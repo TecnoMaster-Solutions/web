@@ -1,8 +1,7 @@
 "use client";
 
-import Purchases from "@/features/dashboard/Purchases";
-
+import PurchasesIndex from "@/features/dashboard/purchases/PurchasesIndex";
 
 export default function PurchasesPage() {
-  return <Purchases />;
+  return <PurchasesIndex />;
 }

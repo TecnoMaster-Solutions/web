@@ -1,4 +1,4 @@
-import CategoriesPage from "@/features/dashboard/CategoryProducts";
+import CategoriesPage from "@/features/dashboard/categoryProducts/indexCategoryProducts";
 
 export default function Page() {
   return <CategoriesPage />;

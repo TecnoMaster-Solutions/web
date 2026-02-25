@@ -1,78 +1,277 @@
-import { useState } from "react";
-import { Category, CreateCategoryData } from "../types";
+﻿import { useCallback, useEffect, useRef, useState } from "react";
+import { confirmDelete } from "@/shared/utils/Delete/confirmDelete";
+import { showSuccess, showError } from "@/shared/utils/notifications";
+import { getProducts } from "@/features/dashboard/products/api/products.api";
+import {
+  getCategories,
+  createCategory,
+  updateCategory,
+  deleteCategory,
+} from "../connection/categoryApi";
+import {
+  Category,
+  CreateCategoryData,
+  EditCategoryData,
+} from "../types/typeCategoryProducts";
 
-// Datos mock iniciales
-const initialCategories: Category[] = [
-  { id: 1, nombre: "Electrónicos", descripcion: "Dispositivos electrónicos y gadgets", estado: "Activo" },
-  { id: 2, nombre: "Ropa", descripcion: "Prendas de vestir para todas las edades", estado: "Activo" },
-  { id: 3, nombre: "Hogar", descripcion: "Artículos para el hogar y decoración", estado: "Inactivo" },
-  { id: 4, nombre: "Deportes", descripcion: "Equipamiento y ropa deportiva", estado: "Activo" },
-  { id: 5, nombre: "Juguetes", descripcion: "Juguetes para niños y niñas", estado: "Activo" },
-  { id: 6, nombre: "Libros", descripcion: "Libros de todos los géneros", estado: "Activo" },
-  { id: 7, nombre: "Belleza", descripcion: "Productos de cuidado personal y belleza", estado: "Inactivo" },
-  { id: 8, nombre: "Alimentos", descripcion: "Productos alimenticios y bebidas", estado: "Activo" },
-  { id: 9, nombre: "Muebles", descripcion: "Muebles para interior y exterior", estado: "Activo" },
-  { id: 10, nombre: "Jardín", descripcion: "Herramientas y plantas para jardín", estado: "Activo" },
-  { id: 11, nombre: "Tecnología", descripcion: "Dispositivos tecnológicos y accesorios", estado: "Activo" },
-  { id: 12, nombre: "Salud", descripcion: "Productos para el cuidado de la salud", estado: "Inactivo" },
-  { id: 13, nombre: "Automóviles", descripcion: "Accesorios y repuestos para autos", estado: "Activo" },
-  { id: 14, nombre: "Instrumentos", descripcion: "Instrumentos musicales y accesorios", estado: "Activo" },
-  { id: 15, nombre: "Oficina", descripcion: "Suministros y muebles de oficina", estado: "Activo" },
-  { id: 16, nombre: "Bebés", descripcion: "Productos para bebés y niños pequeños", estado: "Inactivo" },
-  { id: 17, nombre: "Mascotas", descripcion: "Alimentos y accesorios para mascotas", estado: "Activo" },
-  { id: 18, nombre: "Viajes", descripcion: "Equipaje y accesorios de viaje", estado: "Activo" },
-  { id: 19, nombre: "Joyeria", descripcion: "Joyas y accesorios personales", estado: "Activo" },
-  { id: 20, nombre: "Herramientas", descripcion: "Herramientas manuales y eléctricas", estado: "Inactivo" },
-  { id: 21, nombre: "Arte", descripcion: "Materiales y suministros de arte", estado: "Activo" },
-  { id: 22, nombre: "Videojuegos", descripcion: "Consolas y videojuegos", estado: "Activo" },
-  { id: 23, nombre: "Fotografía", descripcion: "Cámaras y equipos de fotografía", estado: "Activo" },
-  { id: 24, nombre: "Relojes", descripcion: "Relojes de pulsera y de pared", estado: "Inactivo" },
-  { id: 25, nombre: "Calzado", descripcion: "Zapatos and calzado para toda ocasión", estado: "Activo" },
-  { id: 26, nombre: "Outdoor", descripcion: "Equipamiento para actividades al aire libre", estado: "Activo" },
-  { id: 27, nombre: "Limpieza", descripcion: "Productos de limpieza para el hogar", estado: "Activo" },
-  { id: 28, nombre: "Electrodomésticos", descripcion: "Electrodomésticos grandes y pequeños", estado: "Inactivo" },
-  { id: 29, nombre: "Navidad", descripcion: "Decoraciones y artículos navideños", estado: "Activo" },
-  { id: 30, nombre: "Coleccionables", descripcion: "Artículos de colección y antigüedades", estado: "Activo" },
-];
+const sortCategories = (list: Category[]): Category[] =>
+  [...list].sort((a, b) => {
+    const nameA = a.name ?? "";
+    const nameB = b.name ?? "";
+    return nameA.localeCompare(nameB, "es", { sensitivity: "base" });
+  });
+
+const waitForNextRender = async () => {
+  await new Promise<void>((resolve) => {
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        resolve();
+      }),
+    );
+  });
+};
+
+const resolvePayloadData = (value: unknown): any => {
+  if (!value || typeof value !== "object") return value;
+  if ("data" in value) return resolvePayloadData((value as any).data);
+  return value;
+};
+
+const toBoolean = (value: unknown): boolean => {
+  if (typeof value === "boolean") return value;
+  if (value === undefined || value === null) return false;
+  if (typeof value === "number") return Boolean(value);
+  if (typeof value === "string") {
+    const lower = value.toLowerCase();
+    if (lower === "true" || lower === "1") return true;
+    if (lower === "false" || lower === "0") return false;
+  }
+  return Boolean(value);
+};
+
+const parseCategoryPayload = (payload: any): Category | null => {
+  if (!payload || typeof payload !== "object") return null;
+
+  const resolved = resolvePayloadData(payload);
+  if (!resolved || typeof resolved !== "object") return null;
+
+  const idValue = resolved.id ?? resolved.categoryid ?? resolved.category_id;
+  const numericId =
+    typeof idValue === "number" ? idValue : Number(idValue);
+  const id =
+    typeof idValue === "number"
+      ? idValue
+      : Number.isFinite(numericId)
+        ? numericId
+        : null;
+
+  if (id === null) {
+    return null;
+  }
+
+  return {
+    id,
+    name: resolved.name ?? resolved.categoryname ?? "",
+    description: resolved.description ?? resolved.categorydescription ?? "",
+    status: toBoolean(resolved.status ?? resolved.isactive),
+    icon: resolved.icon ?? null,
+  };
+};
+
+const extractPayloadCategory = (response: any): Category | null => {
+  return parseCategoryPayload(response);
+};
 
 export const useCategories = () => {
-  const [categories, setCategories] = useState<Category[]>(initialCategories);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [editingCategory, setEditingCategory] =
+    useState<EditCategoryData | null>(null);
+  const [viewingCategory, setViewingCategory] = useState<Category | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [categoryProductCounts, setCategoryProductCounts] = useState<
+    Record<number, number>
+  >({});
 
-  const handleCreateCategory = (categoryData: CreateCategoryData) => {
-    const newCategory: Category = {
-      id: categories.length + 1,
-      nombre: categoryData.nombre,
-      descripcion: categoryData.descripcion,
-      estado: "Activo",
+  const hasFetchedRef = useRef(false);
+
+  const refreshCategoryProductCounts = useCallback(async () => {
+    try {
+      const products = await getProducts("all");
+      const counts: Record<number, number> = {};
+      products.forEach((product) => {
+        const categoryId = product.categoryId;
+        if (!categoryId) return;
+        counts[categoryId] = (counts[categoryId] ?? 0) + 1;
+      });
+      setCategoryProductCounts(counts);
+    } catch (error) {
+      console.error(
+        "Error al cargar productos para verificar las categorías:",
+        error,
+      );
+      setCategoryProductCounts({});
+    }
+  }, []);
+
+  const refreshCategories = useCallback(async () => {
+    const list = await getCategories();
+    setCategories(sortCategories(list));
+    void refreshCategoryProductCounts();
+    await waitForNextRender();
+    return list;
+  }, [refreshCategoryProductCounts]);
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        await refreshCategories();
+      } catch (error) {
+        console.error("Error al cargar categorias:", error);
+        showError("No se pudieron cargar las categorias.");
+      } finally {
+        setLoading(false);
+      }
     };
 
-    setCategories(prev => [...prev, newCategory]);
+    if (!hasFetchedRef.current) {
+      hasFetchedRef.current = true;
+      load();
+    }
+  }, [refreshCategories]);
+
+  const addCategoryToState = useCallback((category: Category) => {
+    setCategories((prev) => sortCategories([...prev, category]));
+  }, []);
+
+  const updateCategoryInState = useCallback((category: Category) => {
+    setCategories((prev) =>
+      sortCategories(prev.map((item) => (item.id === category.id ? category : item))),
+    );
+  }, []);
+
+  const removeCategoryFromState = useCallback((categoryId: number) => {
+    setCategories((prev) =>
+      sortCategories(prev.filter((item) => item.id !== categoryId)),
+    );
+  }, []);
+
+  const handleCreateCategory = useCallback(
+    async (categoryData: CreateCategoryData) => {
+      setLoading(true);
+      try {
+        setIsCreateModalOpen(false);
+
+        const response = await createCategory(categoryData);
+        const createdCategory = extractPayloadCategory(response);
+
+        if (createdCategory) {
+          addCategoryToState(createdCategory);
+        } else {
+          await refreshCategories();
+        }
+
+        showSuccess("Categoria creada exitosamente!");
+        await waitForNextRender();
+      } catch (error) {
+        console.error("Error al crear categoria:", error);
+        showError("No se pudo crear la categoria.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [addCategoryToState, refreshCategories],
+  );
+
+  const handleEditCategory = useCallback(
+    async (id: number, categoryData: EditCategoryData) => {
+      setLoading(true);
+      try {
+        const response = await updateCategory(id, categoryData);
+        const updatedCategory = extractPayloadCategory(response);
+
+        if (updatedCategory) {
+          updateCategoryInState(updatedCategory);
+        } else {
+          await refreshCategories();
+        }
+
+        showSuccess("Categoria actualizada exitosamente!");
+        await waitForNextRender();
+      } catch (error) {
+        console.error("Error al actualizar categoria:", error);
+        showError("No se pudo actualizar la categoria.");
+      } finally {
+        setLoading(false);
+        setEditingCategory(null);
+      }
+    },
+    [refreshCategories, updateCategoryInState],
+  );
+
+  const handleDeleteCategory = useCallback(
+    async (category: Category): Promise<boolean> => {
+      return confirmDelete(
+        {
+          itemName: category.name,
+          itemType: "categoria",
+          successMessage: `La categoria "${category.name}" ha sido eliminada correctamente.`,
+          errorMessage: "No se pudo eliminar la categoria.",
+        },
+        async () => {
+          setLoading(true);
+          try {
+            await deleteCategory(category.id);
+            removeCategoryFromState(category.id);
+            await waitForNextRender();
+          } catch (error) {
+            console.error("Error al eliminar categoria:", error);
+            const parsedError = error instanceof Error ? error.message : undefined;
+            showError(parsedError ?? "Error al eliminar la categoria.");
+            throw error;
+          } finally {
+            setLoading(false);
+          }
+        },
+      );
+    },
+    [removeCategoryFromState],
+  );
+
+  const handleView = useCallback((category: Category) => {
+    setViewingCategory(category);
+  }, []);
+
+  const handleEdit = useCallback((category: Category) => {
+    setEditingCategory({
+      id: category.id,
+      name: category.name,
+      description: category.description,
+      status: category.status,
+      icon: category.icon,
+    });
+  }, []);
+
+  const closeModals = useCallback(() => {
+    setEditingCategory(null);
+    setViewingCategory(null);
     setIsCreateModalOpen(false);
-  };
-
-  const handleView = (category: Category) => {
-    console.log("Ver categoría:", category);
-    // Aquí puedes implementar la lógica para ver la categoría
-  };
-
-  const handleEdit = (category: Category) => {
-    console.log("Editar categoría:", category);
-    // Aquí puedes implementar la lógica para editar la categoría
-  };
-
-  const handleDelete = (category: Category) => {
-    console.log("Eliminar categoría:", category);
-    // Aquí puedes implementar la lógica para eliminar la categoría
-  };
+  }, []);
 
   return {
     categories,
+    categoryProductCounts,
+    loading,
     isCreateModalOpen,
     setIsCreateModalOpen,
+    editingCategory,
+    viewingCategory,
     handleCreateCategory,
+    handleEditCategory,
+    handleDeleteCategory,
     handleView,
     handleEdit,
-    handleDelete
+    closeModals,
   };
 };

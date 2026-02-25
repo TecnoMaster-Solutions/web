@@ -1,91 +1,86 @@
 "use client";
 
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
+import TableTechnicians from "./components/tableTechnicians/tableTechnicians";
+import CreateTechnicianModal from "./components/createTechniciansModal/createTechniciansModal";
+import EditTechnicianModal from "./components/editTechniciansModal/editTechniciansModal";
+import ViewTechnicianModal from "./components/viewTechniciansModal/viewTechniciansModal";
+
+import { Technician, CreateTechnicianData } from "./types/typesTechnicians";
+import { useTechnicians } from "./hooks/useTechnicians";
 import { useState } from "react";
-import { Column, DataTable } from "@/features/dashboard/components/DataTable";
-import { useLoader } from "@/shared/components/loader";
 
-type Technician = {
-  id: number;
-  name: string;
-  specialty: string;
-  phone: string;
-  status: "Activo" | "Inactivo";
-};
-
-const mockTechnicians: Technician[] = [
-  {
-    id: 1,
-    name: "Carlos Ramírez",
-    specialty: "Electricista",
-    phone: "3001234567",
-    status: "Activo",
-  },
-  {
-    id: 2,
-    name: "Ana López",
-    specialty: "Redes",
-    phone: "3019876543",
-    status: "Inactivo",
-  },
-  {
-    id: 3,
-    name: "Miguel Torres",
-    specialty: "CCTV",
-    phone: "3024567890",
-    status: "Activo",
-  },
-];
+function Loader({ show }: { show: boolean }) {
+  if (!show) return null;
+  return (
+    <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-[99999]">
+      <div className="w-16 h-16 border-4 border-red-600 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+}
 
 export default function TechniciansIndex() {
-  const [technicians, setTechnicians] = useState<Technician[]>(mockTechnicians);
-  const { showLoader, hideLoader } = useLoader();
+  const {
+    technicians,
+    typeOptions,
+    isCreateModalOpen,
+    setIsCreateModalOpen,
+    editingTechnician,
+    setEditingTechnician,
+    handleCreateTechnician,
+    handleEditTechnician,
+    handleDeleteTechnician,
+    loading,
+  } = useTechnicians();
 
-  const handleDelete = async (row: Technician) => {
-    if (!confirm(`¿Eliminar técnico "${row.name}"?`)) return;
-    showLoader();
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 1500)); // simula petición
-      setTechnicians((prev) => prev.filter((p) => p.id !== row.id));
-    } finally {
-      hideLoader();
-    }
-  };
-
-  const columns: Column<Technician>[] = [
-    { key: "id", header: "ID" },
-    { key: "name", header: "Nombre" },
-    { key: "specialty", header: "Especialidad" },
-    { key: "phone", header: "Teléfono" },
-    {
-      key: "status",
-      header: "Estado",
-      render: (row) => (
-        <span
-          className={
-            row.status === "Activo"
-              ? "text-green-600 font-medium"
-              : "text-red-600 font-medium"
-          }
-        >
-          {row.status}
-        </span>
-      ),
-    },
-  ];
+  const [viewingTechnician, setViewingTechnician] = useState<Technician | null>(null);
 
   return (
-    <div className="flex flex-col gap-4">
-      <DataTable<Technician>
-        data={technicians}
-        columns={columns}
-        searchableKeys={["name", "specialty", "phone", "status"]}
-        pageSize={10}
-        onView={(row) => alert(`Ver técnico "${row.name}"`)}
-        onEdit={(row) => alert(`Editar técnico "${row.name}"`)}
-        onDelete={handleDelete}
-        onCreate={() => alert("Abrir modal: crear técnico")}
-        createButtonText="Crear técnico"
-      />
+    <div className="min-h-screen flex">
+      <ToastContainer position="bottom-right" />
+
+      <div className="flex-1 flex flex-col">
+        <main className="flex-1 flex flex-col">
+          <div className="px-6 pt-6">
+            <CreateTechnicianModal
+              isOpen={isCreateModalOpen}
+              onClose={() => setIsCreateModalOpen(false)}
+              onSave={handleCreateTechnician as (data: CreateTechnicianData) => void}
+              technicians={technicians}
+              typeOptions={typeOptions}
+            />
+
+            {editingTechnician && (
+              <EditTechnicianModal
+                isOpen={true}
+                technician={editingTechnician}
+                onClose={() => setEditingTechnician(null)}
+                onUpdate={(data) => handleEditTechnician(data.id, data)}
+                technicians={technicians}
+                typeOptions={typeOptions}
+              />
+            )}
+
+            <ViewTechnicianModal
+              isOpen={!!viewingTechnician}
+              technician={viewingTechnician}
+              onClose={() => setViewingTechnician(null)}
+            />
+
+            <TableTechnicians
+              technicians={technicians}
+              onView={(t) => setViewingTechnician(t)}
+              onEdit={(t) => setEditingTechnician(t)}
+              onDelete={handleDeleteTechnician}
+              onCreate={() => setIsCreateModalOpen(true)}
+            />
+          </div>
+        </main>
+      </div>
+
+      <Loader show={loading} />
     </div>
   );
 }

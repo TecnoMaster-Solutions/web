@@ -1,0 +1,55 @@
+/* src/shared/styles/styleCalendar.css */
+/* Estilos para el calendario mensual */
+.dhx_cal_month .dhx_cal_container {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.dhx_cal_month .dhx_cal_header {
+  background-color: #f8fafc;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.dhx_cal_month .dhx_cal_header div {
+  font-weight: 600;
+  color: #374151;
+  padding: 12px 0;
+}
+
+.dhx_cal_month .dhx_month_head {
+  background-color: #f1f5f9;
+  font-weight: 500;
+  padding: 8px 0;
+}
+
+.dhx_cal_month .dhx_month_body {
+  border-top: 1px solid #e5e7eb;
+}
+
+.dhx_cal_month .dhx_month_day {
+  padding: 8px;
+  font-size: 14px;
+}
+
+.dhx_cal_month .dhx_before .dhx_month_day,
+.dhx_cal_month .dhx_after .dhx_month_day {
+  color: #9ca3af;
+}
+
+.dhx_cal_month .dhx_now {
+  background-color: #dbeafe;
+  font-weight: 600;
+}
+
+/* Estilos para el calendario semanal */
+.dhx_cal_week .dhx_cal_container {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+/* Ocultar barra de navegación si no la necesitas */
+.dhx_cal_navline {
+  display: none;
+}

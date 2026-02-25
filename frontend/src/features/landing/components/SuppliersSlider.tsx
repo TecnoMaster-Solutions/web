@@ -66,10 +66,10 @@ const SuppliersSlider = () => {
   }, [isTransitioning]);
 
   return (
-    <section className="py-12 relative">
+    <section className="py-12 relative h-80">
       {/* Título */}
       <h2
-        className="text-center text-3xl md:text-4xl font-bold mb-8"
+        className="text-center text-3xl md:text-5xl font-bold mb-8"
         style={{ color: "#B20000" }}
       >
         Nuestros Proveedores
@@ -79,9 +79,13 @@ const SuppliersSlider = () => {
         {/* Flecha izquierda */}
         <button
           onClick={prevSlide}
-          className="absolute left-0 top-1/2 -translate-y-1/2 z-20 p-2 hover:scale-110 transition-transform"
+          className="cursor-pointer absolute left-0 top-1/2 -translate-y-1/2 z-20 p-2 hover:scale-110 transition-transform"
         >
-          <ChevronLeft size={40} strokeWidth={3} className="text-black" />
+          {/* Ícono más grande y responsive */}
+          <ChevronLeft
+            className="text-black w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 lg:w-16 lg:h-16"
+            strokeWidth={3}
+          />
         </button>
 
         {/* Contenedor del slider */}
@@ -100,10 +104,11 @@ const SuppliersSlider = () => {
             {extendedSuppliers.map((src, index) => (
               <div
                 key={`${src}-${index}`}
-                className="flex-shrink-0 flex justify-center items-center p-4"
+                className="flex-shrink-0 flex justify-center items-center p-6"
                 style={{ width: `${25 / itemsToShow}%` }}
               >
-                <div className="relative w-full h-28 grayscale hover:grayscale-0 transition-all duration-300 hover:scale-105">
+                {/* Imagen más grande y responsive */}
+                <div className="cursor-pointer relative w-40 h-20 sm:w-52 sm:h-28 md:w-64 md:h-32 lg:w-80 lg:h-40 grayscale hover:grayscale-0 transition-all duration-300 hover:scale-110">
                   <Image
                     src={src}
                     alt={`Proveedor ${(index % suppliers.length) + 1}`}
@@ -119,9 +124,13 @@ const SuppliersSlider = () => {
         {/* Flecha derecha */}
         <button
           onClick={nextSlide}
-          className="absolute right-0 top-1/2 -translate-y-1/2 z-20 p-2 hover:scale-110 transition-transform"
+          className="cursor-pointer absolute right-0 top-1/2 -translate-y-1/2 z-20 p-2 hover:scale-110 transition-transform"
         >
-          <ChevronRight size={40} strokeWidth={3} className="text-black" />
+          {/* Ícono más grande y responsive */}
+          <ChevronRight
+            className="text-black w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 lg:w-16 lg:h-16"
+            strokeWidth={3}
+          />
         </button>
       </div>
     </section>

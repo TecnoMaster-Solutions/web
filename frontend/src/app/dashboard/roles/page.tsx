@@ -1,6 +1,6 @@
 "use client";
 
-import RolesIndex from "@/features/dashboard/roles/RolesIndex";
+import RolesIndex from "@/features/dashboard/roles";
 
 export default function RolesPage() {
   return <RolesIndex/>;
