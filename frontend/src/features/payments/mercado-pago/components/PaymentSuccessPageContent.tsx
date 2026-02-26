@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
+  clearMercadoPagoCheckoutLocalState,
   getLastMercadoPagoSaleId,
   getSaleStatus,
   verifyMercadoPagoPayment,
@@ -182,6 +183,11 @@ export default function PaymentSuccessPageContent() {
 
     window.location.href = targetCartUrl;
   };
+
+  useEffect(() => {
+    if (!isPaid) return;
+    clearMercadoPagoCheckoutLocalState();
+  }, [isPaid]);
 
   if (isPaid) {
     return (

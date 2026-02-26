@@ -13,6 +13,7 @@ const SALES_PATH = "/sales";
 const VERIFY_PATH = "/payments/mercado-pago/verify";
 const PREFERENCES_PATH = "/payments/mercado-pago/preferences";
 const LAST_SALE_ID_KEY = "mp_last_sale_id";
+const CART_STORAGE_KEY = "vertecx_cart";
 
 type CheckoutWindowOptions = {
   popupWindow?: Window | null;
@@ -57,6 +58,12 @@ export function getLastMercadoPagoSaleId(): number | null {
   const raw = localStorage.getItem(LAST_SALE_ID_KEY);
   const parsed = Number(raw);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+export function clearMercadoPagoCheckoutLocalState() {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(LAST_SALE_ID_KEY);
+  localStorage.removeItem(CART_STORAGE_KEY);
 }
 
 export async function createSaleCheckoutAndRedirect(
