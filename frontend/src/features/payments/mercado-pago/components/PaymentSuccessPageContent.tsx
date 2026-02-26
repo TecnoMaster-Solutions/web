@@ -10,6 +10,7 @@ import {
 import type { SalePaymentStatusResponse } from "../types";
 import PaymentResultCard from "./PaymentResultCard";
 import { routes } from "@/shared/routes";
+import { Loader } from "@/shared/components/loader";
 
 const normalizeMpParam = (value: string | null) =>
   !value || value === "null" ? null : value;
@@ -34,9 +35,6 @@ export default function PaymentSuccessPageContent() {
   const paymentId =
     normalizeMpParam(searchParams.get("payment_id")) ??
     normalizeMpParam(searchParams.get("collection_id"));
-  const paymentStatus =
-    normalizeMpParam(searchParams.get("status")) ??
-    normalizeMpParam(searchParams.get("collection_status"));
   const externalReference = normalizeMpParam(
     searchParams.get("external_reference")
   );
@@ -148,9 +146,6 @@ export default function PaymentSuccessPageContent() {
     };
   }, [saleState]);
 
-  const resolvedSaleId =
-    verifyState.kind === "done" ? verifyState.saleId : getLastMercadoPagoSaleId();
-
   const isPaid = saleState.kind === "done" && saleState.sale.status === "PAID";
   const paidExternalReference =
     (saleState.kind === "done" ? saleState.sale.externalReference : null) ??
@@ -237,29 +232,31 @@ export default function PaymentSuccessPageContent() {
     );
   }
 
+  if (saleState.kind !== "error") {
+    return (
+      <main className="min-h-[70vh] bg-gradient-to-b from-amber-50 via-white to-white px-4 py-10">
+        <div className="mx-auto max-w-xl rounded-2xl border border-amber-200 bg-white p-8 shadow-sm">
+          <div className="flex flex-col items-center text-center">
+            <Loader size="md" className="text-amber-500" />
+            <h1 className="mt-5 text-2xl font-bold text-amber-900">
+              Confirmando pago...
+            </h1>
+            <p className="mt-2 text-sm text-slate-600">
+              Estamos verificando el pago con Mercado Pago y sincronizando la
+              venta con el backend.
+            </p>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <PaymentResultCard
       title={ui.title}
       description={ui.description}
       tone={ui.tone}
-      details={[
-        { label: "saleId", value: resolvedSaleId ? String(resolvedSaleId) : null },
-        {
-          label: "payment_id / collection_id",
-          value: paymentId,
-        },
-        { label: "status (query)", value: paymentStatus },
-        { label: "external_reference", value: externalReference },
-        {
-          label: "status (venta backend)",
-          value: saleState.kind === "done" ? saleState.sale.status : null,
-        },
-        {
-          label: "mpPaymentId",
-          value:
-            saleState.kind === "done" ? (saleState.sale.mpPaymentId ?? null) : null,
-        },
-      ]}
+      details={[]}
       extra={
         verifyState.kind === "error" ? (
           <p className="text-sm text-amber-700">
