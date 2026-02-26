@@ -1,4 +1,4 @@
-"use clients";
+"use client";
 
 import PurchaseOrdersIndex from "@/features/dashboard/purchases/orders/purchasesOrdersIndex";
 

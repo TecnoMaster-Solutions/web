@@ -1,10 +1,12 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Colors from "@/shared/theme/colors";
 import { YearlyGraph } from "./components/BarChar/YearlySalesGraph";
 import { MonthlyGraph } from "./components/BarChar/monthlySalesGraph";
+import { YearlySalesPurchasesGraph } from "./components/BarChar/YearlySalesPurchasesGraph";
+import { MonthlySalesPurchasesGraph } from "./components/BarChar/MonthlySalesPurchasesGraph";
 import {
   PieChartCategoryAndProducts,
   CategoryData,
@@ -79,8 +81,7 @@ export const IndexDashboard = () => {
     return years;
   });
 
-  const [selectedMonthSales, setSelectedMonthSales] = useState<MonthSelection | null>(null);
-  const [selectedMonthShopping, setSelectedMonthShopping] = useState<MonthSelection | null>(null);
+  const [selectedMonthSalesPurchases, setSelectedMonthSalesPurchases] = useState<MonthSelection | null>(null);
   const [selectedMonthClients, setSelectedMonthClients] = useState<MonthSelection | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -97,7 +98,7 @@ export const IndexDashboard = () => {
         setPurchasesYear(await dashboardApi.getPurchasesByYear(selectedYear));
         setTotalPurchases((await dashboardApi.getTotalPurchases(selectedYear)).total);
 
-        // PRODUCTOS POR CATEGORÍA
+        // PRODUCTOS POR CATEGORÃA
         const rawCategoryProducts =
           (await dashboardApi.getCategoryProducts(selectedYear)) as CategoryProductsResponse[];
         setCategoryProducts(
@@ -107,7 +108,7 @@ export const IndexDashboard = () => {
           }))
         );
 
-        // ÓRDENES
+        // Ã“RDENES
         const rawOrdersState = await dashboardApi.getOrdersByState(selectedYear);
         setOrdersState(
           (rawOrdersState ?? []).map((item: any) => ({
@@ -143,8 +144,7 @@ export const IndexDashboard = () => {
   const handleYearChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const year = Number(event.target.value);
     setSelectedYear(year);
-    setSelectedMonthSales(null);
-    setSelectedMonthShopping(null);
+    setSelectedMonthSalesPurchases(null);
     setSelectedMonthClients(null);
   };
 
@@ -172,7 +172,7 @@ export const IndexDashboard = () => {
         </div>
       </div>
 
-      {/* PRIMERA FILA: MÉTRICAS PRINCIPALES */}
+      {/* PRIMERA FILA: MÃ‰TRICAS PRINCIPALES */}
       <div className="flex flex-wrap gap-4 justify-center md:justify-start">
         {/* Ventas */}
         <div className="p-3 w-full sm:w-[calc(50%-1rem)] md:w-[calc(25%-1rem)]">
@@ -219,64 +219,45 @@ export const IndexDashboard = () => {
           </div>
         </div>
 
-        {/* Órdenes */}
+        {/* Ã“rdenes */}
         <div className="p-3 w-full sm:w-[calc(50%-1rem)] md:w-[calc(25%-1rem)]">
           <div className="bg-[#F4F4F4] rounded-lg p-5 shadow-md h-full">
             <div className="bg-[#B20000] text-white rounded-lg p-4 sm:p-6 h-full flex flex-col justify-between">
               <div className="flex items-start justify-between gap-3 min-h-10">
                 <h2 className="text-sm sm:text-base font-medium whitespace-nowrap overflow-hidden text-ellipsis leading-tight">
-                  Órdenes de servicio
+                  Orden de servicio
                 </h2>
-                <Image src="/icons/box.svg" alt="Órdenes" width={32} height={32} className="w-8 h-8 object-contain filter brightness-0 invert" />
+                <Image src="/icons/box.svg" alt="Ã“rdenes" width={32} height={32} className="w-8 h-8 object-contain filter brightness-0 invert" />
               </div>
               <p className="text-lg sm:text-2xl font-bold whitespace-nowrap overflow-hidden text-ellipsis leading-tight">{totalOrders}</p>
             </div>
           </div>
         </div>
       </div>
-
-      {/* SEGUNDA FILA: GRÁFICA DE VENTAS & COMPRAS */}
-      <div className="flex flex-wrap lg:flex-nowrap w-full h-auto mt-4 gap-4">
-        {/* Ventas */}
-        <div className="p-2 w-full lg:w-[50%]">
+      {/* SEGUNDA FILA: GRÁFICA COMBINADA DE VENTAS & COMPRAS */}
+      <div className="flex flex-wrap w-full h-auto mt-4">
+        <div className="p-2 w-full">
           <div className="bg-[#F4F4F4] rounded-lg p-6 shadow-md h-full">
             <div className="bg-white rounded-lg p-6 flex flex-col h-full">
-              {!selectedMonthSales ? (
+              {!selectedMonthSalesPurchases ? (
                 <>
-                  <h2 className="text-xl font-bold mb-4">Ventas: {formatCOP(totalSales)}</h2>
-                  <YearlyGraph title="Ventas" data={salesYear} onMonthClick={setSelectedMonthSales} isCurrency={true} />
+                  <h2 className="text-xl font-bold mb-4">
+                    Ventas: {formatCOP(totalSales)} | Compras: {formatCOP(totalPurchases)}
+                  </h2>
+                  <YearlySalesPurchasesGraph
+                    salesData={salesYear}
+                    purchasesData={purchasesYear}
+                    onMonthClick={setSelectedMonthSalesPurchases}
+                    isCurrency={true}
+                  />
                 </>
               ) : (
-                <MonthlyGraph
-                  title="Ventas"
-                  month={selectedMonthSales?.label ?? ""}
-                  monthNumber={selectedMonthSales?.value}
-                  data={salesYear}
-                  onBack={() => setSelectedMonthSales(null)}
-                  isCurrency={true}
-                  year={selectedYear}
-                />
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Compras */}
-        <div className="p-2 w-full lg:w-[50%]">
-          <div className="bg-[#F4F4F4] rounded-lg p-6 shadow-md h-full">
-            <div className="bg-white rounded-lg p-6 flex flex-col h-full">
-              {!selectedMonthShopping ? (
-                <>
-                  <h2 className="text-xl font-bold mb-4">Compras: {formatCOP(totalPurchases)}</h2>
-                  <YearlyGraph title="Compras" data={purchasesYear} onMonthClick={setSelectedMonthShopping} isCurrency={true} />
-                </>
-              ) : (
-                <MonthlyGraph
-                  title="Compras"
-                  month={selectedMonthShopping?.label ?? ""}
-                  monthNumber={selectedMonthShopping?.value}
-                  data={purchasesYear}
-                  onBack={() => setSelectedMonthShopping(null)}
+                <MonthlySalesPurchasesGraph
+                  month={selectedMonthSalesPurchases?.label ?? ""}
+                  monthNumber={selectedMonthSalesPurchases?.value}
+                  salesData={salesYear}
+                  purchasesData={purchasesYear}
+                  onBack={() => setSelectedMonthSalesPurchases(null)}
                   isCurrency={true}
                   year={selectedYear}
                 />
@@ -286,13 +267,13 @@ export const IndexDashboard = () => {
         </div>
       </div>
 
-      {/* TERCERA FILA: CATEGORÍAS, ÓRDENES Y SOLICITUDES */}
+      {/* TERCERA FILA: CATEGORÃAS, Ã“RDENES Y SOLICITUDES */}
       <div className="flex flex-wrap lg:flex-nowrap gap-4 w-full h-auto mt-6">
-        {/* Categorías */}
+        {/* CategorÃ­as */}
         <div className="p-2 w-full md:w-[35%]">
           <div className="bg-[#F4F4F4] rounded-lg p-6 shadow-md h-full">
             <div className="bg-white rounded-lg p-6 flex flex-col h-full">
-              <h2 className="text-xl font-bold mb-4">Productos por categoría</h2>
+              <h2 className="text-xl font-bold mb-4">Productos por categorí­a</h2>
               <div className="h-[320px]">
                 <PieChartCategoryAndProducts data={categoryProducts} />
               </div>
@@ -300,11 +281,11 @@ export const IndexDashboard = () => {
           </div>
         </div>
 
-        {/* Órdenes */}
+        {/* Ã“rdenes */}
         <div className="p-2 w-full md:w-[35%]">
           <div className="bg-[#F4F4F4] rounded-lg p-6 shadow-md h-full">
             <div className="bg-white rounded-lg p-6 flex flex-col h-full">
-              <h2 className="text-xl font-bold mb-4">Órdenes de servicio</h2>
+              <h2 className="text-xl font-bold mb-4">Orden de servicio</h2>
               <div className="h-[320px]">
                 <CustomBarChart
                   data={ordersState}
@@ -375,3 +356,5 @@ export const IndexDashboard = () => {
     </div>
   );
 };
+
+

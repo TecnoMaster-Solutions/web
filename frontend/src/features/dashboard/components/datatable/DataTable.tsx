@@ -1,12 +1,6 @@
 "use client";
 
-import React, {
-  useMemo,
-  useState,
-  useCallback,
-  useEffect,
-  useRef,
-} from "react";
+import React, { useMemo, useState, useCallback, useEffect, useRef } from "react";
 import Colors from "@/shared/theme/colors";
 import { SearchIcon } from "./icons/SearchIcon";
 import { PlusIcon } from "./icons/PlusIcon";
@@ -22,6 +16,28 @@ import { usePermissions } from "@/features/auth/hooks/usePermissions";
 const ROW_HEIGHT = 60;
 const VISIBLE_ROWS = 10;
 const ACTIONS_COL_WIDTH = "230px";
+
+/* ================================
+ * SKELETONS (GENERALES)
+ * ================================ */
+function SkeletonBlock({
+  className = "",
+  style,
+}: {
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  return (
+    <div
+      className={`animate-pulse bg-gray-200/80 rounded ${className}`}
+      style={style}
+    />
+  );
+}
+
+function SkeletonText({ w = "70%" }: { w?: string }) {
+  return <SkeletonBlock className="h-3" style={{ width: w }} />;
+}
 
 function Th({
   children,
@@ -45,9 +61,7 @@ function Th({
 const OptimizedTd = React.memo(OptimizedTdComponent);
 export const ActionButton = React.memo(ActionButtonComponent);
 export const ActionButtons = React.memo(ActionButtonsComponent);
-const MobileCard = React.memo(
-  MobileCardComponent
-) as typeof MobileCardComponent;
+const MobileCard = React.memo(MobileCardComponent) as typeof MobileCardComponent;
 const CreateButton = React.memo(CreateButtonComponent);
 const Pagination = React.memo(PaginationComponent);
 
@@ -78,6 +92,9 @@ const DataTableComponent = <T extends { [key: string]: any }>(
     actionGuard,
     freeze,
     disableInternalScroll = false,
+
+    // loading general
+    loading = false,
   } = props;
 
   const { canView, canCreate, canUpdate, canDelete } = usePermissions();
@@ -122,14 +139,14 @@ const DataTableComponent = <T extends { [key: string]: any }>(
       if (!Number.isFinite(n)) return [];
       const rounded = Math.round(n);
 
-      const plain = String(rounded); // 200000
-      const esCO = rounded.toLocaleString("es-CO"); // 200.000
-      const enUS = rounded.toLocaleString("en-US"); // 200,000
+      const plain = String(rounded);
+      const esCO = rounded.toLocaleString("es-CO");
+      const enUS = rounded.toLocaleString("en-US");
       const cop = rounded.toLocaleString("es-CO", {
         style: "currency",
         currency: "COP",
         maximumFractionDigits: 0,
-      }); // $ 200.000
+      });
 
       return [plain, esCO, enUS, cop].map(normalizeText);
     },
@@ -141,10 +158,7 @@ const DataTableComponent = <T extends { [key: string]: any }>(
       const raw = normalizeText(estado);
       if (!raw) return [];
 
-      if (
-        raw.includes("garantiareportada") ||
-        raw.includes("garantia_reportada")
-      ) {
+      if (raw.includes("garantiareportada") || raw.includes("garantia_reportada")) {
         return [
           "garantia reportada",
           "garantia (reportada)",
@@ -155,24 +169,11 @@ const DataTableComponent = <T extends { [key: string]: any }>(
       }
 
       if (raw.includes("garantia")) {
-        return ["garantia", "en garantia", "garantia sin reporte"].map(
-          normalizeText
-        );
+        return ["garantia", "en garantia", "garantia sin reporte"].map(normalizeText);
       }
 
-      if (
-        raw.includes("anul") ||
-        raw.includes("cancel") ||
-        raw.includes("revoke")
-      ) {
-        return [
-          "anulada",
-          "anulado",
-          "cancelada",
-          "cancelado",
-          "revocada",
-          "revoke",
-        ].map(normalizeText);
+      if (raw.includes("anul") || raw.includes("cancel") || raw.includes("revoke")) {
+        return ["anulada", "anulado", "cancelada", "cancelado", "revocada", "revoke"].map(normalizeText);
       }
 
       if (raw.includes("aprob") || raw.includes("approved")) {
@@ -192,7 +193,6 @@ const DataTableComponent = <T extends { [key: string]: any }>(
     (value: unknown, key?: string): string[] => {
       if (value == null) return [];
 
-      // Estados (estado / state)
       if (key === "estado") return estadoTokens(value);
 
       if (key === "state") {
@@ -211,7 +211,6 @@ const DataTableComponent = <T extends { [key: string]: any }>(
         return estadoTokens(mapped).concat([mapped]).map(normalizeText);
       }
 
-      // Montos (monto / viaticos / total)
       if (key === "monto" || key === "viaticos" || key === "total") {
         return moneyTokens(value);
       }
@@ -221,11 +220,7 @@ const DataTableComponent = <T extends { [key: string]: any }>(
       const numericCandidate = str.replace(/\s/g, "");
       const cleaned = numericCandidate.replace(/[^0-9.-]/g, "");
       if (cleaned && !isNaN(Number(cleaned))) {
-        return Array.from(
-          new Set(
-            [str, cleaned, ...moneyTokens(Number(cleaned))].map(normalizeText)
-          )
-        );
+        return Array.from(new Set([str, cleaned, ...moneyTokens(Number(cleaned))].map(normalizeText)));
       }
 
       if (!isNaN(Date.parse(String(value)))) {
@@ -244,6 +239,9 @@ const DataTableComponent = <T extends { [key: string]: any }>(
   );
 
   const filtered = useMemo(() => {
+    // Mientras carga, no filtrar (evita parpadeos y costo)
+    if (loading) return Array.isArray(data) ? data : [];
+
     const term = normalizeText(q);
     if (!term) return data;
 
@@ -255,18 +253,14 @@ const DataTableComponent = <T extends { [key: string]: any }>(
     const hasKey = (k: string) => searchableKeys.includes(k as any);
 
     const pickStatusText = (row: any): string => {
-      if (hasKey("status") && row?.status != null)
-        return normalizeText(row.status);
-      if (hasKey("estado") && row?.estado != null)
-        return normalizeText(row.estado);
+      if (hasKey("status") && row?.status != null) return normalizeText(row.status);
+      if (hasKey("estado") && row?.estado != null) return normalizeText(row.estado);
       if (hasKey("state")) {
         if (typeof row?.state === "string") return normalizeText(row.state);
         if (row?.state?.name != null) return normalizeText(row.state.name);
       }
-      if (hasKey("stateSearch") && row?.stateSearch != null)
-        return normalizeText(row.stateSearch);
-      if (hasKey("statusSearch") && row?.statusSearch != null)
-        return normalizeText(row.statusSearch);
+      if (hasKey("stateSearch") && row?.stateSearch != null) return normalizeText(row.stateSearch);
+      if (hasKey("statusSearch") && row?.statusSearch != null) return normalizeText(row.statusSearch);
       return "";
     };
 
@@ -282,7 +276,6 @@ const DataTableComponent = <T extends { [key: string]: any }>(
           const value = (row as any)[key];
           if (value == null) return false;
 
-          // Compatibilidad: si el key es stateSearch/statusSearch, normaliza directo como texto
           if (String(key) === "stateSearch" || String(key) === "statusSearch") {
             const v = normalizeText(value);
             if (t.startsWith("act")) return v === "activo";
@@ -295,7 +288,7 @@ const DataTableComponent = <T extends { [key: string]: any }>(
         });
       });
     });
-  }, [q, data, searchableKeys, normalize, normalizeText]);
+  }, [q, data, searchableKeys, normalize, normalizeText, loading]);
 
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(filtered.length / pageSize)),
@@ -330,21 +323,11 @@ const DataTableComponent = <T extends { [key: string]: any }>(
 
   const resolveRowKey = useCallback((row: T, idxFallback: number) => {
     const anyRow = row as any;
-    return (
-      anyRow.id ??
-      anyRow.purchaseorderid ??
-      anyRow.numberoforder ??
-      anyRow.reference ??
-      idxFallback
-    );
+    return anyRow.id ?? anyRow.purchaseorderid ?? anyRow.numberoforder ?? anyRow.reference ?? idxFallback;
   }, []);
 
   const visibleColumns = useMemo(
-    () =>
-      columns.filter(
-        (col) =>
-          col.priority === "high" || (!col.priority && columns.indexOf(col) < 3)
-      ),
+    () => columns.filter((col) => col.priority === "high" || (!col.priority && columns.indexOf(col) < 3)),
     [columns]
   );
 
@@ -362,78 +345,62 @@ const DataTableComponent = <T extends { [key: string]: any }>(
     renderActions;
 
   const Row = useMemo(() => {
-    const RowComponent = React.memo(
-      ({ row, index }: { row: T; index: number }) => {
-        const currentStartIndex = disableInternalScroll
-          ? 0
-          : Math.floor(scrollTop / ROW_HEIGHT);
-        const isDesktop =
-          typeof window !== "undefined" ? window.innerWidth >= 768 : true;
-        const colsToRender = isDesktop ? columns : visibleColumns;
+    const RowComponent = React.memo(({ row, index }: { row: T; index: number }) => {
+      const currentStartIndex = disableInternalScroll ? 0 : Math.floor(scrollTop / ROW_HEIGHT);
+      const isDesktop = typeof window !== "undefined" ? window.innerWidth >= 768 : true;
+      const colsToRender = isDesktop ? columns : visibleColumns;
 
-        return (
-          <tr
-            className="hover:bg-gray-50 text-center table-row transition-all duration-300 ease-in-out"
-            style={
-              disableInternalScroll
-                ? { width: "100%", height: `${ROW_HEIGHT}px` }
-                : {
-                    top: `${(currentStartIndex + index) * ROW_HEIGHT}px`,
-                    width: "100%",
-                    height: `${ROW_HEIGHT}px`,
-                  }
-            }
-          >
-            {colsToRender.map((c, colIndex) => (
-              <OptimizedTd
-                key={String(c.key)}
-                colIndex={colIndex}
-                header={String(c.header ?? "")}
-                width={c.width}
-                className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm"
-              >
-                <div className="truncate" title={String((row as any)[c.key])}>
-                  {c.render ? c.render(row) : String((row as any)[c.key])}
-                </div>
-              </OptimizedTd>
-            ))}
+      return (
+        <tr
+          className="hover:bg-gray-50 text-center table-row transition-all duration-300 ease-in-out"
+          style={
+            disableInternalScroll
+              ? { width: "100%", height: `${ROW_HEIGHT}px` }
+              : { top: `${(currentStartIndex + index) * ROW_HEIGHT}px`, width: "100%", height: `${ROW_HEIGHT}px` }
+          }
+        >
+          {colsToRender.map((c, colIndex) => (
+            <OptimizedTd
+              key={String(c.key)}
+              colIndex={colIndex}
+              header={String(c.header ?? "")}
+              width={c.width}
+              className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm"
+            >
+              <div className="truncate" title={String((row as any)[c.key])}>
+                {c.render ? c.render(row) : String((row as any)[c.key])}
+              </div>
+            </OptimizedTd>
+          ))}
 
-            {showActionsColumn && (
-              <OptimizedTd
-                header="Acciones"
-                width={ACTIONS_COL_WIDTH}
-                className="min-w-[230px] whitespace-nowrap"
-              >
-                {renderActions ? (
-                  renderActions(row)
-                ) : (
-                  <ActionButtons
-                    row={row}
-                    onView={canView(module) ? onView : undefined}
-                    onEdit={canUpdate(module) ? onEdit : undefined}
-                    onDelete={canDelete(module) ? onDelete : undefined}
-                    onCancel={onCancel}
-                    onCheck={onCheck}
-                    onApprove={onApprove}
-                    actionGuard={actionGuard}
-                    renderExtraActions={renderExtraActions}
-                  />
-                )}
-              </OptimizedTd>
-            )}
+          {showActionsColumn && (
+            <OptimizedTd header="Acciones" width={ACTIONS_COL_WIDTH} className="min-w-[230px] whitespace-nowrap">
+              {renderActions ? (
+                renderActions(row)
+              ) : (
+                <ActionButtons
+                  row={row}
+                  onView={canView(module) ? onView : undefined}
+                  onEdit={canUpdate(module) ? onEdit : undefined}
+                  onDelete={canDelete(module) ? onDelete : undefined}
+                  onCancel={onCancel}
+                  onCheck={onCheck}
+                  onApprove={onApprove}
+                  actionGuard={actionGuard}
+                  renderExtraActions={renderExtraActions}
+                />
+              )}
+            </OptimizedTd>
+          )}
 
-            {renderTail && (
-              <OptimizedTd
-                header={tailHeader ?? "Imprimir"}
-                className="text-center"
-              >
-                {renderTail(row)}
-              </OptimizedTd>
-            )}
-          </tr>
-        );
-      }
-    );
+          {renderTail && (
+            <OptimizedTd header={tailHeader ?? "Imprimir"} className="text-center">
+              {renderTail(row)}
+            </OptimizedTd>
+          )}
+        </tr>
+      );
+    });
 
     RowComponent.displayName = "RowComponent";
     return RowComponent;
@@ -460,11 +427,99 @@ const DataTableComponent = <T extends { [key: string]: any }>(
     disableInternalScroll,
   ]);
 
-  return (
+  /* ================================
+   * SKELETON HELPERS
+   * ================================ */
+  const desktopSkeletonRowsCount = useMemo(() => {
+    // usa el pageSize actual si ya se seteo, si no, cae al default
+    const n = Number(pageSize || defaultPageSize || 8);
+    return Number.isFinite(n) && n > 0 ? Math.min(n, 12) : 8;
+  }, [pageSize, defaultPageSize]);
+
+  const DesktopTableSkeleton = () => (
     <div
-      className="flex flex-col gap-2 sm:gap-4 px-2 sm:px-0 mt-4 sm:mt-6"
+      className={`${mobileCardView ? "hidden md:block" : "block"} overflow-x-auto`}
       style={tableStyle}
     >
+      <div className={disableInternalScroll ? "" : "max-h-[600px] overflow-y-auto"} style={freeze ? { overflowY: "hidden" } : {}}>
+        <table className="min-w-full w-full text-sm table-fixed border-collapse">
+          <thead className="bg-gray-50 text-gray-700 sticky top-0 z-10" style={{ backgroundColor: Colors.table.header }}>
+            <tr className="text-center table-row">
+              {columns.map((c) => (
+                <Th key={String(c.key)} width={c.width}>
+                  {c.header}
+                </Th>
+              ))}
+              {showActionsColumn && <Th width={ACTIONS_COL_WIDTH}>Acciones</Th>}
+              {renderTail && <Th className="text-center">{tailHeader ?? "Imprimir"}</Th>}
+            </tr>
+          </thead>
+
+          <tbody className="divide divide-[#E6E6E6]">
+            {Array.from({ length: desktopSkeletonRowsCount }).map((_, rIdx) => (
+              <tr key={`sk-row-${rIdx}`} className="text-center" style={{ height: `${ROW_HEIGHT}px` }}>
+                {columns.map((c) => (
+                  <td key={`sk-${rIdx}-${String(c.key)}`} className="px-2 sm:px-4 py-2 sm:py-3">
+                    <div className="flex justify-center">
+                      <SkeletonText w={c.width ? "80%" : "70%"} />
+                    </div>
+                  </td>
+                ))}
+                {showActionsColumn && (
+                  <td className="px-2 sm:px-4 py-2 sm:py-3 min-w-[230px]">
+                    <div className="flex items-center justify-center gap-2">
+                      <SkeletonBlock className="h-8 w-8 rounded-md" />
+                      <SkeletonBlock className="h-8 w-8 rounded-md" />
+                      <SkeletonBlock className="h-8 w-8 rounded-md" />
+                    </div>
+                  </td>
+                )}
+                {renderTail && (
+                  <td className="px-2 sm:px-4 py-2 sm:py-3">
+                    <div className="flex justify-center">
+                      <SkeletonText w="50%" />
+                    </div>
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
+  const MobileCardsSkeleton = () => (
+    <div className="md:hidden">
+      <div className={`p-3 space-y-3 ${disableInternalScroll ? "" : "max-h-[600px] overflow-y-auto"}`}>
+        {Array.from({ length: 6 }).map((_, idx) => (
+          <div key={`sk-card-${idx}`} className="bg-white rounded-xl shadow-md border border-gray-100 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1 space-y-2">
+                <SkeletonBlock className="h-4 w-[70%]" />
+                <SkeletonBlock className="h-3 w-[55%]" />
+                <SkeletonBlock className="h-3 w-[45%]" />
+              </div>
+              <div className="flex gap-2">
+                <SkeletonBlock className="h-8 w-8 rounded-md" />
+                <SkeletonBlock className="h-8 w-8 rounded-md" />
+              </div>
+            </div>
+
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <SkeletonBlock className="h-3 w-[80%]" />
+              <SkeletonBlock className="h-3 w-[70%]" />
+              <SkeletonBlock className="h-3 w-[75%]" />
+              <SkeletonBlock className="h-3 w-[60%]" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="flex flex-col gap-2 sm:gap-4 px-2 sm:px-0 mt-4 sm:mt-6" style={tableStyle}>
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         {searchableKeys.length > 0 && (
           <div className="flex items-center gap-3 w-full sm:max-w-lg">
@@ -515,116 +570,95 @@ const DataTableComponent = <T extends { [key: string]: any }>(
             {rightActions}
             {onCreate && canCreate(module) && (
               <div className="hidden md:block">
-                <CreateButton
-                  onCreate={onCreate}
-                  createButtonText={createButtonText}
-                />
+                <CreateButton onCreate={onCreate} createButtonText={createButtonText} />
               </div>
             )}
           </div>
         )}
       </div>
 
-      <div
-        className="bg-white rounded-xl shadow-lg overflow-hidden"
-        style={tableStyle}
-      >
-        {mobileCardView && (
-          <div className="md:hidden">
-            <div
-              className={`p-3 space-y-3 ${
-                disableInternalScroll ? "" : "max-h-[600px] overflow-y-auto"
-              }`}
-            >
-              {current.map((row, idx) => (
-                <MobileCard
-                  key={resolveRowKey(row, idx)}
-                  row={row}
-                  columns={columns}
-                  onView={canView(module) ? onView : undefined}
-                  onEdit={canUpdate(module) ? onEdit : undefined}
-                  onDelete={canDelete(module) ? onDelete : undefined}
-                  onCancel={onCancel}
-                  onCheck={onCheck}
-                  actionGuard={actionGuard}
-                  renderActions={renderActions}
-                  renderExtraActions={renderExtraActions}
-                  renderTail={renderTail}
-                  tailHeader={tailHeader}
-                />
-              ))}
-              {current.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
-                  No se encontraron resultados
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        <div
-          className={`${
-            mobileCardView ? "hidden md:block" : "block"
-          } overflow-x-auto`}
-          style={tableStyle}
-        >
-          <div
-            className={disableInternalScroll ? "" : "max-h-[600px] overflow-y-auto"}
-            onScroll={disableInternalScroll ? undefined : handleScroll}
-            style={freeze ? { overflowY: "hidden" } : {}}
-          >
-            <table className="min-w-full w-full text-sm table-fixed border-collapse">
-              <thead
-                className="bg-gray-50 text-gray-700 sticky top-0 z-10"
-                style={{ backgroundColor: Colors.table.header }}
-              >
-                <tr className="text-center table-row">
-                  {columns.map((c) => (
-                    <Th key={String(c.key)} width={c.width}>
-                      {c.header}
-                    </Th>
+      <div className="bg-white rounded-xl shadow-lg overflow-hidden" style={tableStyle}>
+        {/*  LOADING: Skeletons */}
+        {loading ? (
+          <>
+            {mobileCardView && <MobileCardsSkeleton />}
+            <DesktopTableSkeleton />
+          </>
+        ) : (
+          <>
+            {mobileCardView && (
+              <div className="md:hidden">
+                <div className={`p-3 space-y-3 ${disableInternalScroll ? "" : "max-h-[600px] overflow-y-auto"}`}>
+                  {current.map((row, idx) => (
+                    <MobileCard
+                      key={resolveRowKey(row, idx)}
+                      row={row}
+                      columns={columns}
+                      onView={canView(module) ? onView : undefined}
+                      onEdit={canUpdate(module) ? onEdit : undefined}
+                      onDelete={canDelete(module) ? onDelete : undefined}
+                      onCancel={onCancel}
+                      onCheck={onCheck}
+                      actionGuard={actionGuard}
+                      renderActions={renderActions}
+                      renderExtraActions={renderExtraActions}
+                      renderTail={renderTail}
+                      tailHeader={tailHeader}
+                    />
                   ))}
-                  {showActionsColumn && <Th width={ACTIONS_COL_WIDTH}>Acciones</Th>}
-                  {renderTail && (
-                    <Th className="text-center">{tailHeader ?? "Imprimir"}</Th>
+
+                  {current.length === 0 && (
+                    <div className="text-center py-8 text-gray-500">No se encontraron resultados</div>
                   )}
-                </tr>
-              </thead>
-
-              <tbody
-                className="divide divide-[#E6E6E6]"
-                style={
-                  disableInternalScroll
-                    ? undefined
-                    : {
-                        position: "relative",
-                        height: `${current.length * ROW_HEIGHT}px`,
-                      }
-                }
-              >
-                {visibleRows.map((row, index) => (
-                  <Row
-                    key={resolveRowKey(
-                      row,
-                      disableInternalScroll ? index : startIndex + index
-                    )}
-                    row={row}
-                    index={index}
-                  />
-                ))}
-              </tbody>
-            </table>
-
-            {current.length === 0 && (
-              <div className="text-center py-12 text-gray-500">
-                No se encontraron resultados
+                </div>
               </div>
             )}
-          </div>
-        </div>
 
-        {totalPages > 1 && (
-          <Pagination page={page} totalPages={totalPages} goTo={goTo} />
+            <div className={`${mobileCardView ? "hidden md:block" : "block"} overflow-x-auto`} style={tableStyle}>
+              <div
+                className={disableInternalScroll ? "" : "max-h-[600px] overflow-y-auto"}
+                onScroll={disableInternalScroll ? undefined : handleScroll}
+                style={freeze ? { overflowY: "hidden" } : {}}
+              >
+                <table className="min-w-full w-full text-sm table-fixed border-collapse">
+                  <thead className="bg-gray-50 text-gray-700 sticky top-0 z-10" style={{ backgroundColor: Colors.table.header }}>
+                    <tr className="text-center table-row">
+                      {columns.map((c) => (
+                        <Th key={String(c.key)} width={c.width}>
+                          {c.header}
+                        </Th>
+                      ))}
+                      {showActionsColumn && <Th width={ACTIONS_COL_WIDTH}>Acciones</Th>}
+                      {renderTail && <Th className="text-center">{tailHeader ?? "Imprimir"}</Th>}
+                    </tr>
+                  </thead>
+
+                  <tbody
+                    className="divide divide-[#E6E6E6]"
+                    style={
+                      disableInternalScroll
+                        ? undefined
+                        : { position: "relative", height: `${current.length * ROW_HEIGHT}px` }
+                    }
+                  >
+                    {visibleRows.map((row, index) => (
+                      <Row
+                        key={resolveRowKey(row, disableInternalScroll ? index : startIndex + index)}
+                        row={row}
+                        index={index}
+                      />
+                    ))}
+                  </tbody>
+                </table>
+
+                {current.length === 0 && (
+                  <div className="text-center py-12 text-gray-500">No se encontraron resultados</div>
+                )}
+              </div>
+            </div>
+
+            {totalPages > 1 && <Pagination page={page} totalPages={totalPages} goTo={goTo} />}
+          </>
         )}
       </div>
 
@@ -650,7 +684,8 @@ export const DataTable = React.memo(
       prevProps.freeze === nextProps.freeze &&
       prevProps.onCreate === nextProps.onCreate &&
       prevProps.onView === nextProps.onView &&
-      prevProps.onCancel === nextProps.onCancel
+      prevProps.onCancel === nextProps.onCancel &&
+      prevProps.loading === nextProps.loading
     );
   }
 ) as typeof DataTableComponent;

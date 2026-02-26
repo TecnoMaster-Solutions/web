@@ -26,6 +26,8 @@ const getErrorMessage = (error: unknown, fallback: string) => {
   return e?.response?.data?.message ?? e?.message ?? fallback;
 };
 
+const MAX_IMAGES = 6;
+
 export const useProducts = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -84,18 +86,31 @@ export const useProducts = () => {
     }
   }, [refreshProducts]);
 
-  const requireImageUrl = async (image: File | string | null | undefined) => {
-    if (!image) throw new Error("Debe agregar una imagen para el producto.");
-
-    if (typeof image === "string") {
-      const trimmed = image.trim();
-      if (!trimmed) throw new Error("Debe agregar una imagen para el producto.");
+  const normalizeToUrl = async (item: File | string) => {
+    if (typeof item === "string") {
+      const trimmed = item.trim();
+      if (!trimmed) throw new Error("Imagen inválida.");
       return trimmed;
     }
 
-    const url = await uploadImageToCloudinary(image);
-    if (!url?.trim()) throw new Error("No se pudo subir la imagen a Cloudinary.");
+    const url = await uploadImageToCloudinary(item);
+    if (!url?.trim()) throw new Error("No se pudo subir una imagen a Cloudinary.");
     return url.trim();
+  };
+
+  const requireImagesUrls = async (images: Array<File | string> | null | undefined) => {
+    const list = (images ?? []).filter(Boolean);
+
+    if (list.length === 0) throw new Error("Debe agregar al menos una imagen para el producto.");
+    if (list.length > MAX_IMAGES) throw new Error(`Máximo ${MAX_IMAGES} imágenes por producto.`);
+
+    const urls: string[] = [];
+    for (const img of list) {
+      urls.push(await normalizeToUrl(img));
+    }
+
+    // dedupe manteniendo orden + cap
+    return Array.from(new Set(urls)).slice(0, MAX_IMAGES);
   };
 
   const handleCreateProduct = async (payload: CreateProductData) => {
@@ -109,14 +124,14 @@ export const useProducts = () => {
         throw new Error("La categoría del proveedor es obligatoria.");
       if (!payload.code?.trim()) throw new Error("El código es obligatorio.");
 
-      const imageUrl = await requireImageUrl(payload.image);
+      const imagesUrls = await requireImagesUrls(payload.images);
 
       await createProduct({
         productname: payload.name.trim(),
         productdescription: (payload.description ?? "").trim() || null,
         categoryid: payload.categoryId,
         suppliercategory: payload.supplierCategory.trim(),
-        image: imageUrl,
+        images: imagesUrls,
         productcode: payload.code.trim(),
         isactive: true,
       });
@@ -155,15 +170,8 @@ export const useProducts = () => {
         isactive: payload.state === "Activo",
       };
 
-      if (payload.image instanceof File) {
-        body.image = await requireImageUrl(payload.image);
-      } else if (typeof payload.image === "string") {
-        const trimmed = payload.image.trim();
-        if (!trimmed) throw new Error("No se puede guardar un producto sin imagen.");
-        body.image = trimmed;
-      } else if (payload.image === null) {
-        throw new Error("No se puede guardar un producto sin imagen. Debes subir otra.");
-      }
+      const imagesUrls = await requireImagesUrls(payload.images);
+      body.images = imagesUrls;
 
       await updateProduct(id, body);
 

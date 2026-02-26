@@ -1,65 +1,70 @@
 import { ReactNode } from "react";
 
-export interface purchaseOrder {
-  monto?: string;
-  fechaCreacion?: ReactNode;
-  id?: number;
-  numeroOrden: string;
-  proveedor: string;
-  precioUnitario: number;
-  fecha: string;
-  estado: "Pendiente" | "Completada" | "Cancelada" | "En Proceso" | "Anulada";
-  descripcion?: string;
-  cantidad?: number;
-  items?: PurchaseOrderItem[];
-  total?: number;
-}
+/* ============================= */
+/* ITEM DE ORDEN */
+/* ============================= */
 
 export interface PurchaseOrderItem {
-  producto: string; // Identifier for the item/product
+  imagen?: string; // URL o base64 si luego manejas preview
+  producto: string;
   cantidad: number;
   precioUnitario: number;
 }
 
-export interface purchaseOrderBase {
-  numeroOrden: string; // PO Number
+/* ============================= */
+/* MODELO PRINCIPAL (BACKEND) */
+/* ============================= */
+
+export interface purchaseOrder {
+  id: number;
+  numeroOrden: string; // Generado por backend
   proveedor: string;
-  precioUnitario: number; // Keep for backward compat or summary
+  fecha: string;
+  estado: "Pendiente";
+  descripcion?: string;
+  items: PurchaseOrderItem[];
+  total: number;
+
+  // Solo para visualización si luego lo necesitas
+  fechaCreacion?: ReactNode;
+  monto?: string;
+}
+
+/* ============================= */
+/* CREACIÓN */
+/* ============================= */
+
+export interface createPurchaseOrderData {
+  proveedor: string; // Nombre
+  proveedorId: number; // ID para la DB
   fecha: string;
   descripcion?: string;
-  cantidad?: number; // Keep for backward compat or summary
-  items?: PurchaseOrderItem[];
+  items: PurchaseOrderItem[];
 }
 
-export interface createPurchaseOrderData extends purchaseOrderBase {
-  cantidad: number;
-}
-
-export interface editPurchaseOrder extends purchaseOrderBase {
-  id: number;
-  estado: "Pendiente" | "Completada" | "Cancelada" | "En Proceso" | "Anulada";
-  cantidad: number;
-}
+/* ============================= */
+/* ERRORES DE FORMULARIO */
+/* ============================= */
 
 export interface formErrors {
-  numeroOrden: string;
   proveedor: string;
-  precioUnitario: string;
   fecha: string;
   descripcion: string;
-  cantidad: string;
-  estado?: string;
 }
 
+/* ============================= */
+/* TOUCHED DE FORMULARIO */
+/* ============================= */
+
 export interface formTouched {
-  numeroOrden: boolean;
   proveedor: boolean;
-  precioUnitario: boolean;
   fecha: boolean;
   descripcion: boolean;
-  cantidad: boolean;
-  estado?: boolean;
 }
+
+/* ============================= */
+/* PROPS MODAL CREAR */
+/* ============================= */
 
 export interface createPurchaseOrderModalProps {
   isOpen: boolean;
@@ -67,35 +72,34 @@ export interface createPurchaseOrderModalProps {
   onSave: (purchaseOrderData: createPurchaseOrderData) => void;
 }
 
-export interface editPurchaseOrderModalProps {
-  isOpen: boolean;
-  purchaseOrder: editPurchaseOrder | null;
-  onClose: () => void;
-  onSave: (purchaseOrderData: editPurchaseOrder) => void;
-}
+/* ============================= */
+/* PROPS MODAL VER */
+/* ============================= */
 
 export interface viewPurchaseOrderModalProps {
   isOpen: boolean;
   purchaseOrder: purchaseOrder | null;
   onClose: () => void;
-  onSave?: (purchaseOrder: purchaseOrder) => void; // Optional if needed
 }
 
-export interface annulPurchaseOrderModalProps {
-  isOpen: boolean;
-  purchaseOrder: purchaseOrder | null;
-  onClose: () => void;
-  onAnnul: (id: number, reason: string) => void;
-}
+/* ============================= */
+/* PROPS TABLA */
+/* ============================= */
 
 export interface PurchaseOrdersTableProps {
   purchaseOrders: purchaseOrder[];
   onView: (purchaseOrder: purchaseOrder) => void;
-  onEdit: (purchaseOrder: editPurchaseOrder) => void;
-  onAnnul: (purchaseOrder: purchaseOrder) => void;
   onCreate: () => void;
+  rightActions?: ReactNode;
 }
 
-export interface purchaseOrderForTable extends Omit<purchaseOrder, 'id'> {
+/* ============================= */
+/* PARA TABLA */
+/* ============================= */
+
+export interface purchaseOrderForTable
+  extends Omit<purchaseOrder, "id"> {
   id: number;
+  /** Campo auxiliar de texto plano para búsqueda en DataTable */
+  searchQuery?: string;
 }

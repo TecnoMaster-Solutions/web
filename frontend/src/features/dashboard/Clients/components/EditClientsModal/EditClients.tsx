@@ -16,14 +16,15 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
     touched,
     handleInputChange,
     handleBlur,
-    handleSubmit
+    handleSubmit,
   } = useEditClientForm({ isOpen, client, onClose, onSave });
 
-  if (!isOpen || !client) return null;
+  // "formData es posiblemente null"
+  if (!isOpen || !client || !formData) return null;
 
   return createPortal(
     <div className="fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-xl relative">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl relative">
 
         {/* Header */}
         <div className="px-6 pt-6 pb-3 relative">
@@ -37,15 +38,14 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
 
         <div className="border-t border-gray-300 mx-6" />
 
-        {/* Form */}
         <form
           onSubmit={handleSubmit}
           className="px-6 py-6 grid grid-cols-1 sm:grid-cols-2 gap-5"
         >
-          {/* Documento Tipo */}
+          {/* Tipo Documento */}
           <div>
             <label className="block text-sm text-gray-700 mb-1">
-              Documento
+              Tipo Documento
             </label>
             <select
               name="tipo"
@@ -55,14 +55,16 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
               className="w-full px-3 py-2 border rounded-lg text-sm"
               style={{
                 borderColor:
-                  errors.tipo && touched.tipo ? "red" : "#d1d5db",
+                  errors.tipo && touched.tipo
+                    ? "red"
+                    : Colors.table.lines,
               }}
             >
-              <option value="">Seleccione</option>
-              <option value="CC">CC</option>
-              <option value="TI">TI</option>
-              <option value="CE">CE</option>
-              <option value="PPN">PPN</option>
+              <option value={0}>Seleccione</option>
+              <option value={1}>CC</option>
+              <option value={2}>TI</option>
+              <option value={3}>CE</option>
+              <option value={4}>PPN</option>
             </select>
             {errors.tipo && touched.tipo && (
               <span className="text-red-500 text-xs">{errors.tipo}</span>
@@ -81,18 +83,7 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
               onChange={handleInputChange}
               onBlur={handleBlur}
               className="w-full px-3 py-2 border rounded-lg text-sm"
-              style={{
-                borderColor:
-                  errors.documento && touched.documento
-                    ? "red"
-                    : "#d1d5db",
-              }}
             />
-            {errors.documento && touched.documento && (
-              <span className="text-red-500 text-xs">
-                {errors.documento}
-              </span>
-            )}
           </div>
 
           {/* Nombre */}
@@ -107,21 +98,10 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
               onChange={handleInputChange}
               onBlur={handleBlur}
               className="w-full px-3 py-2 border rounded-lg text-sm"
-              style={{
-                borderColor:
-                  errors.nombre && touched.nombre
-                    ? "red"
-                    : "#d1d5db",
-              }}
             />
-            {errors.nombre && touched.nombre && (
-              <span className="text-red-500 text-xs">
-                {errors.nombre}
-              </span>
-            )}
           </div>
 
-          {/* Apellido (usa mismo campo si tu modelo lo maneja unido) */}
+          {/* Apellido */}
           <div>
             <label className="block text-sm text-gray-700 mb-1">
               Apellido
@@ -148,24 +128,13 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
               onChange={handleInputChange}
               onBlur={handleBlur}
               className="w-full px-3 py-2 border rounded-lg text-sm"
-              style={{
-                borderColor:
-                  errors.telefono && touched.telefono
-                    ? "red"
-                    : "#d1d5db",
-              }}
             />
-            {errors.telefono && touched.telefono && (
-              <span className="text-red-500 text-xs">
-                {errors.telefono}
-              </span>
-            )}
           </div>
 
           {/* Correo */}
           <div>
             <label className="block text-sm text-gray-700 mb-1">
-              Correo Electronico
+              Correo Electrónico
             </label>
             <input
               type="email"
@@ -174,24 +143,11 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
               onChange={handleInputChange}
               onBlur={handleBlur}
               className="w-full px-3 py-2 border rounded-lg text-sm"
-              style={{
-                borderColor:
-                  errors.correoElectronico &&
-                  touched.correoElectronico
-                    ? "red"
-                    : "#d1d5db",
-              }}
             />
-            {errors.correoElectronico &&
-              touched.correoElectronico && (
-                <span className="text-red-500 text-xs">
-                  {errors.correoElectronico}
-                </span>
-              )}
           </div>
 
-          {/* Estado - ancho completo */}
-          <div className="col-span-1 sm:col-span-2">
+          {/* Estado */}
+          <div>
             <label className="block text-sm text-gray-700 mb-1">
               Estado
             </label>
@@ -199,11 +155,43 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
               name="estado"
               value={formData.estado}
               onChange={handleInputChange}
+              onBlur={handleBlur}
               className="w-full px-3 py-2 border rounded-lg text-sm"
             >
+              <option value="">Seleccione</option>
               <option value="Activo">Activo</option>
               <option value="Inactivo">Inactivo</option>
             </select>
+          </div>
+
+          {/* Ciudad */}
+          <div>
+            <label className="block text-sm text-gray-700 mb-1">
+              Ciudad
+            </label>
+            <input
+              type="text"
+              name="ciudad"
+              value={formData.ciudad}
+              onChange={handleInputChange}
+              onBlur={handleBlur}
+              className="w-full px-3 py-2 border rounded-lg text-sm"
+            />
+          </div>
+
+          {/* Código Postal */}
+          <div>
+            <label className="block text-sm text-gray-700 mb-1">
+              Código Postal
+            </label>
+            <input
+              type="text"
+              name="codigoPostal"
+              value={formData.codigoPostal}
+              onChange={handleInputChange}
+              onBlur={handleBlur}
+              className="w-full px-3 py-2 border rounded-lg text-sm"
+            />
           </div>
 
           {/* Botones */}

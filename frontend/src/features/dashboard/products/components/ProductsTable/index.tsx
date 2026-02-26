@@ -93,8 +93,10 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
 }) => {
   const productsForTable: ProductForTable[] = useMemo(() => {
     const sortedProducts = [...products].sort(
-      (a, b) => Number(a.id ?? 0) - Number(b.id ?? 0)
+      (a, b) => Number(b.id ?? 0) - Number(a.id ?? 0)
     );
+
+    const total = sortedProducts.length; // <-- ÚNICO EXTRA
 
     return sortedProducts.map((p, index) => {
       const stateSearch: "activo" | "inactivo" = isActiveState(p.state)
@@ -124,7 +126,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
 
       return {
         ...p,
-        rowNumber: index + 1,
+        rowNumber: total - index, // <-- ÚNICO CAMBIO (antes era index + 1)
         stateSearch,
         fullSearch: `${fullSearchText} ${fullSearchNums}`.trim(),
       };
@@ -245,9 +247,9 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
         actionGuard={(row) =>
           isInactiveState(row.state)
             ? {
-                disableDelete: true,
-                deleteTitle: "No se puede eliminar un producto inactivo",
-              }
+              disableDelete: true,
+              deleteTitle: "No se puede eliminar un producto inactivo",
+            }
             : {}
         }
         searchPlaceholder="Buscar productos..."
@@ -259,7 +261,18 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                 id="download-excel-btn"
                 data={xlsxRows as unknown as Record<string, unknown>[]}
                 fileName="reporte_productos.xlsx"
-                headers={["ID", "Nombre", "Categoría", "Cat. proveedor", "Precio venta", "Stock", "Estado"]}
+                headers={[
+                  "ID",
+                  "Nombre",
+                  "Descripción",
+                  "Categoría",
+                  "Cat. proveedor",
+                  "Código",
+                  "Precio proveedor",
+                  "Precio venta",
+                  "Stock",
+                  "Estado",
+                ]}
               />
             </div>
 

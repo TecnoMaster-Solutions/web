@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useCallback, useMemo } from "react";
 import Link from "next/link";
@@ -203,7 +203,6 @@ const AsideNav = ({
           routes.dashboard.suppliers,
           routes.dashboard.purchasesOrders,
           routes.dashboard.purchases,
-          routes.dashboard.purchasesGraph,
         ],
         items: [
           {
@@ -221,12 +220,7 @@ const AsideNav = ({
             label: "Compras",
             module: "purchases" as AuthzModule,
           },
-          {
-            href: routes.dashboard.purchasesGraph,
-            label: "Gráficas compras",
-            module: "purchases" as AuthzModule,
-          },
-        ],
+],
       },
       {
         type: "submenu" as const,

@@ -76,6 +76,26 @@ export const getMonthNumberFromLabel = (value?: string | number | null) => {
   return MONTH_LABEL_TO_NUMBER[normalized] ?? 0;
 };
 
+export const MONTH_LABELS_ES = [
+  "Enero",
+  "Febrero",
+  "Marzo",
+  "Abril",
+  "Mayo",
+  "Junio",
+  "Julio",
+  "Agosto",
+  "Septiembre",
+  "Octubre",
+  "Noviembre",
+  "Diciembre",
+];
+
+export const getMonthLabelFromNumber = (value?: number | null) => {
+  if (!value || value < 1 || value > 12) return "";
+  return MONTH_LABELS_ES[value - 1] ?? "";
+};
+
 export type MonthSelection = {
   label: string;
   value: number;

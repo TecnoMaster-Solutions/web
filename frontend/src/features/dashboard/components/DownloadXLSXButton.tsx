@@ -7,16 +7,16 @@ import ExcelJS from "exceljs";
 interface DownloadXLSXButtonProps<T extends Record<string, unknown>> {
   data: T[];
   fileName?: string;
-  headers?: string[]; // nombres visibles en español
-  excludeKeys?: (keyof T)[]; // claves que no deben mostrarse
-  id?: string; // nuevo para poder disparar desde el botón flotante
+  headers?: string[];
+  excludeKeys?: (keyof T)[];
+  id?: string;
 }
 
 export default function DownloadXLSXButton<T extends Record<string, unknown>>({
   data,
   fileName = "reporte.xlsx",
   headers,
-  excludeKeys = ["image"] as (keyof T)[], // por defecto quitamos imagen
+  excludeKeys = ["image"] as (keyof T)[],
   id,
 }: DownloadXLSXButtonProps<T>) {
   const downloadExcel = async (e: MouseEvent<HTMLButtonElement>) => {
@@ -26,13 +26,19 @@ export default function DownloadXLSXButton<T extends Record<string, unknown>>({
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Reporte");
 
-    const keys = (Object.keys(data[0]) as (keyof T)[]).filter(
-      (k) => !excludeKeys.includes(k)
-    );
+    const firstRow = data[0];
 
-    const headerRow = headers ?? keys.map(String);
+    // Definir orden de columnas
+    const keys: string[] = headers?.length
+      ? headers.filter((h) => h in firstRow && !excludeKeys.includes(h as keyof T))
+      : (Object.keys(firstRow) as string[]).filter(
+          (k) => !excludeKeys.includes(k as keyof T)
+        );
+
+    const headerRow = headers?.length ? headers : keys;
     worksheet.addRow(headerRow);
 
+    // Estilos header
     const headerCell = worksheet.getRow(1);
     headerCell.eachCell((cell) => {
       cell.fill = {
@@ -50,13 +56,35 @@ export default function DownloadXLSXButton<T extends Record<string, unknown>>({
       };
     });
 
+    // Función inteligente de formateo
+    const formatValue = (key: string, value: unknown) => {
+      if (value === null || value === undefined) return "";
+
+      // Solo estos campos llevan $
+      if (key === "Precio proveedor" || key === "Precio venta") {
+        if (typeof value === "number") {
+          return `$${value.toLocaleString("es-CO")}`;
+        }
+        const num = Number(value);
+        return isNaN(num) ? value : `$${num.toLocaleString("es-CO")}`;
+      }
+
+      // Otros números normales
+      if (typeof value === "number") {
+        return value.toLocaleString("es-CO");
+      }
+
+      return String(value);
+    };
+
     data.forEach((row, index) => {
       const rowData = keys.map((k) =>
-        k === "price" ? `$${(row[k] as number).toLocaleString("es-CO")}` : row[k] ?? ""
+        formatValue(k, row[k as keyof T])
       );
 
       const newRow = worksheet.addRow(rowData);
 
+      // Filas alternadas
       if (index % 2 !== 0) {
         newRow.eachCell({ includeEmpty: true }, (cell) => {
           cell.fill = {
@@ -85,6 +113,7 @@ export default function DownloadXLSXButton<T extends Record<string, unknown>>({
     const blob = new Blob([buffer], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
+
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -99,6 +128,7 @@ export default function DownloadXLSXButton<T extends Record<string, unknown>>({
       onClick={downloadExcel}
       className="relative cursor-pointer inline-flex h-9 items-center gap-2 overflow-hidden rounded-md px-4 text-sm font-semibold text-white transition-transform duration-200 hover:scale-105 group"
       style={{ background: Colors.buttons.primary }}
+      type="button"
     >
       <span className="absolute inset-0 bg-red-800 scale-x-0 origin-left transition-transform duration-300 ease-out group-hover:scale-x-100"></span>
 

@@ -60,3 +60,11 @@ export async function getCustomers(): Promise<ICustomer[]> {
 export async function getServices(): Promise<{ data: IService[] }> {
     return apiClient.get<{ data: IService[] }>("/services");
 }
+
+/** Actualizar estado de pago de una venta */
+export async function updateEstadoPago(
+    id: number,
+    estadoPago: 'Abonada' | 'Pagada'
+): Promise<ISale> {
+    return apiClient.patch<ISale>(`/sales/${id}/estado-pago`, { estadoPago });
+}

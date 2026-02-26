@@ -34,8 +34,9 @@ export const MonthlyGraph = ({
 
 
   // Total del mes (para mostrar en el título)
-  const monthData = data.find((m) => m.month === month);
-  const rawTotal = monthData ? monthData.total : 0;
+  const rawTotal = data
+    .filter((item) => getMonthNumberFromLabel(item.month) === resolvedMonthNumber)
+    .reduce((acc, item) => acc + (Number(item.total) || 0), 0);
   const displayTotal = isClientsChart ? Math.max(0, Math.round(rawTotal)) : rawTotal;
 
   // CARGAR DATOS DIARIOS DESDE BACKEND

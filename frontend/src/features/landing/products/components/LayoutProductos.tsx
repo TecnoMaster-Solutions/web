@@ -12,7 +12,6 @@ const LayoutProductos = ({ children }: LayoutProductosProps) => {
     <div className="relative min-h-screen w-full bg-gradient-to-b from-gray-100 to-white">
       <BackgroundWaves baseColor="#374151" />
 
-      {/* Quitamos container y usamos max-w con padding manual */}
       <div className="relative z-10 max-w-7xl mx-auto flex flex-col gap-8 px-4 sm:px-6 lg:px-8 py-10">
         {children}
       </div>

@@ -11,7 +11,7 @@ type ModalProps = {
   onClose: () => void;
   children: React.ReactNode;
   footer?: React.ReactNode;
-  widthClass?: string; // ej: "md:max-w-5xl"
+  widthClass?: string; 
 };
 
 export default function Modal({

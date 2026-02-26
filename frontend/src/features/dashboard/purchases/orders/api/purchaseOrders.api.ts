@@ -2,7 +2,9 @@
 
 import { api } from "@/shared/utils/apiClient";
 
-//   TYPES
+// ==============================
+// TYPES
+// ==============================
 
 export interface PurchaseOrderFromApi {
   id: number;
@@ -23,7 +25,11 @@ export interface PurchaseOrderFromApi {
   fechaAnulacion?: string | null;
   usuarioAnulacion?: string | null;
 
-  productos?: any[] | null;
+  productos?: {
+    producto: string;
+    cantidad: number;
+    precioUnitario: number | string;
+  }[] | null;
 }
 
 export interface PurchaseOrder {
@@ -46,40 +52,93 @@ export interface PurchaseOrder {
   cancelDate?: string | null;
   cancelUser?: string | null;
 
-  products: any[];
+  products: {
+    producto: string;
+    cantidad: number;
+    precioUnitario: number;
+  }[];
 }
 
-// utils
+// ==============================
+// UTILS
+// ==============================
 
 const toNumber = (v: any): number => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
 
-const toUi = (p: PurchaseOrderFromApi): PurchaseOrder => ({
-  id: p.id,
-  orderNumber: p.numeroOrden,
-  supplier: p.proveedor,
+const calculateTotals = (
+  cantidad: number,
+  precioUnitario: number,
+  productos?: {
+    producto: string;
+    cantidad: number;
+    precioUnitario: number;
+  }[]
+) => {
+  let subtotal = 0;
 
-  unitPrice: toNumber(p.precioUnitario),
-  date: p.fecha,
-  state: p.estado,
+  const hasProducts = productos && productos.length > 0;
 
-  description: p.descripcion ?? null,
-  quantity: p.cantidad,
+  if (hasProducts) {
+    subtotal = productos.reduce(
+      (acc, item) => acc + item.cantidad * item.precioUnitario,
+      0
+    );
+  } else {
+    subtotal = cantidad * precioUnitario;
+  }
 
-  subtotal: toNumber(p.subtotal),
-  iva: toNumber(p.iva),
-  total: toNumber(p.total),
+  const iva = subtotal * 0.19;
+  const total = subtotal + iva;
 
-  cancelReason: p.motivoAnulacion ?? null,
-  cancelDate: p.fechaAnulacion ?? null,
-  cancelUser: p.usuarioAnulacion ?? null,
+  return { subtotal, iva, total };
+};
 
-  products: p.productos ?? [],
-});
+const toUi = (p: PurchaseOrderFromApi): PurchaseOrder => {
+  const unitPrice = toNumber(p.precioUnitario);
 
+  const products =
+    p.productos?.map((item) => ({
+      producto: item.producto,
+      cantidad: item.cantidad,
+      precioUnitario: toNumber(item.precioUnitario),
+    })) ?? [];
+
+  const { subtotal, iva, total } = calculateTotals(
+    p.cantidad,
+    unitPrice,
+    products
+  );
+
+  return {
+    id: p.id,
+    orderNumber: p.numeroOrden,
+    supplier: p.proveedor,
+
+    unitPrice,
+    date: p.fecha,
+    state: p.estado,
+
+    description: p.descripcion ?? null,
+    quantity: p.cantidad,
+
+    subtotal,
+    iva,
+    total,
+
+    cancelReason: p.motivoAnulacion ?? null,
+    cancelDate: p.fechaAnulacion ?? null,
+    cancelUser: p.usuarioAnulacion ?? null,
+
+    products,
+  };
+};
+
+// ==============================
 // API METHODS
+// ==============================
 
 const BASE = "/purchase-orders";
 
@@ -106,11 +165,16 @@ export const updatePurchaseOrder = async (
   id: number,
   payload: any
 ): Promise<PurchaseOrder> => {
-  const { data } = await api.patch<PurchaseOrderFromApi>(`${BASE}/${id}`, payload);
+  const { data } = await api.patch<PurchaseOrderFromApi>(
+    `${BASE}/${id}`,
+    payload
+  );
   return toUi(data);
 };
 
-export const deletePurchaseOrder = async (id: number): Promise<boolean> => {
+export const deletePurchaseOrder = async (
+  id: number
+): Promise<boolean> => {
   await api.delete(`${BASE}/${id}`);
   return true;
 };

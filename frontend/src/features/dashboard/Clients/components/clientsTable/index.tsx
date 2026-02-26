@@ -1,4 +1,4 @@
-import { DataTable  } from "@/features/dashboard/components/datatable/DataTable";
+import { DataTable } from "@/features/dashboard/components/datatable/DataTable";
 import { Client } from "../../types/typeClients";
 import Colors from "@/shared/theme/colors";
 import { Column } from "@/features/dashboard/components/datatable/types/column.types";
@@ -18,15 +18,18 @@ export const ClientsTable: React.FC<ClientsTableProps> = ({
   onDelete,
   onCreate,
 }) => {
-  // Definición de columnas para el DataTable
   const columns: Column<Client>[] = [
     { key: "id", header: "Id" },
     { key: "tipo", header: "Tipo" },
     { key: "documento", header: "Documento" },
-    { key: "nombre", header: "Nombre" },
+    {
+      key: "nombre",
+      header: "Nombre completo",
+      render: (client: Client) =>
+        `${client.nombre}${client.apellido ? " " + client.apellido : ""}`,
+    },
     { key: "telefono", header: "Teléfono" },
     { key: "correoElectronico", header: "Correo electrónico" },
-    { key: "rol", header: "Rol" },
     {
       key: "estado",
       header: "Estado",
@@ -34,7 +37,8 @@ export const ClientsTable: React.FC<ClientsTableProps> = ({
         <span
           className="rounded-full px-2 py-0.5 text-xs font-medium"
           style={{
-            backgroundColor: client.estado === "Activo" ? "#e8f5e8" : "#f5e8e8",
+            backgroundColor:
+              client.estado === "Activo" ? "#e8f5e8" : "#f5e8e8",
             color:
               client.estado === "Activo"
                 ? Colors.states.success
@@ -59,7 +63,6 @@ export const ClientsTable: React.FC<ClientsTableProps> = ({
         "nombre",
         "telefono",
         "correoElectronico",
-        "rol",
         "estado",
       ]}
       onView={onView}
@@ -67,7 +70,9 @@ export const ClientsTable: React.FC<ClientsTableProps> = ({
       onDelete={onDelete}
       onCreate={onCreate}
       searchPlaceholder="Buscar clientes..."
-      createButtonText="Crear Cliente" module={""}    />
+      createButtonText="Crear Cliente"
+      module="clients"   // 🔥 AQUÍ ESTABA EL PROBLEMA
+    />
   );
 };
 

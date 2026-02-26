@@ -31,4 +31,5 @@ export type DataTableProps<T> = {
   mobileCardView?: boolean;
   freeze?: boolean;
   disableInternalScroll?: boolean;
+  loading?: boolean;
 };

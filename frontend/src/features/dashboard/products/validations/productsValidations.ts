@@ -6,7 +6,7 @@ export type ProductFormField =
   | "categoryId"
   | "supplierCategory"
   | "code"
-  | "image";
+  | "images";
 
 export type ProductErrors = Partial<Record<ProductFormField, string>>;
 
@@ -15,12 +15,11 @@ export type ProductFormDraft = {
   description?: string | null;
 
   categoryId: number | string;
-
   supplierCategory: string;
 
   code?: string | null;
 
-  image: File | string | null | undefined;
+  images: Array<File | string>;
 };
 
 export const validateProductField = (
@@ -67,10 +66,18 @@ export const validateProductField = (
       return;
     }
 
-    case "image": {
-      if (value instanceof File) return;
-      const v = String(value ?? "").trim();
-      if (!v) return "Debe seleccionar una imagen";
+    case "images": {
+      const arr = Array.isArray(value) ? (value as unknown[]) : [];
+      const normalized = arr
+        .map((x) => {
+          if (x instanceof File) return x;
+          const s = String(x ?? "").trim();
+          return s ? s : null;
+        })
+        .filter(Boolean);
+
+      if (normalized.length === 0) return "Debe seleccionar al menos una imagen";
+      if (normalized.length > 6) return "Máximo 6 imágenes por producto";
       return;
     }
 
@@ -95,12 +102,12 @@ export const validateProductForm = (
     "categoryId",
     "supplierCategory",
     "code",
-    "image",
+    "images",
   ];
 
   for (const field of fields) {
-    const error = validateProductField(field, data[field], products, currentId);
-    if (error) errors[field] = error;
+    const error = validateProductField(field, (data as any)[field], products, currentId);
+    if (error) (errors as any)[field] = error;
   }
 
   return errors;

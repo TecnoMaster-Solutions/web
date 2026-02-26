@@ -63,20 +63,23 @@ export const ServicesTable: React.FC<ServicesTableProps> = ({
   onCreate,
 }) => {
   const sortedServices = useMemo(
-    () => [...services].sort((a, b) => Number(a.id ?? 0) - Number(b.id ?? 0)),
+    () =>
+      [...services].sort(
+        (a, b) => Number(b.id ?? 0) - Number(a.id ?? 0) // DESC
+      ),
     [services]
   );
 
-  const rows: ServiceRow[] = useMemo(
-    () =>
-      sortedServices.map((s, index) => ({
-        ...s,
-        rowNumber: index + 1,
-        searchText: buildSearchText(s),
-        stateSearch: toStateSearch(s.state),
-      })),
-    [sortedServices]
-  );
+  const rows: ServiceRow[] = useMemo(() => {
+    const total = sortedServices.length;
+
+    return sortedServices.map((s, index) => ({
+      ...s,
+      rowNumber: total - index,
+      searchText: buildSearchText(s),
+      stateSearch: toStateSearch(s.state),
+    }));
+  }, [sortedServices]);
 
   const columns: Column<ServiceRow>[] = [
     { key: "rowNumber", header: "#" },

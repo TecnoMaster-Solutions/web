@@ -1,342 +1,427 @@
-import { useState, useEffect } from "react";
-import { Client, CreateClientData, EditClientData, FormErrors, FormTouched, EditClientModalProps, CreateClientModalProps } from "../types/typeClients";
-import { initialClients } from "../mocks/mockClients";
-import { showSuccess } from "@/shared/utils/notifications";
-import { validateFormWithNotification } from "../validations/clientsValidations";
-import { confirmDelete } from "@/shared/utils/Delete/confirmDelete";
+"use client";
 
-export const useClients = () => {
-  const [clients, setClients] = useState<Client[]>(initialClients);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [editingClient, setEditingClient] = useState<EditClientData | null>(null);
-  const [viewingClient, setViewingClient] = useState<Client | null>(null);
+import { useEffect, useRef, useState } from "react";
+import {
+  getClients,
+  createClient,
+  updateClient,
+  deleteClient,
+  CreateClientPayload,
+  UpdateClientPayload,
+} from "../api/clients.api";
 
-  const handleCreateClient = (clientData: CreateClientData) => {
-    const newClient: Client = {
-      id: Math.max(...clients.map(c => c.id)) + 1,
-      tipo: clientData.tipo,
-      documento: clientData.documento,
-      nombre: clientData.nombre,
-      telefono: clientData.telefono,
-      correoElectronico: clientData.correoElectronico,
-      rol: clientData.rol,
-      estado: clientData.estado || "Activo",
-      apellido: clientData.apellido || ""
+import {
+  Client,
+  CreateClientData,
+  EditClientData,
+  ClientFormErrors,
+  ClientFormTouched,
+} from "../types/typeClients";
+
+import { showSuccess, showError } from "@/shared/utils/notifications";
+
+const MIN_LOADER_MS = 450;
+
+// ── Mapa de estados
+const stateMap: Record<string, number> = {
+  Activo: 1,
+  Inactivo: 2,
+};
+
+// ── Validaciones exhaustivas ─────────────────────────────────────────────────
+
+const ONLY_LETTERS = /^[A-Za-záéíóúÁÉÍÓÚñÑ\s'-]+$/;
+const ONLY_NUMBERS = /^\d+$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export function validateClientData(
+  data: CreateClientData | EditClientData
+): ClientFormErrors {
+  const errors: ClientFormErrors = {};
+
+  if (!data.tipo || data.tipo === 0) {
+    errors.tipo = "Seleccione tipo de documento";
+  }
+
+  if (!data.documento?.trim()) {
+    errors.documento = "Documento obligatorio";
+  } else if (!ONLY_NUMBERS.test(data.documento.trim())) {
+    errors.documento = "El documento solo puede contener números";
+  } else if (data.documento.trim().length < 5) {
+    errors.documento = "El documento debe tener al menos 5 dígitos";
+  }
+
+  if (!data.nombre?.trim()) {
+    errors.nombre = "Nombre obligatorio";
+  } else if (!ONLY_LETTERS.test(data.nombre.trim())) {
+    errors.nombre = "El nombre solo puede contener letras";
+  }
+
+  if (!data.apellido?.trim()) {
+    errors.apellido = "Apellido obligatorio";
+  } else if (!ONLY_LETTERS.test(data.apellido.trim())) {
+    errors.apellido = "El apellido solo puede contener letras";
+  }
+
+  if (!data.telefono?.trim()) {
+    errors.telefono = "Teléfono obligatorio";
+  } else if (!ONLY_NUMBERS.test(data.telefono.trim())) {
+    errors.telefono = "El teléfono solo puede contener números";
+  } else if (data.telefono.trim().length < 7) {
+    errors.telefono = "El teléfono debe tener al menos 7 dígitos";
+  }
+
+  if (!data.correoElectronico?.trim()) {
+    errors.correoElectronico = "Correo obligatorio";
+  } else if (!EMAIL_RE.test(data.correoElectronico.trim())) {
+    errors.correoElectronico = "Formato de correo inválido";
+  }
+
+  if (!data.ciudad?.trim()) {
+    errors.ciudad = "Ciudad obligatoria";
+  } else if (!ONLY_LETTERS.test(data.ciudad.trim())) {
+    errors.ciudad = "La ciudad solo puede contener letras";
+  }
+
+  if (!data.codigoPostal?.trim()) {
+    errors.codigoPostal = "Código postal obligatorio";
+  } else if (!ONLY_NUMBERS.test(data.codigoPostal.trim())) {
+    errors.codigoPostal = "El código postal solo puede contener números";
+  }
+
+  return errors;
+}
+
+// =====================================================
+// MAIN HOOK
+// =====================================================
+
+export function useClients() {
+  const [clients, setClients] = useState<Client[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const busyRef = useRef(false);
+  const startRef = useRef(0);
+
+  const startLoading = () => {
+    busyRef.current = true;
+    startRef.current = Date.now();
+    setLoading(true);
+  };
+
+  const stopLoading = () => {
+    const elapsed = Date.now() - startRef.current;
+    const remaining = MIN_LOADER_MS - elapsed;
+
+    if (remaining > 0) {
+      setTimeout(() => {
+        busyRef.current = false;
+        setLoading(false);
+      }, remaining);
+    } else {
+      busyRef.current = false;
+      setLoading(false);
+    }
+  };
+
+  const withLoading = async (fn: () => Promise<void>) => {
+    if (busyRef.current) return;
+    startLoading();
+    try {
+      await fn();
+    } catch (error: any) {
+      console.error("Hook Error:", error);
+      const msg = error.response?.data?.message || "Ocurrió un error inesperado.";
+      showError(Array.isArray(msg) ? msg[0] : msg);
+      throw error; // Re-lanzar para que el flujo externo sepa que falló
+    } finally {
+      stopLoading();
+    }
+  };
+
+  const loadClients = async () => {
+    const data = await getClients();
+    // Mapear tipoId desde el ClientUI (ya incluido en clients.api.ts)
+    const mapped: Client[] = data.map((c) => ({
+      ...c,
+      tipoId: (c as Client & { tipoId?: number }).tipoId ?? 0,
+    }));
+    setClients(mapped);
+  };
+
+  useEffect(() => {
+    withLoading(loadClients);
+  }, []);
+
+  // ── CREATE CLIENT ──────────────────────────────────────────────────────────
+  const handleCreateClient = async (form: CreateClientData) => {
+    const payload: CreateClientPayload = {
+      name: form.nombre.trim(),
+      lastname: form.apellido.trim(),
+      email: form.correoElectronico.trim(),
+      documentnumber: form.documento.trim(),
+      phone: form.telefono.replace(/\D/g, ""), // ← solo dígitos para evitar 400 por regex
+      typeid: Number(form.tipo),
+      customercity: form.ciudad.trim(),
+      customerzipcode: form.codigoPostal.trim(),
+      image: "", // imagen vacía por defecto (campo requerido por backend)
     };
 
-    setClients(prev => [...prev, newClient]);
-    setIsCreateModalOpen(false);
+    await withLoading(async () => {
+      await createClient(payload);
+      showSuccess("Cliente creado exitosamente.");
+    });
 
-    showSuccess('Cliente creado exitosamente!');
+    await loadClients();
   };
 
-  const handleEditClient = (id: number, clientData: EditClientData) => {
-    setClients(prev =>
-      prev.map(client =>
-        client.id === id
-          ? { ...client, ...clientData }
-          : client
-      )
-    );
-    setEditingClient(null);
+  // ── EDIT CLIENT ────────────────────────────────────────────────────────────
+  const handleEditClient = async (form: EditClientData) => {
+    const payload: UpdateClientPayload = {
+      name: form.nombre.trim(),
+      lastname: form.apellido.trim(),
+      email: form.correoElectronico.trim(),
+      documentnumber: form.documento.trim(),
+      phone: form.telefono.trim(),
+      typeid: Number(form.tipo),
+      stateid: stateMap[form.estado] ?? 1,
+      customercity: form.ciudad.trim(),
+      customerzipcode: form.codigoPostal.trim(),
+    };
 
-    showSuccess('Cliente actualizado exitosamente!');
+    await withLoading(async () => {
+      await updateClient(form.id, payload);
+      showSuccess("Cliente actualizado correctamente.");
+    });
+
+    await loadClients();
   };
 
-  const handleDeleteClient = async (client: Client): Promise<boolean> => {
-    return confirmDelete(
-      {
-        itemName: client.nombre,
-        itemType: 'cliente',
-        successMessage: `El cliente "${client.nombre}" ha sido eliminado correctamente.`,
-        errorMessage: 'No se pudo eliminar el cliente. Por favor, intenta nuevamente.',
-      },
-      () => {
-        setClients(prev => prev.filter(c => c.id !== client.id));
+  // ── DELETE CLIENT ──────────────────────────────────────────────────────────
+  const handleDeleteClient = async (id: number) => {
+    let deleted = false;
+
+    await withLoading(async () => {
+      try {
+        await deleteClient(id);
+        deleted = true;
+        showSuccess("Cliente eliminado correctamente.");
+      } catch (err: unknown) {
+        // Extraer detalles del error de Axios
+        const axiosErr = err as {
+          response?: { status?: number; data?: { message?: string | string[] } };
+        };
+        const status = axiosErr?.response?.status;
+        const rawMsg = axiosErr?.response?.data?.message;
+        const message = Array.isArray(rawMsg) ? rawMsg[0] : rawMsg;
+
+        if (status === 409) {
+          showError(
+            message ||
+            "No se puede eliminar el cliente porque tiene ventas activas."
+          );
+        } else if (status === 404) {
+          showError("El cliente no fue encontrado.");
+        } else {
+          showError("Error al eliminar el cliente.");
+        }
+        // NO re-lanzamos → withLoading termina limpiamente sin propagar
       }
-    );
-  };
+    });
 
-  const handleView = (client: Client) => {
-    setViewingClient(client);
-  };
-
-  const handleEdit = (client: EditClientData) => {
-    setEditingClient(client);
-  };
-
-  const handleDelete = async (client: Client) => {
-    await handleDeleteClient(client);
-  };
-
-  const closeModals = () => {
-    setEditingClient(null);
-    setViewingClient(null);
-    setIsCreateModalOpen(false);
+    // Solo recargar si realmente se borró
+    if (deleted) {
+      await loadClients();
+    }
   };
 
   return {
     clients,
-    isCreateModalOpen,
-    setIsCreateModalOpen,
-    editingClient,
-    viewingClient,
+    loading,
     handleCreateClient,
     handleEditClient,
     handleDeleteClient,
-    handleView,
-    handleEdit,
-    handleDelete,
-    closeModals,
-    setEditingClient,
-    setViewingClient
   };
-};
+}
 
-// Hook para el formulario de creación
-export const useCreateClientForm = ({
+// =====================================================
+// CREATE CLIENT FORM HOOK
+// =====================================================
+
+interface UseCreateClientFormProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (data: CreateClientData) => Promise<void>;
+}
+
+export function useCreateClientForm({
   isOpen,
   onClose,
   onSave,
-}: CreateClientModalProps) => {
-  const [formData, setFormData] = useState<CreateClientData>({
-    tipo: '',
-    documento: '',
-    nombre: '',
-    apellido: '',
-    telefono: '',
-    correoElectronico: '',
-    rol: 'Cliente',
-    estado: 'Activo'
-  });
+}: UseCreateClientFormProps) {
+  const initialState: CreateClientData = {
+    tipo: 0,
+    documento: "",
+    nombre: "",
+    apellido: "",
+    telefono: "",
+    correoElectronico: "",
+    ciudad: "",
+    codigoPostal: "",
+    estado: "",
+  };
 
-  const [errors, setErrors] = useState<FormErrors>({
-    tipo: '',
-    documento: '',
-    nombre: '',
-    apellido: '',
-    telefono: '',
-    correoElectronico: '',
-    rol: ''
-  });
-
-  const [touched, setTouched] = useState<FormTouched>({
-    tipo: false,
-    documento: false,
-    nombre: false,
-    apellido: false,
-    telefono: false,
-    correoElectronico: false,
-    rol: false
-  });
+  const [formData, setFormData] = useState<CreateClientData>(initialState);
+  const [errors, setErrors] = useState<ClientFormErrors>({});
+  const [touched, setTouched] = useState<ClientFormTouched>({});
 
   useEffect(() => {
     if (isOpen) {
-      setFormData({
-        tipo: '',
-        documento: '',
-        nombre: '',
-        apellido: '',
-        telefono: '',
-        correoElectronico: '',
-        rol: 'Cliente',
-        estado: 'Activo'
-      });
-      setErrors({
-        tipo: '',
-        documento: '',
-        nombre: '',
-        apellido: '',
-        telefono: '',
-        correoElectronico: '',
-        rol: ''
-      });
-      setTouched({
-        tipo: false,
-        documento: false,
-        nombre: false,
-        apellido: false,
-        telefono: false,
-        correoElectronico: false,
-        rol: false
-      });
+      setFormData(initialState);
+      setErrors({});
+      setTouched({});
     }
   }, [isOpen]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target;
-
-    // Validaciones específicas por campo
-    if (name === 'nombre') {
-      if (hasSpecialChars(value) || hasNumbers(value)) return;
-    }
-
-    if (name === 'documento' || name === 'telefono') {
-      if (!/^\d*$/.test(value)) return; // Solo números
-    }
-
-    setFormData(prev => ({ ...prev, [name]: value }));
-    setTouched(prev => ({ ...prev, [name]: true }));
+    setFormData((prev) => ({
+      ...prev,
+      [name]: name === "tipo" ? Number(value) : value,
+    }));
   };
 
-  const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleBlur = (
+    e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { name } = e.target;
     setTouched((prev) => ({ ...prev, [name]: true }));
+    // Validar solo ese campo al terminar de llenar
+    const allErrors = validateClientData(formData);
+    setErrors((prev) => ({ ...prev, [name]: allErrors[name as keyof ClientFormErrors] ?? "" }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const validationErrors = validateClientData(formData);
+    setErrors(validationErrors);
 
-    // Usar la nueva función de validación con notificaciones
-    const isValid = validateFormWithNotification(formData, setErrors, setTouched);
+    // Marcar todos como tocados para mostrar errores
+    const allTouched: ClientFormTouched = {};
+    (Object.keys(formData) as Array<keyof CreateClientData>).forEach(
+      (k) => (allTouched[k] = true)
+    );
+    setTouched(allTouched);
 
-    if (isValid) {
-      onSave(formData);
-      setTimeout(() => {
-        onClose();
-      }, 1000);
-    }
+    if (Object.keys(validationErrors).length > 0) return;
+
+    await onSave(formData);
+    onClose();
   };
 
   return {
     formData,
+    setFormData,
     errors,
     touched,
     handleInputChange,
     handleBlur,
-    handleSubmit
+    handleSubmit,
   };
-};
+}
 
-// Hook para el formulario de Editar 
-export const useEditClientForm = ({
+// =====================================================
+// EDIT CLIENT FORM HOOK
+// =====================================================
+
+interface UseEditClientFormProps {
+  isOpen: boolean;
+  client: Client | null;
+  onClose: () => void;
+  onSave: (data: EditClientData) => Promise<void>;
+}
+
+export function useEditClientForm({
   isOpen,
   client,
   onClose,
   onSave,
-}: EditClientModalProps) => {
-  const [formData, setFormData] = useState<EditClientData>({
-    id: 0,
-    tipo: '',
-    documento: '',
-    nombre: '',
-    apellido: '',
-    telefono: '',
-    correoElectronico: '',
-    rol: 'Cliente',
-    estado: 'Activo'
-  });
-
-  const [errors, setErrors] = useState<FormErrors>({
-    tipo: '',
-    documento: '',
-    nombre: '',
-    apellido: '',
-    telefono: '',
-    correoElectronico: '',
-    rol: ''
-  });
-
-  const [touched, setTouched] = useState<FormTouched>({
-    tipo: false,
-    documento: false,
-    nombre: false,
-    apellido: false,
-    telefono: false,
-    correoElectronico: false,
-    rol: false
-  });
+}: UseEditClientFormProps) {
+  const [formData, setFormData] = useState<EditClientData | null>(null);
+  const [errors, setErrors] = useState<ClientFormErrors>({});
+  const [touched, setTouched] = useState<ClientFormTouched>({});
 
   useEffect(() => {
     if (isOpen && client) {
       setFormData({
         id: client.id,
-        tipo: client.tipo,
-        documento: client.documento,
         nombre: client.nombre,
         apellido: client.apellido,
+        // Usar tipoId (número) para que el select quede preseleccionado
+        tipo: client.tipoId || 0,
+        documento: client.documento,
         telefono: client.telefono,
         correoElectronico: client.correoElectronico,
-        rol: client.rol,
-        estado: client.estado
+        estado: client.estado,
+        ciudad: client.ciudad,
+        codigoPostal: client.codigoPostal,
       });
-      setErrors({
-        tipo: '',
-        documento: '',
-        nombre: '',
-        apellido: '',
-        telefono: '',
-        correoElectronico: '',
-        rol: ''
-      });
-      setTouched({
-        tipo: false,
-        documento: false,
-        nombre: false,
-        apellido: false,
-        telefono: false,
-        correoElectronico: false,
-        rol: false
-      });
+
+      setErrors({});
+      setTouched({});
     }
   }, [isOpen, client]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    if (!formData) return;
     const { name, value } = e.target;
-
-    // Validaciones específicas por campo
-    if (name === 'nombre') {
-      if (hasSpecialChars(value) || hasNumbers(value)) return;
-    }
-
-    if (name === 'documento' || name === 'telefono') {
-      if (!/^\d*$/.test(value)) return; // Solo números
-    }
-
-    setFormData(prev => ({ ...prev, [name]: value }));
-    setTouched(prev => ({ ...prev, [name]: true }));
-
-    // Validación en tiempo real con notificaciones
-
+    setFormData({
+      ...formData,
+      [name]: name === "tipo" ? Number(value) : value,
+    });
   };
 
-  const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleBlur = (
+    e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { name } = e.target;
-    setTouched(prev => ({ ...prev, [name]: true }));
+    setTouched((prev) => ({ ...prev, [name]: true }));
+    if (formData) {
+      const allErrors = validateClientData(formData);
+      setErrors((prev) => ({ ...prev, [name]: allErrors[name as keyof ClientFormErrors] ?? "" }));
+    }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData) return;
 
-    // Usar la nueva función de validación con notificaciones
-    const isValid = validateFormWithNotification(formData, setErrors, setTouched);
+    const validationErrors = validateClientData(formData);
+    setErrors(validationErrors);
 
-    if (isValid) {
-      onSave(formData);
-      setTimeout(() => {
-        onClose();
-      }, 1000);
-    }
+    const allTouched: ClientFormTouched = {};
+    (Object.keys(formData) as Array<keyof EditClientData>).forEach(
+      (k) => (allTouched[k as keyof ClientFormTouched] = true)
+    );
+    setTouched(allTouched);
+
+    if (Object.keys(validationErrors).length > 0) return;
+
+    await onSave(formData);
+    onClose();
   };
 
   return {
     formData,
+    setFormData,
     errors,
     touched,
     handleInputChange,
     handleBlur,
-    handleSubmit
+    handleSubmit,
   };
-};
-
-function hasSpecialChars(value: string): boolean {
-  // Devuelve true si hay caracteres que no sean letras, números o espacios
-  // Ajusta la regex según los caracteres que consideres "especiales"
-  return /[^A-Za-zÀ-ÿ0-9\s]/.test(value);
-}
-
-
-function hasNumbers(value: string): boolean {
-  // Devuelve true si contiene al menos un dígito
-  return /\d/.test(value);
 }

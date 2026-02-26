@@ -2,10 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Modal from "@/features/dashboard/components/Modal";
-import { ISale, ISaleDetail } from "../types/sales.types";
+import { ISale, ISaleDetail } from "../types/Sales.type";
 import { getSaleById } from "../services/sales.service";
-import { Loader } from "@/shared/components/loader";
-import Colors from "@/shared/theme/colors";
 
 interface SaleDetailModalProps {
     saleId: number | null;
@@ -52,18 +50,33 @@ export default function SaleDetailModal({ saleId, onClose }: SaleDetailModalProp
         <Modal
             isOpen={!!saleId}
             onClose={onClose}
-            title={`Detalle de Venta #${sale?.salecode || "..."}`}
+            title={undefined}
+            hideHeader={true}
             widthClass="max-w-4xl"
         >
-            {loading ? (
-                <div className="flex justify-center p-8">
-                    <Loader />
-                </div>
-            ) : error ? (
+            {error ? (
                 <div className="text-red-500 p-4 text-center">{error}</div>
             ) : sale ? (
                 <div className="space-y-6">
-                    {/* Header Info */}
+                    {/* Nuevo Header visual: icono + título + subtítulo debajo */}
+                    <div className="flex items-start justify-between">
+                        <div className="flex items-start gap-4">
+                            <div className="w-10 h-10 rounded bg-gray-100 flex items-center justify-center">
+                                {/* Icono simple */}
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-700">
+                                    <rect x="3" y="7" width="18" height="13" rx="2" ry="2"></rect>
+                                    <path d="M16 3v4"></path>
+                                    <path d="M8 3v4"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <h2 className="text-lg font-bold text-gray-800">Detalle de Venta</h2>
+                            </div>
+                        </div>
+                        
+                    </div>
+
+                    {/* Header Info (dos columnas) */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                         <div className="bg-gray-50 p-4 rounded-lg">
                             <h4 className="font-bold text-gray-700 mb-2">Información del Cliente</h4>
@@ -79,6 +92,10 @@ export default function SaleDetailModal({ saleId, onClose }: SaleDetailModalProp
                         </div>
                         <div className="bg-gray-50 p-4 rounded-lg">
                             <h4 className="font-bold text-gray-700 mb-2">Datos de la Venta</h4>
+                            <p>
+                                <span className="font-medium">Número Venta:</span>{" "}
+                                {sale.salecode || '-'}
+                            </p>
                             <p>
                                 <span className="font-medium">Fecha:</span> {formatDate(sale.saledate)}
                             </p>
@@ -100,17 +117,20 @@ export default function SaleDetailModal({ saleId, onClose }: SaleDetailModalProp
                             <p>
                                 <span className="font-medium">Creado por:</span> {sale.createdby || "Sistema"}
                             </p>
-                            {sale.notes && (
-                                <p className="mt-2 text-gray-600 italic">
-                                    " {sale.notes} "
-                                </p>
-                            )}
+                        
                         </div>
                     </div>
 
                     {/* Detalles Table */}
                     <div>
-                        <h4 className="font-bold text-gray-700 mb-2">Productos / Servicios</h4>
+                        <div className="flex items-center gap-2 mb-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-700">
+                                <rect x="3" y="7" width="18" height="13" rx="2" ry="2"></rect>
+                                <path d="M16 3v4"></path>
+                                <path d="M8 3v4"></path>
+                            </svg>
+                            <h4 className="font-bold text-gray-700">Productos / Servicios</h4>
+                        </div>
                         <div className="border rounded-lg overflow-hidden">
                             <table className="w-full text-sm text-left">
                                 <thead className="bg-gray-100 text-gray-600">
@@ -123,7 +143,7 @@ export default function SaleDetailModal({ saleId, onClose }: SaleDetailModalProp
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
-                                    {sale.salesdetail?.map((detail) => (
+                                    {sale.salesdetail?.map((detail: ISaleDetail) => (
                                         <tr key={detail.saledetailid} className="hover:bg-gray-50">
                                             <td className="p-3">
                                                 <div className="font-medium">
@@ -178,6 +198,16 @@ export default function SaleDetailModal({ saleId, onClose }: SaleDetailModalProp
                             </div>
                         </div>
                     </div>
+
+                    {/* Observaciones */}
+                    {sale.notes && (
+                        <div className="bg-gray-50 p-4 rounded-lg">
+                            <h4 className="font-bold text-gray-700 mb-2">Observaciones</h4>
+                            <p className="text-gray-600 italic">
+                                " {sale.notes} "
+                            </p>
+                        </div>
+                    )}
 
                     <div className="flex justify-end">
                         <button

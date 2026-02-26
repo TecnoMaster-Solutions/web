@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef, JSX } from "react";
 import { motion } from "framer-motion";
 
-// Íconos por defecto si el backend no trae icono
 import { Monitor, Camera, HardDrive, Cpu, Router } from "lucide-react";
 import { getCategories } from "@/features/dashboard/categoryProducts/connection/categoryApi";
 
@@ -18,7 +17,6 @@ const iconMap: Record<string, JSX.Element> = {
 interface Category {
   id: number;
   name: string;
-  description: string;
   icon: string | null;
   status: boolean;
 }
@@ -35,18 +33,15 @@ const CategoryCarousel: React.FC = () => {
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const [slideWidth, setSlideWidth] = useState<number>(0);
 
-  // Cargar categorías desde backend
   useEffect(() => {
     const load = async () => {
       try {
         const data = await getCategories();
         if (Array.isArray(data)) {
-          // SOLO CATEGORÍAS ACTIVAS
           const active = data.filter((c) => c.status === true);
 
           setCategories(active);
 
-          // Extender lista para efecto infinito
           setExtended([
             ...active.slice(-buffer),
             ...active,
@@ -63,7 +58,6 @@ const CategoryCarousel: React.FC = () => {
     load();
   }, []);
 
-  // Medir ancho dinámico
   useEffect(() => {
     const measure = () => {
       if (!viewportRef.current) return;
@@ -85,7 +79,6 @@ const CategoryCarousel: React.FC = () => {
     setIndex((prev) => prev - 1);
   };
 
-  // Carrusel infinito
   useEffect(() => {
     if (extended.length === 0) return;
 
@@ -113,15 +106,18 @@ const CategoryCarousel: React.FC = () => {
 
   const translateX = -index * slideWidth;
 
-  return (
-    <section className="relative w-full py-10">
-      <div className="max-w-7xl mx-auto px-6 lg:px-8">
-        <h2 className="text-center text-3xl md:text-4xl font-extrabold text-[#B20000] mb-8">
+return (
+  <section className="relative w-full">
+    <div className="-mx-4 sm:-mx-6 lg:-mx-8">
+      <div className="px-4 sm:px-6 lg:px-8">
+        <h2 className="text-center text-3xl md:text-4xl font-extrabold text-[#B20000] mb-10 tracking-tight">
           Categorías de Productos
         </h2>
+      </div>
 
-        <div className="relative">
-          <div ref={viewportRef} className="overflow-hidden px-6">
+      <div className="relative px-4 sm:px-6 lg:px-8">
+        <div className="relative px-16 pb-8">
+          <div ref={viewportRef} className="overflow-hidden">
             <motion.div
               className="flex items-stretch"
               animate={{ x: translateX }}
@@ -130,9 +126,7 @@ const CategoryCarousel: React.FC = () => {
                   ? { duration: ANIMATION_MS / 1000, ease: "easeInOut" }
                   : { duration: 0 }
               }
-              style={{
-                width: `${extended.length * slideWidth}px`,
-              }}
+              style={{ width: `${extended.length * slideWidth}px` }}
             >
               {extended.map((cat, idx) => (
                 <div
@@ -140,55 +134,114 @@ const CategoryCarousel: React.FC = () => {
                   className="flex-shrink-0"
                   style={{ width: `${slideWidth}px` }}
                 >
-                  <div className="bg-white rounded-2xl shadow-lg p-6 flex flex-col items-center text-center gap-4 min-h-[220px] mx-2">
-                    <div className="bg-gray-100 rounded-full p-4 flex items-center justify-center shadow-inner w-14 h-14">
-                      {cat.icon && cat.icon.startsWith("http")
-                        ? (
+                  <div className="px-3 py-2 h-full">
+                    <div
+                      className={[
+                        "bg-white rounded-2xl",
+                        "border border-gray-100",
+                        "shadow-[0_6px_18px_rgba(0,0,0,0.06)]",
+                        "transition-all duration-300 ease-out",
+                        "hover:-translate-y-1 hover:shadow-[0_14px_28px_rgba(0,0,0,0.10)]",
+                        "hover:border-[#B20000]/30",
+                        "p-6 flex flex-col items-center text-center gap-5",
+                        "min-h-[180px]",
+                        "group",
+                      ].join(" ")}
+                    >
+                      <div
+                        className={[
+                          "bg-white rounded-full",
+                          "border-2 border-[#B20000]",
+                          "w-16 h-16 p-4",
+                          "flex items-center justify-center",
+                          "shadow-sm",
+                          "ring-1 ring-[#B20000]/10",
+                          "transition-transform duration-300",
+                          "group-hover:scale-[1.03]",
+                        ].join(" ")}
+                      >
+                        {cat.icon && cat.icon.startsWith("http") ? (
                           <img
                             src={cat.icon}
                             alt={cat.name}
-                            className="w-12 h-12 object-contain"
+                            className="w-10 h-10 object-contain"
                           />
-                        )
-                        : (
+                        ) : (
                           iconMap[cat.icon || "monitor"] || iconMap["monitor"]
-                        )
-                      }
+                        )}
+                      </div>
+
+                      <h3 className="text-lg md:text-xl font-semibold text-gray-800 leading-tight">
+                        {cat.name}
+                      </h3>
+
                     </div>
-                    <h3 className="text-lg md:text-xl font-semibold text-gray-800">
-                      {cat.name}
-                    </h3>
-                    <p className="text-gray-600 text-sm md:text-base leading-relaxed">
-                      {cat.description}
-                    </p>
                   </div>
                 </div>
               ))}
             </motion.div>
           </div>
 
-          {/* botones */}
           <button
             onClick={handlePrev}
-            className="absolute left-2 top-1/2 -translate-y-1/2 z-20 p-3 bg-white rounded-full shadow-lg hover:scale-110 transition-transform"
+            className={[
+              "absolute left-4 top-1/2 -translate-y-1/2 z-20",
+              "w-11 h-11 flex items-center justify-center",
+              "bg-white rounded-full",
+              "shadow-md border border-gray-100",
+              "transition-all duration-200",
+              "hover:shadow-lg hover:scale-110",
+              "focus:outline-none focus:ring-2 focus:ring-[#B20000]/30 focus:ring-offset-2",
+            ].join(" ")}
+            aria-label="Anterior"
           >
-            <svg className="w-6 h-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+            <svg
+              className="w-6 h-6 text-gray-800"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M15 19l-7-7 7-7"
+              />
             </svg>
           </button>
 
           <button
             onClick={handleNext}
-            className="absolute right-2 top-1/2 -translate-y-1/2 z-20 p-3 bg-white rounded-full shadow-lg hover:scale-110 transition-transform"
+            className={[
+              "absolute right-4 top-1/2 -translate-y-1/2 z-20",
+              "w-11 h-11 flex items-center justify-center",
+              "bg-white rounded-full",
+              "shadow-md border border-gray-100",
+              "transition-all duration-200",
+              "hover:shadow-lg hover:scale-110",
+              "focus:outline-none focus:ring-2 focus:ring-[#B20000]/30 focus:ring-offset-2",
+            ].join(" ")}
+            aria-label="Siguiente"
           >
-            <svg className="w-6 h-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+            <svg
+              className="w-6 h-6 text-gray-800"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M9 5l7 7-7 7"
+              />
             </svg>
           </button>
         </div>
       </div>
-    </section>
-  );
+    </div>
+  </section>
+);
 };
 
 export default CategoryCarousel;

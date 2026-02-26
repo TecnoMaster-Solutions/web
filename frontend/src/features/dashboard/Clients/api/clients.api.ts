@@ -1,131 +1,121 @@
 "use client";
 
 import { api } from "@/shared/utils/apiClient";
-import type { Client } from "../types/typeClients";
 
-// TIPOS DEL BACKEND (API)
+// ================================
+// TYPES FROM BACKEND
+// ================================
 
-export type StatusQuery = "active" | "inactive" | "all";
-
-export type ClientFromApi = {
-  id: number;
-
-  tipo: string;            // CC, TI, PPT...
-  documento: string;
-  nombre: string;
-  apellido: string | null;
-
-  telefono: string;
-  correo: string;
-
-  rol: "Cliente" | "Administrador" | "Empleado";
-
-  estado: boolean;         // true = activo, false = inactivo
-
-  // opcional
-  createdAt?: string;
-  updatedAt?: string;
-};
-
-// NORMALIZACIÓN
-
-const normalizeString = (v: unknown): string => {
-  if (typeof v === "string") return v.trim();
-  return "";
-};
-
-// MAPPER → Transformar API → UI
-
-const toUiClient = (c: ClientFromApi): Client => {
-  return {
-    id: c.id,
-
-    tipo: normalizeString(c.tipo),
-    documento: normalizeString(c.documento),
-    nombre: normalizeString(c.nombre),
-    apellido: c.apellido ? c.apellido.trim() : "",
-
-    telefono: normalizeString(c.telefono),
-    correoElectronico: normalizeString(c.correo),
-
-    rol: c.rol,
-
-    estado: c.estado ? "Activo" : "Inactivo",
+export type CustomerFromApi = {
+  customerid: number;
+  customercity: string;
+  customerzipcode: string;
+  users: {
+    userid: number;
+    name: string;
+    lastname: string;
+    email: string;
+    documentnumber: string;
+    phone: string;
+    image?: string | null;
+    typeofdocuments?: { id: number; name: string };
+    states?: { stateid?: number; id?: number; name: string };
+    roles?: { id: number; name: string };
   };
+  sales: { salestatus: string }[];
 };
 
-// PAYLOADS DE CREACIÓN Y EDICIÓN
+// ================================
+// UI TYPE
+// ================================
+
+export type ClientUI = {
+  id: number;
+  nombre: string;
+  apellido: string;
+  /** Nombre del tipo de documento (CC, TI…) */
+  tipo: string;
+  /** ID numérico del tipo de documento (para pre-seleccionar en edit) */
+  tipoId: number;
+  documento: string;
+  telefono: string;
+  correoElectronico: string;
+  estado: string;
+  ciudad: string;
+  codigoPostal: string;
+};
+
+// ================================
+// UI MAPPER
+// ================================
+
+export const toUiClient = (c: CustomerFromApi): ClientUI => ({
+  id: c.customerid,
+  nombre: c.users?.name ?? "",
+  apellido: c.users?.lastname ?? "",
+  tipo: c.users?.typeofdocuments?.name ?? "",
+  tipoId: c.users?.typeofdocuments?.id ?? 0,
+  documento: c.users?.documentnumber ?? "",
+  telefono: c.users?.phone ?? "",
+  correoElectronico: c.users?.email ?? "",
+  estado: c.users?.states?.name ?? "",
+  ciudad: c.customercity ?? "",
+  codigoPostal: c.customerzipcode ?? "",
+});
+
+// ================================
+// GET ALL
+// ================================
+
+export async function getClients(): Promise<ClientUI[]> {
+  // El backend devuelve el array directamente (sin envoltorio)
+  const response = await api.get<CustomerFromApi[]>("/customers");
+  // axios pone la respuesta en response.data — pero nosotros llamamos api.get que ya extrae .data
+  // Si el backend envuelve en {data:[...]}, necesitamos acc ese campo extra:
+  const list = Array.isArray(response)
+    ? response
+    : (response as unknown as { data: CustomerFromApi[] }).data ?? [];
+  return list.map(toUiClient);
+}
+
+// ================================
+// CREATE
+// ================================
 
 export type CreateClientPayload = {
-  tipo: string;
-  documento: string;
-  nombre: string;
-  apellido?: string | null;
-
-  telefono: string;
-  correo: string;
-
-  rol: "Cliente" | "Administrador" | "Empleado";
-
-  estado?: boolean; // true/false
-  contrasena: string;
+  name: string;
+  lastname: string;
+  email: string;
+  documentnumber: string;
+  phone: string;
+  typeid: number;
+  stateid?: number;
+  image?: string;
+  customercity: string;
+  customerzipcode: string;
 };
+
+export async function createClient(payload: CreateClientPayload) {
+  return await api.post("/customers", payload);
+}
+
+// ================================
+// UPDATE
+// ================================
 
 export type UpdateClientPayload = Partial<CreateClientPayload>;
 
-// CRUD
-
-export const getClients = async (
-  status: StatusQuery = "active"
-): Promise<Client[]> => {
-  const { data } = await api.get<ClientFromApi[]>("/clients", {
-    params: { status },
-  });
-  return data.map(toUiClient);
-};
-
-export const getClientById = async (id: number): Promise<Client> => {
-  const { data } = await api.get<ClientFromApi>(`/clients/${id}`);
-  return toUiClient(data);
-};
-
-export const createClient = async (
-  payload: CreateClientPayload
-): Promise<unknown> => {
-  const { data } = await api.post(`/clients`, payload);
-  return data;
-};
-
-export const updateClient = async (
+export async function updateClient(
   id: number,
   payload: UpdateClientPayload
-): Promise<unknown> => {
-  const { data } = await api.patch(`/clients/${id}`, payload);
-  return data;
-};
+) {
+  return await api.patch(`/customers/${id}`, payload);
+}
 
-export const deleteClient = async (id: number): Promise<unknown> => {
-  const { data } = await api.delete(`/clients/${id}`);
-  return data;
-};
+// ================================
+// DELETE
+// ================================
 
-// INFORMACIÓN PARA VALIDAR BORRADO
-
-export type ClientDeletionInfo = {
-  canDelete: boolean;
-  reason?: string;
-};
-
-export const getClientDeletionInfo = async (
-  id: number
-): Promise<ClientDeletionInfo> => {
-  const { data } = await api.get<ClientDeletionInfo>(
-    `/clients/${id}/deletion-info`
-  );
-
-  return {
-    canDelete: !!data?.canDelete,
-    reason:
-      typeof data?.reason === "string" ? data.reason.trim() : undefined,
-  };
-};
+export async function deleteClient(id: number) {
+  return await api.delete(`/customers/${id}`);
+}

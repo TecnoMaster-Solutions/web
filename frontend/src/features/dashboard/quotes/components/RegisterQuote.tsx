@@ -63,6 +63,16 @@ interface QuoteFormState {
   details: QuoteDetailPayload[];
 }
 
+type NewClientForm = {
+  tipo: string;
+  documento: string;
+  nombre: string;
+  apellido?: string;
+  telefono: string;
+  correo: string;
+  contrasena: string;
+};
+
 interface Props {
   onSave: (payload: QuoteCreatePayload) => Promise<void>;
 }
@@ -89,6 +99,20 @@ export default function RegisterQuoteForm({ onSave }: Props) {
   const [selectedServiceRequest, setSelectedServiceRequest] =
     useState<ServiceRequestFromApi | null>(null);
   const [isLoadingRequests, setIsLoadingRequests] = useState(true);
+
+  /* ================================
+   * CLIENTE NUEVO (solo si no hay solicitud)
+   * ================================ */
+  const [createNewClientEnabled, setCreateNewClientEnabled] = useState(true);
+  const [clientForm, setClientForm] = useState<NewClientForm>({
+    tipo: "CC",
+    documento: "",
+    nombre: "",
+    apellido: "",
+    telefono: "",
+    correo: "",
+    contrasena: "",
+  });
 
   /* ================================
    * PRODUCTOS
@@ -138,11 +162,9 @@ export default function RegisterQuoteForm({ onSave }: Props) {
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Cargar solicitudes de servicio
         const requests = await getServicesRequestsForQuote();
         setServiceRequests(requests);
 
-        // Cargar productos
         const productsResponse = await api.get("/products?status=all");
         setProducts(productsResponse.data);
       } catch (error) {
@@ -157,7 +179,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
   }, []);
 
   /* ================================
-   * MANEJO DE SELECCIÓN DE SERVICE REQUEST
+   * MANEJO DE SELECCIÓN DE SERVICE REQUEST (OPCIONAL)
    * ================================ */
   const handleServiceRequestChange = (serviceRequestId: number) => {
     const selected = serviceRequests.find(
@@ -171,6 +193,8 @@ export default function RegisterQuoteForm({ onSave }: Props) {
         serviceRequestId: "",
         servicetype: "",
       }));
+      // si no hay solicitud, por defecto habilitamos creación de cliente
+      setCreateNewClientEnabled(true);
       return;
     }
 
@@ -180,6 +204,9 @@ export default function RegisterQuoteForm({ onSave }: Props) {
       serviceRequestId: selected.serviceRequestId,
       servicetype: selected.serviceType,
     }));
+
+    // si hay solicitud, no necesitamos crear cliente aquí
+    setCreateNewClientEnabled(false);
   };
 
   /* ================================
@@ -263,7 +290,6 @@ export default function RegisterQuoteForm({ onSave }: Props) {
       setShowProductList(false);
       return;
     }
-
     applyProductSelection(product, false);
   };
 
@@ -292,7 +318,6 @@ export default function RegisterQuoteForm({ onSave }: Props) {
 
     const subtotal = detailForm.quantity * detailForm.unitprice;
 
-    // Configurar disponibilidad basada en el tipo de producto
     let availability = detailForm.availability;
     if (isManualProduct) {
       availability = "SOLICITAR";
@@ -356,13 +381,10 @@ export default function RegisterQuoteForm({ onSave }: Props) {
           updatedDetails.push(detailPayload);
         }
       }
-      return {
-        ...prev,
-        details: updatedDetails,
-      };
+
+      return { ...prev, details: updatedDetails };
     });
 
-    // Resetear formulario de detalle
     setDetailForm({
       productid: null,
       name: "",
@@ -402,28 +424,25 @@ export default function RegisterQuoteForm({ onSave }: Props) {
         quantity: qty,
         subtotal: qty * current.unitprice,
       };
-
       return { ...prev, details: updated };
     });
   };
 
- const changeDetailQuantityBy = (index: number, delta: number) => {
-  setForm((prev) => {
-    const updated = [...prev.details];
-    const current = updated[index];
-    if (!current) return prev;
+  const changeDetailQuantityBy = (index: number, delta: number) => {
+    setForm((prev) => {
+      const updated = [...prev.details];
+      const current = updated[index];
+      if (!current) return prev;
 
-    const qty = Math.max(1, current.quantity + delta);
-
-    updated[index] = {
-      ...current,
-      quantity: qty,
-      subtotal: qty * current.unitprice,
-    };
-
-    return { ...prev, details: updated };
-  });
-};
+      const qty = Math.max(1, current.quantity + delta);
+      updated[index] = {
+        ...current,
+        quantity: qty,
+        subtotal: qty * current.unitprice,
+      };
+      return { ...prev, details: updated };
+    });
+  };
 
   /* ================================
    * HANDLER PARA ENVIAR FORMULARIO
@@ -431,8 +450,9 @@ export default function RegisterQuoteForm({ onSave }: Props) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!form.serviceRequestId || !form.servicetype) {
-      showError("Debe seleccionar una solicitud de servicio");
+    // 1) Ya NO exigimos solicitud. Sí exigimos tipo de servicio.
+    if (!form.servicetype) {
+      showError("Debe seleccionar el tipo de servicio");
       return;
     }
 
@@ -447,21 +467,17 @@ export default function RegisterQuoteForm({ onSave }: Props) {
       statesid: form.statesid,
       servicetype: form.servicetype as "MANTENIMIENTO" | "INSTALACION",
       observation: form.observation,
-      details: form.details.map((detail) => ({
+      details: form.details.map(({ isBackorder, ...detail }) => ({
+        ...detail,
         productid: detail.productid ?? null,
-        description: detail.description.trim().slice(0, DETAIL_DESCRIPTION_MAX),
-        quantity: detail.quantity,
-        unitprice: detail.unitprice,
-        subtotal: detail.subtotal,
-        availability: detail.availability,
       })),
     };
 
     try {
-      await onSave(payload);
+      await onSave?.(payload);
       showSuccess("Cotización guardada exitosamente");
 
-      // Resetear formulario
+      // Reset
       setForm({
         serviceRequestId: "",
         statesid: 5,
@@ -470,6 +486,16 @@ export default function RegisterQuoteForm({ onSave }: Props) {
         details: [],
       });
       setSelectedServiceRequest(null);
+      setCreateNewClientEnabled(true);
+      setClientForm({
+        tipo: "CC",
+        documento: "",
+        nombre: "",
+        apellido: "",
+        telefono: "",
+        correo: "",
+        contrasena: "",
+      });
       setDetailForm({
         productid: null,
         name: "",
@@ -480,12 +506,8 @@ export default function RegisterQuoteForm({ onSave }: Props) {
         availability: "DISPONIBLE",
         isBackorder: false,
       });
-    } catch (error: any) {
-      const backendMessage = error?.response?.data?.message;
-      const message = Array.isArray(backendMessage)
-        ? backendMessage.join(", ")
-        : backendMessage;
-      showError(message || "Error al guardar la cotización");
+    } catch (error) {
+      showError("Error al guardar la cotización");
     }
   };
 
@@ -500,20 +522,31 @@ export default function RegisterQuoteForm({ onSave }: Props) {
     );
   }
 
+  const canSubmit =
+    !!form.servicetype &&
+    form.details.length > 0 &&
+    (form.serviceRequestId
+      ? true
+      : createNewClientEnabled &&
+        !!clientForm.documento.trim() &&
+        !!clientForm.nombre.trim() &&
+        !!clientForm.telefono.trim() &&
+        !!clientForm.correo.trim() &&
+        !!clientForm.contrasena.trim());
+
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5 p-5 text-sm">
-      {/* SOLICITUD DE SERVICIO */}
+      {/* SOLICITUD DE SERVICIO (OPCIONAL) */}
       <div>
         <label className="block mb-1 font-medium">
-          Solicitud de servicio
+          Solicitud de servicio (opcional)
         </label>
         <select
           value={form.serviceRequestId}
           onChange={(e) => handleServiceRequestChange(Number(e.target.value))}
           className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          required
         >
-          <option value="">Seleccione una solicitud</option>
+          <option value="">Sin solicitud (cotización directa)</option>
           {serviceRequests.map((request) => {
             const customerLabel = request.customer?.users
               ? `${request.customer.users.name} ${request.customer.users.lastname}`
@@ -539,7 +572,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
         </button>
       </div>
 
-      {/* INFORMACIÓN AUTOMÁTICA DEL SERVICE REQUEST */}
+      {/* INFO AUTOMÁTICA DEL SERVICE REQUEST */}
       {selectedServiceRequest && (
         <div className="border p-4 rounded-lg bg-gray-50 space-y-3">
           <h3 className="font-bold text-gray-700">
@@ -547,7 +580,6 @@ export default function RegisterQuoteForm({ onSave }: Props) {
           </h3>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {/* CLIENTE */}
             <div className="space-y-1">
               <div className="text-xs text-gray-500">Cliente</div>
               <div className="font-medium">
@@ -563,7 +595,6 @@ export default function RegisterQuoteForm({ onSave }: Props) {
               </div>
             </div>
 
-            {/* TÉCNICO */}
             <div className="space-y-1">
               <div className="text-xs text-gray-500">Técnico asignado</div>
               {selectedServiceRequest.techniciansMap &&
@@ -601,7 +632,6 @@ export default function RegisterQuoteForm({ onSave }: Props) {
               )}
             </div>
 
-            {/* DETALLES DEL SERVICIO */}
             <div className="space-y-1">
               <div className="text-xs text-gray-500">Tipo de servicio</div>
               <div className="font-medium">
@@ -628,18 +658,155 @@ export default function RegisterQuoteForm({ onSave }: Props) {
         </div>
       )}
 
-      {/* TIPO DE SERVICIO (solo lectura cuando hay solicitud seleccionada) */}
+      {/* CLIENTE NUEVO (solo si NO hay solicitud seleccionada) */}
+      {!selectedServiceRequest && (
+        <div className="border p-4 rounded-lg bg-gray-50 space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="font-bold text-gray-700">Cliente</h3>
+
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={createNewClientEnabled}
+                onChange={(e) => setCreateNewClientEnabled(e.target.checked)}
+              />
+              Crear cliente nuevo
+            </label>
+          </div>
+
+          {createNewClientEnabled ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="block mb-1 font-medium">Tipo documento</label>
+                <select
+                  value={clientForm.tipo}
+                  onChange={(e) =>
+                    setClientForm((p) => ({ ...p, tipo: e.target.value }))
+                  }
+                  className="w-full border rounded px-3 py-2"
+                >
+                  <option value="CC">CC</option>
+                  <option value="CE">CE</option>
+                  <option value="NIT">NIT</option>
+                  <option value="PAS">PAS</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block mb-1 font-medium">Documento *</label>
+                <input
+                  value={clientForm.documento}
+                  onChange={(e) =>
+                    setClientForm((p) => ({ ...p, documento: e.target.value }))
+                  }
+                  className="w-full border rounded px-3 py-2"
+                />
+              </div>
+
+              <div>
+                <label className="block mb-1 font-medium">Nombre *</label>
+                <input
+                  value={clientForm.nombre}
+                  onChange={(e) =>
+                    setClientForm((p) => ({ ...p, nombre: e.target.value }))
+                  }
+                  className="w-full border rounded px-3 py-2"
+                />
+              </div>
+
+              <div>
+                <label className="block mb-1 font-medium">Apellido</label>
+                <input
+                  value={clientForm.apellido ?? ""}
+                  onChange={(e) =>
+                    setClientForm((p) => ({ ...p, apellido: e.target.value }))
+                  }
+                  className="w-full border rounded px-3 py-2"
+                />
+              </div>
+
+              <div>
+                <label className="block mb-1 font-medium">Teléfono *</label>
+                <input
+                  value={clientForm.telefono}
+                  onChange={(e) =>
+                    setClientForm((p) => ({ ...p, telefono: e.target.value }))
+                  }
+                  className="w-full border rounded px-3 py-2"
+                />
+              </div>
+
+              <div>
+                <label className="block mb-1 font-medium">Correo *</label>
+                <input
+                  type="email"
+                  value={clientForm.correo}
+                  onChange={(e) =>
+                    setClientForm((p) => ({ ...p, correo: e.target.value }))
+                  }
+                  className="w-full border rounded px-3 py-2"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block mb-1 font-medium">Contraseña *</label>
+                <input
+                  type="password"
+                  value={clientForm.contrasena}
+                  onChange={(e) =>
+                    setClientForm((p) => ({ ...p, contrasena: e.target.value }))
+                  }
+                  className="w-full border rounded px-3 py-2"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Se creará el usuario con rol Cliente
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="text-sm text-yellow-800 bg-yellow-50 border border-yellow-200 rounded p-3">
+              Para cotizar sin solicitud, debe crear un cliente nuevo.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TIPO DE SERVICIO (auto si hay solicitud / manual si no hay) */}
       <div>
         <label className="block mb-1 font-medium">Tipo de servicio *</label>
-        <input
-          type="text"
-          value={form.servicetype}
-          readOnly
-          className="w-full border rounded px-3 py-2 bg-gray-100"
-        />
-        <p className="text-xs text-gray-500 mt-1">
-          Este campo se completa automáticamente desde la solicitud de servicio
-        </p>
+
+        {selectedServiceRequest ? (
+          <>
+            <input
+              type="text"
+              value={form.servicetype}
+              readOnly
+              className="w-full border rounded px-3 py-2 bg-gray-100"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Este campo se completa automáticamente desde la solicitud de
+              servicio
+            </p>
+          </>
+        ) : (
+          <>
+            <select
+              value={form.servicetype}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, servicetype: e.target.value }))
+              }
+              className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            >
+              <option value="">Seleccione un tipo</option>
+              <option value="MANTENIMIENTO">MANTENIMIENTO</option>
+              <option value="INSTALACION">INSTALACION</option>
+            </select>
+            <p className="text-xs text-gray-500 mt-1">
+              Si no hay solicitud, debe elegir el tipo manualmente
+            </p>
+          </>
+        )}
       </div>
 
       {/* OBSERVACIÓN */}
@@ -663,18 +830,14 @@ export default function RegisterQuoteForm({ onSave }: Props) {
           <button
             type="button"
             onClick={() => handleProductModeChange(false)}
-            className={`px-4 py-2 rounded ${
-              !isManualProduct ? "bg-blue-500 text-white" : "bg-gray-200"
-            }`}
+            className={`px-4 py-2 rounded ${!isManualProduct ? "bg-blue-500 text-white" : "bg-gray-200"}`}
           >
             Producto existente
           </button>
           <button
             type="button"
             onClick={() => handleProductModeChange(true)}
-            className={`px-4 py-2 rounded ${
-              isManualProduct ? "bg-blue-500 text-white" : "bg-gray-200"
-            }`}
+            className={`px-4 py-2 rounded ${isManualProduct ? "bg-blue-500 text-white" : "bg-gray-200"}`}
           >
             Producto manual (para comprar)
           </button>
@@ -697,6 +860,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
               onFocus={() => setShowProductList(true)}
               className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
+
             {showProductList && filteredProducts.length > 0 && (
               <div className="absolute z-10 w-full mt-1 bg-white border rounded shadow-lg max-h-60 overflow-y-auto">
                 {filteredProducts.map((p) => (
@@ -787,6 +951,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
               className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
+
           <div className="md:col-span-2">
             <label className="block mb-1 font-medium">Descripción *</label>
             <AutoGrowTextarea
@@ -854,7 +1019,9 @@ export default function RegisterQuoteForm({ onSave }: Props) {
             )}
             <br />
             <strong>Subtotal:</strong> $
-            {(detailForm.quantity * detailForm.unitprice).toLocaleString()}
+            {(detailForm.quantity * detailForm.unitprice).toLocaleString(
+              "es-CO",
+            )}
           </div>
         </div>
 
@@ -880,6 +1047,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
                   d.isBackorder && d.availability !== "SOLICITAR"
                     ? "BAJO PEDIDO"
                     : d.availability;
+
                 return (
                   <div
                     key={i}
@@ -890,11 +1058,12 @@ export default function RegisterQuoteForm({ onSave }: Props) {
                       <button
                         type="button"
                         onClick={() => handleRemoveDetail(i)}
-                        className="cursor-ponter text-red-500 hover:text-red-700 text-sm focus:outline-none"
+                        className="cursor-pointer text-red-500 hover:text-red-700 text-sm focus:outline-none"
                       >
                         Eliminar
                       </button>
                     </div>
+
                     <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-600">
                       <div className="flex items-center gap-2">
                         <span className="text-sm text-gray-600">Cantidad:</span>
@@ -941,6 +1110,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
                       {d.productid !== null && (
                         <div>ID del producto: {d.productid}</div>
                       )}
+
                       <div className="flex items-center gap-2">
                         <span>Disponibilidad:</span>
                         <span className="font-semibold text-gray-800">
@@ -948,6 +1118,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
                         </span>
                       </div>
                     </div>
+
                     {d.isBackorder && (
                       <div className="mt-3 rounded-lg border border-orange-200 bg-orange-50 p-2 text-xs text-orange-900">
                         <div className="flex flex-col gap-1">
@@ -993,7 +1164,12 @@ export default function RegisterQuoteForm({ onSave }: Props) {
         type="submit"
         style={{ backgroundColor: Colors.buttons.primary }}
         className="cursor-pointer w-full text-white px-4 py-3 rounded font-medium hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-        disabled={!form.serviceRequestId || form.details.length === 0}
+        disabled={!canSubmit}
+        title={
+          !canSubmit
+            ? "Completa tipo de servicio, productos y (si no hay solicitud) los datos del cliente"
+            : ""
+        }
       >
         Guardar Cotización
       </button>

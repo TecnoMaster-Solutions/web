@@ -21,7 +21,9 @@ type ProductFromApi = {
   category?: ProductCategoryFromApi | null;
 
   suppliercategory: string;
+
   image: string;
+  images?: string[] | null;
 
   productpriceofsale: number | string | null;
 
@@ -37,7 +39,8 @@ const toNumber = (v: unknown): number => {
 const getCategoryName = (cat: ProductCategoryFromApi | null | undefined): string => {
   if (!cat) return "";
   if (typeof cat.name === "string" && cat.name.trim()) return cat.name.trim();
-  if (typeof cat.categoryname === "string" && cat.categoryname.trim()) return cat.categoryname.trim();
+  if (typeof cat.categoryname === "string" && cat.categoryname.trim())
+    return cat.categoryname.trim();
   return "";
 };
 
@@ -47,15 +50,24 @@ const toLanding = (p: ProductFromApi): Product => ({
   description: p.productdescription ?? "Sin descripción",
   category: getCategoryName(p.category) || "Sin categoría",
   image: p.image || undefined,
+  images: Array.isArray(p.images)
+    ? p.images.filter((x) => typeof x === "string" && x.trim())
+    : undefined,
   price: p.productpriceofsale === null ? undefined : toNumber(p.productpriceofsale),
-  stock: p.productstock ?? 0,
+  stock: toNumber(p.productstock),
 });
 
 export const getLandingProducts = async (): Promise<Product[]> => {
   const { data } = await api.get<ProductFromApi[]>("/products", {
     params: { status: "active" },
   });
+
   return (data ?? [])
-    .filter((product) => (product.productstock ?? 0) > 0)
+    .filter((product) => product.isactive !== false)
     .map(toLanding);
+};
+
+export const getLandingProductById = async (id: string | number): Promise<Product> => {
+  const { data } = await api.get<ProductFromApi>(`/products/${id}`);
+  return toLanding(data);
 };

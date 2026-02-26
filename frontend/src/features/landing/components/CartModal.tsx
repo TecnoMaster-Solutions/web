@@ -56,7 +56,7 @@ interface CartModalProps {
 type Address = {
   city: string;
   zone: string;
-  streetType: string; // Calle / Carrera / Avenida / Transversal
+  streetType: string;
   streetNumber: string;
   secondaryNumber: string;
   complement?: string;
@@ -89,8 +89,8 @@ function buildSalePayload({
     taxpercent,
     taxamount,
     discountamount: 0,
-    totalamount: subtotal + taxamount + 20000, // envío
-    paymentmethod: "Cash", // TEMPORAL
+    totalamount: subtotal + taxamount + 20000,
+    paymentmethod: "Cash",
     salestatus: "Pending",
     notes: "Venta creada desde carrito",
     details: cart.map((item) => ({
@@ -165,11 +165,9 @@ export default function CartModal({ isOpen, onClose }: CartModalProps) {
     return null;
   };
 
-  const fullAddress = `${address.streetType} ${address.streetNumber} #${
-    address.secondaryNumber
-  }, ${address.zone}, ${address.city}${
-    address.complement ? ` (${address.complement})` : ""
-  }`;
+  const fullAddress = `${address.streetType} ${address.streetNumber} #${address.secondaryNumber
+    }, ${address.zone}, ${address.city}${address.complement ? ` (${address.complement})` : ""
+    }`;
 
   const handlePurchase = async () => {
     const validationError = validateAddress();
@@ -271,11 +269,10 @@ export default function CartModal({ isOpen, onClose }: CartModalProps) {
                 layout
                 transition={{ duration: 0.4, ease: "easeInOut" }}
                 className={`cursor-pointer bg-gray-50 rounded-xl shadow-md hover:shadow-xl p-4 relative
-  ${
-    openProducts.has(item.id)
-      ? "flex flex-col md:flex-row gap-6 items-start md:col-span-3"
-      : "flex flex-col items-center"
-  }`}
+  ${openProducts.has(item.id)
+                    ? "flex flex-col md:flex-row gap-6 items-start md:col-span-3"
+                    : "flex flex-col items-center"
+                  }`}
               >
                 {/* Flecha de despliegue - arriba a la izquierda */}
                 <div className="absolute top-2 left-2 z-10">
@@ -387,11 +384,10 @@ export default function CartModal({ isOpen, onClose }: CartModalProps) {
                                 <button
                                   disabled={item.quantity >= item.stock}
                                   className={`cursor-pointer transition rounded 
-    ${
-      item.quantity >= item.stock
-        ? "opacity-40 cursor-not-allowed"
-        : "hover:scale-110 hover:bg-red-300/60"
-    }`}
+    ${item.quantity >= item.stock
+                                      ? "opacity-40 cursor-not-allowed"
+                                      : "hover:scale-110 hover:bg-red-300/60"
+                                    }`}
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     updateQuantity(item.id, 1);
@@ -451,11 +447,10 @@ export default function CartModal({ isOpen, onClose }: CartModalProps) {
                                     setOpenServiceModal(false);
                                   }
                                 }}
-                                className={`cursor-pointer px-3 py-1 rounded text-sm font-medium transition ${
-                                  item.service
+                                className={`cursor-pointer px-3 py-1 rounded text-sm font-medium transition ${item.service
                                     ? "bg-green-100 text-green-800 hover:bg-green-200"
                                     : "bg-gray-100 text-gray-800 hover:bg-gray-200"
-                                }`}
+                                  }`}
                               >
                                 {item.service
                                   ? "✓ Servicio incluido"

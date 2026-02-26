@@ -17,6 +17,9 @@ export interface Product {
   code?: string | null;
 
   image: string;
+
+  images?: string[] | null;
+
   state: ProductState;
 }
 
@@ -26,7 +29,8 @@ export type CreateProductData = {
   categoryId: number;
   supplierCategory: string;
   code?: string | null;
-  image: File;
+
+  images: File[];
 };
 
 export type EditProductData = {
@@ -37,7 +41,7 @@ export type EditProductData = {
   supplierCategory: string;
   code?: string | null;
 
-  image: string | File | null;
+  images: Array<string | File>;
 
   state: ProductState;
 };

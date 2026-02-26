@@ -73,6 +73,7 @@ export interface ISale {
     totalamount: number;
     paymentmethod: string;
     salestatus: string;
+    estadoPago: string | null;
     createdby: string | null;
     createddate: string | null;
     notes: string | null;

@@ -22,7 +22,10 @@ type ProductFromApi = {
   category?: ProductCategoryFromApi | null;
 
   suppliercategory: string;
+
   image: string;
+
+  images?: string[] | null;
 
   productpriceofsupplier: number | string;
   productpriceofsale: number | string | null;
@@ -42,12 +45,22 @@ const toNumber = (v: unknown): number => {
 const getCategoryName = (cat: ProductCategoryFromApi | null | undefined): string => {
   if (!cat) return "";
   if (typeof cat.name === "string" && cat.name.trim()) return cat.name.trim();
-  if (typeof cat.categoryname === "string" && cat.categoryname.trim())
-    return cat.categoryname.trim();
+  if (typeof cat.categoryname === "string" && cat.categoryname.trim()) return cat.categoryname.trim();
   return "";
 };
 
+const normalizeImages = (p: ProductFromApi): { image: string; images?: string[] | null } => {
+  const arr = Array.isArray(p.images) ? p.images.filter((x) => typeof x === "string" && x.trim()) : [];
+  const img = typeof p.image === "string" && p.image.trim() ? p.image.trim() : "";
+
+  if (arr.length > 0) return { image: arr[0], images: arr };
+  if (img) return { image: img, images: [img] };
+  return { image: "", images: null };
+};
+
 const toUi = (p: ProductFromApi): Product => {
+  const imgs = normalizeImages(p);
+
   return {
     id: p.productid,
     name: p.productname,
@@ -63,7 +76,9 @@ const toUi = (p: ProductFromApi): Product => {
     stock: p.productstock,
     code: p.productcode ?? null,
 
-    image: p.image,
+    image: imgs.image,
+    images: imgs.images ?? null,
+
     state: p.isactive ? "Activo" : "Inactivo",
   };
 };
@@ -75,11 +90,10 @@ export type CreateProductPayload = {
   categoryid: number;
   suppliercategory: string;
 
-  image: string;
+  images: string[];
 
   productcode?: string | null;
 
-  // precios NO se envían desde productos; los gestiona Compras
   isactive?: boolean;
 };
 
@@ -124,8 +138,6 @@ export const getProductDeletionInfo = async (id: number): Promise<ProductDeletio
     canDelete: !!data?.canDelete,
     reason: typeof data?.reason === "string" ? data.reason : undefined,
     canDeactivate:
-      typeof (data as any)?.canDeactivate === "boolean"
-        ? (data as any).canDeactivate
-        : undefined,
+      typeof (data as any)?.canDeactivate === "boolean" ? (data as any).canDeactivate : undefined,
   };
 };

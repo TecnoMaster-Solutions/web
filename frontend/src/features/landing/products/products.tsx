@@ -11,9 +11,9 @@ import CardProducts from "./components/CardProducts";
 import Pagination from "./components/Pagination";
 import { useProducts, Product } from "./hooks/useProducts";
 import CategoryCarousel from "./components/CategoryCarousel";
-import ViewDetailsModal from "./components/ViewDetailsModal";
 import { useCart } from "../contexts/CartContext";
-import { showSuccess } from "@/shared/utils/notifications";
+import { showSuccess, showError} from "@/shared/utils/notifications";
+
 
 interface ProductsProps {
   className?: string;
@@ -22,7 +22,7 @@ interface ProductsProps {
 export default function ProductsLanding({ className = "" }: ProductsProps) {
   const mockProducts: Product[] = [];
 
-  const { addToCart } = useCart();
+const { addToCart, cart } = useCart();
 
   const {
     loading,
@@ -43,29 +43,30 @@ export default function ProductsLanding({ className = "" }: ProductsProps) {
     currentPage * itemsPerPage
   );
 
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+const handleAddToCart = (product: Product) => {
+  if ((product.stock ?? 0) <= 0) {
+    showError("Producto agotado.");
+    return;
+  }
 
-  const handleViewDetails = (product: Product) => {
-    setSelectedProduct(product);
-    setIsModalOpen(true);
-  };
+  const itemInCart = cart.find((item) => String(item.id) === String(product.id));
+  const qtyInCart = itemInCart?.quantity ?? 0;
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setSelectedProduct(null);
-  };
+  if (qtyInCart >= product.stock) {
+    showError(`No puedes agregar más. Stock disponible: ${product.stock}`);
+    return;
+  }
 
-  const handleAddToCart = (product: Product) => {
-    addToCart({
-      id: product.id,
-      name: product.title,
-      price: product.price ?? 0,
-      stock: product.stock,
-      image: product.image || "/assets/imgs/default-product.png",
-    });
-    showSuccess("Producto agregado al carrito");
-  };
+  addToCart({
+    id: product.id,
+    name: product.title,
+    price: product.price ?? 0,
+    stock: product.stock,
+    image: product.image || "/assets/imgs/default-product.png",
+  });
+
+  showSuccess("Producto agregado al carrito");
+};
 
   return (
     <div className={className}>
@@ -108,12 +109,13 @@ export default function ProductsLanding({ className = "" }: ProductsProps) {
                 {displayedProducts.map((product) => (
                   <CardProducts
                     key={product.id}
+                    id={String(product.id)}
                     title={product.title}
                     description={product.description}
                     category={product.category}
                     image={product.image}
                     price={product.price}
-                    onViewDetails={() => handleViewDetails(product)}
+                    stock={product.stock}
                     onAddToCart={() => handleAddToCart(product)}
                   />
                 ))}
@@ -132,15 +134,6 @@ export default function ProductsLanding({ className = "" }: ProductsProps) {
       </LayoutProductos>
 
       <Footer />
-
-      {selectedProduct && (
-        <ViewDetailsModal
-          product={selectedProduct}
-          isOpen={isModalOpen}
-          onClose={handleCloseModal}
-          onAddToCart={() => handleAddToCart(selectedProduct)}
-        />
-      )}
     </div>
   );
 }

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { apiClient } from "@/shared/utils/apiClient";
 import { showSuccess, showError } from "@/shared/utils/notifications";
-import { Loader } from "@/shared/components/loader";
+
 
 interface CreateServiceModalProps {
     onClose: () => void;
@@ -117,7 +117,6 @@ export default function CreateServiceModal({ onClose, onSaved }: CreateServiceMo
             <div className="flex justify-end gap-2 mt-4">
                 <button onClick={onClose} className="px-4 py-2 bg-gray-500 text-white rounded-lg">Cancelar</button>
                 <button onClick={handleSubmit} disabled={loading} className="px-4 py-2 bg-black text-white rounded-lg flex items-center gap-2">
-                    {loading && <Loader size="sm" />}
                     Guardar
                 </button>
             </div>

@@ -90,13 +90,17 @@ const TechniciansTable: React.FC<TechniciansTableProps> = ({
   onCreate,
 }) => {
   const rows: TechnicianRow[] = useMemo(() => {
+    // ✅ Orden DESC (últimos primero)
     const sorted = [...technicians].sort(
-      (a, b) => Number(a.id ?? 0) - Number(b.id ?? 0)
+      (a, b) => Number(b.id ?? 0) - Number(a.id ?? 0)
     );
+
+    // ✅ Numeración consistente: empieza en total y va bajando
+    const total = sorted.length;
 
     return sorted.map((t, index) => ({
       ...t,
-      rowNumber: index + 1,
+      rowNumber: total - index,
       searchText: buildSearchText(t),
       stateSearch: toStateSearch(t.state),
     }));
@@ -191,7 +195,7 @@ const TechniciansTable: React.FC<TechniciansTableProps> = ({
       module="technicians"
       data={rows}
       columns={columns}
-      pageSize={6}
+      pageSize={4} // ✅ solo 4 por página
       searchableKeys={["searchText", "stateSearch"]}
       onView={onView}
       onEdit={onEdit}

@@ -1,93 +1,76 @@
-// =============================
-// Base para formularios
-// =============================
-export interface ClientFormBase {
-  tipo: string;
-  documento: string;
+// ================================
+// UI MODEL (DATA TABLE)
+// ================================
+
+export interface Client {
+  id: number;
   nombre: string;
   apellido: string;
+  tipo: string; // nombre del tipo (CC, TI, CE...)
+  tipoId: number; // ID numérico para pre-seleccionar en el select
+  documento: string;
   telefono: string;
   correoElectronico: string;
   estado: string;
+  ciudad: string;
+  codigoPostal: string;
 }
 
-// =============================
-// Crear cliente (formulario)
-// =============================
-export interface CreateClientData extends ClientFormBase {
-  rol: string;
-}
+// ================================
+// CREATE FORM DATA (UI FORM STATE)
+// ================================
 
-// =============================
-// Editar cliente (formulario)
-// =============================
-export interface EditClientData extends ClientFormBase {
-  id: number;
-  rol: string;
-}
-
-// =============================
-// Cliente completo (modelo backend)
-// =============================
-export interface Client extends ClientFormBase {
-  id: number;
-  rol: string;
-}
-
-// =============================
-// Cliente para tabla
-// =============================
-export interface ClientForTable {
-  id: number;
-  tipo: string;
+export interface CreateClientData {
+  nombre: string;
+  apellido: string;
+  tipo: number; // 👈 SIEMPRE number
   documento: string;
-  nombreCompleto: string;
   telefono: string;
   correoElectronico: string;
   estado: string;
+  ciudad: string;
+  codigoPostal: string;
 }
 
-// =============================
-// Errores del formulario
-// =============================
-export interface FormErrors {
-  tipo: string;
-  documento: string;
-  nombre: string;
-  apellido: string;
-  telefono: string;
-  correoElectronico: string;
-  rol: string;
+// ================================
+// EDIT FORM DATA
+// ================================
+
+export interface EditClientData extends CreateClientData {
+  id: number;
 }
 
-// =============================
-// Campos tocados
-// =============================
-export interface FormTouched {
-  tipo: boolean;
-  documento: boolean;
-  nombre: boolean;
-  apellido: boolean;
-  telefono: boolean;
-  correoElectronico: boolean;
-  rol: boolean;
-}
+// ================================
+// FORM STATE
+// ================================
 
-// =============================
-// Props del modal de creación
-// =============================
+export type ClientFormErrors = Partial<
+  Record<keyof CreateClientData, string>
+>;
+
+export type ClientFormTouched = Partial<
+  Record<keyof CreateClientData, boolean>
+>;
+
+// ================================
+// MODAL PROPS
+// ================================
+
 export interface CreateClientModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: CreateClientData) => void;
+  onSave: (data: CreateClientData) => Promise<void>;
 }
 
-// =============================
-// Props del modal de edición
-// =============================
 export interface EditClientModalProps {
   isOpen: boolean;
-  client: Client | null;
   onClose: () => void;
-  onSave: (id: number, data: EditClientData) => void;
+  client: Client | null;
+  onSave: (data: EditClientData) => Promise<void>;
+}
+
+export interface ViewClientModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  client: Client | null;
 }

@@ -1,11 +1,29 @@
-import React from "react";
+"use client";
+
+import React, { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import "react-toastify/dist/ReactToastify.css";
 import Colors from "@/shared/theme/colors";
 import { createPurchaseOrderModalProps } from "../../types/typesPurchaseOrder";
 import { useCreatePurchaseOrderForm } from "../../hooks/usePurchaseOrders";
+import {
+  getSuppliers,
+  ISupplier,
+} from "@/features/dashboard/suppliers/services/suppliers.service";
+import {
+  getProductsBySupplier,
+  generateOrderNumber,
+  sendPurchaseOrderNotification,
+  ProductoAPI,
+} from "../../services/suppliersOrderService";
+import { showSuccess, showError, showWarning } from "@/shared/utils/notifications";
 
-import { getSuppliers, ISupplier } from "@/features/dashboard/suppliers/services/suppliers.service";
+interface ItemRow {
+  productoNombre: string;
+  cantidad: number;
+  precioUnitario: number;
+  imagen?: string;
+}
 
 export const CreatePurchaseOrderModal: React.FC<createPurchaseOrderModalProps> = ({
   isOpen,
@@ -17,333 +35,444 @@ export const CreatePurchaseOrderModal: React.FC<createPurchaseOrderModalProps> =
     errors,
     touched,
     handleInputChange,
+    handleSupplierChange: handleSupplierChangeHook,
     handleBlur,
     handleSubmit,
     isSubmitting,
-    handleAddItem,
-    handleRemoveItem,
-    handleItemChange
-  } = useCreatePurchaseOrderForm({
-    isOpen,
-    onClose,
-    onSave
-  });
+    setItems,
+  } = useCreatePurchaseOrderForm({ isOpen, onClose, onSave });
 
-  const [suppliers, setSuppliers] = React.useState<ISupplier[]>([]);
+  const [suppliers, setSuppliers] = useState<ISupplier[]>([]);
+  const [selectedSupplier, setSelectedSupplier] = useState<ISupplier | null>(null);
+  const [supplierProducts, setSupplierProducts] = useState<ProductoAPI[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [orderNumber, setOrderNumber] = useState("");
+  const [rows, setRows] = useState<ItemRow[]>([
+    { productoNombre: "", cantidad: 1, precioUnitario: 0 },
+  ]);
 
-  React.useEffect(() => {
+  // Cargar proveedores al abrir el modal
+  useEffect(() => {
     if (isOpen) {
+      setOrderNumber(generateOrderNumber());
+      setSelectedSupplier(null);
+      setSupplierProducts([]);
+      setRows([{ productoNombre: "", cantidad: 1, precioUnitario: 0 }]);
       getSuppliers()
         .then((data) => setSuppliers(data))
-        .catch((err) => console.error("Error fetching suppliers:", err));
+        .catch(() => showError("Error al cargar proveedores."));
     }
   }, [isOpen]);
 
+  // Sincronizar rows → formData.items
+  // NOTA: setItems está envuelto en useCallback en el hook (referencia estable)
+  useEffect(() => {
+    setItems(
+      rows.map((r) => ({
+        producto: r.productoNombre,
+        cantidad: r.cantidad,
+        precioUnitario: r.precioUnitario,
+        imagen: r.imagen,
+      }))
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows]); // setItems es estable (useCallback), pero lo excluimos para evitar loops
+
+  // ── Seleccionar proveedor ──────────────────────────────────────────────────
+  const handleSupplierChange = useCallback(
+    async (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const supplierId = Number(e.target.value);
+
+      if (!supplierId) {
+        setSelectedSupplier(null);
+        setSupplierProducts([]);
+        // Limpiar campo proveedor en el formulario
+        handleInputChange("proveedor", "");
+        return;
+      }
+
+      const found = suppliers.find((s) => s.supplierid === supplierId);
+      setSelectedSupplier(found || null);
+
+      if (found) {
+        // ✅ Guardar el NOMBRE y el ID del proveedor en el hook
+        handleSupplierChangeHook(found.name, found.supplierid);
+
+        setLoadingProducts(true);
+        try {
+          const productos = await getProductsBySupplier(supplierId);
+          setSupplierProducts(productos);
+        } catch {
+          setSupplierProducts([]);
+        } finally {
+          setLoadingProducts(false);
+        }
+      }
+    },
+    [suppliers, handleInputChange]
+  );
+
+  // ── Manejo de filas de productos ──────────────────────────────────────────
+  const handleProductSelect = (index: number, productName: string) => {
+    const prod = supplierProducts.find((p) => p.productname === productName);
+    setRows((prev) =>
+      prev.map((row, i) =>
+        i === index
+          ? {
+            productoNombre: productName,
+            cantidad: row.cantidad,
+            precioUnitario: prod?.productpriceofsupplier ?? row.precioUnitario,
+            imagen: prod?.image ?? undefined,
+          }
+          : row
+      )
+    );
+  };
+
+  const handleRowChange = <K extends keyof ItemRow>(
+    index: number,
+    field: K,
+    value: ItemRow[K]
+  ) => {
+    setRows((prev) => prev.map((row, i) => (i === index ? { ...row, [field]: value } : row)));
+  };
+
+  const handleAddRow = () => {
+    setRows((prev) => [...prev, { productoNombre: "", cantidad: 1, precioUnitario: 0 }]);
+  };
+
+  const handleRemoveRow = (index: number) => {
+    if (rows.length === 1) return;
+    setRows((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // ── Enviar + guardar ───────────────────────────────────────────────────────
+  const handleSendAndSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!selectedSupplier) {
+      showError("Seleccione un proveedor antes de enviar.");
+      return;
+    }
+
+    const validRows = rows.filter((r) => r.productoNombre.trim());
+    if (validRows.length === 0) {
+      showError("Debe agregar al menos un producto antes de enviar.");
+      return;
+    }
+
+    const subtotal = rows.reduce((acc, r) => acc + r.cantidad * r.precioUnitario, 0);
+    const iva = subtotal * 0.19;
+    const total = subtotal + iva;
+
+    const hasContact = selectedSupplier.email || selectedSupplier.phone;
+
+    if (hasContact) {
+      setIsSending(true);
+      try {
+        const result = await sendPurchaseOrderNotification({
+          numeroOrden: orderNumber,
+          proveedorId: selectedSupplier.supplierid,
+          supplierName: selectedSupplier.name,
+          supplierEmail: selectedSupplier.email || undefined,
+          supplierPhone: selectedSupplier.phone || undefined,
+          productos: rows.map((r) => ({
+            producto: r.productoNombre,
+            cantidad: r.cantidad,
+            precioUnitario: r.precioUnitario,
+          })),
+          total,
+          fecha: formData.fecha,
+          descripcion: formData.descripcion,
+        });
+
+        if (result.success) {
+          showSuccess(
+            `Notificación enviada por ${result.channel === "both"
+              ? "WhatsApp y correo"
+              : result.channel === "email"
+                ? "correo"
+                : "WhatsApp"
+            }.`
+          );
+        }
+      } catch {
+        showWarning("No se pudo enviar la notificación, pero la orden se guardará.");
+      } finally {
+        setIsSending(false);
+      }
+    } else {
+      showWarning("El proveedor no tiene contacto registrado. La orden se guardará sin notificación.");
+    }
+
+    handleSubmit();
+  };
+
   if (!isOpen) return null;
 
-  // Función para manejar cambios en selects
-  const handleSelectChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    handleInputChange(event.target.name as keyof typeof formData, event.target.value);
-  };
-
-  // Función para manejar cambios en inputs de texto del header
-  const handleTextChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const value = event.target.type === 'number' ?
-      parseFloat(event.target.value) || 0 :
-      event.target.value;
-    handleInputChange(event.target.name as keyof typeof formData, value);
-  };
-
-  // Función para manejar cambios en items
-  const onItemChange = (index: number, field: string, value: string | number) => {
-    // Cast field to strict type locally
-    handleItemChange(index, field as 'producto' | 'cantidad' | 'precioUnitario', value);
-  };
-
-  const onItemTextChange = (index: number, event: React.ChangeEvent<HTMLInputElement>) => {
-    const field = event.target.name;
-    const value = event.target.type === 'number' ?
-      parseFloat(event.target.value) || 0 :
-      event.target.value;
-    onItemChange(index, field, value);
-  };
-
-  // Calcular subtotal y total basado en items
-  const subtotal = (formData.items || []).reduce((acc, item) => acc + (item.cantidad * item.precioUnitario), 0);
-  const iva = subtotal * 0.19; // 19% IVA
-  const descuento = 0; // Por ahora sin descuento
-  const total = subtotal + iva - descuento;
+  const subtotal = rows.reduce((acc, r) => acc + r.cantidad * r.precioUnitario, 0);
+  const iva = subtotal * 0.19;
+  const total = subtotal + iva;
 
   return createPortal(
-    <>
-      <div className="fixed inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm z-50 p-4">
-        <div className="bg-white rounded-lg shadow-lg w-full max-w-4xl relative z-50 max-h-[90vh] overflow-y-auto">
-          {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b">
-            <h2 className="text-xl font-semibold text-gray-900">
-              Crear Orden Compra
-            </h2>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
+    <div className="fixed inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm z-50 p-4">
+      <div className="bg-white rounded-lg shadow-lg w-full max-w-4xl relative z-50 max-h-[90vh] overflow-y-auto">
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="p-4 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Número de Orden */}
-              <div>
-                <label className="block text-sm font-medium mb-2 text-gray-700">
-                  Número de Orden*
-                </label>
-                <input
-                  type="text"
-                  name="numeroOrden"
-                  value={formData.numeroOrden}
-                  onChange={handleTextChange}
-                  onBlur={() => handleBlur('numeroOrden')}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                  placeholder="Ej: ORD-001"
-                  style={{
-                    borderColor: errors.numeroOrden && touched.numeroOrden ? 'red' : Colors.table.lines,
-                  }}
-                />
-                {errors.numeroOrden && touched.numeroOrden && (
-                  <span className="text-red-500 text-xs mt-1">{errors.numeroOrden}</span>
-                )}
-              </div>
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b">
+          <h2 className="text-xl font-semibold text-gray-900">Crear Orden de Compra</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
 
-              {/* Proveedor */}
-              <div>
-                <label className="block text-sm font-medium mb-2 text-gray-700">
-                  Proveedor*
-                </label>
-                <select
-                  name="proveedor"
-                  value={formData.proveedor}
-                  onChange={handleSelectChange}
-                  onBlur={() => handleBlur('proveedor')}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                  style={{
-                    borderColor: errors.proveedor && touched.proveedor ? 'red' : Colors.table.lines,
-                  }}
-                >
-                  <option value="">Seleccione Un Proveedor</option>
-                  {suppliers.map((supplier) => (
-                    <option key={supplier.supplierid} value={supplier.name}>
-                      {supplier.name}
-                    </option>
-                  ))}
-                </select>
-                {errors.proveedor && touched.proveedor && (
-                  <span className="text-red-500 text-xs mt-1">{errors.proveedor}</span>
-                )}
-              </div>
+        {/* Form */}
+        <form onSubmit={handleSendAndSave} className="p-4 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-              {/* Fecha estimada de entrega */}
-              <div>
-                <label className="block text-sm font-medium mb-2 text-gray-700">
-                  Fecha estimada de entrega
-                </label>
-                <input
-                  type="date"
-                  name="fecha"
-                  value={formData.fecha}
-                  onChange={handleTextChange}
-                  onBlur={() => handleBlur('fecha')}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                  style={{
-                    borderColor: errors.fecha && touched.fecha ? 'red' : Colors.table.lines,
-                  }}
-                />
-                {errors.fecha && touched.fecha && (
-                  <span className="text-red-500 text-xs mt-1">{errors.fecha}</span>
-                )}
-              </div>
-
-              {/* Estado de la Orden */}
-              <div>
-                <label className="block text-sm font-medium mb-2 text-gray-700">
-                  Estado de la Orden
-                </label>
-                <select
-                  name="estado"
-                  value="Pendiente"
-                  disabled
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100"
-                >
-                  <option value="Pendiente">Pendiente</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Tabla de productos */}
+            {/* N° ORDEN */}
             <div>
-              <div className="border border-gray-300 rounded-md overflow-hidden">
-                {/* Header de tabla */}
-                <div className="grid grid-cols-[2fr_80px_100px_120px_120px_40px] gap-2 p-3 bg-gray-50 border-b text-sm font-medium text-gray-700">
-                  <div>Producto / Descripción</div>
-                  <div>Imagen</div>
-                  <div className="text-center">Cant.</div>
-                  <div className="text-right">Precio Unit.</div>
-                  <div className="text-right">Total</div>
-                  <div></div>
-                </div>
-
-                {/* Filas de productos */}
-                {formData.items?.map((item, index) => (
-                  <div key={index} className="grid grid-cols-[2fr_80px_100px_120px_120px_40px] gap-2 p-3 items-center border-b last:border-b-0 hover:bg-gray-50">
-                    {/* Producto */}
-                    <div>
-                      <input
-                        type="text"
-                        name="producto"
-                        placeholder="Nombre del producto"
-                        value={item.producto}
-                        onChange={(e) => onItemTextChange(index, e)}
-                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-red-500"
-                      />
-                    </div>
-
-                    {/* Imagen placeholder */}
-                    <div className="text-center text-gray-400 text-xs">
-                      -
-                    </div>
-
-                    {/* Cantidad */}
-                    <div>
-                      <input
-                        type="number"
-                        name="cantidad"
-                        value={item.cantidad}
-                        onChange={(e) => onItemTextChange(index, e)}
-                        min="1"
-                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm text-center focus:ring-2 focus:ring-red-500"
-                      />
-                    </div>
-
-                    {/* Precio Unitario */}
-                    <div>
-                      <input
-                        type="number"
-                        name="precioUnitario"
-                        placeholder="0"
-                        value={item.precioUnitario || ''}
-                        onChange={(e) => onItemTextChange(index, e)}
-                        min="0"
-                        step="0.01"
-                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm text-right focus:ring-2 focus:ring-red-500"
-                      />
-                    </div>
-
-                    {/* Total de línea */}
-                    <div className="text-sm font-medium text-right">
-                      ${(item.cantidad * item.precioUnitario).toLocaleString('es-CO')}
-                    </div>
-
-                    {/* Botón eliminar */}
-                    <div className="text-center">
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveItem(index)}
-                        className="text-gray-400 hover:text-red-500 transition-colors"
-                        title="Eliminar producto"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                ))}
-
-                {/* Estado vacío si no hay items */}
-                {(!formData.items || formData.items.length === 0) && (
-                  <div className="p-8 text-center text-gray-500 text-sm">
-                    No hay productos agregados.
-                  </div>
-                )}
-
-                {/* Botón agregar producto */}
-                <div className="p-3 bg-gray-50 border-t">
-                  <button
-                    type="button"
-                    onClick={handleAddItem}
-                    className="text-sm text-blue-600 hover:text-blue-800 flex items-center font-medium"
-                  >
-                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                    Agregar Producto
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Resumen de totales */}
-            <div className="bg-gray-50 p-4 rounded-md">
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span>Subtotal:</span>
-                  <span>${subtotal.toLocaleString('es-CO')}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Iva (19%):</span>
-                  <span>${iva.toLocaleString('es-CO')}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Descuento:</span>
-                  <span>$0</span>
-                </div>
-                <div className="flex justify-between font-bold text-lg border-t pt-2">
-                  <span>TOTAL a pagar:</span>
-                  <span>${total.toLocaleString('es-CO')}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Observaciones */}
-            <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700">
-                Observaciones
-              </label>
-              <textarea
-                name="descripcion"
-                value={formData.descripcion || ''}
-                onChange={(e) => handleInputChange('descripcion', e.target.value)}
-                onBlur={() => handleBlur('descripcion')}
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                placeholder="Ingrese observaciones adicionales..."
+              <label className="block text-sm font-medium mb-2 text-gray-700">N° Orden (Auto)</label>
+              <input
+                type="text"
+                value={orderNumber}
+                readOnly
+                tabIndex={-1}
+                className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-gray-500 cursor-not-allowed select-none"
               />
             </div>
 
-            {/* Botones */}
-            <div className="flex justify-end gap-3 pt-4 border-t">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-md font-medium"
+            {/* PROVEEDOR */}
+            <div>
+              <label className="block text-sm font-medium mb-2 text-gray-700">Proveedor*</label>
+              <select
+                value={selectedSupplier?.supplierid?.toString() ?? ""}
+                onChange={handleSupplierChange}
+                onBlur={() => handleBlur("proveedor")}
+                className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-red-500"
+                style={{
+                  borderColor: errors.proveedor && touched.proveedor ? "red" : Colors.table.lines,
+                }}
               >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-md font-medium disabled:opacity-50"
-              >
-                {isSubmitting ? 'Guardando...' : 'Guardar'}
-              </button>
+                <option value="">Seleccione un proveedor</option>
+                {suppliers.map((s) => (
+                  <option key={s.supplierid} value={s.supplierid}>{s.name}</option>
+                ))}
+              </select>
+              {errors.proveedor && touched.proveedor && (
+                <span className="text-red-500 text-xs mt-1">{errors.proveedor}</span>
+              )}
             </div>
-          </form>
-        </div>
+
+            {/* FECHA */}
+            <div>
+              <label className="block text-sm font-medium mb-2 text-gray-700">Fecha estimada de entrega</label>
+              <input
+                type="date"
+                value={formData.fecha}
+                onChange={(e) => handleInputChange("fecha", e.target.value)}
+                onBlur={() => handleBlur("fecha")}
+                className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-red-500"
+                style={{ borderColor: errors.fecha && touched.fecha ? "red" : Colors.table.lines }}
+              />
+              {errors.fecha && touched.fecha && (
+                <span className="text-red-500 text-xs mt-1">{errors.fecha}</span>
+              )}
+            </div>
+
+            {/* ESTADO */}
+            <div>
+              <label className="block text-sm font-medium mb-2 text-gray-700">Estado</label>
+              <input
+                type="text"
+                value="Pendiente"
+                disabled
+                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-600"
+              />
+            </div>
+          </div>
+
+          {/* Info proveedor */}
+          {selectedSupplier && (
+            <div className="text-xs text-gray-500 bg-gray-50 rounded p-2 flex gap-4 flex-wrap">
+              {selectedSupplier.email && <span>📧 {selectedSupplier.email}</span>}
+              {selectedSupplier.phone && <span>📱 {selectedSupplier.phone}</span>}
+              {!selectedSupplier.email && !selectedSupplier.phone && (
+                <span className="text-amber-600 font-medium">
+                  ⚠️ Sin contacto — la orden se guardará sin notificación
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* TABLA DE PRODUCTOS */}
+          <div>
+            {loadingProducts && (
+              <div className="text-xs text-blue-600 mb-2 flex items-center gap-2">
+                <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                Cargando productos del proveedor…
+              </div>
+            )}
+
+            <div className="border border-gray-300 rounded-md overflow-hidden">
+              <div className="grid grid-cols-[2fr_80px_90px_110px_100px_36px] gap-2 p-3 bg-gray-50 border-b text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                <div>Producto</div>
+                <div>Imagen</div>
+                <div className="text-center">Cant.</div>
+                <div className="text-right">Precio Unit.</div>
+                <div className="text-right">Subtotal</div>
+                <div />
+              </div>
+
+              {rows.map((row, index) => (
+                <div
+                  key={index}
+                  className="grid grid-cols-[2fr_80px_90px_110px_100px_36px] gap-2 p-3 items-center border-b last:border-b-0 hover:bg-gray-50"
+                >
+                  {/* Selector / input de producto */}
+                  <div>
+                    {supplierProducts.length > 0 ? (
+                      <select
+                        value={row.productoNombre}
+                        onChange={(e) => handleProductSelect(index, e.target.value)}
+                        className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-red-500"
+                      >
+                        <option value="">— Seleccionar producto —</option>
+                        {supplierProducts.map((p) => (
+                          <option key={p.productid} value={p.productname}>{p.productname}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        value={row.productoNombre}
+                        onChange={(e) => handleRowChange(index, "productoNombre", e.target.value)}
+                        placeholder="Nombre del producto"
+                        className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-red-500"
+                      />
+                    )}
+                  </div>
+
+                  {/* Imagen */}
+                  <div className="flex items-center justify-center">
+                    {row.imagen ? (
+                      <img
+                        src={row.imagen}
+                        alt={row.productoNombre}
+                        className="h-10 w-10 object-cover rounded"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                      />
+                    ) : (
+                      <span className="text-xs text-gray-400">N/A</span>
+                    )}
+                  </div>
+
+                  {/* Cantidad */}
+                  <div>
+                    <input
+                      type="number"
+                      value={row.cantidad}
+                      min={1}
+                      onChange={(e) => handleRowChange(index, "cantidad", Math.max(1, Number(e.target.value)))}
+                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm text-center focus:ring-2 focus:ring-red-500"
+                    />
+                  </div>
+
+                  {/* Precio */}
+                  <div>
+                    <input
+                      type="number"
+                      value={row.precioUnitario || ""}
+                      min={0}
+                      step={0.01}
+                      onChange={(e) => handleRowChange(index, "precioUnitario", Number(e.target.value))}
+                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm text-right focus:ring-2 focus:ring-red-500"
+                    />
+                  </div>
+
+                  {/* Total fila */}
+                  <div className="text-sm font-medium text-right text-gray-700">
+                    ${(row.cantidad * row.precioUnitario).toLocaleString("es-CO")}
+                  </div>
+
+                  {/* Eliminar */}
+                  <div className="text-center">
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveRow(index)}
+                      className="text-gray-300 hover:text-red-500 text-lg font-bold leading-none"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              <div className="p-3 bg-gray-50 border-t">
+                <button
+                  type="button"
+                  onClick={handleAddRow}
+                  className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                >
+                  + Agregar Producto
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* RESUMEN */}
+          <div className="bg-gray-50 p-4 rounded-md space-y-1.5 text-sm">
+            <div className="flex justify-between text-gray-600">
+              <span>Subtotal:</span>
+              <span>${subtotal.toLocaleString("es-CO")}</span>
+            </div>
+            <div className="flex justify-between text-gray-600">
+              <span>IVA (19%):</span>
+              <span>${iva.toLocaleString("es-CO")}</span>
+            </div>
+            <div className="flex justify-between font-bold text-base border-t pt-2 mt-1">
+              <span>TOTAL:</span>
+              <span>${total.toLocaleString("es-CO")}</span>
+            </div>
+          </div>
+
+          {/* Observaciones */}
+          <div>
+            <label className="block text-sm font-medium mb-2 text-gray-700">Observaciones</label>
+            <textarea
+              value={formData.descripcion || ""}
+              onChange={(e) => handleInputChange("descripcion", e.target.value)}
+              rows={3}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500"
+            />
+          </div>
+
+          {/* Botones */}
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-md"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={isSending || isSubmitting || !selectedSupplier}
+              className="px-5 py-2 bg-gray-900 hover:bg-black text-white rounded-md disabled:opacity-50 flex items-center gap-2 font-medium"
+            >
+              {(isSending || isSubmitting) && (
+                <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              )}
+              {isSending ? "Enviando…" : isSubmitting ? "Guardando…" : "Enviar al Proveedor y Guardar"}
+            </button>
+          </div>
+        </form>
       </div>
-    </>,
+    </div>,
     document.body
   );
 };

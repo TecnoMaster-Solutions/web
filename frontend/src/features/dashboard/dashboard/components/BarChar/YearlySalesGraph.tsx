@@ -13,7 +13,7 @@ import {
   Cell,
 } from "recharts";
 import Colors from "@/shared/theme/colors";
-import { getMonthNumberFromLabel, MonthSelection } from "./monthUtils";
+import { getMonthLabelFromNumber, getMonthNumberFromLabel, MonthSelection, MONTH_LABELS_ES } from "./monthUtils";
 import { formatCOP } from "../../indexDashboard"
 
 interface YearlyGraphProps {
@@ -40,7 +40,19 @@ const CustomTooltip = ({ active, payload, isCurrency }: any) => {
 };
 
 export const YearlyGraph = ({ title, data, onMonthClick, isCurrency = true }: YearlyGraphProps) => {
-  const maxValue = Math.max(...data.map((item) => item.total));
+  const normalizedData = MONTH_LABELS_ES.map((label, index) => {
+    const monthNumber = index + 1;
+    const total = data
+      .filter((item) => getMonthNumberFromLabel(item.month) === monthNumber)
+      .reduce((acc, item) => acc + (Number(item.total) || 0), 0);
+
+    return {
+      month: getMonthLabelFromNumber(monthNumber),
+      total,
+    };
+  });
+
+  const maxValue = Math.max(0, ...normalizedData.map((item) => item.total));
 
   const handleBarClick = (entry: any) => {
     if (!entry) return;
@@ -54,7 +66,7 @@ export const YearlyGraph = ({ title, data, onMonthClick, isCurrency = true }: Ye
   return (
     <ResponsiveContainer width="100%" height={300}>
       <BarChart
-        data={data}
+        data={normalizedData}
         margin={{ top: 10, right: 30, left: 32, bottom: 10 }}
       >
         <XAxis dataKey="month" axisLine={false} tickLine={false} />
@@ -81,7 +93,7 @@ export const YearlyGraph = ({ title, data, onMonthClick, isCurrency = true }: Ye
           activeBar={<Rectangle fill={Colors.graphic.lineThird} stroke="purple" />}
           onClick={handleBarClick}
         >
-          {data.map((entry, index) => (
+          {normalizedData.map((entry, index) => (
             <Cell
               key={`cell-${index}`}
               fill={
