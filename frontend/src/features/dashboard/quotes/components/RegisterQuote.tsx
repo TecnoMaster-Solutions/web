@@ -7,7 +7,8 @@ import { QuoteCreatePayload, QuoteDetailPayload } from "../types/Quote.type";
 import { api } from "@/shared/utils/apiClient";
 import { getServicesRequestsForQuote } from "../api/quotes.api";
 import AutoGrowTextarea from "@/components/ui/AutoGrowTextarea";
-import { createClient, CreateClientPayload } from "../../Clients/api/clients.api";
+import { useRouter } from "next/navigation";
+import { routes } from "@/shared/routes";
 
 /* ================================
  * TIPOS
@@ -49,6 +50,8 @@ type ProductFromApi = {
   isactive: boolean;
 };
 
+const DETAIL_DESCRIPTION_MAX = 150;
+
 /* ================================
  * ESTADO DEL FORMULARIO
  * ================================ */
@@ -71,10 +74,11 @@ type NewClientForm = {
 };
 
 interface Props {
-  onSave?: (payload: QuoteCreatePayload) => Promise<void>;
+  onSave: (payload: QuoteCreatePayload) => Promise<void>;
 }
 
 export default function RegisterQuoteForm({ onSave }: Props) {
+  const router = useRouter();
   /* ================================
    * STATE PRINCIPAL
    * ================================ */
@@ -252,11 +256,13 @@ export default function RegisterQuoteForm({ onSave }: Props) {
     isBackorder: boolean,
   ) => {
     const unitprice = Number(product.productpriceofsale);
+    const rawDescription = product.productdescription ?? product.productname;
+    const safeDescription = rawDescription.slice(0, DETAIL_DESCRIPTION_MAX);
 
     setDetailForm({
       productid: product.productid,
       name: product.productname,
-      description: product.productdescription ?? "",
+      description: safeDescription,
       quantity: 1,
       unitprice,
       subtotal: unitprice,
@@ -293,8 +299,16 @@ export default function RegisterQuoteForm({ onSave }: Props) {
   const normalizeDescription = (value: string) => value.trim().toLowerCase();
 
   const handleAddDetail = () => {
-    if (!detailForm.description.trim()) {
+    const description = detailForm.description.trim();
+
+    if (!description) {
       showError("La descripción es obligatoria");
+      return;
+    }
+    if (description.length > DETAIL_DESCRIPTION_MAX) {
+      showError(
+        `La descripción no puede superar ${DETAIL_DESCRIPTION_MAX} caracteres`,
+      );
       return;
     }
     if (detailForm.quantity <= 0 || detailForm.unitprice < 0) {
@@ -313,6 +327,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
 
     const detailPayload: QuoteDetailPayload = {
       ...detailForm,
+      description,
       productid: isManualProduct ? null : detailForm.productid,
       subtotal,
       availability,
@@ -446,73 +461,20 @@ export default function RegisterQuoteForm({ onSave }: Props) {
       return;
     }
 
-    // 2) Si NO hay solicitud, exigimos crear cliente (según requerimiento)
-    const isWithoutServiceRequest = !form.serviceRequestId;
-    if (isWithoutServiceRequest) {
-      if (!createNewClientEnabled) {
-        showError("Para cotizar sin solicitud, debe crear un cliente nuevo");
-        return;
-      }
-      if (
-        !clientForm.documento.trim() ||
-        !clientForm.nombre.trim() ||
-        !clientForm.telefono.trim() ||
-        !clientForm.correo.trim() ||
-        !clientForm.contrasena.trim()
-      ) {
-        showError("Completa los datos obligatorios del cliente");
-        return;
-      }
-    }
+    // Preparar el payload según la especificación del endpoint
+    const payload: QuoteCreatePayload = {
+      serviceRequestId: Number(form.serviceRequestId),
+      statesid: form.statesid,
+      servicetype: form.servicetype as "MANTENIMIENTO" | "INSTALACION",
+      observation: form.observation,
+      details: form.details.map(({ isBackorder, ...detail }) => ({
+        ...detail,
+        productid: detail.productid ?? null,
+      })),
+    };
 
     try {
-      // 3) Crear cliente si aplica
-      let createdClientId: number | null = null;
-
-      if (isWithoutServiceRequest && createNewClientEnabled) {
-        const payloadClient: CreateClientPayload = {
-          tipo: clientForm.tipo,
-          documento: clientForm.documento.trim(),
-          nombre: clientForm.nombre.trim(),
-          apellido: clientForm.apellido?.trim() || null,
-          telefono: clientForm.telefono.trim(),
-          correo: clientForm.correo.trim(),
-          rol: "Cliente",
-          estado: true,
-          contrasena: clientForm.contrasena,
-        };
-
-        const created: any = await createClient(payloadClient);
-        createdClientId =
-          created?.clientid ?? created?.customerid ?? created?.id ?? null;
-
-        if (!createdClientId) {
-          showError("Cliente creado, pero no se recibió el ID del cliente");
-          return;
-        }
-      }
-
-      // 4) Crear payload de cotización
-      // NOTA: Aquí incluimos serviceRequestId como null si no hay solicitud
-      // y mandamos clientId si se creó cliente.
-      const quotePayload: any = {
-        serviceRequestId: form.serviceRequestId
-          ? Number(form.serviceRequestId)
-          : null,
-        statesid: form.statesid,
-        servicetype: form.servicetype as "MANTENIMIENTO" | "INSTALACION",
-        observation: form.observation,
-        details: form.details.map(({ isBackorder, ...detail }) => ({
-          ...detail,
-          productid: detail.productid ?? null,
-        })),
-        ...(createdClientId ? { clientId: createdClientId } : {}),
-      };
-
-      // onSave está tipado con QuoteCreatePayload (sin clientId / sin null)
-      // por eso lo casteamos: el backend debe soportar este caso “sin solicitud”.
-      await onSave?.(quotePayload as QuoteCreatePayload);
-
+      await onSave?.(payload);
       showSuccess("Cotización guardada exitosamente");
 
       // Reset
@@ -544,9 +506,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
         availability: "DISPONIBLE",
         isBackorder: false,
       });
-      setProductSearch("");
     } catch (error) {
-      console.error(error);
       showError("Error al guardar la cotización");
     }
   };
@@ -603,6 +563,13 @@ export default function RegisterQuoteForm({ onSave }: Props) {
             );
           })}
         </select>
+        <button
+          type="button"
+          className="mt-2 text-xs text-blue-700 underline hover:text-blue-900"
+          onClick={() => router.push(routes.dashboard.users)}
+        >
+          Crear cliente desde Usuarios
+        </button>
       </div>
 
       {/* INFO AUTOMÁTICA DEL SERVICE REQUEST */}
@@ -993,9 +960,13 @@ export default function RegisterQuoteForm({ onSave }: Props) {
               onChange={(e) =>
                 setDetailForm({ ...detailForm, description: e.target.value })
               }
+              maxLength={DETAIL_DESCRIPTION_MAX}
               readOnly={!isManualProduct}
               className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
+            <p className="mt-1 text-xs text-gray-500">
+              {detailForm.description.length}/{DETAIL_DESCRIPTION_MAX}
+            </p>
           </div>
 
           <div>

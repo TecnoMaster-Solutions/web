@@ -30,7 +30,6 @@ export default function UsersPage() {
     handleDelete,
     closeModals
   } = useUser();
-
   // Determinar si los modales están abiertos basado en el estado
   const isEditModalOpen = !!editingUser;
   const isViewModalOpen = !!viewingUser;

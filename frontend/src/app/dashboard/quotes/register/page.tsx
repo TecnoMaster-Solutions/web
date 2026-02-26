@@ -2,10 +2,16 @@
 
 import RequireAuth from "@/features/auth/requireauth";
 import RegisterQuoteForm from "@/features/dashboard/quotes/components/RegisterQuote";
+import { createQuote } from "@/features/dashboard/quotes/api/quotes.api";
+import { QuoteCreatePayload } from "@/features/dashboard/quotes/types/Quote.type";
 import { useRouter } from "next/navigation";
 
 export default function QuotesRegisterPage() {
   const router = useRouter();
+  const handleSave = async (payload: QuoteCreatePayload) => {
+    await createQuote(payload);
+    router.push("/dashboard/quotes");
+  };
 
   return (
     <RequireAuth>
@@ -22,7 +28,7 @@ export default function QuotesRegisterPage() {
           </button>
         </div>
 
-        <RegisterQuoteForm redirectTo="/quotes" />
+        <RegisterQuoteForm onSave={handleSave} />
       </div>
     </RequireAuth>
   );
