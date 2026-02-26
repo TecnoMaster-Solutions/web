@@ -37,8 +37,30 @@ type Props = {
   servicios?: ServiceOption[] | null;
   clientId: number;
   clientLabel?: string;
+  clientDocumentLabel?: string | null;
   initialServiceId?: number | null;
   initialDireccion?: string | null;
+  initialAddressFields?: {
+    city?: string | null;
+    zone?: string | null;
+    streetType?: string | null;
+    streetNumber?: string | null;
+    secondaryNumber?: string | null;
+    complement?: string | null;
+  } | null;
+  onInitialAddressFieldsChange?: (next: {
+    city: string;
+    zone: string;
+    streetType: string;
+    streetNumber: string;
+    secondaryNumber: string;
+    complement: string;
+  }) => void;
+  addressOptions?: {
+    cities?: string[];
+    zones?: string[];
+    streetTypes?: string[];
+  } | null;
   pendingStateId?: number | null;
   scheduledStateId?: number | null;
 };
@@ -62,8 +84,12 @@ export default function ClientCreateRequestModal({
   servicios,
   clientId,
   clientLabel,
+  clientDocumentLabel,
   initialServiceId = null,
   initialDireccion,
+  initialAddressFields,
+  onInitialAddressFieldsChange,
+  addressOptions,
   pendingStateId = null,
   scheduledStateId = null,
 }: Props) {
@@ -158,9 +184,19 @@ export default function ClientCreateRequestModal({
     e.tipo = validateTipo(serviceTypeId);
     e.serviceId = validateServiceId(serviceId);
     e.description = validateDescription(description);
-    e.direccion = validateDireccion(direccion);
+    e.direccion =
+      initialAddressFields && onInitialAddressFieldsChange
+        ? null
+        : validateDireccion(direccion);
     return e;
-  }, [serviceTypeId, serviceId, description, direccion]);
+  }, [
+    serviceTypeId,
+    serviceId,
+    description,
+    direccion,
+    initialAddressFields,
+    onInitialAddressFieldsChange,
+  ]);
 
   function markTouched(k: ErrorKey) {
     setTouched((p) => ({ ...p, [k]: true }));
@@ -239,6 +275,21 @@ export default function ClientCreateRequestModal({
   async function submit() {
     setSubmitAttempted(true);
 
+    if (initialAddressFields && onInitialAddressFieldsChange) {
+      const city = String(initialAddressFields.city || "").trim();
+      const zone = String(initialAddressFields.zone || "").trim();
+      const streetType = String(initialAddressFields.streetType || "").trim();
+      const streetNumber = String(initialAddressFields.streetNumber || "").trim();
+      const secondaryNumber = String(
+        initialAddressFields.secondaryNumber || ""
+      ).trim();
+
+      if (!city || !zone || !streetType || !streetNumber || !secondaryNumber) {
+        showInfo("Completa los datos de dirección.");
+        return;
+      }
+    }
+
     const errKeys = Object.keys(errors) as ErrorKey[];
     const firstError = errKeys.find((k) => !!errors[k]);
     if (firstError) {
@@ -260,12 +311,27 @@ export default function ClientCreateRequestModal({
     try {
       setSaving(true);
 
+      const composedDireccion =
+        initialAddressFields && onInitialAddressFieldsChange
+          ? `${String(initialAddressFields.streetType || "").trim()} ${String(
+              initialAddressFields.streetNumber || ""
+            ).trim()} #${String(
+              initialAddressFields.secondaryNumber || ""
+            ).trim()}, ${String(initialAddressFields.zone || "").trim()}, ${String(
+              initialAddressFields.city || ""
+            ).trim()}${
+              String(initialAddressFields.complement || "").trim()
+                ? ` (${String(initialAddressFields.complement || "").trim()})`
+                : ""
+            }`
+          : String(direccion || "").trim();
+
       const basePayload: CreateRequestPayload = {
         scheduledAt: null,
         scheduledEndAt: null,
         serviceType: selectedType.code,
         description: String(description || "").trim(),
-        direccion: String(direccion || "").trim(),
+        direccion: composedDireccion,
         stateId: 0,
         serviceId: sid,
         clientId,
@@ -332,6 +398,62 @@ export default function ClientCreateRequestModal({
           <div className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
             <p className="text-[11px] font-medium text-gray-500">Cliente</p>
             <p className="text-sm font-semibold text-gray-900">{clientLabel}</p>
+            {clientDocumentLabel && (
+              <>
+                <p className="mt-2 text-[11px] font-medium text-gray-500">
+                  Cédula
+                </p>
+                <p className="text-sm font-semibold text-gray-900">
+                  {clientDocumentLabel}
+                </p>
+              </>
+            )}
+          </div>
+        )}
+
+        {initialAddressFields && (
+          <div className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-3">
+            <p className="text-[11px] font-medium text-gray-500 mb-2">
+              Dirección de envío (carrito)
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <div className="rounded-md border border-gray-200 bg-white px-2 py-1.5">
+                <p className="text-[10px] text-gray-500">Ciudad</p>
+                <p className="text-xs font-medium text-gray-900">
+                  {initialAddressFields.city || "-"}
+                </p>
+              </div>
+              <div className="rounded-md border border-gray-200 bg-white px-2 py-1.5">
+                <p className="text-[10px] text-gray-500">Zona / Barrio</p>
+                <p className="text-xs font-medium text-gray-900">
+                  {initialAddressFields.zone || "-"}
+                </p>
+              </div>
+              <div className="rounded-md border border-gray-200 bg-white px-2 py-1.5">
+                <p className="text-[10px] text-gray-500">Tipo de vía</p>
+                <p className="text-xs font-medium text-gray-900">
+                  {initialAddressFields.streetType || "-"}
+                </p>
+              </div>
+              <div className="rounded-md border border-gray-200 bg-white px-2 py-1.5">
+                <p className="text-[10px] text-gray-500">Número</p>
+                <p className="text-xs font-medium text-gray-900">
+                  {initialAddressFields.streetNumber || "-"}
+                </p>
+              </div>
+              <div className="rounded-md border border-gray-200 bg-white px-2 py-1.5 md:col-span-2">
+                <p className="text-[10px] text-gray-500"># secundaria</p>
+                <p className="text-xs font-medium text-gray-900">
+                  {initialAddressFields.secondaryNumber || "-"}
+                </p>
+              </div>
+              <div className="rounded-md border border-gray-200 bg-white px-2 py-1.5 md:col-span-2">
+                <p className="text-[10px] text-gray-500">Complemento</p>
+                <p className="text-xs font-medium text-gray-900">
+                  {initialAddressFields.complement || "-"}
+                </p>
+              </div>
+            </div>
           </div>
         )}
 
@@ -430,7 +552,143 @@ export default function ClientCreateRequestModal({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {initialAddressFields && onInitialAddressFieldsChange && (
+          <div className="grid gap-3 rounded-lg border border-gray-100 bg-gray-50 p-3">
+            <p className="text-xs font-semibold text-gray-900">
+              Dirección de envío
+            </p>
+
+            <select
+              value={String(initialAddressFields.city || "")}
+              onChange={(e) =>
+                onInitialAddressFieldsChange({
+                  city: e.target.value,
+                  zone: String(initialAddressFields.zone || ""),
+                  streetType: String(initialAddressFields.streetType || ""),
+                  streetNumber: String(initialAddressFields.streetNumber || ""),
+                  secondaryNumber: String(initialAddressFields.secondaryNumber || ""),
+                  complement: String(initialAddressFields.complement || ""),
+                })
+              }
+              className="w-full rounded-lg border border-gray-300 bg-white h-10 px-3 text-sm"
+              disabled={saving}
+            >
+              <option value="">Ciudad</option>
+              {(addressOptions?.cities || []).map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={String(initialAddressFields.zone || "")}
+              onChange={(e) =>
+                onInitialAddressFieldsChange({
+                  city: String(initialAddressFields.city || ""),
+                  zone: e.target.value,
+                  streetType: String(initialAddressFields.streetType || ""),
+                  streetNumber: String(initialAddressFields.streetNumber || ""),
+                  secondaryNumber: String(initialAddressFields.secondaryNumber || ""),
+                  complement: String(initialAddressFields.complement || ""),
+                })
+              }
+              className="w-full rounded-lg border border-gray-300 bg-white h-10 px-3 text-sm"
+              disabled={saving}
+            >
+              <option value="">Zona / Barrio</option>
+              {(addressOptions?.zones || []).map((z) => (
+                <option key={z} value={z}>
+                  {z}
+                </option>
+              ))}
+            </select>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <select
+                value={String(initialAddressFields.streetType || "")}
+                onChange={(e) =>
+                  onInitialAddressFieldsChange({
+                    city: String(initialAddressFields.city || ""),
+                    zone: String(initialAddressFields.zone || ""),
+                    streetType: e.target.value,
+                    streetNumber: String(initialAddressFields.streetNumber || ""),
+                    secondaryNumber: String(initialAddressFields.secondaryNumber || ""),
+                    complement: String(initialAddressFields.complement || ""),
+                  })
+                }
+                className="w-full rounded-lg border border-gray-300 bg-white h-10 px-3 text-sm"
+                disabled={saving}
+              >
+                <option value="">Tipo</option>
+                {(addressOptions?.streetTypes || []).map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+
+              <input
+                value={String(initialAddressFields.streetNumber || "")}
+                onChange={(e) =>
+                  onInitialAddressFieldsChange({
+                    city: String(initialAddressFields.city || ""),
+                    zone: String(initialAddressFields.zone || ""),
+                    streetType: String(initialAddressFields.streetType || ""),
+                    streetNumber: e.target.value,
+                    secondaryNumber: String(initialAddressFields.secondaryNumber || ""),
+                    complement: String(initialAddressFields.complement || ""),
+                  })
+                }
+                placeholder="Número"
+                className="w-full rounded-lg border border-gray-300 bg-white h-10 px-3 text-sm"
+                disabled={saving}
+              />
+            </div>
+
+            <input
+              value={String(initialAddressFields.secondaryNumber || "")}
+              onChange={(e) =>
+                onInitialAddressFieldsChange({
+                  city: String(initialAddressFields.city || ""),
+                  zone: String(initialAddressFields.zone || ""),
+                  streetType: String(initialAddressFields.streetType || ""),
+                  streetNumber: String(initialAddressFields.streetNumber || ""),
+                  secondaryNumber: e.target.value,
+                  complement: String(initialAddressFields.complement || ""),
+                })
+              }
+              placeholder="# secundaria (ej: 23-18)"
+              className="w-full rounded-lg border border-gray-300 bg-white h-10 px-3 text-sm"
+              disabled={saving}
+            />
+
+            <input
+              value={String(initialAddressFields.complement || "")}
+              onChange={(e) =>
+                onInitialAddressFieldsChange({
+                  city: String(initialAddressFields.city || ""),
+                  zone: String(initialAddressFields.zone || ""),
+                  streetType: String(initialAddressFields.streetType || ""),
+                  streetNumber: String(initialAddressFields.streetNumber || ""),
+                  secondaryNumber: String(initialAddressFields.secondaryNumber || ""),
+                  complement: e.target.value,
+                })
+              }
+              placeholder="Complemento (Apto, Casa, Torre...)"
+              className="w-full rounded-lg border border-gray-300 bg-white h-10 px-3 text-sm"
+              disabled={saving}
+            />
+          </div>
+        )}
+
+        <div
+          className={
+            initialAddressFields && onInitialAddressFieldsChange
+              ? "hidden"
+              : "grid grid-cols-1 md:grid-cols-2 gap-3"
+          }
+        >
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-900">
               Dirección
