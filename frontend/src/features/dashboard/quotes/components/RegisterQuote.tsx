@@ -7,6 +7,8 @@ import { QuoteCreatePayload, QuoteDetailPayload } from "../types/Quote.type";
 import { api } from "@/shared/utils/apiClient";
 import { getServicesRequestsForQuote } from "../api/quotes.api";
 import AutoGrowTextarea from "@/components/ui/AutoGrowTextarea";
+import { useRouter } from "next/navigation";
+import { routes } from "@/shared/routes";
 
 /* ================================
  * TIPOS
@@ -48,6 +50,8 @@ type ProductFromApi = {
   isactive: boolean;
 };
 
+const DETAIL_DESCRIPTION_MAX = 150;
+
 /* ================================
  * ESTADO DEL FORMULARIO
  * ================================ */
@@ -60,10 +64,11 @@ interface QuoteFormState {
 }
 
 interface Props {
-  onSave?: (payload: QuoteCreatePayload) => Promise<void>;
+  onSave: (payload: QuoteCreatePayload) => Promise<void>;
 }
 
 export default function RegisterQuoteForm({ onSave }: Props) {
+  const router = useRouter();
   /* ================================
    * STATE PRINCIPAL
    * ================================ */
@@ -224,11 +229,13 @@ export default function RegisterQuoteForm({ onSave }: Props) {
     isBackorder: boolean,
   ) => {
     const unitprice = Number(product.productpriceofsale);
+    const rawDescription = product.productdescription ?? product.productname;
+    const safeDescription = rawDescription.slice(0, DETAIL_DESCRIPTION_MAX);
 
     setDetailForm({
       productid: product.productid,
       name: product.productname,
-      description: product.productdescription ?? "",
+      description: safeDescription,
       quantity: 1,
       unitprice,
       subtotal: unitprice,
@@ -266,8 +273,16 @@ export default function RegisterQuoteForm({ onSave }: Props) {
   const normalizeDescription = (value: string) => value.trim().toLowerCase();
 
   const handleAddDetail = () => {
-    if (!detailForm.description.trim()) {
+    const description = detailForm.description.trim();
+
+    if (!description) {
       showError("La descripción es obligatoria");
+      return;
+    }
+    if (description.length > DETAIL_DESCRIPTION_MAX) {
+      showError(
+        `La descripción no puede superar ${DETAIL_DESCRIPTION_MAX} caracteres`,
+      );
       return;
     }
     if (detailForm.quantity <= 0 || detailForm.unitprice < 0) {
@@ -287,6 +302,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
 
     const detailPayload: QuoteDetailPayload = {
       ...detailForm,
+      description,
       productid: isManualProduct ? null : detailForm.productid,
       subtotal,
       availability,
@@ -431,14 +447,18 @@ export default function RegisterQuoteForm({ onSave }: Props) {
       statesid: form.statesid,
       servicetype: form.servicetype as "MANTENIMIENTO" | "INSTALACION",
       observation: form.observation,
-      details: form.details.map(({ isBackorder, ...detail }) => ({
-        ...detail,
+      details: form.details.map((detail) => ({
         productid: detail.productid ?? null,
+        description: detail.description.trim().slice(0, DETAIL_DESCRIPTION_MAX),
+        quantity: detail.quantity,
+        unitprice: detail.unitprice,
+        subtotal: detail.subtotal,
+        availability: detail.availability,
       })),
     };
 
     try {
-      await onSave?.(payload);
+      await onSave(payload);
       showSuccess("Cotización guardada exitosamente");
 
       // Resetear formulario
@@ -460,8 +480,12 @@ export default function RegisterQuoteForm({ onSave }: Props) {
         availability: "DISPONIBLE",
         isBackorder: false,
       });
-    } catch (error) {
-      showError("Error al guardar la cotización");
+    } catch (error: any) {
+      const backendMessage = error?.response?.data?.message;
+      const message = Array.isArray(backendMessage)
+        ? backendMessage.join(", ")
+        : backendMessage;
+      showError(message || "Error al guardar la cotización");
     }
   };
 
@@ -506,6 +530,13 @@ export default function RegisterQuoteForm({ onSave }: Props) {
             );
           })}
         </select>
+        <button
+          type="button"
+          className="mt-2 text-xs text-blue-700 underline hover:text-blue-900"
+          onClick={() => router.push(routes.dashboard.users)}
+        >
+          Crear cliente desde Usuarios
+        </button>
       </div>
 
       {/* INFORMACIÓN AUTOMÁTICA DEL SERVICE REQUEST */}
@@ -764,9 +795,13 @@ export default function RegisterQuoteForm({ onSave }: Props) {
               onChange={(e) =>
                 setDetailForm({ ...detailForm, description: e.target.value })
               }
+              maxLength={DETAIL_DESCRIPTION_MAX}
               readOnly={!isManualProduct}
               className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
+            <p className="mt-1 text-xs text-gray-500">
+              {detailForm.description.length}/{DETAIL_DESCRIPTION_MAX}
+            </p>
           </div>
 
           <div>

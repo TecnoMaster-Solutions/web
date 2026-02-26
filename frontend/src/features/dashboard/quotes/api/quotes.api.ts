@@ -5,9 +5,19 @@ export const createQuote = async (payload: any) => {
   try {
     const { data } = await api.post("/quotes", payload);
     return data;
-  } catch (error) {
-    console.error("Error al crear la cotización:", error);
-    showError("Error al crear la cotización. Inténtalo nuevamente.");
+  } catch (error: any) {
+    const backendMessage = error?.response?.data?.message;
+    const message = Array.isArray(backendMessage)
+      ? backendMessage.join(", ")
+      : backendMessage;
+    console.error("Error al crear la cotización:", {
+      status: error?.response?.status,
+      message: message ?? error?.message,
+      data: error?.response?.data,
+    });
+    if (message) {
+      error.message = message;
+    }
     throw error;
   }
 };
@@ -19,6 +29,17 @@ export const getQuotes = async () => {
   } catch (error) {
     console.error("Error al obtener las cotizaciones:", error);
     showError("Error al obtener las cotizaciones");
+    throw error;
+  }
+};
+
+export const getQuoteById = async (id: number) => {
+  try {
+    const { data } = await api.get(`/quotes/${id}`);
+    return data;
+  } catch (error) {
+    console.error("Error al obtener la cotización:", error);
+    showError("Error al obtener la cotización");
     throw error;
   }
 };
