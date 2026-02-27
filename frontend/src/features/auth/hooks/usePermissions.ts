@@ -57,6 +57,20 @@ const PRIVILEGE_ALIASES: Record<string, string> = {
   eliminar: "delete",
   borrar: "delete",
 
+  deactivate: "deactivate",
+  desactivar: "deactivate",
+
+  complete: "complete",
+  completar: "complete",
+
+  download_report: "download_report",
+  downloadreport: "download_report",
+  descargar_reporte: "download_report",
+  descargarreporte: "download_report",
+
+  add_history: "add_history",
+  addhistory: "add_history",
+
   report_warranty: "report_warranty",
   reportwarranty: "report_warranty",
   warrantyreport: "report_warranty",
