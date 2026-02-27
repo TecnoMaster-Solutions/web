@@ -12,9 +12,7 @@ import {
 } from "@/features/auth/authz";
 import { ChangePasswordModal } from "@/features/auth/Components/PasswordModals";
 import { routes } from "@/shared/routes";
-import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-import { APP_TOAST_ID, showSuccess } from "@/shared/utils/notifications";
+import { showSuccess } from "@/shared/utils/notifications";
 
 export default function DashboardLayout({
   children,
@@ -74,6 +72,18 @@ export default function DashboardLayout({
     if (!pathname.startsWith(base)) router.replace(base);
   }, [allowedModules, ready, user, pathname, router]);
 
+  useEffect(() => {
+    const prevBodyOverflow = document.body.style.overflow;
+    const prevHtmlOverflow = document.documentElement.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = prevBodyOverflow;
+      document.documentElement.style.overflow = prevHtmlOverflow;
+    };
+  }, []);
+
   const [forcePasswordModal, setForcePasswordModal] = useState(false);
 
   const mustChangePassword = !!user?.mustchangepassword;
@@ -114,20 +124,7 @@ export default function DashboardLayout({
 
   return (
     <RequireAuth>
-      <ToastContainer
-        containerId={APP_TOAST_ID}
-        position="bottom-right"
-        autoClose={3000}
-        hideProgressBar={false}
-        closeOnClick
-        pauseOnHover
-        draggable
-        newestOnTop
-        limit={3}
-        style={{ zIndex: 999999 }}
-      />
-
-      <div className="flex h-screen">
+      <div className="flex h-screen overflow-hidden">
         {!hideAside && (
           <AsideNav isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
         )}
@@ -147,7 +144,7 @@ export default function DashboardLayout({
 
           <main
             className={`flex-1 h-50 bg-gray-100 p-6 overflow-x-hidden scrollbar-thin ${
-              isNoScrollRoute ? "overflow-y-hidden" : ""
+              isNoScrollRoute ? "overflow-y-hidden" : "overflow-y-auto"
             }`}
           >
             {children}

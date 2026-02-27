@@ -1,11 +1,16 @@
 export type QuoteTableRow = {
   id: number;
+  requestRef: string;
   client: string;
   technician: string;
+  serviceType: string;
+  itemsSummary: string;
   status: string;
+  statusSearch?: string;
   creationDate: string;
   amount: number;
-  raw: any; // quote completo para ver detalle
+  detailsCount?: number;
+  raw: unknown; // quote completo para ver detalle
 };
 
 export interface QuoteDetail {
@@ -45,7 +50,7 @@ export interface IQuote {
     stateid?: number;
   };
   serviceRequest?: ServiceRequest;
-  ordersservices?: any;
+  ordersservices?: unknown;
   customer?: {
     customerid?: number;
     userid?: number;
@@ -86,7 +91,9 @@ export type QuoteDetailPayload = {
 };
 
 export type QuoteCreatePayload = {
-  serviceRequestId: number;
+  serviceRequestId?: number;
+  customerid?: number;
+  technicianid?: number;
   statesid: number;
   servicetype: string;
   observation: string;

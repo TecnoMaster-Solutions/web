@@ -230,6 +230,17 @@ export function coerceAllowedTime(hm: string, fallback: string) {
 
 export function normalizeQuote(q: QuoteLike): QuoteNormalized {
   const root = q?.sale ?? q?.sales ?? q?.quote ?? q?.quotation ?? q?.cotizacion ?? q;
+  const saleDetails = Array.isArray(root?.salesdetail) ? root.salesdetail : [];
+  const firstDetailWithRequest =
+    saleDetails.find(
+      (d: any) =>
+        pickNumber(
+          d?.servicerequestid,
+          d?.serviceRequestId,
+          d?.serviceRequest?.serviceRequestId,
+          d?.serviceRequest?.id
+        ) != null
+    ) ?? null;
 
   const saleid = pickNumber(root?.saleid, root?.salesid);
   const quotesid = pickNumber(root?.saleid, root?.salesid, root?.quotesid, root?.quotationid, root?.cotizacionid, root?.id);
@@ -238,10 +249,24 @@ export function normalizeQuote(q: QuoteLike): QuoteNormalized {
     root?.servicerequestid,
     root?.serviceRequestId,
     root?.servicerequestId,
-    root?.service_request_id
+    root?.service_request_id,
+    firstDetailWithRequest?.servicerequestid,
+    firstDetailWithRequest?.serviceRequestId,
+    firstDetailWithRequest?.serviceRequest?.serviceRequestId,
+    firstDetailWithRequest?.serviceRequest?.id
   );
 
   const serviceid = pickNumber(root?.serviceid, root?.serviceId, root?.service?.serviceid, root?.service?.id);
+  const serviceIdFromDetail = pickNumber(
+    firstDetailWithRequest?.serviceid,
+    firstDetailWithRequest?.serviceId,
+    firstDetailWithRequest?.service?.serviceid,
+    firstDetailWithRequest?.service?.id,
+    firstDetailWithRequest?.serviceRequest?.serviceId,
+    firstDetailWithRequest?.serviceRequest?.serviceid,
+    firstDetailWithRequest?.serviceRequest?.service?.serviceid,
+    firstDetailWithRequest?.serviceRequest?.service?.id
+  );
   const clientid = pickNumber(
     root?.customerid,
     root?.clientid,
@@ -386,7 +411,7 @@ export function normalizeQuote(q: QuoteLike): QuoteNormalized {
     technicianid,
     servicerequestid: servicerequestid ?? undefined,
     serviceRequestId: servicerequestid ?? undefined,
-    serviceid: serviceid ?? undefined,
+    serviceid: serviceid ?? serviceIdFromDetail ?? undefined,
     typeofservicename,
     technicians: techs,
     description,

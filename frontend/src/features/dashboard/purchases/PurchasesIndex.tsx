@@ -303,7 +303,6 @@ export default function PurchasesIndex() {
     <RequireAuth>
       <div className="p-6">
         <ToastContainer position="bottom-right" />
-        
 
         {(!loading || purchases.length > 0) && memoizedDataTable}
 

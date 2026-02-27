@@ -45,7 +45,7 @@ import {
   getBusyTechnicianIdsForWindow,
 } from "@/features/dashboard/shared/technicianAvailability";
 
-type ServiceLineItem = { id: string; nombre: string; precio: number; tipoId: number };
+type ServiceLineItem = { id: string; nombre: string; precio: number; tipoId: number; serviceid?: number };
 type MaterialLineItem = { id: string; nombre: string; precio: number; cantidad: number };
 
 type CustomerOption = {
@@ -382,8 +382,16 @@ const {
     };
   }, []);
 
-  const approvedQuotes = useMemo(() => {
+  const eligibleSales = useMemo(() => {
     return (quotesRaw || []).filter((q) => {
+      const paymentRaw =
+        q?.estadoPago ??
+        q?.estadopago ??
+        q?.paymentstatus ??
+        q?.paymentStatus ??
+        "";
+      const paymentNormalized = normalizeText(paymentRaw || "");
+
       const statusRaw =
         q?.salestatus ??
         q?.status ??
@@ -393,23 +401,23 @@ const {
         q?.statename ??
         (typeof q?.state === "string" ? q.state : "");
       const normalized = normalizeText(statusRaw || "");
-      if (!normalized) return true;
-      return !normalized.includes("cancel") && !normalized.includes("anulad");
+      if (normalized.includes("cancel") || normalized.includes("anulad")) return false;
+      return paymentNormalized === "abonada";
     });
   }, [quotesRaw]);
 
   const quoteMapById = useMemo(() => {
     const m = new Map<number, any>();
-    for (const q of approvedQuotes || []) {
+    for (const q of eligibleSales || []) {
       const id = pickNumber(q?.saleid, q?.salesid, q?.quotesid, q?.quotationid, q?.cotizacionid, q?.id);
       if (id) m.set(id, q);
     }
     return m;
-  }, [approvedQuotes]);
+  }, [eligibleSales]);
 
   const quoteOptions = useMemo(() => {
     const opts: Array<{ id: number; label: string }> = [];
-    for (const q of approvedQuotes || []) {
+    for (const q of eligibleSales || []) {
       const nq = normalizeQuote(q);
       const id =
         nq.saleid ??
@@ -444,7 +452,7 @@ const {
     }
     opts.sort((a, b) => b.id - a.id);
     return opts;
-  }, [approvedQuotes, customers, serviceTypes]);
+  }, [eligibleSales, customers, serviceTypes]);
 
   const [selectedQuotesId, setSelectedQuotesId] = useState<number | "">("");
   const [quoteQuery, setQuoteQuery] = useState("");
@@ -1319,20 +1327,32 @@ const {
           const sr = (srRes as any)?.data ?? null;
           const srv = sr?.service ?? null;
           const srvId = pickNumber(sr?.serviceId, sr?.serviceid, srv?.serviceid);
-          const srvTypeId = pickNumber(srv?.typeofserviceid, srv?.typeOfServiceId, srv?.typeofserviceId);
+          const srvCatalog = srvId ? servicesCatalog.find((x) => x.serviceid === srvId) ?? null : null;
+          const srvTypeId = pickNumber(
+            srv?.typeofserviceid,
+            srv?.typeOfServiceId,
+            srv?.typeofserviceId,
+            srvCatalog?.typeofserviceid,
+            typeId
+          );
 
           if (typeof srvTypeId === "number") setTipoId(srvTypeId);
 
-          const name = String(srv?.name ?? "").trim();
+          const name = String(srv?.name ?? srv?.servicename ?? srvCatalog?.name ?? "").trim();
           const price = pickNumber(srv?.servicepriceofsale, srv?.serviceprice, srv?.price, srv?.precio) ?? 0;
 
           if (srvId && name) {
             setServicios((prev) => {
-              const exists = prev.some((x: any) => pickNumber(x?.serviceid, x?.id) === srvId);
+              const exists = prev.some(
+                (x: any) =>
+                  pickNumber(x?.serviceid) === srvId ||
+                  (typeof x?.id === "string" && x.id === `sr-${srvId}`) ||
+                  normalizeText(String(x?.nombre || "")) === normalizeText(name)
+              );
               if (exists) return prev;
               return [
                 ...prev,
-                { id: `sr-${srvId}`, nombre: name, precio: price, tipoId: srvTypeId ?? typeId },
+                { id: `sr-${srvId}`, serviceid: srvId, nombre: name, precio: price, tipoId: srvTypeId ?? typeId },
               ];
             });
           }
@@ -1379,6 +1399,21 @@ const {
     setDireccion(String(nq.direccion || "").trim());
 
     const svcItems: ServiceLineItem[] = [];
+    if ((!nq.services || nq.services.length === 0) && nq.serviceid) {
+      const rec = servicesCatalog.find((x) => x.serviceid === nq.serviceid) || null;
+      if (rec) {
+        const tid = rec.typeofserviceid ?? typeId ?? 0;
+        if (tid) {
+          svcItems.push({
+            id: `sid-${rec.serviceid}-${uid()}`,
+            serviceid: rec.serviceid,
+            nombre: rec.name,
+            precio: 0,
+            tipoId: tid,
+          });
+        }
+      }
+    }
     if (Array.isArray(nq.services) && nq.services.length) {
       for (const s of nq.services) {
         const rec = servicesCatalog.find((x) => x.serviceid === s.serviceid) || null;
@@ -1386,10 +1421,22 @@ const {
         const precio = Math.max(0, Math.round(Number(s.unitprice || 0)));
         const tid = rec?.typeofserviceid ?? typeId ?? 0;
         if (!tid) continue;
-        svcItems.push({ id: uid(), nombre, precio, tipoId: tid });
+        svcItems.push({ id: `q-${s.serviceid}-${uid()}`, serviceid: s.serviceid, nombre, precio, tipoId: tid });
       }
     }
-    setServicios(svcItems);
+    setServicios((prev) => {
+      if (!svcItems.length) return prev;
+      const merged = [...prev];
+      for (const item of svcItems) {
+        const exists = merged.some(
+          (x) =>
+            (item.serviceid != null && x.serviceid != null && x.serviceid === item.serviceid) ||
+            (x.tipoId === item.tipoId && normalizeText(String(x.nombre || "")) === normalizeText(String(item.nombre || "")))
+        );
+        if (!exists) merged.push(item);
+      }
+      return merged;
+    });
 
     const matItems: MaterialLineItem[] = [];
     if (Array.isArray(nq.products) && nq.products.length) {
@@ -1418,13 +1465,16 @@ const {
 
   function getServiceRequestIdFromQuoteLike(q: any): number | null {
     if (!q) return null;
+    const base = q?.quote ?? q?.data?.quote ?? q?.data ?? q;
     return (
       pickNumber(
-        q?.serviceRequest?.serviceRequestId,
-        q?.serviceRequest?.id,
-        q?.serviceRequestId,
-        q?.servicerequestid,
-        q?.servicerequestId
+        base?.serviceRequest?.serviceRequestId,
+        base?.serviceRequest?.id,
+        base?.serviceRequestId,
+        base?.servicerequestid,
+        base?.servicerequestId,
+        base?.quotes?.serviceRequestId,
+        base?.quotes?.servicerequestid
       ) ?? null
     );
   }
@@ -1438,11 +1488,23 @@ const {
         sale?.quotesid,
         sale?.quotationid,
         sale?.cotizacionid,
+        sale?.quotes?.quotesid,
+        sale?.quotes?.quoteid,
         sale?.quote?.quotesid,
+        sale?.quote?.id,
         sale?.quote?.quoteid,
         sale?.quotation?.quotesid
       ) ?? null;
     if (direct) return direct;
+
+    const saleCode = String(sale?.salecode ?? "").trim();
+    if (saleCode) {
+      const mCode = saleCode.match(/\bCOT[-_ ]?(\d+)\b/i);
+      if (mCode?.[1]) {
+        const nCode = Number(mCode[1]);
+        if (Number.isFinite(nCode) && nCode > 0) return nCode;
+      }
+    }
 
     const notes = String(sale?.notes ?? sale?.observation ?? "").trim();
     if (!notes) return null;
@@ -1492,14 +1554,40 @@ const {
   }
 
   async function resolveServiceRequestIdFromSale(rawSale: any, nq: QuoteNormalized): Promise<number | null> {
+    const details = Array.isArray(rawSale?.salesdetail) ? rawSale.salesdetail : [];
+    const detailWithRequest =
+      details.find(
+        (d: any) =>
+          pickNumber(
+            d?.servicerequestid,
+            d?.serviceRequestId,
+            d?.serviceRequest?.serviceRequestId,
+            d?.serviceRequest?.id
+          ) != null
+      ) ?? null;
     const current = pickNumber(
       nq?.serviceRequestId,
       nq?.servicerequestid,
       rawSale?.serviceRequest?.serviceRequestId,
       rawSale?.serviceRequest?.id,
       rawSale?.serviceRequestId,
-      rawSale?.servicerequestid
+      rawSale?.servicerequestid,
+      detailWithRequest?.servicerequestid,
+      detailWithRequest?.serviceRequestId,
+      detailWithRequest?.serviceRequest?.serviceRequestId,
+      detailWithRequest?.serviceRequest?.id
     );
+    const detailServiceId = pickNumber(
+      detailWithRequest?.serviceid,
+      detailWithRequest?.serviceId,
+      detailWithRequest?.service?.serviceid,
+      detailWithRequest?.service?.id,
+      detailWithRequest?.serviceRequest?.serviceId,
+      detailWithRequest?.serviceRequest?.serviceid,
+      detailWithRequest?.serviceRequest?.service?.serviceid,
+      detailWithRequest?.serviceRequest?.service?.id
+    );
+    if (detailServiceId && !nq.serviceid) nq.serviceid = detailServiceId;
     if (current) return current;
 
     const saleId = pickNumber(rawSale?.saleid, rawSale?.salesid, rawSale?.id);
@@ -1511,7 +1599,95 @@ const {
     if (quoteId) {
       try {
         const { data } = await api.get(`quotes/${quoteId}`);
-        const sr = getServiceRequestIdFromQuoteLike(data);
+        const quotePayload = data?.quote ?? data?.data?.quote ?? data?.data ?? data;
+        const sr = getServiceRequestIdFromQuoteLike(quotePayload);
+        const quoteServiceType = String(quotePayload?.servicetype ?? "").trim();
+        if (quoteServiceType && !nq.typeofservicename) nq.typeofservicename = quoteServiceType;
+
+        if ((!nq.services || nq.services.length === 0) && quotePayload) {
+          const details = Array.isArray(quotePayload?.details) ? quotePayload.details : [];
+          const serviceLikeDetails = details.filter((d: any) => {
+            const pid = pickNumber(d?.productid, d?.product?.productid, d?.products?.productid);
+            if (pid) return false;
+            const desc = normalizeText(String(d?.description ?? d?.name ?? ""));
+            return desc.includes("servicio") || desc.includes("instalacion") || desc.includes("mantenimiento");
+          });
+
+          if (serviceLikeDetails.length) {
+            const tryCatalog = nq.typeofserviceid
+              ? servicesCatalog.filter((s) => s.typeofserviceid === nq.typeofserviceid)
+              : servicesCatalog;
+
+            const inferred = serviceLikeDetails
+              .map((d: any) => {
+                const rawDesc = String(d?.description ?? d?.name ?? "").trim();
+                const cleanDesc = normalizeText(rawDesc.replace(/^servicio\s*:\s*/i, "").trim());
+                const rec =
+                  tryCatalog.find((s) => {
+                    const n = normalizeText(s.name);
+                    return n === cleanDesc || n.includes(cleanDesc) || cleanDesc.includes(n);
+                  }) ??
+                  servicesCatalog.find((s) => {
+                    const n = normalizeText(s.name);
+                    return n === cleanDesc || n.includes(cleanDesc) || cleanDesc.includes(n);
+                  }) ??
+                  null;
+
+                if (!rec) return null;
+                const cantidad = Math.max(1, Math.round(Number(d?.quantity ?? d?.cantidad ?? 1)));
+                const unitprice = Math.max(0, Math.round(Number(d?.unitprice ?? d?.price ?? 0)));
+                return { serviceid: rec.serviceid, cantidad, unitprice };
+              })
+              .filter(Boolean) as Array<{ serviceid: number; cantidad: number; unitprice: number }>;
+
+            if (inferred.length) {
+              nq.services = inferred;
+              if (!nq.serviceid) nq.serviceid = inferred[0].serviceid;
+              if (!nq.typeofserviceid) {
+                const firstRec = servicesCatalog.find((s) => s.serviceid === inferred[0].serviceid);
+                if (firstRec?.typeofserviceid) nq.typeofserviceid = firstRec.typeofserviceid;
+              }
+            }
+          }
+
+          const orderId = pickNumber(
+            quotePayload?.ordersservicesid,
+            quotePayload?.ordersservices?.ordersservicesid,
+            quotePayload?.ordersservices?.id,
+            quotePayload?.order?.ordersservicesid,
+            quotePayload?.order?.id
+          );
+
+          if (orderId) {
+            try {
+              const { data: orderData } = await api.get(`orders-services/${orderId}`);
+              const order = orderData?.data ?? orderData;
+              const orderServices = Array.isArray(order?.services) ? order.services : [];
+              const mapped = orderServices
+                .map((line: any) => {
+                  const sid = pickNumber(line?.serviceid, line?.service?.serviceid, line?.service?.id);
+                  const cantidad = pickNumber(line?.cantidad, line?.quantity, line?.qty) ?? 1;
+                  const unitprice = pickNumber(line?.unitprice, line?.precio, line?.subtotal, line?.price) ?? 0;
+                  if (!sid) return null;
+                  return {
+                    serviceid: sid,
+                    cantidad: Math.max(1, Math.round(Number(cantidad))),
+                    unitprice: Math.max(0, Math.round(Number(unitprice))),
+                  };
+                })
+                .filter(Boolean) as Array<{ serviceid: number; cantidad: number; unitprice: number }>;
+
+              if (mapped.length) {
+                nq.services = mapped;
+                if (!nq.typeofserviceid) {
+                  const first = servicesCatalog.find((s) => s.serviceid === mapped[0].serviceid);
+                  if (first?.typeofserviceid) nq.typeofserviceid = first.typeofserviceid;
+                }
+              }
+            } catch {}
+          }
+        }
+
         if (saleId) saleToServiceRequestCacheRef.current.set(saleId, sr ?? null);
         if (sr) return sr;
       } catch {}
@@ -1560,7 +1736,7 @@ const {
 
   useEffect(() => {
     if (lookupsLoading) return;
-    if (!customers.length || !technicians.length || !productsCatalog.length || !serviceTypes.length) return;
+    if (!customers.length || !technicians.length || !productsCatalog.length || !serviceTypes.length || !servicesCatalog.length) return;
 
     const keyFromUrl = quotesIdFromUrl
       ? `url:id:${quotesIdFromUrl}`
@@ -1626,7 +1802,7 @@ const {
   useEffect(() => {
     if (!selectedQuotesId) return;
     if (lookupsLoading) return;
-    if (!customers.length || !technicians.length || !productsCatalog.length || !serviceTypes.length) return;
+    if (!customers.length || !technicians.length || !productsCatalog.length || !serviceTypes.length || !servicesCatalog.length) return;
 
     const id = Number(selectedQuotesId);
     if (!Number.isFinite(id) || id <= 0) return;

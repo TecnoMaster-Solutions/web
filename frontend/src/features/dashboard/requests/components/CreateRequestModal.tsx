@@ -13,6 +13,7 @@ import {
   buildWindowFromLocalSchedule,
   getBusyTechnicianIdsForWindow,
 } from "@/features/dashboard/shared/technicianAvailability";
+import { hasInvalidRequestCharacters } from "@/features/dashboard/requests/utils/textValidation";
 
 export type CreateRequestPayload = {
   scheduledAt?: string | null;
@@ -319,14 +320,17 @@ export default function CreateRequestModal({
 
   function validateDireccion(v: string) {
     const dir = (v ?? "").trim();
-    if (dir.length < 3) return "MÃ­nimo 3 caracteres.";
-    if (dir.length > 255) return "MÃ¡ximo 255 caracteres.";
+    if (dir.length < 3) return "Mínimo 3 caracteres.";
+    if (dir.length > 255) return "Máximo 255 caracteres.";
+    if (hasInvalidRequestCharacters(dir)) return "Contiene caracteres no permitidos.";
     return null;
   }
 
   function validateDescription(v: string) {
     const d = (v ?? "").trim();
-    return d.length >= 3 ? null : "MÃ­nimo 3 caracteres.";
+    if (d.length < 3) return "Mínimo 3 caracteres.";
+    if (hasInvalidRequestCharacters(d)) return "Contiene caracteres no permitidos.";
+    return null;
   }
 
   function validateServiceId(v: number | "") {
@@ -1221,7 +1225,7 @@ export default function CreateRequestModal({
                       {initials(t.label)}
                     </span>
                     <span className="max-w-[220px] truncate">
-                      #{t.technicianid} â€” {t.label}
+                      #{t.technicianid} - {t.label}
                     </span>
                     <button
                       type="button"
@@ -1229,7 +1233,7 @@ export default function CreateRequestModal({
                       className="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full hover:bg-gray-200"
                       disabled={saving || techLoading}
                     >
-                      âœ•
+                      x
                     </button>
                   </span>
                 ))}

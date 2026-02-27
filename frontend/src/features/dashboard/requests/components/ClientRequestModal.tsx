@@ -5,6 +5,7 @@ import Modal from "@/features/dashboard/components/Modal";
 import type { Option } from "@/features/dashboard/requests/types/option.types";
 import { showError, showInfo, showSuccess } from "@/shared/utils/notifications";
 import { getServiceOptions } from "@/features/dashboard/requests/services/lookups.service";
+import { hasInvalidRequestCharacters } from "@/features/dashboard/requests/utils/textValidation";
 
 export type CreateRequestPayload = {
   scheduledAt?: string | null;
@@ -161,14 +162,17 @@ export default function ClientCreateRequestModal({
 
   function validateDireccion(v: string) {
     const dir = (v ?? "").trim();
-    if (dir.length < 3) return "MÃ­nimo 3 caracteres.";
-    if (dir.length > 255) return "MÃ¡ximo 255 caracteres.";
+    if (dir.length < 3) return "Mínimo 3 caracteres.";
+    if (dir.length > 255) return "Máximo 255 caracteres.";
+    if (hasInvalidRequestCharacters(dir)) return "Contiene caracteres no permitidos.";
     return null;
   }
 
   function validateDescription(v: string) {
     const d = (v ?? "").trim();
-    return d.length >= 3 ? null : "MÃ­nimo 3 caracteres.";
+    if (d.length < 3) return "Mínimo 3 caracteres.";
+    if (hasInvalidRequestCharacters(d)) return "Contiene caracteres no permitidos.";
+    return null;
   }
 
   function validateServiceId(v: number | "") {

@@ -8,6 +8,7 @@ import { ToastContainer } from "react-toastify";
 import { Column } from "../components/datatable/types/column.types";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { usePermissions } from "@/features/auth/hooks/usePermissions";
 
 import {
   getQuotes,
@@ -15,7 +16,9 @@ import {
   completeQuote,
   cancelQuote,
   revokeQuote,
+  assignCustomerToQuote,
 } from "./api/quotes.api";
+import { api } from "@/shared/utils/apiClient";
 
 import { QuoteTableRow } from "./types/Quote.type";
 import Colors from "@/shared/theme/colors";
@@ -24,6 +27,62 @@ type QuoteStatusConfig = {
   label: string;
   className: string;
   style?: React.CSSProperties;
+};
+
+type QuoteDetailLike = {
+  description?: string;
+  quantity?: number;
+};
+
+type QuoteListItem = {
+  quotesid: number;
+  customerid?: number | null;
+  serviceRequestId?: number | null;
+  servicetype?: string | null;
+  total?: number | null;
+  createdat?: string;
+  details?: QuoteDetailLike[];
+  state?: { name?: string };
+  customer?: { users?: { name?: string; lastname?: string } };
+  technician?: { users?: { name?: string; lastname?: string } };
+  serviceRequest?: {
+    serviceRequestId?: number;
+    id?: number;
+    customer?: { users?: { name?: string; lastname?: string } };
+    techniciansMap?: Array<{
+      technician?: { users?: { name?: string; lastname?: string } };
+    }>;
+  };
+};
+
+type NewClientForm = {
+  tipo: string;
+  documento: string;
+  nombre: string;
+  apellido?: string;
+  telefono: string;
+  correo: string;
+};
+
+type DocumentTypeApi = {
+  typeofdocumentid: number;
+  name: string;
+};
+
+type RoleApi = {
+  roleid: number;
+  name: string;
+};
+
+const getErrorMessage = (error: unknown, fallback: string): string => {
+  if (typeof error === "object" && error !== null) {
+    const maybeResponse = (error as { response?: { data?: { message?: string } } }).response;
+    const backendMessage = maybeResponse?.data?.message;
+    if (backendMessage) return backendMessage;
+    const maybeMessage = (error as { message?: string }).message;
+    if (maybeMessage) return maybeMessage;
+  }
+  return fallback;
 };
 
 const normalizeQuoteStatus = (status?: string): QuoteStatusConfig => {
@@ -67,26 +126,212 @@ const normalizeQuoteStatusText = (status?: string): string => {
   return value;
 };
 
+const resolveRequestId = (q: QuoteListItem): number | null => {
+  const fromNested = Number(q.serviceRequest?.serviceRequestId ?? q.serviceRequest?.id);
+  if (Number.isFinite(fromNested) && fromNested > 0) return fromNested;
+  const fromFlat = Number(q.serviceRequestId);
+  if (Number.isFinite(fromFlat) && fromFlat > 0) return fromFlat;
+  return null;
+};
+
+const resolveClientName = (q: QuoteListItem): string => {
+  const fromQuote = `${q.customer?.users?.name ?? ""} ${q.customer?.users?.lastname ?? ""}`.trim();
+  if (fromQuote) return fromQuote;
+  const fromRequest = `${q.serviceRequest?.customer?.users?.name ?? ""} ${q.serviceRequest?.customer?.users?.lastname ?? ""}`.trim();
+  if (fromRequest) return fromRequest;
+  return "Sin cliente";
+};
+
+const normalizeText = (value: string) =>
+  String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+
 export default function QuotesIndex() {
   const router = useRouter();
+  const { canView, canCreate, canUpdate, canDelete, has } = usePermissions();
+  const canViewQuotes = canView("quotes");
+  const canCreateQuotes = canCreate("quotes");
+  const canUpdateQuotes = canUpdate("quotes");
+  const canDeleteQuotes = canDelete("quotes");
+  const canCompleteQuotes = has("quotes", "complete");
+  const canDeactivateQuotes = has("quotes", "deactivate");
+  const canCancelQuotes = canUpdateQuotes || canDeactivateQuotes;
+  const canExportQuotes =
+    canViewQuotes || has("quotes", "export") || has("quotes", "download_report");
 
   const [quotesData, setQuotesData] = useState<QuoteTableRow[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const createCustomerAndAssignToQuote = useCallback(
+    async (quoteId: number, form: NewClientForm) => {
+      const [{ data: rawDocTypes }, { data: rawRoles }] = await Promise.all([
+        api.get("/typeofdocuments"),
+        api.get("/roles/list"),
+      ]);
+
+      const docTypes: DocumentTypeApi[] = Array.isArray(rawDocTypes)
+        ? rawDocTypes
+        : rawDocTypes?.data ?? [];
+      const roles: RoleApi[] = Array.isArray(rawRoles)
+        ? rawRoles
+        : rawRoles?.data ?? [];
+
+      const selectedDocType = docTypes.find(
+        (d) => normalizeText(d.name) === normalizeText(form.tipo),
+      );
+      if (!selectedDocType) {
+        throw new Error(`No se encontró el tipo de documento ${form.tipo}`);
+      }
+
+      const clientRole = roles.find(
+        (r) => normalizeText(r.name) === "cliente",
+      );
+      if (!clientRole) {
+        throw new Error("No se encontró el rol Cliente");
+      }
+
+      const userPayload = {
+        name: form.nombre.trim(),
+        lastname: (form.apellido ?? "").trim(),
+        email: form.correo.trim(),
+        phone: form.telefono.replace(/\D/g, ""),
+        typeid: selectedDocType.typeofdocumentid,
+        stateid: 1,
+        roleid: clientRole.roleid,
+        documentnumber: form.documento.trim(),
+        customercity: "",
+        customerzipcode: "",
+        image: "",
+      };
+
+      const createdUserRes = await api.post("/users", userPayload);
+      const userId = Number(
+        createdUserRes?.data?.data?.userid ?? createdUserRes?.data?.userid,
+      );
+      if (!userId) throw new Error("No se pudo obtener el usuario creado");
+
+      const customerRes = await api.get(`/customers/user/${userId}`);
+      const customerId = Number(
+        customerRes?.data?.customerid ?? customerRes?.data?.data?.customerid,
+      );
+      if (!customerId) throw new Error("No se pudo obtener el cliente creado");
+
+      await assignCustomerToQuote(quoteId, customerId);
+    },
+    [],
+  );
+
+  const ensureQuoteHasCustomer = useCallback(
+    async (row: QuoteTableRow): Promise<boolean> => {
+      const raw = row.raw as QuoteListItem | undefined;
+      const hasCustomer = Boolean(raw?.customerid || raw?.customer?.users);
+      if (hasCustomer) return true;
+
+      const { value: formValues } = await Swal.fire({
+        title: "Crear cliente para aprobar",
+        html: `
+          <div style="display:grid;gap:8px;text-align:left;">
+            <select id="swal_tipo" class="swal2-input">
+              <option value="CC">CC</option>
+              <option value="TI">TI</option>
+              <option value="CE">CE</option>
+              <option value="NIT">NIT</option>
+              <option value="PASAPORTE">PASAPORTE</option>
+            </select>
+            <input id="swal_documento" class="swal2-input" placeholder="Documento" />
+            <input id="swal_nombre" class="swal2-input" placeholder="Nombre" />
+            <input id="swal_apellido" class="swal2-input" placeholder="Apellido (opcional)" />
+            <input id="swal_telefono" class="swal2-input" placeholder="Teléfono" />
+            <input id="swal_correo" class="swal2-input" placeholder="Correo" type="email" />
+          </div>
+        `,
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: "Crear cliente",
+        cancelButtonText: "Cancelar",
+        preConfirm: () => {
+          const tipo = (
+            document.getElementById("swal_tipo") as HTMLSelectElement | null
+          )?.value?.trim();
+          const documento = (
+            document.getElementById("swal_documento") as HTMLInputElement | null
+          )?.value?.trim();
+          const nombre = (
+            document.getElementById("swal_nombre") as HTMLInputElement | null
+          )?.value?.trim();
+          const apellido = (
+            document.getElementById("swal_apellido") as HTMLInputElement | null
+          )?.value?.trim();
+          const telefono = (
+            document.getElementById("swal_telefono") as HTMLInputElement | null
+          )?.value?.trim();
+          const correo = (
+            document.getElementById("swal_correo") as HTMLInputElement | null
+          )?.value?.trim();
+
+          if (!tipo || !documento || !nombre || !telefono || !correo) {
+            Swal.showValidationMessage(
+              "Documento, nombre, teléfono y correo son obligatorios.",
+            );
+            return;
+          }
+
+          return {
+            tipo,
+            documento,
+            nombre,
+            apellido,
+            telefono,
+            correo,
+          } as NewClientForm;
+        },
+      });
+
+      if (!formValues) return false;
+
+      try {
+        await createCustomerAndAssignToQuote(row.id, formValues as NewClientForm);
+        await Swal.fire(
+          "Cliente creado",
+          "Se creó y asoció el cliente a la cotización.",
+          "success",
+        );
+        return true;
+      } catch (error: unknown) {
+        await Swal.fire(
+          "Error",
+          getErrorMessage(error, "No se pudo crear/asociar el cliente."),
+          "error",
+        );
+        return false;
+      }
+    },
+    [createCustomerAndAssignToQuote],
+  );
+
   const fetchQuotes = useCallback(async () => {
+    if (!canViewQuotes) {
+      setQuotesData([]);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
       const data = await getQuotes();
 
-      const mapped: QuoteTableRow[] = (data ?? []).map((q: any) => {
+      const mapped: QuoteTableRow[] = (data ?? []).map((q: QuoteListItem) => {
         const rawStatus = q.state?.name ?? "";
-        const clientName = `${q.customer?.users?.name ?? ""} ${q.customer?.users?.lastname ?? ""}`.trim();
-        const techName = `${q.technician?.users?.name ?? ""} ${q.technician?.users?.lastname ?? ""}`.trim();
+        const clientName = resolveClientName(q);
+        const requestId = resolveRequestId(q);
 
         return {
           id: q.quotesid,
+          requestRef: requestId ? `#${requestId}` : "Directa",
           client: clientName,
-          technician: techName,
           status: rawStatus,
           statusSearch: normalizeQuoteStatusText(rawStatus),
           creationDate: q.createdat,
@@ -99,7 +344,7 @@ export default function QuotesIndex() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [canViewQuotes]);
 
   useEffect(() => {
     fetchQuotes();
@@ -107,8 +352,8 @@ export default function QuotesIndex() {
 
   const columns: Column<QuoteTableRow>[] = [
     { key: "id", header: "ID" },
+    { key: "requestRef", header: "Solicitud" },
     { key: "client", header: "Cliente" },
-    { key: "technician", header: "TÃ©cnico" },
     {
       key: "creationDate",
       header: "Fecha",
@@ -141,7 +386,12 @@ export default function QuotesIndex() {
     },
   ];
 
-  const handleApproveQuote = async (row: QuoteTableRow) => {
+  const handleApproveQuote = useCallback(async (row: QuoteTableRow) => {
+    if (!canUpdateQuotes) {
+      await Swal.fire("Sin permisos", "No tienes permisos para aprobar cotizaciones.", "warning");
+      return;
+    }
+
     const r = await Swal.fire({
       title: "Â¿Aprobar cotizaciÃ³n?",
       text: `Total: ${Number(row.amount ?? 0).toLocaleString("es-CO", {
@@ -158,21 +408,35 @@ export default function QuotesIndex() {
 
     if (!r.isConfirmed) return;
 
+    const customerReady = await ensureQuoteHasCustomer(row);
+    if (!customerReady) return;
+
     try {
       await approveQuote(row.id);
-    } catch (error: any) {
+    } catch (error: unknown) {
       await Swal.fire(
         "Error",
-        error?.response?.data?.message ?? error?.message ?? "No se pudo aprobar la cotizaciÃ³n.",
+        getErrorMessage(error, "No se pudo aprobar la cotización."),
         "error"
       );
       return;
     }
 
-    let completionResult: any = null;
+    await fetchQuotes();
+
+    if (!canCompleteQuotes) {
+      await Swal.fire(
+        "Cotización aprobada",
+        "La cotización quedó aprobada.",
+        "success",
+      );
+      return;
+    }
+
+    let completionResult: { sale?: { salecode?: string; saleid?: number } } | null = null;
     try {
       completionResult = await completeQuote(row.id);
-    } catch (error: any) {
+    } catch {
       await fetchQuotes();
       await Swal.fire(
         "CotizaciÃ³n aprobada",
@@ -191,9 +455,14 @@ export default function QuotesIndex() {
         : "La cotizaciÃ³n se completÃ³ y se creÃ³ la venta asociada.",
       "success"
     );
-  };
+  }, [canCompleteQuotes, canUpdateQuotes, ensureQuoteHasCustomer, fetchQuotes]);
 
   const handleCancelQuote = async (row: QuoteTableRow) => {
+    if (!canCancelQuotes) {
+      await Swal.fire("Sin permisos", "No tienes permisos para cancelar cotizaciones.", "warning");
+      return;
+    }
+
     const r = await Swal.fire({
       title: "Â¿Cancelar cotizaciÃ³n?",
       text: "Esta acciÃ³n no se puede deshacer",
@@ -209,17 +478,22 @@ export default function QuotesIndex() {
     try {
       await cancelQuote(row.id);
       await fetchQuotes();
-      await Swal.fire("Cancelada", "CotizaciÃ³n cancelada", "success");
-    } catch (error: any) {
+      await Swal.fire("Cancelada", "Cotización cancelada", "success");
+    } catch (error: unknown) {
       await Swal.fire(
         "Error",
-        error?.response?.data?.message ?? error?.message ?? "No se pudo cancelar la cotizaciÃ³n.",
+        getErrorMessage(error, "No se pudo cancelar la cotización."),
         "error"
       );
     }
   };
 
   const handleRevokeQuote = async (row: QuoteTableRow) => {
+    if (!canDeleteQuotes) {
+      await Swal.fire("Sin permisos", "No tienes permisos para anular cotizaciones.", "warning");
+      return;
+    }
+
     const status = row.statusSearch;
 
     if (status !== "aprobada") {
@@ -255,10 +529,10 @@ export default function QuotesIndex() {
         title: "CotizaciÃ³n anulada",
         text: "La cotizaciÃ³n fue anulada correctamente.",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       await Swal.fire(
         "Error",
-        error?.response?.data?.message ?? error?.message ?? "No se pudo anular la cotizaciÃ³n.",
+        getErrorMessage(error, "No se pudo anular la cotización."),
         "error"
       );
     }
@@ -271,20 +545,36 @@ export default function QuotesIndex() {
 
         <h1 className="text-xl font-semibold mb-4">Listado de Cotizaciones</h1>
 
+        {!canViewQuotes ? (
+          <div className="flex items-center justify-center py-20">
+            <span className="text-gray-500">
+              No tienes permisos para visualizar cotizaciones.
+            </span>
+          </div>
+        ) : (
+
         <DataTable<QuoteTableRow>
           module="quotes"
           data={quotesData}
           columns={columns}
           loading={loading}
-          searchableKeys={["id", "client", "technician", "statusSearch", "amount", "creationDate"]}
+          searchableKeys={[
+            "id",
+            "requestRef",
+            "client",
+            "statusSearch",
+            "amount",
+            "creationDate",
+          ]}
           pageSize={8}
           onView={(row) => router.push(`/dashboard/quotes/${row.id}`)}
-          onCreate={() => router.push("/dashboard/quotes/register")}
-          createButtonText="Crear CotizaciÃ³n"
-          onCheck={handleApproveQuote}
-          onCancel={handleCancelQuote}
-          onDelete={handleRevokeQuote}
+          onCreate={canCreateQuotes ? () => router.push("/dashboard/quotes/register") : undefined}
+          createButtonText="Crear Cotización"
+          onCheck={canUpdateQuotes ? handleApproveQuote : undefined}
+          onCancel={canCancelQuotes ? handleCancelQuote : undefined}
+          onDelete={canDeleteQuotes ? handleRevokeQuote : undefined}
           rightActions={
+            canExportQuotes ? (
             <button
               type="button"
               className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-[#b20000] text-white text-sm font-semibold hover:bg-[#910000]"
@@ -293,8 +583,10 @@ export default function QuotesIndex() {
               <Image src="/icons/download.svg" alt="Descargar" width={16} height={16} />
               Descargar Reporte
             </button>
+            ) : null
           }
         />
+        )}
       </div>
     </RequireAuth>
   );

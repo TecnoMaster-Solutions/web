@@ -32,7 +32,7 @@ export default function AccessPage() {
         href={routes.path}
         className="fixed left-6 top-6 z-30 inline-flex h-9 items-center rounded-md bg-white/85 px-3 text-sm shadow backdrop-blur hover:bg-white"
       >
-        ← Volver
+        ? Volver
       </Link>
 
       <AuthShell mode={mode}>
