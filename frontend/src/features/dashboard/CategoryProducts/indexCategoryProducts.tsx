@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useCallback } from "react";
 import Colors from "@/shared/theme/colors";
 import { ToastContainer } from "react-toastify";
@@ -14,7 +14,7 @@ import { Column } from "../components/datatable/types/column.types";
 function Loader() {
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
-      <div className="w-16 h-16 border-4 border-red-600 border-t-transparent rounded-full animate-spin" />
+      <div className="w-16 h-16 border-4 border-green-600 border-t-transparent rounded-full animate-spin" />
     </div>
   );
 }
@@ -42,12 +42,12 @@ export default function CategoriesPage() {
     { key: "name", header: "Nombre" },
     {
       key: "description",
-      header: "Descripción",
+      header: "DescripciÃ³n",
       render: (row: Category) => {
         const desc =
           row.description && row.description.trim() !== ""
             ? row.description
-            : "No hay descripción";
+            : "No hay descripciÃ³n";
 
         const maxLength = 60;
         const truncated =
@@ -59,7 +59,7 @@ export default function CategoriesPage() {
             className="flex justify-center items-center text-center w-full h-full"
           >
             <span
-              className={`block max-w-[250px] truncate ${desc === "No hay descripción"
+              className={`block max-w-[250px] truncate ${desc === "No hay descripciÃ³n"
                   ? "text-gray-400 italic"
                   : "text-gray-700"
                 }`}
@@ -110,8 +110,8 @@ export default function CategoriesPage() {
 
     const deleteTitle =
       count === 1
-        ? "No se puede eliminar: la categoría tiene 1 producto asociado"
-        : `No se puede eliminar: la categoría tiene ${count} productos asociados`;
+        ? "No se puede eliminar: la categorÃ­a tiene 1 producto asociado"
+        : `No se puede eliminar: la categorÃ­a tiene ${count} productos asociados`;
 
     return {
       disableDelete: true,
@@ -140,7 +140,7 @@ export default function CategoriesPage() {
         <main className="flex-1 flex flex-col">
           <div className="flex-1 px-6 py-6">
 
-            {/* Modal de Crear Categoría */}
+            {/* Modal de Crear CategorÃ­a */}
             <CreateCategoryModal
               isOpen={isCreateModalOpen}
               onClose={() => setIsCreateModalOpen(false)}
@@ -148,7 +148,7 @@ export default function CategoriesPage() {
               categories={categories}
             />
 
-            {/* Modal de Editar Categoría */}
+            {/* Modal de Editar CategorÃ­a */}
             <EditCategoryModal
               isOpen={!!editingCategory}
               category={editingCategory}
@@ -161,7 +161,7 @@ export default function CategoriesPage() {
               categories={categories}
             />
 
-            {/* Modal de Ver Categoría */}
+            {/* Modal de Ver CategorÃ­a */}
             <ViewCategoryModal
               isOpen={!!viewingCategory}
               category={viewingCategory}
@@ -178,8 +178,8 @@ export default function CategoriesPage() {
                 pageSize={10}
                 searchableKeys={["id", "name", "description", "statusSearch"]}
                 onCreate={() => setIsCreateModalOpen(true)}
-                createButtonText="Crear Categoría"
-                searchPlaceholder="Buscar categorías..."
+                createButtonText="Crear CategorÃ­a"
+                searchPlaceholder="Buscar categorÃ­as..."
                 onView={handleView}
                 onEdit={handleEdit}
                 onDelete={handleDeleteCategory}
@@ -192,3 +192,4 @@ export default function CategoriesPage() {
     </div>
   );
 }
+

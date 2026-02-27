@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import { XMarkIcon, CheckIcon } from "@heroicons/react/24/solid";
@@ -111,7 +111,7 @@ export default function CreateRoleModal({
       type="button"
       onClick={onChange}
       className={`w-5 h-5 rounded-md border border-gray-400 flex items-center justify-center transition-all duration-150 
-        ${checked ? "bg-[#B20000] scale-110" : "bg-white"}`}
+        ${checked ? "bg-[#04652c] scale-110" : "bg-white"}`}
     >
       <CheckIcon
         className={`w-3 h-3 text-white transition-opacity duration-150 ${
@@ -152,7 +152,7 @@ export default function CreateRoleModal({
                   className="block text-base font-semibold mb-1"
                   style={{ color: Colors.texts.primary }}
                 >
-                  Nombre del rol <span className="text-red-500">*</span>
+                  Nombre del rol <span className="text-green-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -167,7 +167,7 @@ export default function CreateRoleModal({
                   onBlur={validateForm}
                 />
                 {errors.name && (
-                  <span className="text-xs text-red-500">{errors.name}</span>
+                  <span className="text-xs text-green-500">{errors.name}</span>
                 )}
               </div>
 
@@ -177,12 +177,12 @@ export default function CreateRoleModal({
                   style={{ color: Colors.texts.primary }}
                 >
                   Asignar permisos y privilegios{" "}
-                  <span className="text-red-500">*</span>
+                  <span className="text-green-500">*</span>
                 </h3>
               </div>
 
               {errors.permissions && (
-                <p className="text-left text-xs text-red-500">
+                <p className="text-left text-xs text-green-500">
                   {errors.permissions}
                 </p>
               )}
@@ -191,11 +191,11 @@ export default function CreateRoleModal({
                 <table className="min-w-full text-sm">
                   <thead
                     className="sticky top-0 z-10"
-                    style={{ backgroundColor: "#B20000" }}
+                    style={{ backgroundColor: "#04652c" }}
                   >
                     <tr>
                       <th className="px-4 py-3 text-left font-semibold text-white">
-                        Módulo
+                        MÃ³dulo
                       </th>
                       <th className="px-4 py-3 text-center font-semibold text-white">
                         Permisos / Privilegios
@@ -264,7 +264,7 @@ export default function CreateRoleModal({
               <button
                 type="button"
                 onClick={handleSubmit}
-                className="cursor-pointer transition duration-300 hover:bg-black hover:text-white hover:scale-105 px-4 py-2 rounded-lg bg-black text-white w-full sm:w-auto disabled:opacity-60"
+                className="cursor-pointer transition duration-300 hover:bg-[#227a69] hover:text-white hover:scale-105 px-4 py-2 rounded-lg bg-[#2a9781] text-white w-full sm:w-auto disabled:opacity-60"
                 disabled={loading}
               >
                 {loading ? "Guardando..." : "Guardar"}
@@ -276,3 +276,4 @@ export default function CreateRoleModal({
     </AnimatePresence>
   );
 }
+

@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { createPortal } from "react-dom";
 import Colors from "@/shared/theme/colors";
 import { useEditClientForm } from "../../hooks/useClients";
@@ -67,14 +67,14 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
               <option value={4}>PPN</option>
             </select>
             {errors.tipo && touched.tipo && (
-              <span className="text-red-500 text-xs">{errors.tipo}</span>
+              <span className="text-green-500 text-xs">{errors.tipo}</span>
             )}
           </div>
 
-          {/* Número Documento */}
+          {/* NÃºmero Documento */}
           <div>
             <label className="block text-sm text-gray-700 mb-1">
-              Número de Documento
+              NÃºmero de Documento
             </label>
             <input
               type="text"
@@ -116,10 +116,10 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
             />
           </div>
 
-          {/* Teléfono */}
+          {/* TelÃ©fono */}
           <div>
             <label className="block text-sm text-gray-700 mb-1">
-              Teléfono
+              TelÃ©fono
             </label>
             <input
               type="tel"
@@ -134,7 +134,7 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
           {/* Correo */}
           <div>
             <label className="block text-sm text-gray-700 mb-1">
-              Correo Electrónico
+              Correo ElectrÃ³nico
             </label>
             <input
               type="email"
@@ -179,10 +179,10 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
             />
           </div>
 
-          {/* Código Postal */}
+          {/* CÃ³digo Postal */}
           <div>
             <label className="block text-sm text-gray-700 mb-1">
-              Código Postal
+              CÃ³digo Postal
             </label>
             <input
               type="text"
@@ -206,7 +206,7 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
 
             <button
               type="submit"
-              className="px-5 py-2 rounded-lg text-sm bg-black text-white"
+              className="px-5 py-2 rounded-lg text-sm bg-[#2a9781] text-white hover:bg-[#227a69] transition-colors"
             >
               Guardar
             </button>
@@ -221,3 +221,4 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
 };
 
 export default EditClientModal;
+

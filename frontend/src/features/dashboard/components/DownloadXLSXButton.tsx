@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { MouseEvent } from "react";
 import Colors from "@/shared/theme/colors";
@@ -56,7 +56,7 @@ export default function DownloadXLSXButton<T extends Record<string, unknown>>({
       };
     });
 
-    // Función inteligente de formateo
+    // FunciÃ³n inteligente de formateo
     const formatValue = (key: string, value: unknown) => {
       if (value === null || value === undefined) return "";
 
@@ -69,7 +69,7 @@ export default function DownloadXLSXButton<T extends Record<string, unknown>>({
         return isNaN(num) ? value : `$${num.toLocaleString("es-CO")}`;
       }
 
-      // Otros números normales
+      // Otros nÃºmeros normales
       if (typeof value === "number") {
         return value.toLocaleString("es-CO");
       }
@@ -130,7 +130,7 @@ export default function DownloadXLSXButton<T extends Record<string, unknown>>({
       style={{ background: Colors.buttons.primary }}
       type="button"
     >
-      <span className="absolute inset-0 bg-red-800 scale-x-0 origin-left transition-transform duration-300 ease-out group-hover:scale-x-100"></span>
+      <span className="absolute inset-0 bg-green-800 scale-x-0 origin-left transition-transform duration-300 ease-out group-hover:scale-x-100"></span>
 
       <span className="relative z-10 flex items-center gap-2 group-hover:text-white transition-colors duration-300">
         <svg

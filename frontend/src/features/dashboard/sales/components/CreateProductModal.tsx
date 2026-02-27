@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { apiClient } from "@/shared/utils/apiClient";
@@ -94,11 +94,11 @@ export default function CreateProductModal({ onClose, onSaved }: CreateProductMo
             </div>
 
             <div>
-                <label className="block text-sm font-medium mb-1">Descripción</label>
+                <label className="block text-sm font-medium mb-1">DescripciÃ³n</label>
                 <textarea
                     className="w-full p-2 border rounded-lg"
                     value={description} onChange={e => setDescription(e.target.value)}
-                    placeholder="Ingrese descripción"
+                    placeholder="Ingrese descripciÃ³n"
                 />
             </div>
 
@@ -126,7 +126,7 @@ export default function CreateProductModal({ onClose, onSaved }: CreateProductMo
             </div>
 
             <div>
-                <label className="block text-sm font-medium mb-1">Categoría *</label>
+                <label className="block text-sm font-medium mb-1">CategorÃ­a *</label>
                 <select
                     className="w-full p-2 border rounded-lg"
                     value={categoryId} onChange={e => setCategoryId(e.target.value)}
@@ -149,7 +149,7 @@ export default function CreateProductModal({ onClose, onSaved }: CreateProductMo
 
             <div className="flex justify-end gap-2 mt-4">
                 <button onClick={onClose} className="px-4 py-2 bg-gray-500 text-white rounded-lg">Cancelar</button>
-                <button onClick={handleSubmit} disabled={loading} className="px-4 py-2 bg-black text-white rounded-lg flex items-center gap-2">
+                <button onClick={handleSubmit} disabled={loading} className="px-4 py-2 bg-[#2a9781] text-white rounded-lg flex items-center gap-2">
                     {loading && <Loader size="sm" />}
                     Guardar
                 </button>

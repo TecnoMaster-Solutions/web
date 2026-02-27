@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Modal from "@/features/dashboard/components/Modal";
@@ -133,7 +133,7 @@ const CreateServiceModal: React.FC<CreateServiceModalProps> = ({
             <button
               type="submit"
               form="create-service-form"
-              className="cursor-pointer transition duration-300 hover:bg-black hover:text-white hover:scale-105 px-4 py-2 rounded-lg bg-black text-white w-full sm:w-auto"
+              className="cursor-pointer transition duration-300 hover:bg-[#227a69] hover:text-white hover:scale-105 px-4 py-2 rounded-lg bg-[#2a9781] text-white w-full sm:w-auto"
             >
               Guardar
             </button>
@@ -151,7 +151,7 @@ const CreateServiceModal: React.FC<CreateServiceModalProps> = ({
             className="block text-sm font-medium mb-1"
             style={{ color: Colors.texts.primary }}
           >
-            Imagen <span className="text-red-500">*</span>
+            Imagen <span className="text-green-500">*</span>
           </label>
 
           <input
@@ -200,7 +200,7 @@ const CreateServiceModal: React.FC<CreateServiceModalProps> = ({
 
           <div className="text-center">
             <div className="text-xs text-gray-500 mb-1">
-              Haga clic en el círculo para{" "}
+              Haga clic en el cÃ­rculo para{" "}
               {image ? "cambiar" : "seleccionar"} la imagen
             </div>
 
@@ -217,7 +217,7 @@ const CreateServiceModal: React.FC<CreateServiceModalProps> = ({
                     setImage(null);
                     setErrors((p) => ({ ...p, image: "La imagen es obligatoria" }));
                   }}
-                  className="text-red-500 text-xs hover:text-red-700 px-2 py-1 border border-red-200 rounded-md"
+                  className="text-green-500 text-xs hover:text-green-700 px-2 py-1 border border-green-200 rounded-md"
                   style={{ borderColor: Colors.states.nullable }}
                 >
                   Eliminar imagen
@@ -226,7 +226,7 @@ const CreateServiceModal: React.FC<CreateServiceModalProps> = ({
             )}
 
             {errors.image && (
-              <span className="text-xs text-red-500 mt-1">{errors.image}</span>
+              <span className="text-xs text-green-500 mt-1">{errors.image}</span>
             )}
           </div>
         </div>
@@ -236,7 +236,7 @@ const CreateServiceModal: React.FC<CreateServiceModalProps> = ({
             className="block text-sm font-medium mb-1"
             style={{ color: Colors.texts.primary }}
           >
-            Nombre <span className="text-red-500">*</span>
+            Nombre <span className="text-green-500">*</span>
           </label>
           <input
             type="text"
@@ -248,7 +248,7 @@ const CreateServiceModal: React.FC<CreateServiceModalProps> = ({
             style={{ borderColor: errors.name ? "red" : Colors.table.lines }}
           />
           {errors.name && (
-            <span className="text-xs text-red-500">{errors.name}</span>
+            <span className="text-xs text-green-500">{errors.name}</span>
           )}
         </div>
 
@@ -257,7 +257,7 @@ const CreateServiceModal: React.FC<CreateServiceModalProps> = ({
             className="block text-sm font-medium mb-1"
             style={{ color: Colors.texts.primary }}
           >
-            Tipo de servicio <span className="text-red-500">*</span>
+            Tipo de servicio <span className="text-green-500">*</span>
           </label>
           <select
             value={typeofserviceid || ""}
@@ -287,7 +287,7 @@ const CreateServiceModal: React.FC<CreateServiceModalProps> = ({
             ))}
           </select>
           {errors.typeofserviceid && (
-            <span className="text-xs text-red-500">{errors.typeofserviceid}</span>
+            <span className="text-xs text-green-500">{errors.typeofserviceid}</span>
           )}
         </div>
 
@@ -296,10 +296,10 @@ const CreateServiceModal: React.FC<CreateServiceModalProps> = ({
             className="block text-sm font-medium mb-1"
             style={{ color: Colors.texts.primary }}
           >
-            Descripción
+            DescripciÃ³n
           </label>
           <textarea
-            placeholder="Ingrese descripción"
+            placeholder="Ingrese descripciÃ³n"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={5}
@@ -313,3 +313,5 @@ const CreateServiceModal: React.FC<CreateServiceModalProps> = ({
 };
 
 export default CreateServiceModal;
+
+

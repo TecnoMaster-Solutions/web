@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -187,12 +187,12 @@ function estadoBadgeClass(key: Row["estadoKey"]) {
   if (key === "Pendiente") return "bg-yellow-100 text-yellow-700 ring-1 ring-inset ring-yellow-200";
   if (key === "Agendada") return "bg-sky-100 text-sky-700 ring-1 ring-inset ring-sky-200";
   if (key === "Finalizado") return "bg-emerald-100 text-emerald-700 ring-1 ring-inset ring-emerald-200";
-  return "bg-red-100 text-red-700 ring-1 ring-inset ring-red-200";
+  return "bg-green-100 text-green-700 ring-1 ring-inset ring-green-200";
 }
 
 function tipoBadgeClass(tipo: string) {
   const normalized = normalizeText(tipo);
-  if (normalized.includes("instal")) return "bg-red-50 text-red-700 ring-1 ring-inset ring-red-200";
+  if (normalized.includes("instal")) return "bg-green-50 text-green-700 ring-1 ring-inset ring-green-200";
   return "bg-gray-100 text-gray-700 ring-1 ring-inset ring-gray-200";
 }
 
@@ -344,11 +344,11 @@ export default function ServiceRequestsClientsPage() {
   async function handleCancel(row: Row) {
     if (!canCancelRequests || !canMutateRow(row)) return;
     const res = await Swal.fire({
-      title: "¿Cancelar solicitud?",
-      text: `Se marcará la solicitud #${row.id} como cancelada.`,
+      title: "Â¿Cancelar solicitud?",
+      text: `Se marcarÃ¡ la solicitud #${row.id} como cancelada.`,
       icon: "warning",
       showCancelButton: true,
-      confirmButtonText: "Sí, cancelar",
+      confirmButtonText: "SÃ­, cancelar",
       cancelButtonText: "Volver",
       confirmButtonColor: "#d33",
       reverseButtons: true,
@@ -402,7 +402,7 @@ export default function ServiceRequestsClientsPage() {
                 {canCreateRequests && (
                   <button
                     onClick={() => setOpenCreate(true)}
-                    className="inline-flex h-10 items-center rounded-md bg-[#B20000] px-3 text-sm font-semibold text-white shadow-sm hover:opacity-90 whitespace-nowrap"
+                    className="inline-flex h-10 items-center rounded-md bg-[#04652c] px-3 text-sm font-semibold text-white shadow-sm hover:opacity-90 whitespace-nowrap"
                     disabled={busy || !clientIdFromAuth}
                   >
                     Crear Solicitud
@@ -548,7 +548,7 @@ export default function ServiceRequestsClientsPage() {
                     key={p}
                     onClick={() => setPage(p as number)}
                     className={`h-9 min-w-9 px-3 rounded-md border text-sm ${
-                      current === p ? "bg-[#CC0000] border-[#CC0000] text-white" : "bg-white border-gray-300"
+                      current === p ? "bg-[#06a646] border-[#06a646] text-white" : "bg-white border-gray-300"
                     }`}
                   >
                     {p}
@@ -609,3 +609,4 @@ export default function ServiceRequestsClientsPage() {
     </RequireAuth>
   );
 }
+

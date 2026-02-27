@@ -1,4 +1,4 @@
-interface IColors {
+﻿interface IColors {
   buttons: {
     primary: string;
     secondary: string;
@@ -85,14 +85,14 @@ interface IColors {
 
 const Colors: IColors = {
   buttons: {
-    primary: "#CC0000",
+    primary: "#06a646",
     secondary: "#6c757d",
     tertiary: "#7C7C7C",
     quaternary: "#000000",
   },
   texts: {
     primary: "#0D141C",
-    secondary: "#B20000",
+    secondary: "#04652c",
     tertiary: "#3f4445",
     quaternary: "#ffffff",
     quinary: "#717680",
@@ -108,14 +108,14 @@ const Colors: IColors = {
     header: "#F4F4F4",
   },
   asideNavBackground: {
-    primary: "#B20000",
+    primary: "#04652c",
   },
   states: {
     completed: "#015800",
     success: "#189416",
     pending: "#FFBB00",
     inactive: "#FF0000",
-    nullable: "#B20000",
+    nullable: "#04652c",
     appointment: {
       finalizado: {
         background: "#D2F5D3",
@@ -150,19 +150,20 @@ const Colors: IColors = {
     quaternary: "#f4f4f4",
   },
   graphic: {
-    linePrimary: "#B20000",
+    linePrimary: "#04652c",
     lineSecondary: "#E9E9E9",
-    lineThird: "#CC0000",
-    lineMax: "#CC0000",
+    lineThird: "#06a646",
+    lineMax: "#06a646",
     circle: {
-      primary: "#E60000",
-      secondary: "#D00000",
-      tertiary: "#B20000",
-      quaternary: "#990000",
-      quinary: "#800000",
-      scenery: "#660000",
+      primary: "#06a646",
+      secondary: "#058a3c",
+      tertiary: "#04652c",
+      quaternary: "#034a21",
+      quinary: "#034a21",
+      scenery: "#034a21",
     },
   },
 };
 
 export default Colors;
+

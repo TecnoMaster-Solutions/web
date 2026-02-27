@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Swal from "sweetalert2";
@@ -59,7 +59,7 @@ type Row = {
 function Loader() {
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-[9999]">
-      <div className="w-16 h-16 border-4 border-red-600 border-t-transparent rounded-full animate-spin" />
+      <div className="w-16 h-16 border-4 border-green-600 border-t-transparent rounded-full animate-spin" />
     </div>
   );
 }
@@ -67,7 +67,7 @@ function Loader() {
 function estadoClass(v: string) {
   const s = (v || "").toLowerCase();
   if (s.includes("aprob")) return "text-green-600";
-  if (s.includes("anul") || s.includes("cancel")) return "text-red-600";
+  if (s.includes("anul") || s.includes("cancel")) return "text-green-600";
   if (s.includes("pend")) return "text-yellow-600";
   if (s.includes("activo")) return "text-green-600";
   return "text-gray-700";
@@ -417,15 +417,15 @@ export default function ServiceRequestsPage() {
     return rows.map((r) => ({
       Id: r.id,
       Cliente: r.cliente,
-      Descripción: r.descripcion,
+      DescripciÃ³n: r.descripcion,
       Servicio: r.servicio,
       Tipo: r.tipo,
-      Dirección: r.direccion,
+      DirecciÃ³n: r.direccion,
       Fecha: r.fecha,
       Estado: r.estado,
       Programada: r.programada ?? "",
       "Programada Fin": r.programadaEnd ?? "",
-      Técnicos:
+      TÃ©cnicos:
         (r.technicianNames || []).join(", ") ||
         (r.technicians || []).join(", "),
     }));
@@ -490,7 +490,7 @@ export default function ServiceRequestsPage() {
     const row = rows.find((r) => String(r.id) === String(targetId));
     if (!row) {
       cancelHandledRef.current = true;
-      showError("No se encontró la solicitud para cancelar.");
+      showError("No se encontrÃ³ la solicitud para cancelar.");
       clearParams();
       return;
     }
@@ -722,11 +722,11 @@ export default function ServiceRequestsPage() {
     }
 
     const res = await Swal.fire({
-      title: "¿Cancelar solicitud?",
-      text: `Se marcará la solicitud #${row.id} como cancelada.`,
+      title: "Â¿Cancelar solicitud?",
+      text: `Se marcarÃ¡ la solicitud #${row.id} como cancelada.`,
       icon: "warning",
       showCancelButton: true,
-      confirmButtonText: "Sí, cancelar",
+      confirmButtonText: "SÃ­, cancelar",
       cancelButtonText: "Volver",
       confirmButtonColor: "#d33",
       reverseButtons: true,
@@ -783,10 +783,10 @@ export default function ServiceRequestsPage() {
         ? row.technicianNames.join(", ")
         : (row.technicians || []).length
         ? row.technicians.join(", ")
-        : "—";
+        : "â€”";
 
-    const fechaProg = row.programada ? row.programada : "—";
-    const fechaFin = row.programadaEnd ? row.programadaEnd : "—";
+    const fechaProg = row.programada ? row.programada : "â€”";
+    const fechaFin = row.programadaEnd ? row.programadaEnd : "â€”";
 
     const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>Solicitud #${
       row.id
@@ -800,13 +800,13 @@ export default function ServiceRequestsPage() {
       row.cliente
     }</div></div><div class="item"><div class="label">Servicio</div><div class="val">${
       row.servicio
-    }</div></div><div class="item"><div class="label">Técnicos</div><div class="val">${techs}</div></div><div class="item"><div class="label">Programada</div><div class="val">${fechaProg}</div></div><div class="item"><div class="label">Hora final</div><div class="val">${fechaFin}</div></div><div class="item" style="grid-column:1/-1"><div class="label">Dirección</div><div class="val">${
-      row.direccion || "—"
+    }</div></div><div class="item"><div class="label">TÃ©cnicos</div><div class="val">${techs}</div></div><div class="item"><div class="label">Programada</div><div class="val">${fechaProg}</div></div><div class="item"><div class="label">Hora final</div><div class="val">${fechaFin}</div></div><div class="item" style="grid-column:1/-1"><div class="label">DirecciÃ³n</div><div class="val">${
+      row.direccion || "â€”"
     }</div></div></div><div class="item" style="margin-top:12px"><div class="label">Tipo de servicio</div><div class="val">${
-      row.tipo || "—"
-    }</div></div><div class="item" style="margin-top:12px"><div class="label">Descripción</div><div class="val desc">${
-      row.descripcion || "—"
-    }</div></div><div class="footer">Código: SRV-${String(row.id).padStart(
+      row.tipo || "â€”"
+    }</div></div><div class="item" style="margin-top:12px"><div class="label">DescripciÃ³n</div><div class="val desc">${
+      row.descripcion || "â€”"
+    }</div></div><div class="footer">CÃ³digo: SRV-${String(row.id).padStart(
       6,
       "0"
     )}</div></div></body></html>`;
@@ -840,7 +840,7 @@ export default function ServiceRequestsPage() {
 
         {error ? (
           <div className="flex-1 flex items-center justify-center p-8">
-            <div className="text-red-600">Error cargando solicitudes</div>
+            <div className="text-green-600">Error cargando solicitudes</div>
           </div>
         ) : (
           <DataTable<Row>
@@ -859,7 +859,7 @@ export default function ServiceRequestsPage() {
 
               return {
                 disableCancel: cancelado,
-                cancelTitle: cancelado ? "Ya está cancelada." : "Anular",
+                cancelTitle: cancelado ? "Ya estÃ¡ cancelada." : "Anular",
               };
             }}
             rightActions={
@@ -873,15 +873,15 @@ export default function ServiceRequestsPage() {
                     headers={[
                       "Id",
                       "Cliente",
-                      "Descripción",
+                      "DescripciÃ³n",
                       "Servicio",
                       "Tipo",
-                      "Dirección",
+                      "DirecciÃ³n",
                       "Fecha",
                       "Estado",
                       "Programada",
                       "Programada Fin",
-                      "Técnicos",
+                      "TÃ©cnicos",
                     ]}
                     excludeKeys={[]}
                   />
@@ -894,7 +894,7 @@ export default function ServiceRequestsPage() {
                       ?.click()
                   }
                   className="fixed bottom-20 right-6 z-50 flex md:hidden items-center justify-center w-12 h-12 rounded-full shadow-lg text-white transition-transform hover:scale-105"
-                  style={{ background: "#B20000" }}
+                  style={{ background: "#04652c" }}
                   type="button"
                   title="Descargar reporte"
                 >
@@ -941,7 +941,7 @@ export default function ServiceRequestsPage() {
                 ? (row) => (
                     <button
                       key={`print-${row.id}`}
-                      className="p-1 rounded-full cursor-pointer transition-all duration-300 hover:scale-110 hover:bg-red-300/60"
+                      className="p-1 rounded-full cursor-pointer transition-all duration-300 hover:scale-110 hover:bg-green-300/60"
                       title="Imprimir"
                       onClick={() => printRequest(row)}
                     >
@@ -1030,3 +1030,4 @@ export default function ServiceRequestsPage() {
     </RequireAuth>
   );
 }
+

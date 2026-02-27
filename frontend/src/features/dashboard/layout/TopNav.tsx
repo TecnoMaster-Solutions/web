@@ -38,7 +38,7 @@ type TopNavProps = {
 function Loader() {
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-[9999]">
-      <div className="w-16 h-16 border-4 border-red-600 border-t-transparent rounded-full animate-spin" />
+      <div className="w-16 h-16 border-4 border-[#06a646] border-t-transparent rounded-full animate-spin" />
     </div>
   );
 }
@@ -141,14 +141,14 @@ export default function TopNav({
     <>
       {loading && <Loader />}
 
-      <header className="bg-white shadow-[0_6px_10px_-1px_rgba(0,0,0,0.25)] px-4 md:px-8 py-3 flex items-center justify-between relative">
-        <h1 className="text-xl md:text-4xl font-bold text-red-800 pl-2 md:pl-5">
+      <header className="bg-[#e9eeec] border-b border-[#e9eeec] shadow-[0_6px_10px_-1px_rgba(0,0,0,0.16)] px-4 md:px-8 py-3 flex items-center justify-between relative">
+        <h1 className="text-xl md:text-4xl font-bold text-[#04652c] pl-2 md:pl-5">
           {displayedText}
         </h1>
 
         <button
           onClick={() => setMenuOpen((v) => !v)}
-          className="md:hidden text-gray-700 mr-2"
+          className="md:hidden text-[#04652c] mr-2"
           aria-label="Abrir menú"
         >
           {menuOpen ? <X size={24} /> : <Menu size={24} />}
@@ -161,17 +161,17 @@ export default function TopNav({
             aria-haspopup="menu"
             aria-expanded={menuProfileOpen}
             className={[
-              "flex items-center gap-3 rounded-full px-3 py-1 outline-none transition",
-              "focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2",
+              "flex items-center gap-3 rounded-full px-3 py-1 outline-none transition-all duration-300 ease-in-out",
+              "focus-visible:ring-2 focus-visible:ring-[#2596be] focus-visible:ring-offset-2 focus-visible:ring-offset-[#cfd8d3]",
               menuProfileOpen
-                ? "bg-red-700 border border-red-700 shadow-sm"
-                : "bg-gray-100 border border-gray-200 hover:bg-gray-200 shadow-sm",
+                ? "bg-[#dbe7e1] border border-[#b8c7c0] shadow-sm"
+                : "bg-[#e6eeea] border border-[#b8c7c0] hover:bg-[#dbe7e1] shadow-sm",
             ].join(" ")}
           >
             <span
               className={[
                 "hidden md:block max-w-[180px] truncate transition-colors",
-                menuProfileOpen ? "text-white" : "text-gray-800",
+                "text-[#2596be]",
               ].join(" ")}
             >
               {display.name}
@@ -184,15 +184,15 @@ export default function TopNav({
                 className={[
                   "w-9 h-9 md:w-10 md:h-10 rounded-full object-cover transition",
                   menuProfileOpen
-                    ? "ring-2 ring-white/70"
-                    : "ring-2 ring-gray-300",
+                    ? "ring-2 ring-[#2596be]/50"
+                    : "ring-2 ring-[#b8c7c0]",
                 ].join(" ")}
               />
             ) : (
               <UserCircle
                 className={[
                   "w-9 h-9 md:w-10 md:h-10 transition-colors",
-                  menuProfileOpen ? "text-white" : "text-gray-700",
+                  "text-[#2596be]",
                 ].join(" ")}
               />
             )}
@@ -202,12 +202,12 @@ export default function TopNav({
             <div
               ref={menuRef}
               role="menu"
-              className="absolute right-0 mt-2 w-56 rounded-xl border bg-white shadow-xl z-50 overflow-hidden"
+              className="absolute right-0 mt-2 w-56 rounded-xl border border-[#c3e6d2] bg-[#d0f0dc] shadow-xl z-50 overflow-hidden"
             >
-              <div className="px-4 py-3 border-b">
-                <p className="text-sm font-medium truncate">{display.name}</p>
+              <div className="px-4 py-3 border-b border-[#c3e6d2]">
+                <p className="text-sm font-medium text-[#012e14] truncate">{display.name}</p>
                 {!!display.email && (
-                  <p className="text-xs text-gray-500 truncate">
+                  <p className="text-xs text-[#1c4d34] truncate">
                     {display.email}
                   </p>
                 )}
@@ -216,7 +216,7 @@ export default function TopNav({
               <button
                 onClick={handleOpenProfile}
                 role="menuitem"
-                className="w-full text-left px-4 py-3 flex items-center gap-2 hover:bg-gray-50"
+                className="w-full text-left px-4 py-3 flex items-center gap-2 text-[#012e14] hover:bg-[#e6f6ec] transition-all duration-300 ease-in-out"
               >
                 <Pencil size={16} />
                 Editar perfil
@@ -226,7 +226,7 @@ export default function TopNav({
                 onClick={handleLogout}
                 disabled={loading}
                 role="menuitem"
-                className="w-full text-left px-4 py-3 flex items-center gap-2 text-red-700 hover:bg-red-50 disabled:opacity-60"
+                className="w-full text-left px-4 py-3 flex items-center gap-2 text-[#012e14] hover:bg-[#e6f6ec] transition-all duration-300 ease-in-out disabled:opacity-60"
               >
                 <LogOut size={16} />
                 {loading ? "Saliendo…" : "Cerrar sesión"}

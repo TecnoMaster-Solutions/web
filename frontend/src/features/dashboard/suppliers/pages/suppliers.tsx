@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import Swal from "sweetalert2";
@@ -48,7 +48,7 @@ type Row = {
 function Loader() {
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-[9998]">
-      <div className="w-16 h-16 border-4 border-red-600 border-t-transparent rounded-full animate-spin" />
+      <div className="w-16 h-16 border-4 border-green-600 border-t-transparent rounded-full animate-spin" />
     </div>
   );
 }
@@ -56,9 +56,9 @@ function Loader() {
 function getErrorMessage(err: any) {
   const msg =
     err?.response?.data?.message ?? err?.response?.data?.error ?? err?.message;
-  if (Array.isArray(msg)) return msg.join(" · ");
+  if (Array.isArray(msg)) return msg.join(" Â· ");
   if (typeof msg === "string" && msg.trim()) return msg;
-  return "Ocurrió un error inesperado.";
+  return "OcurriÃ³ un error inesperado.";
 }
 
 export default function SuppliersPage() {
@@ -102,7 +102,7 @@ export default function SuppliersPage() {
       render: (r) => <span className="font-medium text-gray-900">{r.name}</span>,
     },
     { key: "nit", header: "NIT" },
-    { key: "phone", header: "Teléfono" },
+    { key: "phone", header: "TelÃ©fono" },
     { key: "contact", header: "Contacto" },
     {
       key: "status",
@@ -110,7 +110,7 @@ export default function SuppliersPage() {
       render: (r) => (
         <span
           className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-            r.status === "Activo" ? "text-green-600" : "text-red-600"
+            r.status === "Activo" ? "text-green-600" : "text-green-600"
           }`}
         >
           {r.status}
@@ -149,11 +149,11 @@ export default function SuppliersPage() {
     if (row.status === "Inactivo") return;
 
     const res = await Swal.fire({
-      title: "¿Inactivar proveedor?",
-      text: `Se marcará "${row.name}" como Inactivo (no se eliminará).`,
+      title: "Â¿Inactivar proveedor?",
+      text: `Se marcarÃ¡ "${row.name}" como Inactivo (no se eliminarÃ¡).`,
       icon: "warning",
       showCancelButton: true,
-      confirmButtonText: "Sí, inactivar",
+      confirmButtonText: "SÃ­, inactivar",
       cancelButtonText: "Cancelar",
       confirmButtonColor: "#d33",
       reverseButtons: true,
@@ -161,7 +161,7 @@ export default function SuppliersPage() {
     });
 
     if (!res.isConfirmed) {
-      showInfo("Acción cancelada.");
+      showInfo("AcciÃ³n cancelada.");
       return;
     }
 
@@ -284,7 +284,7 @@ export default function SuppliersPage() {
 
         {error ? (
           <div className="flex-1 flex items-center justify-center p-8">
-            <div className="text-red-600">Error cargando proveedores</div>
+            <div className="text-green-600">Error cargando proveedores</div>
           </div>
         ) : (
           <DataTable<Row>
@@ -338,3 +338,4 @@ export default function SuppliersPage() {
     </RequireAuth>
   );
 }
+

@@ -456,13 +456,6 @@ export default function CartModal({
           {error && <p className="text-red-600 text-sm mt-2">{error}</p>}
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-xl px-4 py-3 shadow-sm">
-          <div className="flex items-center gap-3 text-gray-800">
-            <input type="checkbox" className="h-4 w-4 rounded border-gray-300" />
-            <span className="font-medium">Todos los productos</span>
-          </div>
-        </div>
-
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
             <p className="font-semibold text-gray-900">
@@ -863,7 +856,7 @@ export default function CartModal({
               <button
                 onClick={handlePurchase}
                 disabled={isRedirectingToCheckout || cart.length === 0}
-                className="cursor-pointer bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-8 py-3 rounded-lg text-lg font-semibold shadow-md transition"
+                className="cursor-pointer bg-[#2a9781] hover:bg-[#227a69] text-white px-8 py-3 rounded-lg text-lg font-semibold shadow-md transition"
               >
                 {isRedirectingToCheckout
                   ? "Redirigiendo a Mercado Pago..."

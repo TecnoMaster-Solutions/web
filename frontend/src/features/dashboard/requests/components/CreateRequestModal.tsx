@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Modal from "@/features/dashboard/components/Modal";
@@ -255,7 +255,7 @@ export default function CreateRequestModal({
       .map((t: any) => {
         const u = t?.users || t?.user || t?.Users || {};
         const name = [u?.name, u?.lastname].filter(Boolean).join(" ").trim();
-        const label = name || `Técnico #${t?.technicianid ?? t?.id ?? "?"}`;
+        const label = name || `TÃ©cnico #${t?.technicianid ?? t?.id ?? "?"}`;
         return { technicianid: Number(t?.technicianid ?? t?.id), label } as TechnicianOption;
       })
       .filter((x) => Number.isFinite(x.technicianid) && x.technicianid > 0);
@@ -344,15 +344,15 @@ export default function CreateRequestModal({
   function validateDateRequired(date: string | null) {
     if (!date) return "Selecciona la fecha.";
     const d = parseYMD(date);
-    if (!d) return "Fecha inválida.";
+    if (!d) return "Fecha invÃ¡lida.";
     if (isPastDateLocal(date)) return "No puedes seleccionar una fecha pasada.";
-    if (!isAllowedDate(date)) return "No se puede agendar los domingos (solo lunes a sábado).";
+    if (!isAllowedDate(date)) return "No se puede agendar los domingos (solo lunes a sÃ¡bado).";
     return null;
   }
 
   function validateStartTimeRequired(date: string | null, start: string | null) {
     if (!start) return "Selecciona la hora inicial.";
-    if (!isAllowedTime(start)) return "Horario permitido: 07:00–17:00.";
+    if (!isAllowedTime(start)) return "Horario permitido: 07:00â€“17:00.";
     if (timeToMinutes(start) === SCHEDULE_MAX) return "La hora de inicio no puede ser 17:00.";
     if (date && !isPastDateLocal(date) && isPastDateTimeLocal(date, start)) {
       return "La hora inicial no puede estar en el pasado.";
@@ -362,7 +362,7 @@ export default function CreateRequestModal({
 
   function validateEndTimeRequired(date: string | null, start: string | null, end: string | null) {
     if (!end) return "Selecciona la hora final.";
-    if (!isAllowedTime(end)) return "Horario permitido: 07:00–17:00.";
+    if (!isAllowedTime(end)) return "Horario permitido: 07:00â€“17:00.";
 
     if (date && !isPastDateLocal(date) && isPastDateTimeLocal(date, end)) {
       return "La hora final no puede estar en el pasado.";
@@ -393,9 +393,9 @@ export default function CreateRequestModal({
     e.horaFinal = needsTime ? validateEndTimeRequired(programada, horaProgramada, horaFinal) : null;
 
     if (!selectedTechnicians.length) {
-      e.technicians = "Selecciona al menos un técnico.";
+      e.technicians = "Selecciona al menos un tÃ©cnico.";
     } else if (selectedBusyTechnicianIds.length > 0) {
-      e.technicians = "Hay técnicos seleccionados que ya están ocupados en ese horario.";
+      e.technicians = "Hay tÃ©cnicos seleccionados que ya estÃ¡n ocupados en ese horario.";
     } else {
       e.technicians = null;
     }
@@ -477,7 +477,7 @@ export default function CreateRequestModal({
   function addTechnician(id: number) {
     if (!Number.isFinite(id) || id <= 0) return;
     if (busyTechnicianIds.has(id)) {
-      showWarning("Este técnico ya está ocupado en el horario seleccionado.");
+      showWarning("Este tÃ©cnico ya estÃ¡ ocupado en el horario seleccionado.");
       return;
     }
     markTouched("technicians");
@@ -529,7 +529,7 @@ export default function CreateRequestModal({
             ? `No se pudieron cargar los servicios (${status}).`
             : "No se pudieron cargar los servicios."
         );
-        console.error("LOOKUP services ERROR →", sr.reason);
+        console.error("LOOKUP services ERROR â†’", sr.reason);
       }
 
       if (cr.status === "fulfilled") setClientesLocal(cr.value as Option[]);
@@ -541,7 +541,7 @@ export default function CreateRequestModal({
             ? `No se pudieron cargar los clientes (${status}).`
             : "No se pudieron cargar los clientes."
         );
-        console.error("LOOKUP customers ERROR →", cr.reason);
+        console.error("LOOKUP customers ERROR â†’", cr.reason);
       }
 
       setLoadingLookups(false);
@@ -571,7 +571,7 @@ export default function CreateRequestModal({
           : [];
         if (!cancelled) setTechniciansRaw(list);
       } catch (e: any) {
-        const msg = e?.response?.data?.message || e?.message || "Error cargando técnicos.";
+        const msg = e?.response?.data?.message || e?.message || "Error cargando tÃ©cnicos.";
         if (!cancelled) {
           setTechError(String(msg));
           setTechniciansRaw([]);
@@ -722,7 +722,7 @@ export default function CreateRequestModal({
     }
 
     if (!isAllowedDate(v)) {
-      showWarning("No se puede agendar los domingos. Solo lunes a sábado.");
+      showWarning("No se puede agendar los domingos. Solo lunes a sÃ¡bado.");
       return;
     }
 
@@ -742,7 +742,7 @@ export default function CreateRequestModal({
     }
 
     if (!isAllowedTime(v)) {
-      showWarning("Horario permitido: 07:00–17:00.");
+      showWarning("Horario permitido: 07:00â€“17:00.");
       return;
     }
 
@@ -769,7 +769,7 @@ export default function CreateRequestModal({
     }
 
     if (!isAllowedTime(v)) {
-      showWarning("Horario permitido: 07:00–17:00.");
+      showWarning("Horario permitido: 07:00â€“17:00.");
       return;
     }
 
@@ -792,14 +792,14 @@ export default function CreateRequestModal({
     }
 
     if (techLoading) {
-      showInfo("Espera a que carguen los técnicos.");
+      showInfo("Espera a que carguen los tÃ©cnicos.");
       return;
     }
 
     if (!isValidNow()) return;
 
     if (selectedBusyTechnicianIds.length > 0) {
-      showError("Hay técnicos ocupados en ese horario. Ajusta horario o técnicos.");
+      showError("Hay tÃ©cnicos ocupados en ese horario. Ajusta horario o tÃ©cnicos.");
       return;
     }
 
@@ -869,13 +869,13 @@ export default function CreateRequestModal({
           <button
             type="button"
             onClick={submit}
-            className="rounded-lg bg-black px-3 py-2 text-sm font-semibold text-white hover:bg-neutral-800 disabled:opacity-60"
+            className="rounded-lg bg-[#2a9781] px-3 py-2 text-sm font-semibold text-white hover:bg-[#227a69] disabled:opacity-60"
             disabled={saving || loadingLookups || techLoading}
             title={
               loadingLookups
                 ? "Cargando servicios/clientes..."
                 : techLoading
-                ? "Cargando técnicos..."
+                ? "Cargando tÃ©cnicos..."
                 : undefined
             }
           >
@@ -921,12 +921,12 @@ export default function CreateRequestModal({
             </div>
           ) : (
             <p className="text-xs text-gray-500">
-              Configura tipos de servicio en el catálogo de servicios.
+              Configura tipos de servicio en el catÃ¡logo de servicios.
             </p>
           )}
 
           {shouldShowError("tipo") && errors.tipo && (
-            <p className="mt-1 text-xs text-red-600">{errors.tipo}</p>
+            <p className="mt-1 text-xs text-green-600">{errors.tipo}</p>
           )}
         </div>
 
@@ -945,7 +945,7 @@ export default function CreateRequestModal({
                 className={[
                   "w-full appearance-none rounded-lg border bg-gray-50 h-10 px-3 pr-8 text-sm focus:bg-white focus:ring-2 focus:ring-black/15 disabled:opacity-60",
                   shouldShowError("serviceId") && errors.serviceId
-                    ? "border-red-500"
+                    ? "border-green-500"
                     : "border-gray-300",
                 ].join(" ")}
               >
@@ -965,11 +965,11 @@ export default function CreateRequestModal({
                 ))}
               </select>
               <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-gray-500">
-                ▾
+                â–¾
               </span>
             </div>
             {shouldShowError("serviceId") && errors.serviceId && (
-              <p className="mt-1 text-xs text-red-600">{errors.serviceId}</p>
+              <p className="mt-1 text-xs text-green-600">{errors.serviceId}</p>
             )}
           </div>
 
@@ -979,7 +979,7 @@ export default function CreateRequestModal({
               ref={clientBoxRef}
               className={[
                 "rounded-lg border bg-gray-50 p-2",
-                shouldShowError("clientId") && errors.clientId ? "border-red-500" : "border-gray-300",
+                shouldShowError("clientId") && errors.clientId ? "border-green-500" : "border-gray-300",
               ].join(" ")}
             >
               {selectedClient ? (
@@ -1093,14 +1093,14 @@ export default function CreateRequestModal({
               </div>
             </div>
             {shouldShowError("clientId") && errors.clientId && (
-              <p className="mt-1 text-xs text-red-600">{errors.clientId}</p>
+              <p className="mt-1 text-xs text-green-600">{errors.clientId}</p>
             )}
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-900">Dirección</label>
+            <label className="mb-1 block text-xs font-medium text-gray-900">DirecciÃ³n</label>
             <input
               value={direccion}
               onChange={(e) => {
@@ -1112,12 +1112,12 @@ export default function CreateRequestModal({
               className={[
                 "w-full rounded-lg border bg-gray-50 h-10 px-3 text-sm focus:bg-white focus:ring-2 focus:ring-black/15",
                 shouldShowError("direccion") && errors.direccion
-                  ? "border-red-500"
+                  ? "border-green-500"
                   : "border-gray-300",
               ].join(" ")}
             />
             {shouldShowError("direccion") && errors.direccion && (
-              <p className="mt-1 text-xs text-red-600">{errors.direccion}</p>
+              <p className="mt-1 text-xs text-green-600">{errors.direccion}</p>
             )}
           </div>
 
@@ -1132,13 +1132,13 @@ export default function CreateRequestModal({
               className={[
                 "w-full rounded-lg border bg-gray-50 h-10 px-3 text-sm focus:bg-white focus:ring-2 focus:ring-black/15",
                 shouldShowError("programada") && errors.programada
-                  ? "border-red-500"
+                  ? "border-green-500"
                   : "border-gray-300",
               ].join(" ")}
               required
             />
             {shouldShowError("programada") && errors.programada && (
-              <p className="mt-1 text-xs text-red-600">{errors.programada}</p>
+              <p className="mt-1 text-xs text-green-600">{errors.programada}</p>
             )}
           </div>
 
@@ -1154,14 +1154,14 @@ export default function CreateRequestModal({
               className={[
                 "w-full rounded-lg border bg-gray-50 h-10 px-3 text-sm focus:bg-white focus:ring-2 focus:ring-black/15 disabled:opacity-60",
                 shouldShowError("horaProgramada") && errors.horaProgramada
-                  ? "border-red-500"
+                  ? "border-green-500"
                   : "border-gray-300",
               ].join(" ")}
               disabled={!programada}
               required
             />
             {shouldShowError("horaProgramada") && errors.horaProgramada && (
-              <p className="mt-1 text-xs text-red-600">{errors.horaProgramada}</p>
+              <p className="mt-1 text-xs text-green-600">{errors.horaProgramada}</p>
             )}
           </div>
 
@@ -1177,21 +1177,21 @@ export default function CreateRequestModal({
               className={[
                 "w-full rounded-lg border bg-gray-50 h-10 px-3 text-sm focus:bg-white focus:ring-2 focus:ring-black/15 disabled:opacity-60",
                 shouldShowError("horaFinal") && errors.horaFinal
-                  ? "border-red-500"
+                  ? "border-green-500"
                   : "border-gray-300",
               ].join(" ")}
               disabled={!programada}
               required
             />
             {shouldShowError("horaFinal") && errors.horaFinal && (
-              <p className="mt-1 text-xs text-red-600">{errors.horaFinal}</p>
+              <p className="mt-1 text-xs text-green-600">{errors.horaFinal}</p>
             )}
           </div>
         </div>
 
         <div>
           <div className="mb-1 flex items-center justify-between">
-            <label className="block text-xs font-medium text-gray-900">Técnicos</label>
+            <label className="block text-xs font-medium text-gray-900">TÃ©cnicos</label>
             <button
               type="button"
               onClick={clearTechnicians}
@@ -1206,13 +1206,13 @@ export default function CreateRequestModal({
             className={[
               "rounded-lg border bg-gray-50 p-2",
               shouldShowError("technicians") && errors.technicians
-                ? "border-red-500 ring-1 ring-red-500"
+                ? "border-green-500 ring-1 ring-green-500"
                 : "border-gray-300",
             ].join(" ")}
           >
             {selectedTechniciansFull.length === 0 ? (
               <div className="text-xs text-gray-500 px-1 py-1">
-                No has seleccionado técnicos.
+                No has seleccionado tÃ©cnicos.
               </div>
             ) : (
               <div className="flex flex-wrap gap-2">
@@ -1267,11 +1267,11 @@ export default function CreateRequestModal({
                   setTechOpen(false);
                 }
               }}
-              placeholder={techLoading ? "Cargando técnicos..." : "Buscar por nombre o ID..."}
+              placeholder={techLoading ? "Cargando tÃ©cnicos..." : "Buscar por nombre o ID..."}
               className={[
                 "w-full rounded-lg border bg-gray-50 h-10 px-3 text-sm focus:bg-white focus:ring-2 focus:ring-black/15 disabled:opacity-60",
                 shouldShowError("technicians") && errors.technicians
-                  ? "border-red-500 ring-1 ring-red-500"
+                  ? "border-green-500 ring-1 ring-green-500"
                   : "border-gray-300",
               ].join(" ")}
               disabled={saving || techLoading}
@@ -1283,7 +1283,7 @@ export default function CreateRequestModal({
                 {techOptions.length === 0 ? (
                   <div className="px-3 py-2 text-xs text-gray-500">
                     {selectedTechnicians.length === availableTechnicians.length
-                      ? "Ya seleccionaste todos los técnicos."
+                      ? "Ya seleccionaste todos los tÃ©cnicos."
                       : "No hay coincidencias."}
                   </div>
                 ) : (
@@ -1306,7 +1306,7 @@ export default function CreateRequestModal({
                           <span className="min-w-0 flex-1">
                             <span className="block truncate font-medium">{t.label}</span>
                             <span className="block text-xs text-gray-500">
-                              Técnico #{t.technicianid}
+                              TÃ©cnico #{t.technicianid}
                             </span>
                           </span>
                           <span className="text-xs text-gray-400">Agregar</span>
@@ -1319,14 +1319,14 @@ export default function CreateRequestModal({
             )}
           </div>
 
-          {techError && <p className="mt-1 text-xs text-red-600">{techError}</p>}
+          {techError && <p className="mt-1 text-xs text-green-600">{techError}</p>}
           {shouldShowError("technicians") && errors.technicians && (
-            <p className="mt-1 text-xs text-red-600">{errors.technicians}</p>
+            <p className="mt-1 text-xs text-green-600">{errors.technicians}</p>
           )}
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-900">Descripción</label>
+          <label className="mb-1 block text-xs font-medium text-gray-900">DescripciÃ³n</label>
           <textarea
             value={description}
             onChange={(e) => {
@@ -1339,15 +1339,17 @@ export default function CreateRequestModal({
             className={[
               "w-full rounded-lg border bg-gray-50 px-3 py-2 text-sm focus:bg-white focus:ring-2 focus:ring-black/15",
               shouldShowError("description") && errors.description
-                ? "border-red-500"
+                ? "border-green-500"
                 : "border-gray-300",
             ].join(" ")}
           />
           {shouldShowError("description") && errors.description && (
-            <p className="mt-1 text-xs text-red-600">{errors.description}</p>
+            <p className="mt-1 text-xs text-green-600">{errors.description}</p>
           )}
         </div>
       </div>
     </Modal>
   );
 }
+
+

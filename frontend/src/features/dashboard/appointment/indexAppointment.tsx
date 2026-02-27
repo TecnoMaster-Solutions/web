@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Calendar, dateFnsLocalizer, type View } from "react-big-calendar";
@@ -66,7 +66,7 @@ const localizer = dateFnsLocalizer({
 function Loader() {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="h-16 w-16 animate-spin rounded-full border-4 border-red-600 border-t-transparent" />
+      <div className="h-16 w-16 animate-spin rounded-full border-4 border-green-600 border-t-transparent" />
     </div>
   );
 }
@@ -160,7 +160,7 @@ export default function IndexAppointment() {
     async (event: AppointmentEvent, orderId: number) => {
       const technicianId = resolveTechnicianIdFromOrder(event);
       if (!technicianId) {
-        throw new Error("No se pudo identificar el técnico asignado para confirmar la orden.");
+        throw new Error("No se pudo identificar el tÃ©cnico asignado para confirmar la orden.");
       }
 
       const history = await fetchOrderServiceHistory(orderId);
@@ -171,8 +171,8 @@ export default function IndexAppointment() {
 
       await addOrderServiceWorklog(orderId, {
         technicianid: technicianId,
-        title: "Confirmación técnica de finalización",
-        note: `${TECH_COMPLETE_CONFIRM_TAG} Técnico confirmó orden lista para validación del cliente.`,
+        title: "ConfirmaciÃ³n tÃ©cnica de finalizaciÃ³n",
+        note: `${TECH_COMPLETE_CONFIRM_TAG} TÃ©cnico confirmÃ³ orden lista para validaciÃ³n del cliente.`,
         progresspercent: 100,
       });
     },
@@ -410,11 +410,11 @@ export default function IndexAppointment() {
         const res = await Swal.fire({
           icon: "warning",
           title: "Cancelar orden",
-          text: `¿Deseas cancelar la orden #${event.id}?`,
+          text: `Â¿Deseas cancelar la orden #${event.id}?`,
           showCancelButton: true,
-          confirmButtonText: "Sí, cancelar",
+          confirmButtonText: "SÃ­, cancelar",
           cancelButtonText: "Volver",
-          confirmButtonColor: "#B20000",
+          confirmButtonColor: "#04652c",
         });
         if (!res.isConfirmed) return;
 
@@ -430,11 +430,11 @@ export default function IndexAppointment() {
       }
 
       const res = await Swal.fire({
-        title: "¿Cancelar solicitud?",
-        text: `Se marcará la solicitud #${event.id} como cancelada.`,
+        title: "Â¿Cancelar solicitud?",
+        text: `Se marcarÃ¡ la solicitud #${event.id} como cancelada.`,
         icon: "warning",
         showCancelButton: true,
-        confirmButtonText: "Sí, cancelar",
+        confirmButtonText: "SÃ­, cancelar",
         cancelButtonText: "Volver",
         confirmButtonColor: "#d33",
         reverseButtons: true,
@@ -580,13 +580,13 @@ export default function IndexAppointment() {
       <div className="space-y-6">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-3">
-            <span className="rounded-2xl bg-red-100 p-2 text-red-600">
+            <span className="rounded-2xl bg-green-100 p-2 text-green-600">
               <CalendarDays className="h-5 w-5" />
             </span>
             <div>
               <p className="text-xs uppercase tracking-wide text-slate-500">Agenda</p>
               <h1 className="text-2xl font-semibold text-slate-900">
-                Calendario de órdenes y servicios
+                Calendario de Órdenes y servicios
               </h1>
               <p className="text-xs text-slate-500">Mes actual: {periodLabel}</p>
             </div>
@@ -724,4 +724,5 @@ export default function IndexAppointment() {
     </>
   );
 }
+
 

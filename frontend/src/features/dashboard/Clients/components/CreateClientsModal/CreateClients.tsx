@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React from "react";
 import { createPortal } from "react-dom";
@@ -83,14 +83,14 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
             </select>
 
             {errors.tipo && touched.tipo && (
-              <span className="text-red-500 text-xs">{errors.tipo}</span>
+              <span className="text-green-500 text-xs">{errors.tipo}</span>
             )}
           </div>
 
-          {/* Número Documento */}
+          {/* NÃºmero Documento */}
           <div>
             <label className="block text-sm mb-1 text-gray-700">
-              Número de Documento
+              NÃºmero de Documento
             </label>
             <input
               type="text"
@@ -132,10 +132,10 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
             />
           </div>
 
-          {/* Teléfono */}
+          {/* TelÃ©fono */}
           <div>
             <label className="block text-sm mb-1 text-gray-700">
-              Teléfono
+              TelÃ©fono
             </label>
             <input
               type="tel"
@@ -150,7 +150,7 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
           {/* Correo */}
           <div>
             <label className="block text-sm mb-1 text-gray-700">
-              Correo Electrónico
+              Correo ElectrÃ³nico
             </label>
             <input
               type="email"
@@ -195,10 +195,10 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
             />
           </div>
 
-          {/* Código Postal */}
+          {/* CÃ³digo Postal */}
           <div>
             <label className="block text-sm mb-1 text-gray-700">
-              Código Postal
+              CÃ³digo Postal
             </label>
             <input
               type="text"
@@ -222,7 +222,7 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
 
             <button
               type="submit"
-              className="px-5 py-2 rounded-md text-sm bg-black text-white"
+              className="px-5 py-2 rounded-md text-sm bg-[#2a9781] "
             >
               Guardar
             </button>
@@ -235,3 +235,4 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
 };
 
 export default CreateClientModal;
+
