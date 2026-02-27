@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useMemo } from "react";
 import * as XLSX from "xlsx";
@@ -34,7 +34,7 @@ export default function ClientsPage() {
     setViewingClient(null);
   };
 
-  // ── Ordenamiento ────────────────────────────────────────────────────────
+  // â”€â”€ Ordenamiento â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   type SortField = "nombre" | "documento";
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
@@ -57,17 +57,17 @@ export default function ClientsPage() {
     });
   }, [clients, sortField, sortDir]);
 
-  // ── Exportar clientes a Excel ──────────────────────────────────────────────
+  // â”€â”€ Exportar clientes a Excel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const exportToExcel = () => {
     const rows = clients.map((c) => ({
       "ID": c.id,
       "Nombre completo": `${c.nombre} ${c.apellido}`.trim(),
       "Tipo Documento": c.tipo,
       "Documento": c.documento,
-      "Teléfono": c.telefono,
+      "TelÃ©fono": c.telefono,
       "Correo": c.correoElectronico,
       "Ciudad": c.ciudad,
-      "Código Postal": c.codigoPostal,
+      "CÃ³digo Postal": c.codigoPostal,
       "Estado": c.estado,
     }));
     const ws = XLSX.utils.json_to_sheet(rows);
@@ -86,10 +86,10 @@ export default function ClientsPage() {
       render: (row: Client) =>
         `${row.nombre}${row.apellido ? " " + row.apellido : ""}`,
     },
-    { key: "telefono", header: "Teléfono" },
-    { key: "correoElectronico", header: "Correo electrónico" },
+    { key: "telefono", header: "TelÃ©fono" },
+    { key: "correoElectronico", header: "Correo electrÃ³nico" },
     { key: "ciudad", header: "Ciudad" },
-    { key: "codigoPostal", header: "Código Postal" },
+    { key: "codigoPostal", header: "CÃ³digo Postal" },
     {
       key: "estado",
       header: "Estado",
@@ -170,21 +170,21 @@ export default function ClientsPage() {
                     key={field}
                     onClick={() => handleSort(field)}
                     className={`flex items-center gap-1 px-3 py-1.5 text-sm font-medium border rounded-lg transition-colors ${sortField === field
-                        ? "bg-red-600 text-white border-red-600"
+                        ? "bg-green-600 text-white border-green-600"
                         : "text-gray-600 bg-white hover:bg-gray-50 border-gray-300"
                       }`}
                     title={`Ordenar por ${field === "nombre" ? "Nombre" : "Documento"}`}
                   >
                     {field === "nombre" ? "Nombre" : "Documento"}
                     <span className="text-xs">
-                      {sortField === field ? (sortDir === "asc" ? " ↑" : " ↓") : " ↕"}
+                      {sortField === field ? (sortDir === "asc" ? " â†‘" : " â†“") : " â†•"}
                     </span>
                   </button>
                 ))}
                 {/* Excel */}
                 <button
                   onClick={exportToExcel}
-                  className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 border border-red-300 rounded-lg transition-colors"
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-green-700 bg-green-50 hover:bg-green-100 border border-green-300 rounded-lg transition-colors"
                   title="Exportar a Excel"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

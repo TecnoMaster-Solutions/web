@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React from "react";
 import Modal from "@/features/dashboard/components/Modal";
@@ -16,7 +16,7 @@ const rowBox =
   "px-2 py-1 border rounded-md bg-gray-50 text-[13px] leading-5 whitespace-nowrap overflow-hidden text-ellipsis";
 
 const chip = "px-2.5 py-0.5 rounded-full border text-xs";
-const chipOn = "bg-red-600 text-white border-red-600";
+const chipOn = "bg-green-600 text-white border-green-600";
 const chipOff = "bg-gray-100 text-gray-700 border-gray-300";
 
 const ViewTechnicianModal: React.FC<ViewTechnicianModalProps> = ({
@@ -38,7 +38,7 @@ const ViewTechnicianModal: React.FC<ViewTechnicianModalProps> = ({
 
   return (
     <Modal
-      title="Detalle del Técnico"
+      title="Detalle del TÃ©cnico"
       isOpen={isOpen}
       onClose={onClose}
       footer={
@@ -91,21 +91,21 @@ const ViewTechnicianModal: React.FC<ViewTechnicianModalProps> = ({
           <label className={rowLabel} style={{ color: Colors.texts.primary }}>
             Documento
           </label>
-          <div className={rowBox} title={documento || "—"}>
-            {documento || "—"}
+          <div className={rowBox} title={documento || "â€”"}>
+            {documento || "â€”"}
           </div>
         </div>
 
         <div>
           <label className={rowLabel} style={{ color: Colors.texts.primary }}>
-            Teléfono
+            TelÃ©fono
           </label>
           <div className={rowBox}>{technician.phone}</div>
         </div>
 
         <div>
           <label className={rowLabel} style={{ color: Colors.texts.primary }}>
-            Correo electrónico
+            Correo electrÃ³nico
           </label>
           <div className={rowBox}>{technician.email}</div>
         </div>
@@ -122,7 +122,7 @@ const ViewTechnicianModal: React.FC<ViewTechnicianModalProps> = ({
             className={`${rowLabel} text-center`}
             style={{ color: Colors.texts.primary }}
           >
-            Tipos de técnico
+            Tipos de tÃ©cnico
           </label>
           <div className="flex flex-wrap justify-center gap-1.5 max-w-[640px]">
             {(technician.types ?? []).length ? (
@@ -161,3 +161,4 @@ const ViewTechnicianModal: React.FC<ViewTechnicianModalProps> = ({
 };
 
 export default ViewTechnicianModal;
+

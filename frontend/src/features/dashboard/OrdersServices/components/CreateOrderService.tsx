@@ -550,9 +550,9 @@ const {
   const sidebarW = useSidebarWidth("#app-sidebar");
 
   const inputBase =
-    "w-full h-10 rounded-md border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-200";
-  const errorText = "mt-1 text-xs text-red-600";
-  const errorRing = "border-red-500 ring-1 ring-red-500";
+    "w-full h-10 rounded-md border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-200";
+  const errorText = "mt-1 text-xs text-green-600";
+  const errorRing = "border-green-500 ring-1 ring-green-500";
 
   const hasErrors = useMemo(
     () => Object.values(errors).some((v) => typeof v === "string" && v.trim().length > 0),
@@ -2066,7 +2066,7 @@ setNavigating(true);
               <button
                 type="submit"
                 form="order-form"
-                className="h-10 rounded-md bg-red-700 px-4 text-sm font-semibold text-white hover:bg-red-800 disabled:opacity-60"
+                className="h-10 rounded-md bg-green-700 px-4 text-sm font-semibold text-white hover:bg-green-800 disabled:opacity-60"
                 disabled={saving || navigating || lookupsLoading}
               >
                 {saving ? (navigating ? "Redirigiendo..." : "Guardando...") : "Guardar"}
@@ -2211,7 +2211,7 @@ setNavigating(true);
             </section>
 
             {submitAttempted && hasErrors && (
-              <div ref={summaryRef} className="mb-4 rounded-md border border-red-300 bg-red-50 text-red-800 p-3 text-sm">
+              <div ref={summaryRef} className="mb-4 rounded-md border border-green-300 bg-green-50 text-green-800 p-3 text-sm">
                 <strong className="block mb-1">Hay errores en el formulario:</strong>
                 <ul className="list-disc pl-5 space-y-1">
                   {errors.quote && <li>{errors.quote}</li>}
@@ -2263,7 +2263,7 @@ setNavigating(true);
                                 setClientIdBeforeInlineCreate("");
                               }
                             }}
-                            className="h-3.5 w-3.5 rounded border-gray-300 accent-red-700"
+                            className="h-3.5 w-3.5 rounded border-gray-300 accent-green-700"
                             disabled={saving || navigating || lookupsLoading || createClientLoading || clientLockedByQuote}
                           />
                           Crear cliente
@@ -2410,11 +2410,11 @@ setNavigating(true);
                                   setCreateClientForm((prev) => ({ ...prev, name: value }));
                                   if (createClientErrors.name) setCreateClientErrors((prev) => ({ ...prev, name: undefined }));
                                 }}
-                                className={`w-full rounded-lg border bg-white h-10 px-3 text-sm ${createClientErrors.name ? "border-red-500" : "border-gray-300"}`}
+                                className={`w-full rounded-lg border bg-white h-10 px-3 text-sm ${createClientErrors.name ? "border-green-500" : "border-gray-300"}`}
                                 placeholder="Nombres"
                                 disabled={createClientLoading || saving || navigating}
                               />
-                              {createClientErrors.name && <p className="mt-1 text-xs text-red-600">{createClientErrors.name}</p>}
+                              {createClientErrors.name && <p className="mt-1 text-xs text-green-600">{createClientErrors.name}</p>}
                             </div>
 
                             <div>
@@ -2426,11 +2426,11 @@ setNavigating(true);
                                   setCreateClientForm((prev) => ({ ...prev, lastname: value }));
                                   if (createClientErrors.lastname) setCreateClientErrors((prev) => ({ ...prev, lastname: undefined }));
                                 }}
-                                className={`w-full rounded-lg border bg-white h-10 px-3 text-sm ${createClientErrors.lastname ? "border-red-500" : "border-gray-300"}`}
+                                className={`w-full rounded-lg border bg-white h-10 px-3 text-sm ${createClientErrors.lastname ? "border-green-500" : "border-gray-300"}`}
                                 placeholder="Apellidos"
                                 disabled={createClientLoading || saving || navigating}
                               />
-                              {createClientErrors.lastname && <p className="mt-1 text-xs text-red-600">{createClientErrors.lastname}</p>}
+                              {createClientErrors.lastname && <p className="mt-1 text-xs text-green-600">{createClientErrors.lastname}</p>}
                             </div>
 
                             <div>
@@ -2443,11 +2443,11 @@ setNavigating(true);
                                   setCreateClientForm((prev) => ({ ...prev, email: value }));
                                   if (createClientErrors.email) setCreateClientErrors((prev) => ({ ...prev, email: undefined }));
                                 }}
-                                className={`w-full rounded-lg border bg-white h-10 px-3 text-sm ${createClientErrors.email ? "border-red-500" : "border-gray-300"}`}
+                                className={`w-full rounded-lg border bg-white h-10 px-3 text-sm ${createClientErrors.email ? "border-green-500" : "border-gray-300"}`}
                                 placeholder="correo@dominio.com"
                                 disabled={createClientLoading || saving || navigating}
                               />
-                              {createClientErrors.email && <p className="mt-1 text-xs text-red-600">{createClientErrors.email}</p>}
+                              {createClientErrors.email && <p className="mt-1 text-xs text-green-600">{createClientErrors.email}</p>}
                             </div>
 
                             <div>
@@ -2459,11 +2459,11 @@ setNavigating(true);
                                   setCreateClientForm((prev) => ({ ...prev, phone: value }));
                                   if (createClientErrors.phone) setCreateClientErrors((prev) => ({ ...prev, phone: undefined }));
                                 }}
-                                className={`w-full rounded-lg border bg-white h-10 px-3 text-sm ${createClientErrors.phone ? "border-red-500" : "border-gray-300"}`}
+                                className={`w-full rounded-lg border bg-white h-10 px-3 text-sm ${createClientErrors.phone ? "border-green-500" : "border-gray-300"}`}
                                 placeholder="Solo numeros"
                                 disabled={createClientLoading || saving || navigating}
                               />
-                              {createClientErrors.phone && <p className="mt-1 text-xs text-red-600">{createClientErrors.phone}</p>}
+                              {createClientErrors.phone && <p className="mt-1 text-xs text-green-600">{createClientErrors.phone}</p>}
                             </div>
 
                             <div>
@@ -2475,7 +2475,7 @@ setNavigating(true);
                                   setCreateClientForm((prev) => ({ ...prev, typeid: value }));
                                   if (createClientErrors.typeid) setCreateClientErrors((prev) => ({ ...prev, typeid: undefined }));
                                 }}
-                                className={`w-full rounded-lg border bg-white h-10 px-3 text-sm ${createClientErrors.typeid ? "border-red-500" : "border-gray-300"}`}
+                                className={`w-full rounded-lg border bg-white h-10 px-3 text-sm ${createClientErrors.typeid ? "border-green-500" : "border-gray-300"}`}
                                 disabled={createClientLoading || saving || navigating}
                               >
                                 <option value="">Selecciona...</option>
@@ -2485,7 +2485,7 @@ setNavigating(true);
                                   </option>
                                 ))}
                               </select>
-                              {createClientErrors.typeid && <p className="mt-1 text-xs text-red-600">{createClientErrors.typeid}</p>}
+                              {createClientErrors.typeid && <p className="mt-1 text-xs text-green-600">{createClientErrors.typeid}</p>}
                             </div>
 
                             <div>
@@ -2497,11 +2497,11 @@ setNavigating(true);
                                   setCreateClientForm((prev) => ({ ...prev, documentnumber: value }));
                                   if (createClientErrors.documentnumber) setCreateClientErrors((prev) => ({ ...prev, documentnumber: undefined }));
                                 }}
-                                className={`w-full rounded-lg border bg-white h-10 px-3 text-sm ${createClientErrors.documentnumber ? "border-red-500" : "border-gray-300"}`}
+                                className={`w-full rounded-lg border bg-white h-10 px-3 text-sm ${createClientErrors.documentnumber ? "border-green-500" : "border-gray-300"}`}
                                 placeholder="Solo numeros"
                                 disabled={createClientLoading || saving || navigating}
                               />
-                              {createClientErrors.documentnumber && <p className="mt-1 text-xs text-red-600">{createClientErrors.documentnumber}</p>}
+                              {createClientErrors.documentnumber && <p className="mt-1 text-xs text-green-600">{createClientErrors.documentnumber}</p>}
                             </div>
 
                             <div>
@@ -2513,11 +2513,11 @@ setNavigating(true);
                                   setCreateClientForm((prev) => ({ ...prev, customercity: value }));
                                   if (createClientErrors.customercity) setCreateClientErrors((prev) => ({ ...prev, customercity: undefined }));
                                 }}
-                                className={`w-full rounded-lg border bg-white h-10 px-3 text-sm ${createClientErrors.customercity ? "border-red-500" : "border-gray-300"}`}
+                                className={`w-full rounded-lg border bg-white h-10 px-3 text-sm ${createClientErrors.customercity ? "border-green-500" : "border-gray-300"}`}
                                 placeholder="Ciudad (opcional)"
                                 disabled={createClientLoading || saving || navigating}
                               />
-                              {createClientErrors.customercity && <p className="mt-1 text-xs text-red-600">{createClientErrors.customercity}</p>}
+                              {createClientErrors.customercity && <p className="mt-1 text-xs text-green-600">{createClientErrors.customercity}</p>}
                             </div>
 
                             <div>
@@ -2529,12 +2529,12 @@ setNavigating(true);
                                   setCreateClientForm((prev) => ({ ...prev, customerzipcode: value }));
                                   if (createClientErrors.customerzipcode) setCreateClientErrors((prev) => ({ ...prev, customerzipcode: undefined }));
                                 }}
-                                className={`w-full rounded-lg border bg-white h-10 px-3 text-sm ${createClientErrors.customerzipcode ? "border-red-500" : "border-gray-300"}`}
+                                className={`w-full rounded-lg border bg-white h-10 px-3 text-sm ${createClientErrors.customerzipcode ? "border-green-500" : "border-gray-300"}`}
                                 placeholder="Opcional"
                                 disabled={createClientLoading || saving || navigating}
                               />
                               {createClientErrors.customerzipcode && (
-                                <p className="mt-1 text-xs text-red-600">{createClientErrors.customerzipcode}</p>
+                                <p className="mt-1 text-xs text-green-600">{createClientErrors.customerzipcode}</p>
                               )}
                             </div>
                           </div>
@@ -2792,7 +2792,7 @@ setNavigating(true);
                             <label
                               key={t.typeofserviceid}
                               className={`flex items-center gap-2 rounded-lg border bg-white px-3 py-2 cursor-pointer hover:bg-gray-50 ${
-                                tipoId === t.typeofserviceid ? "ring-2 ring-red-200 border-red-200" : ""
+                                tipoId === t.typeofserviceid ? "ring-2 ring-green-200 border-green-200" : ""
                               }`}
                             >
                               <input
@@ -2966,7 +2966,7 @@ setNavigating(true);
                           setErrors((p) => ({ ...p, description: validateDescription(descripcion) }));
                         }}
                         rows={3}
-                        className={`w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-200 ${
+                        className={`w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-200 ${
                           errors.description ? errorRing : ""
                         }`}
                         placeholder="Describe el servicio, alcance, observaciones, etc."
@@ -2975,7 +2975,7 @@ setNavigating(true);
                       {errors.description && <p className={errorText}>{errors.description}</p>}
                       <div className="mt-1 flex items-center justify-between text-[11px] text-gray-500">
                         <span>{`Opcional / Maximo ${DESC_MAX}`}</span>
-                        <span className={String(descripcion || "").trim().length > DESC_MAX ? "text-red-600" : ""}>
+                        <span className={String(descripcion || "").trim().length > DESC_MAX ? "text-green-600" : ""}>
                           {String(descripcion || "").trim().length}/{DESC_MAX}
                         </span>
                       </div>
@@ -3310,3 +3310,4 @@ setNavigating(true);
     </RequireAuth>
   );
 }
+

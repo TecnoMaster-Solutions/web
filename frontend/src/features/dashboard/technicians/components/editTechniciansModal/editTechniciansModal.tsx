@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useRef, useState, useEffect } from "react";
 import Modal from "@/features/dashboard/components/Modal";
@@ -274,7 +274,7 @@ const EditTechnicianModal: React.FC<EditTechnicianModalProps> = ({
 
   return (
     <Modal
-      title="Editar Técnico"
+      title="Editar TÃ©cnico"
       isOpen={isOpen}
       onClose={() => {
         resetForm();
@@ -292,7 +292,7 @@ const EditTechnicianModal: React.FC<EditTechnicianModalProps> = ({
           <button
             type="submit"
             form="edit-technician-form"
-            className="cursor-pointer px-4 py-2 rounded-lg bg-black text-white hover:bg-gray-900"
+            className="cursor-pointer px-4 py-2 rounded-lg bg-[#2a9781] text-white hover:bg-[#227a69]"
           >
             Guardar
           </button>
@@ -303,7 +303,7 @@ const EditTechnicianModal: React.FC<EditTechnicianModalProps> = ({
         
         <div>
           <label className="block text-sm font-medium mb-1">
-            Tipo de Documento <span className="text-red-500">*</span>
+            Tipo de Documento <span className="text-green-500">*</span>
           </label>
 
           <select
@@ -317,12 +317,12 @@ const EditTechnicianModal: React.FC<EditTechnicianModalProps> = ({
           </select>
 
           {errors.documentType && (
-            <p className="text-xs text-red-600 mt-1">{errors.documentType}</p>
+            <p className="text-xs text-green-600 mt-1">{errors.documentType}</p>
           )}
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">Número de Documento *</label>
+          <label className="block text-sm font-medium mb-1">NÃºmero de Documento *</label>
           <input
             type="text"
             value={documentNumber}
@@ -330,7 +330,7 @@ const EditTechnicianModal: React.FC<EditTechnicianModalProps> = ({
             className="w-full px-2 py-1 border rounded-md"
           />
           {errors.documentNumber && (
-            <p className="text-xs text-red-600 mt-1">{errors.documentNumber}</p>
+            <p className="text-xs text-green-600 mt-1">{errors.documentNumber}</p>
           )}
         </div>
 
@@ -343,7 +343,7 @@ const EditTechnicianModal: React.FC<EditTechnicianModalProps> = ({
             className="w-full px-2 py-1 border rounded-md"
           />
           {errors.name && (
-            <p className="text-xs text-red-600 mt-1">{errors.name}</p>
+            <p className="text-xs text-green-600 mt-1">{errors.name}</p>
           )}
         </div>
 
@@ -356,12 +356,12 @@ const EditTechnicianModal: React.FC<EditTechnicianModalProps> = ({
             className="w-full px-2 py-1 border rounded-md"
           />
           {errors.lastName && (
-            <p className="text-xs text-red-600 mt-1">{errors.lastName}</p>
+            <p className="text-xs text-green-600 mt-1">{errors.lastName}</p>
           )}
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">Teléfono *</label>
+          <label className="block text-sm font-medium mb-1">TelÃ©fono *</label>
           <input
             type="text"
             value={phone}
@@ -369,7 +369,7 @@ const EditTechnicianModal: React.FC<EditTechnicianModalProps> = ({
             className="w-full px-2 py-1 border rounded-md"
           />
           {errors.phone && (
-            <p className="text-xs text-red-600 mt-1">{errors.phone}</p>
+            <p className="text-xs text-green-600 mt-1">{errors.phone}</p>
           )}
         </div>
 
@@ -382,7 +382,7 @@ const EditTechnicianModal: React.FC<EditTechnicianModalProps> = ({
             className="w-full px-2 py-1 border rounded-md"
           />
           {errors.email && (
-            <p className="text-xs text-red-600 mt-1">{errors.email}</p>
+            <p className="text-xs text-green-600 mt-1">{errors.email}</p>
           )}
         </div>
 
@@ -403,7 +403,7 @@ const EditTechnicianModal: React.FC<EditTechnicianModalProps> = ({
 
         <div className="col-span-2">
           <label className="block text-sm font-medium mb-1">
-            Tipos de técnico *
+            Tipos de tÃ©cnico *
           </label>
 
           <div className="flex flex-wrap gap-2">
@@ -417,7 +417,7 @@ const EditTechnicianModal: React.FC<EditTechnicianModalProps> = ({
                   onClick={() => handleToggleType(opt)}
                   className={`px-3 py-1 rounded-full border text-sm transition ${
                     active
-                      ? "bg-red-600 text-white border-red-600"
+                      ? "bg-green-600 text-white border-green-600"
                       : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
                   }`}
                 >
@@ -428,7 +428,7 @@ const EditTechnicianModal: React.FC<EditTechnicianModalProps> = ({
           </div>
 
           {errors.types && (
-            <p className="text-xs text-red-600 mt-1">{errors.types}</p>
+            <p className="text-xs text-green-600 mt-1">{errors.types}</p>
           )}
         </div>
 
@@ -457,7 +457,7 @@ const EditTechnicianModal: React.FC<EditTechnicianModalProps> = ({
             />
           </div>
 
-          {pdfError && <p className="text-xs text-red-600 mt-1">{pdfError}</p>}
+          {pdfError && <p className="text-xs text-green-600 mt-1">{pdfError}</p>}
         </div>
 
         <div>
@@ -483,7 +483,7 @@ const EditTechnicianModal: React.FC<EditTechnicianModalProps> = ({
             />
           </div>
 
-          {imageError && <p className="text-xs text-red-600 mt-1">{imageError}</p>}
+          {imageError && <p className="text-xs text-green-600 mt-1">{imageError}</p>}
         </div>
       </form>
     </Modal>
@@ -491,3 +491,5 @@ const EditTechnicianModal: React.FC<EditTechnicianModalProps> = ({
 };
 
 export default EditTechnicianModal;
+
+

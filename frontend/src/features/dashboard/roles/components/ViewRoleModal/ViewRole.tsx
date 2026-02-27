@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React from "react";
 import { XMarkIcon, CheckIcon } from "@heroicons/react/24/solid";
@@ -77,7 +77,7 @@ export default function ViewRoleModal({ open, onClose, role }: ViewRoleModalProp
   const Checkbox = ({ checked }: { checked: boolean }) => (
     <div
       className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all duration-150 ${
-        checked ? "bg-[#B20000] scale-105" : "bg-white"
+        checked ? "bg-[#04652c] scale-105" : "bg-white"
       }`}
       style={{ borderColor: Colors.table.lines }}
     >
@@ -144,9 +144,9 @@ export default function ViewRoleModal({ open, onClose, role }: ViewRoleModalProp
 
               <div className="overflow-hidden rounded-xl border max-h-64 overflow-y-auto custom-scroll">
                 <table className="min-w-full text-sm">
-                  <thead className="sticky top-0 z-10" style={{ backgroundColor: "#B20000" }}>
+                  <thead className="sticky top-0 z-10" style={{ backgroundColor: "#04652c" }}>
                     <tr>
-                      <th className="px-4 py-3 text-left font-semibold text-white">Módulo</th>
+                      <th className="px-4 py-3 text-left font-semibold text-white">MÃ³dulo</th>
                       <th className="px-4 py-3 text-center font-semibold text-white">
                         Permisos / Privilegios
                       </th>

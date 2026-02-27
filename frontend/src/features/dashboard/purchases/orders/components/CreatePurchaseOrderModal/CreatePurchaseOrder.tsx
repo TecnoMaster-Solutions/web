@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
@@ -65,8 +65,8 @@ export const CreatePurchaseOrderModal: React.FC<createPurchaseOrderModalProps> =
     }
   }, [isOpen]);
 
-  // Sincronizar rows → formData.items
-  // NOTA: setItems está envuelto en useCallback en el hook (referencia estable)
+  // Sincronizar rows â†’ formData.items
+  // NOTA: setItems estÃ¡ envuelto en useCallback en el hook (referencia estable)
   useEffect(() => {
     setItems(
       rows.map((r) => ({
@@ -79,7 +79,7 @@ export const CreatePurchaseOrderModal: React.FC<createPurchaseOrderModalProps> =
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows]); // setItems es estable (useCallback), pero lo excluimos para evitar loops
 
-  // ── Seleccionar proveedor ──────────────────────────────────────────────────
+  // â”€â”€ Seleccionar proveedor â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleSupplierChange = useCallback(
     async (e: React.ChangeEvent<HTMLSelectElement>) => {
       const supplierId = Number(e.target.value);
@@ -96,7 +96,7 @@ export const CreatePurchaseOrderModal: React.FC<createPurchaseOrderModalProps> =
       setSelectedSupplier(found || null);
 
       if (found) {
-        // ✅ Guardar el NOMBRE y el ID del proveedor en el hook
+        // âœ… Guardar el NOMBRE y el ID del proveedor en el hook
         handleSupplierChangeHook(found.name, found.supplierid);
 
         setLoadingProducts(true);
@@ -113,7 +113,7 @@ export const CreatePurchaseOrderModal: React.FC<createPurchaseOrderModalProps> =
     [suppliers, handleInputChange]
   );
 
-  // ── Manejo de filas de productos ──────────────────────────────────────────
+  // â”€â”€ Manejo de filas de productos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleProductSelect = (index: number, productName: string) => {
     const prod = supplierProducts.find((p) => p.productname === productName);
     setRows((prev) =>
@@ -147,7 +147,7 @@ export const CreatePurchaseOrderModal: React.FC<createPurchaseOrderModalProps> =
     setRows((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // ── Enviar + guardar ───────────────────────────────────────────────────────
+  // â”€â”€ Enviar + guardar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleSendAndSave = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -189,7 +189,7 @@ export const CreatePurchaseOrderModal: React.FC<createPurchaseOrderModalProps> =
 
         if (result.success) {
           showSuccess(
-            `Notificación enviada por ${result.channel === "both"
+            `NotificaciÃ³n enviada por ${result.channel === "both"
               ? "WhatsApp y correo"
               : result.channel === "email"
                 ? "correo"
@@ -198,12 +198,12 @@ export const CreatePurchaseOrderModal: React.FC<createPurchaseOrderModalProps> =
           );
         }
       } catch {
-        showWarning("No se pudo enviar la notificación, pero la orden se guardará.");
+        showWarning("No se pudo enviar la notificaciÃ³n, pero la orden se guardarÃ¡.");
       } finally {
         setIsSending(false);
       }
     } else {
-      showWarning("El proveedor no tiene contacto registrado. La orden se guardará sin notificación.");
+      showWarning("El proveedor no tiene contacto registrado. La orden se guardarÃ¡ sin notificaciÃ³n.");
     }
 
     handleSubmit();
@@ -233,9 +233,9 @@ export const CreatePurchaseOrderModal: React.FC<createPurchaseOrderModalProps> =
         <form onSubmit={handleSendAndSave} className="p-4 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-            {/* N° ORDEN */}
+            {/* NÂ° ORDEN */}
             <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700">N° Orden (Auto)</label>
+              <label className="block text-sm font-medium mb-2 text-gray-700">NÂ° Orden (Auto)</label>
               <input
                 type="text"
                 value={orderNumber}
@@ -252,7 +252,7 @@ export const CreatePurchaseOrderModal: React.FC<createPurchaseOrderModalProps> =
                 value={selectedSupplier?.supplierid?.toString() ?? ""}
                 onChange={handleSupplierChange}
                 onBlur={() => handleBlur("proveedor")}
-                className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-red-500"
+                className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-green-500"
                 style={{
                   borderColor: errors.proveedor && touched.proveedor ? "red" : Colors.table.lines,
                 }}
@@ -263,7 +263,7 @@ export const CreatePurchaseOrderModal: React.FC<createPurchaseOrderModalProps> =
                 ))}
               </select>
               {errors.proveedor && touched.proveedor && (
-                <span className="text-red-500 text-xs mt-1">{errors.proveedor}</span>
+                <span className="text-green-500 text-xs mt-1">{errors.proveedor}</span>
               )}
             </div>
 
@@ -275,11 +275,11 @@ export const CreatePurchaseOrderModal: React.FC<createPurchaseOrderModalProps> =
                 value={formData.fecha}
                 onChange={(e) => handleInputChange("fecha", e.target.value)}
                 onBlur={() => handleBlur("fecha")}
-                className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-red-500"
+                className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-green-500"
                 style={{ borderColor: errors.fecha && touched.fecha ? "red" : Colors.table.lines }}
               />
               {errors.fecha && touched.fecha && (
-                <span className="text-red-500 text-xs mt-1">{errors.fecha}</span>
+                <span className="text-green-500 text-xs mt-1">{errors.fecha}</span>
               )}
             </div>
 
@@ -298,11 +298,11 @@ export const CreatePurchaseOrderModal: React.FC<createPurchaseOrderModalProps> =
           {/* Info proveedor */}
           {selectedSupplier && (
             <div className="text-xs text-gray-500 bg-gray-50 rounded p-2 flex gap-4 flex-wrap">
-              {selectedSupplier.email && <span>📧 {selectedSupplier.email}</span>}
-              {selectedSupplier.phone && <span>📱 {selectedSupplier.phone}</span>}
+              {selectedSupplier.email && <span>ðŸ“§ {selectedSupplier.email}</span>}
+              {selectedSupplier.phone && <span>ðŸ“± {selectedSupplier.phone}</span>}
               {!selectedSupplier.email && !selectedSupplier.phone && (
                 <span className="text-amber-600 font-medium">
-                  ⚠️ Sin contacto — la orden se guardará sin notificación
+                  âš ï¸ Sin contacto â€” la orden se guardarÃ¡ sin notificaciÃ³n
                 </span>
               )}
             </div>
@@ -313,7 +313,7 @@ export const CreatePurchaseOrderModal: React.FC<createPurchaseOrderModalProps> =
             {loadingProducts && (
               <div className="text-xs text-blue-600 mb-2 flex items-center gap-2">
                 <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                Cargando productos del proveedor…
+                Cargando productos del proveedorâ€¦
               </div>
             )}
 
@@ -338,9 +338,9 @@ export const CreatePurchaseOrderModal: React.FC<createPurchaseOrderModalProps> =
                       <select
                         value={row.productoNombre}
                         onChange={(e) => handleProductSelect(index, e.target.value)}
-                        className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-red-500"
+                        className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-green-500"
                       >
-                        <option value="">— Seleccionar producto —</option>
+                        <option value="">â€” Seleccionar producto â€”</option>
                         {supplierProducts.map((p) => (
                           <option key={p.productid} value={p.productname}>{p.productname}</option>
                         ))}
@@ -351,7 +351,7 @@ export const CreatePurchaseOrderModal: React.FC<createPurchaseOrderModalProps> =
                         value={row.productoNombre}
                         onChange={(e) => handleRowChange(index, "productoNombre", e.target.value)}
                         placeholder="Nombre del producto"
-                        className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-red-500"
+                        className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-green-500"
                       />
                     )}
                   </div>
@@ -377,7 +377,7 @@ export const CreatePurchaseOrderModal: React.FC<createPurchaseOrderModalProps> =
                       value={row.cantidad}
                       min={1}
                       onChange={(e) => handleRowChange(index, "cantidad", Math.max(1, Number(e.target.value)))}
-                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm text-center focus:ring-2 focus:ring-red-500"
+                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm text-center focus:ring-2 focus:ring-green-500"
                     />
                   </div>
 
@@ -389,7 +389,7 @@ export const CreatePurchaseOrderModal: React.FC<createPurchaseOrderModalProps> =
                       min={0}
                       step={0.01}
                       onChange={(e) => handleRowChange(index, "precioUnitario", Number(e.target.value))}
-                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm text-right focus:ring-2 focus:ring-red-500"
+                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm text-right focus:ring-2 focus:ring-green-500"
                     />
                   </div>
 
@@ -403,9 +403,9 @@ export const CreatePurchaseOrderModal: React.FC<createPurchaseOrderModalProps> =
                     <button
                       type="button"
                       onClick={() => handleRemoveRow(index)}
-                      className="text-gray-300 hover:text-red-500 text-lg font-bold leading-none"
+                      className="text-gray-300 hover:text-green-500 text-lg font-bold leading-none"
                     >
-                      ✕
+                      âœ•
                     </button>
                   </div>
                 </div>
@@ -446,7 +446,7 @@ export const CreatePurchaseOrderModal: React.FC<createPurchaseOrderModalProps> =
               value={formData.descripcion || ""}
               onChange={(e) => handleInputChange("descripcion", e.target.value)}
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500"
             />
           </div>
 
@@ -462,12 +462,12 @@ export const CreatePurchaseOrderModal: React.FC<createPurchaseOrderModalProps> =
             <button
               type="submit"
               disabled={isSending || isSubmitting || !selectedSupplier}
-              className="px-5 py-2 bg-gray-900 hover:bg-black text-white rounded-md disabled:opacity-50 flex items-center gap-2 font-medium"
+              className="px-5 py-2 bg-[#2a9781] hover:bg-[#227a69] text-white rounded-md disabled:opacity-50 flex items-center gap-2 font-medium"
             >
               {(isSending || isSubmitting) && (
                 <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
               )}
-              {isSending ? "Enviando…" : isSubmitting ? "Guardando…" : "Enviar al Proveedor y Guardar"}
+              {isSending ? "Enviandoâ€¦" : isSubmitting ? "Guardandoâ€¦" : "Enviar al Proveedor y Guardar"}
             </button>
           </div>
         </form>
@@ -478,3 +478,4 @@ export const CreatePurchaseOrderModal: React.FC<createPurchaseOrderModalProps> =
 };
 
 export default CreatePurchaseOrderModal;
+

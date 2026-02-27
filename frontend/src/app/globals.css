@@ -132,17 +132,17 @@
 }
 
 *::-webkit-scrollbar-thumb {
-  background-color: #dc2626; /* rojo */
+  background-color: #06a646; /* verde */
   border-radius: 9999px; /* redondeado */
   border: 2px solid #e5e7eb; /* margen alrededor */
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background-color: #b91c1c; /* rojo oscuro al hover */
+  background-color: #058a3c; /* verde oscuro al hover */
 }
 
 /* Para Firefox */
 * {
   scrollbar-width: thin; /* delgado */
-  scrollbar-color: #dc2626 #e5e7eb; /* thumb color - track color */
+  scrollbar-color: #06a646 #e5e7eb; /* thumb color - track color */
 }

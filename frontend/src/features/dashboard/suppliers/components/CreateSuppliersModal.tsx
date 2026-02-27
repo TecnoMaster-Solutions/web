@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useRef, useState } from "react";
 import { Star, Upload } from "lucide-react";
@@ -139,7 +139,7 @@ function DecimalStarRating({
         onKeyDown={handleKeyDown}
         role="slider"
         tabIndex={disabled ? -1 : 0}
-        aria-label="Calificación"
+        aria-label="CalificaciÃ³n"
         aria-valuemin={0}
         aria-valuemax={5}
         aria-valuenow={Number(value.toFixed(1))}
@@ -166,10 +166,10 @@ function DecimalStarRating({
 }
 
 function sanitizeName(v: string) {
-  return v.replace(/[^A-Za-z0-9ÁÉÍÓÚÜÑáéíóúüñ'’.\- ]/g, "").replace(/\s{2,}/g, " ").slice(0, 80);
+  return v.replace(/[^A-Za-z0-9ÃÃ‰ÃÃ“ÃšÃœÃ‘Ã¡Ã©Ã­Ã³ÃºÃ¼Ã±'â€™.\- ]/g, "").replace(/\s{2,}/g, " ").slice(0, 80);
 }
 function sanitizeContact(v: string) {
-  return v.replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ'’.\- ]/g, "").replace(/\s{2,}/g, " ").slice(0, 80);
+  return v.replace(/[^A-Za-zÃÃ‰ÃÃ“ÃšÃœÃ‘Ã¡Ã©Ã­Ã³ÃºÃ¼Ã±'â€™.\- ]/g, "").replace(/\s{2,}/g, " ").slice(0, 80);
 }
 function sanitizePhone(v: string) {
   let s = v.replace(/[^\d+]/g, "");
@@ -186,26 +186,26 @@ type ErrorMap = Partial<Record<keyof SupplierForm | "image", string | null>>;
 const validators: Record<keyof SupplierForm | "image", (value: any, form: SupplierForm) => string | null> = {
   name: (v) => {
     const s = String(v ?? "").trim();
-    if (s.length < 3) return "Mínimo 3 caracteres.";
-    if (!/^[A-Za-z0-9ÁÉÍÓÚÜÑáéíóúüñ'’.\- ]+$/.test(s)) return "Solo letras, números y espacios.";
+    if (s.length < 3) return "MÃ­nimo 3 caracteres.";
+    if (!/^[A-Za-z0-9ÃÃ‰ÃÃ“ÃšÃœÃ‘Ã¡Ã©Ã­Ã³ÃºÃ¼Ã±'â€™.\- ]+$/.test(s)) return "Solo letras, nÃºmeros y espacios.";
     return null;
   },
   nit: (v) => {
     const raw = String(v ?? "").replace(/[^\d]/g, "");
-    if (!/^\d{5,12}$/.test(raw)) return "Debe tener entre 5 y 12 dígitos (solo números).";
+    if (!/^\d{5,12}$/.test(raw)) return "Debe tener entre 5 y 12 dÃ­gitos (solo nÃºmeros).";
     return null;
   },
   phone: (v) => {
     const s = String(v ?? "").replace(/[^\d+]/g, "");
     const digits = s.startsWith("+") ? s.slice(1) : s;
-    if (digits.length < 7 || digits.length > 15) return "7–15 dígitos.";
-    if (!/^\+?\d+$/.test(s)) return "Solo números.";
+    if (digits.length < 7 || digits.length > 15) return "7â€“15 dÃ­gitos.";
+    if (!/^\+?\d+$/.test(s)) return "Solo nÃºmeros.";
     return null;
   },
   email: (v) => {
     const s = String(v ?? "").trim();
     if (!s) return "Correo requerido.";
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s)) return "Correo inválido.";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s)) return "Correo invÃ¡lido.";
     return null;
   },
   address: (v) => {
@@ -215,8 +215,8 @@ const validators: Record<keyof SupplierForm | "image", (value: any, form: Suppli
   },
   contactName: (v) => {
     const s = String(v ?? "").trim();
-    if (s.length < 3) return "Mínimo 3 caracteres.";
-    if (!/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ'’.\- ]+$/.test(s)) return "Solo letras y espacios.";
+    if (s.length < 3) return "MÃ­nimo 3 caracteres.";
+    if (!/^[A-Za-zÃÃ‰ÃÃ“ÃšÃœÃ‘Ã¡Ã©Ã­Ã³ÃºÃ¼Ã±'â€™.\- ]+$/.test(s)) return "Solo letras y espacios.";
     return null;
   },
   rating: () => null,
@@ -225,7 +225,7 @@ const validators: Record<keyof SupplierForm | "image", (value: any, form: Suppli
   image: (file: File | null) => {
     if (!file) return "Imagen requerida.";
     if (!file.type.startsWith("image/")) return "Archivo no es una imagen.";
-    if (file.size > MAX_IMG_MB * 1024 * 1024) return `Máx ${MAX_IMG_MB}MB.`;
+    if (file.size > MAX_IMG_MB * 1024 * 1024) return `MÃ¡x ${MAX_IMG_MB}MB.`;
     return null;
   },
 };
@@ -316,8 +316,8 @@ export default function CreateSuppliersModal({ isOpen, onClose, onSave, title = 
 
     const nitBase = String(form.nit ?? "").replace(/[^\d]/g, "");
     if (!/^\d{5,12}$/.test(nitBase)) {
-      showError("NIT inválido. Debe tener entre 5 y 12 dígitos (solo números).");
-      setErrors((er) => ({ ...er, nit: "Debe tener entre 5 y 12 dígitos (solo números)." }));
+      showError("NIT invÃ¡lido. Debe tener entre 5 y 12 dÃ­gitos (solo nÃºmeros).");
+      setErrors((er) => ({ ...er, nit: "Debe tener entre 5 y 12 dÃ­gitos (solo nÃºmeros)." }));
       return;
     }
 
@@ -372,7 +372,7 @@ export default function CreateSuppliersModal({ isOpen, onClose, onSave, title = 
         type="submit"
         form="create-supplier-form"
         disabled={saving}
-        className="cursor-pointer px-4 py-2 rounded-lg bg-black text-white hover:bg-gray-900 disabled:opacity-60"
+        className="cursor-pointer px-4 py-2 rounded-lg bg-[#2a9781] text-white hover:bg-[#227a69] disabled:opacity-60"
       >
         {saving ? "Guardando..." : "Guardar"}
       </button>
@@ -384,7 +384,7 @@ export default function CreateSuppliersModal({ isOpen, onClose, onSave, title = 
       <form id="create-supplier-form" onSubmit={handleSubmit} className="grid grid-cols-2 gap-3 p-1">
         <div>
           <label className="block text-sm font-medium mb-1">
-            Nombre <span className="text-red-500">*</span>
+            Nombre <span className="text-green-500">*</span>
           </label>
           <input
             value={form.name}
@@ -393,12 +393,12 @@ export default function CreateSuppliersModal({ isOpen, onClose, onSave, title = 
             placeholder="Ingrese el nombre"
             className="w-full px-2 py-1 border rounded-md"
           />
-          {errors.name && <p className="text-xs text-red-600 mt-1">{errors.name}</p>}
+          {errors.name && <p className="text-xs text-green-600 mt-1">{errors.name}</p>}
         </div>
 
         <div>
           <label className="block text-sm font-medium mb-1">
-            Nit(Sin indicativo) <span className="text-red-500">*</span>
+            Nit(Sin indicativo) <span className="text-green-500">*</span>
           </label>
           <input
             value={form.nit}
@@ -409,12 +409,12 @@ export default function CreateSuppliersModal({ isOpen, onClose, onSave, title = 
             pattern="\d*"
             className="w-full px-2 py-1 border rounded-md"
           />
-          {errors.nit && <p className="text-xs text-red-600 mt-1">{errors.nit}</p>}
+          {errors.nit && <p className="text-xs text-green-600 mt-1">{errors.nit}</p>}
         </div>
 
         <div>
           <label className="block text-sm font-medium mb-1">
-            Teléfono <span className="text-red-500">*</span>
+            TelÃ©fono <span className="text-green-500">*</span>
           </label>
           <input
             value={form.phone}
@@ -424,12 +424,12 @@ export default function CreateSuppliersModal({ isOpen, onClose, onSave, title = 
             inputMode="tel"
             className="w-full px-2 py-1 border rounded-md"
           />
-          {errors.phone && <p className="text-xs text-red-600 mt-1">{errors.phone}</p>}
+          {errors.phone && <p className="text-xs text-green-600 mt-1">{errors.phone}</p>}
         </div>
 
         <div>
           <label className="block text-sm font-medium mb-1">
-            Correo <span className="text-red-500">*</span>
+            Correo <span className="text-green-500">*</span>
           </label>
           <input
             type="email"
@@ -439,12 +439,12 @@ export default function CreateSuppliersModal({ isOpen, onClose, onSave, title = 
             placeholder="correo@dominio.com"
             className="w-full px-2 py-1 border rounded-md"
           />
-          {errors.email && <p className="text-xs text-red-600 mt-1">{errors.email}</p>}
+          {errors.email && <p className="text-xs text-green-600 mt-1">{errors.email}</p>}
         </div>
 
         <div className="col-span-2">
           <label className="block text-sm font-medium mb-1">
-            Dirección <span className="text-red-500">*</span>
+            DirecciÃ³n <span className="text-green-500">*</span>
           </label>
           <input
             value={form.address}
@@ -453,12 +453,12 @@ export default function CreateSuppliersModal({ isOpen, onClose, onSave, title = 
             placeholder="Calle 123 #45-67"
             className="w-full px-2 py-1 border rounded-md"
           />
-          {errors.address && <p className="text-xs text-red-600 mt-1">{errors.address}</p>}
+          {errors.address && <p className="text-xs text-green-600 mt-1">{errors.address}</p>}
         </div>
 
         <div>
           <label className="block text-sm font-medium mb-1">
-            Nombre del contacto <span className="text-red-500">*</span>
+            Nombre del contacto <span className="text-green-500">*</span>
           </label>
           <input
             value={form.contactName}
@@ -467,12 +467,12 @@ export default function CreateSuppliersModal({ isOpen, onClose, onSave, title = 
             placeholder="Nombre del contacto"
             className="w-full px-2 py-1 border rounded-md"
           />
-          {errors.contactName && <p className="text-xs text-red-600 mt-1">{errors.contactName}</p>}
+          {errors.contactName && <p className="text-xs text-green-600 mt-1">{errors.contactName}</p>}
         </div>
 
         <div>
           <label className="block text-sm font-medium mb-1">
-            Imagen <span className="text-red-500">*</span>
+            Imagen <span className="text-green-500">*</span>
           </label>
           <div className="flex items-center gap-2">
             <div
@@ -501,11 +501,11 @@ export default function CreateSuppliersModal({ isOpen, onClose, onSave, title = 
               onBlur={() => validateAndSet("image", form)}
             />
           </div>
-          {errors.image && <p className="text-xs text-red-600 mt-1">{errors.image}</p>}
+          {errors.image && <p className="text-xs text-green-600 mt-1">{errors.image}</p>}
         </div>
 
         <div className="col-span-2">
-          <label className="block text-sm font-medium mb-1">Calificación</label>
+          <label className="block text-sm font-medium mb-1">CalificaciÃ³n</label>
           <DecimalStarRating
             value={sanitizeRating(form.rating)}
             onChange={(v) => update("rating", v)}
@@ -517,3 +517,5 @@ export default function CreateSuppliersModal({ isOpen, onClose, onSave, title = 
     </Modal>
   );
 }
+
+

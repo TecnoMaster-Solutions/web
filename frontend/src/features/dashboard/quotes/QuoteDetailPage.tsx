@@ -1,4 +1,4 @@
-"use client";
+ï»¿"use client";
 
 import { useCallback, useEffect, useState } from "react";
 import Swal from "sweetalert2";
@@ -96,13 +96,13 @@ export default function QuoteDetailPage({ quoteId }: Props) {
 
     const id = Number(quote.quotesid ?? quote.id ?? quoteId);
     if (!id) {
-      await Swal.fire("Error", "ID de cotización inválido.", "error");
+      await Swal.fire("Error", "ID de cotizaciï¿½n invï¿½lido.", "error");
       return;
     }
 
     const confirm = await Swal.fire({
-      title: "¿Completar cotización?",
-      text: "Se generará la venta correspondiente y la cotización pasará a estado completado.",
+      title: "ï¿½Completar cotizaciï¿½n?",
+      text: "Se generarï¿½ la venta correspondiente y la cotizaciï¿½n pasarï¿½ a estado completado.",
       icon: "question",
       showCancelButton: true,
       confirmButtonText: "Completar",
@@ -116,14 +116,14 @@ export default function QuoteDetailPage({ quoteId }: Props) {
       await completeQuote(id);
       await fetchQuote();
       await Swal.fire(
-        "Cotización completada",
-        "Se creó la venta asociada y la cotización se actualizó.",
+        "Cotizaciï¿½n completada",
+        "Se creï¿½ la venta asociada y la cotizaciï¿½n se actualizï¿½.",
         "success",
       );
     } catch (error: any) {
       await Swal.fire(
         "Error",
-        error?.response?.data?.message ?? error?.message ?? "No se pudo completar la cotización.",
+        error?.response?.data?.message ?? error?.message ?? "No se pudo completar la cotizaciï¿½n.",
         "error",
       );
     } finally {
@@ -142,7 +142,7 @@ export default function QuoteDetailPage({ quoteId }: Props) {
     const orderServiceId = getQuoteOrderServiceId(quote);
 
     if (!serviceRequestId && !orderServiceId) {
-      await Swal.fire("Sin registros relacionados", "La cotización no tiene orden ni solicitud asociada.", "warning");
+      await Swal.fire("Sin registros relacionados", "La cotizaciï¿½n no tiene orden ni solicitud asociada.", "warning");
       return;
     }
 
@@ -151,11 +151,11 @@ export default function QuoteDetailPage({ quoteId }: Props) {
       orderServiceId ? "orden de servicio" : null,
     ].filter(Boolean) as string[];
     const targetText = targets.join(" y ");
-    const verb = targets.length > 1 ? "marcarán" : "marcará";
+    const verb = targets.length > 1 ? "marcarï¿½n" : "marcarï¿½";
     const suffix = targets.length > 1 ? "finalizados" : "finalizado";
 
     const confirm = await Swal.fire({
-      title: "¿Finalizar cotización?",
+      title: "ï¿½Finalizar cotizaciï¿½n?",
       text: `Se ${verb} ${targetText} como ${suffix} (estado 6).`,
       icon: "question",
       showCancelButton: true,
@@ -198,7 +198,7 @@ export default function QuoteDetailPage({ quoteId }: Props) {
     <RequireAuth>
       <div className="p-6">
         <div className="flex items-center justify-between gap-3 mb-4">
-          <h1 className="text-xl font-semibold">Detalle de Cotización #{quoteId}</h1>
+          <h1 className="text-xl font-semibold">Detalle de Cotizaciï¿½n #{quoteId}</h1>
           <button
             type="button"
             onClick={() => router.push("/dashboard/quotes")}
@@ -213,7 +213,7 @@ export default function QuoteDetailPage({ quoteId }: Props) {
             <span className="text-gray-500">No tienes permisos para visualizar cotizaciones.</span>
           </div>
         ) : loading ? (
-          <div className="text-sm text-gray-500">Cargando cotización...</div>
+          <div className="text-sm text-gray-500">Cargando cotizaciï¿½n...</div>
         ) : quote ? (
           <ViewQuote
             quote={quote}
@@ -225,9 +225,10 @@ export default function QuoteDetailPage({ quoteId }: Props) {
             onFinalize={handleFinalizeQuote}
           />
         ) : (
-          <div className="text-sm text-red-600">No se pudo cargar la cotización.</div>
+          <div className="text-sm text-red-600">No se pudo cargar la cotizaciï¿½n.</div>
         )}
       </div>
     </RequireAuth>
   );
 }
+

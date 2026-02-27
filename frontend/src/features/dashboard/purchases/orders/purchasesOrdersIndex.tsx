@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState } from "react";
 import { ToastContainer } from "react-toastify";
@@ -24,7 +24,7 @@ export default function PurchaseOrdersIndex() {
 
   const isViewModalOpen = !!viewingPurchaseOrder;
 
-  // ── Ordenamiento ──────────────────────────────────────────────────────────
+  // â”€â”€ Ordenamiento â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   type SortField = "fecha" | "total";
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
@@ -53,7 +53,7 @@ export default function PurchaseOrdersIndex() {
     });
   }, [purchaseOrders, sortField, sortDir]);
 
-  // ── Botones de sort para pasar via prop al DataTable ──────────────────────
+  // â”€â”€ Botones de sort para pasar via prop al DataTable â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const sortButtons = (
     <div className="flex items-center gap-2">
       {(["fecha", "total"] as const).map((field) => (
@@ -61,14 +61,14 @@ export default function PurchaseOrdersIndex() {
           key={field}
           onClick={() => handleSort(field)}
           className={`flex items-center gap-1 px-3 py-1.5 text-sm font-medium border rounded-lg transition-colors ${sortField === field
-            ? "bg-red-600 text-white border-red-600"
+            ? "bg-green-600 text-white border-green-600"
             : "text-gray-600 bg-white hover:bg-gray-50 border-gray-300"
             }`}
           title={`Ordenar por ${field === "fecha" ? "Fecha" : "Total"}`}
         >
           {field === "fecha" ? "Fecha" : "Total"}
           <span className="text-xs">
-            {sortField === field ? (sortDir === "asc" ? " ↑" : " ↓") : " ↕"}
+            {sortField === field ? (sortDir === "asc" ? " â†‘" : " â†“") : " â†•"}
           </span>
         </button>
       ))}

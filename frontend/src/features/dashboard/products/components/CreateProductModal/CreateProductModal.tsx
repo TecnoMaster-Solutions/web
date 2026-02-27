@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Modal from "@/features/dashboard/components/Modal";
@@ -177,7 +177,7 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
           <button
             type="submit"
             form="create-product-form"
-            className="cursor-pointer transition duration-300 hover:bg-black hover:text-white hover:scale-105 px-4 py-2 rounded-lg bg-black text-white w-full sm:w-auto"
+            className="cursor-pointer transition duration-300 hover:bg-[#227a69] hover:text-white hover:scale-105 px-4 py-2 rounded-lg bg-[#2a9781] text-white w-full sm:w-auto"
           >
             Guardar
           </button>
@@ -196,7 +196,7 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2">
                 <label className="block text-sm font-medium mb-1" style={{ color: Colors.texts.primary }}>
-                  Nombre <span className="text-red-500">*</span>
+                  Nombre <span className="text-green-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -210,12 +210,12 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
                   className="w-full px-3 py-2 border rounded-md"
                   style={{ borderColor: (errors as any).name ? "red" : Colors.table.lines }}
                 />
-                {(errors as any).name && <span className="text-xs text-red-500">{(errors as any).name}</span>}
+                {(errors as any).name && <span className="text-xs text-green-500">{(errors as any).name}</span>}
               </div>
 
               <div className="col-span-2">
                 <label className="block text-sm font-medium mb-1" style={{ color: Colors.texts.primary }}>
-                  Categoría del proveedor <span className="text-red-500">*</span>
+                  CategorÃ­a del proveedor <span className="text-green-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -230,13 +230,13 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
                   style={{ borderColor: (errors as any).supplierCategory ? "red" : Colors.table.lines }}
                 />
                 {(errors as any).supplierCategory && (
-                  <span className="text-xs text-red-500">{(errors as any).supplierCategory}</span>
+                  <span className="text-xs text-green-500">{(errors as any).supplierCategory}</span>
                 )}
               </div>
 
               <div>
                 <label className="block text-sm font-medium mb-1" style={{ color: Colors.texts.primary }}>
-                  Categoría <span className="text-red-500">*</span>
+                  CategorÃ­a <span className="text-green-500">*</span>
                 </label>
                 <select
                   value={categoryId}
@@ -249,7 +249,7 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
                   style={{ borderColor: (errors as any).categoryId ? "red" : Colors.table.lines }}
                 >
                   <option value="" disabled>
-                    Seleccione una categoría...
+                    Seleccione una categorÃ­a...
                   </option>
                   {categories.map((c) => (
                     <option key={c.id} value={String(c.id)}>
@@ -257,12 +257,12 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
                     </option>
                   ))}
                 </select>
-                {(errors as any).categoryId && <span className="text-xs text-red-500">{(errors as any).categoryId}</span>}
+                {(errors as any).categoryId && <span className="text-xs text-green-500">{(errors as any).categoryId}</span>}
               </div>
 
               <div>
                 <label className="block text-sm font-medium mb-1" style={{ color: Colors.texts.primary }}>
-                  Código <span className="text-red-500">*</span>
+                  CÃ³digo <span className="text-green-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -276,12 +276,12 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
                   className="w-full px-3 py-2 border rounded-md"
                   style={{ borderColor: (errors as any).code ? "red" : Colors.table.lines }}
                 />
-                {(errors as any).code && <span className="text-xs text-red-500">{(errors as any).code}</span>}
+                {(errors as any).code && <span className="text-xs text-green-500">{(errors as any).code}</span>}
               </div>
 
               <div className="col-span-2">
                 <label className="block text-sm font-medium mb-1" style={{ color: Colors.texts.primary }}>
-                  Descripción
+                  DescripciÃ³n
                 </label>
                 <textarea
                   value={description}
@@ -298,7 +298,7 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
           <div className="min-h-0 flex flex-col">
             <div className="flex items-end justify-between mb-2">
               <label className="block text-sm font-medium" style={{ color: Colors.texts.primary }}>
-                Imágenes <span className="text-red-500">*</span>
+                ImÃ¡genes <span className="text-green-500">*</span>
               </label>
 
               <div className="flex items-center gap-3">
@@ -310,7 +310,7 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
                       setImages([]);
                       validateField("images" as any, []);
                     }}
-                    className="text-xs text-red-600 hover:text-red-700"
+                    className="text-xs text-green-600 hover:text-green-700"
                   >
                     Limpiar
                   </button>
@@ -326,7 +326,7 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
 
                 <div className="flex items-start justify-between gap-2">
                   <div className="text-xs text-gray-600 leading-4">
-                    PNG, JPG, WEBP · Máximo {MAX_IMAGES} imágenes
+                    PNG, JPG, WEBP Â· MÃ¡ximo {MAX_IMAGES} imÃ¡genes
                     <div className="mt-1">
                       Selecciona una imagen para marcarla como principal.
                     </div>
@@ -360,7 +360,7 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
                     style={{ borderColor: "#9CA3AF" }}
                   >
                     <UploadCloud size={22} />
-                    <div className="text-sm font-medium text-gray-700">Sube tus imágenes</div>
+                    <div className="text-sm font-medium text-gray-700">Sube tus imÃ¡genes</div>
                     <div className="text-xs text-gray-500">Haz clic para seleccionar</div>
                   </div>
                 ) : (
@@ -417,7 +417,7 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
                         onClick={openPicker}
                         className="rounded-md border border-dashed bg-gray-50 hover:bg-gray-100 transition flex items-center justify-center"
                         style={{ borderColor: "#9CA3AF", height: "96px" }}
-                        title="Agregar imágenes"
+                        title="Agregar imÃ¡genes"
                       >
                         <div className="flex flex-col items-center gap-1 text-gray-600">
                           <Plus size={18} />
@@ -429,7 +429,7 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
                 )}
 
                 {(errors as any).images && (
-                  <p className="mt-2 text-xs text-red-600">{(errors as any).images}</p>
+                  <p className="mt-2 text-xs text-green-600">{(errors as any).images}</p>
                 )}
               </div>
             </div>
@@ -441,3 +441,4 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
 };
 
 export default CreateProductModal;
+

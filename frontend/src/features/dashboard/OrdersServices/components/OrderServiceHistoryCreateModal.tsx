@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import Modal from "@/features/dashboard/components/Modal";
@@ -104,7 +104,7 @@ export default function OrderServiceHistoryCreateModal({
     let ok = true;
 
     if (!techId || techId < 1) {
-      setErrTech("Selecciona o ingresa un técnico");
+      setErrTech("Selecciona o ingresa un tÃ©cnico");
       ok = false;
     } else {
       setErrTech("");
@@ -121,14 +121,14 @@ export default function OrderServiceHistoryCreateModal({
     }
 
     if (t.length > 120) {
-      showWarning("El título supera 120 caracteres.");
+      showWarning("El tÃ­tulo supera 120 caracteres.");
       ok = false;
     }
 
     if (!ok) return;
 
     if (!orderId) {
-      showError("No se encontró el ID de la orden.");
+      showError("No se encontrÃ³ el ID de la orden.");
       return;
     }
 
@@ -153,7 +153,7 @@ export default function OrderServiceHistoryCreateModal({
 
   return (
     <Modal
-      title={orderId ? `Agregar historial · Orden #${orderId}` : "Agregar historial"}
+      title={orderId ? `Agregar historial Â· Orden #${orderId}` : "Agregar historial"}
       isOpen={isOpen}
       onClose={onClose}
       widthClass={widthClass}
@@ -171,7 +171,7 @@ export default function OrderServiceHistoryCreateModal({
             type="button"
             onClick={onSubmit}
             disabled={saving || !orderId}
-            className="cursor-pointer inline-flex h-9 items-center rounded-md bg-[#B20000] px-4 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="cursor-pointer inline-flex h-9 items-center rounded-md bg-[#04652c] px-4 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {saving ? "Guardando..." : "Guardar historial"}
           </button>
@@ -181,7 +181,7 @@ export default function OrderServiceHistoryCreateModal({
       <div className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs uppercase tracking-wide text-gray-600 mb-1">Técnico</label>
+            <label className="block text-xs uppercase tracking-wide text-gray-600 mb-1">TÃ©cnico</label>
             {hasTechOptions ? (
               <select
                 value={technicianid ? String(technicianid) : ""}
@@ -190,7 +190,7 @@ export default function OrderServiceHistoryCreateModal({
                   setErrTech("");
                 }}
                 className={`w-full border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 ${
-                  errTech ? "border-red-500 focus:ring-red-200" : "focus:ring-[#B20000]/30"
+                  errTech ? "border-green-500 focus:ring-green-200" : "focus:ring-[#04652c]/30"
                 }`}
               >
                 {technicians.map((t) => (
@@ -208,23 +208,23 @@ export default function OrderServiceHistoryCreateModal({
                   setTechnicianid(Number(e.target.value) || 0);
                   setErrTech("");
                 }}
-                placeholder="ID del técnico"
+                placeholder="ID del tÃ©cnico"
                 className={`w-full border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 ${
-                  errTech ? "border-red-500 focus:ring-red-200" : "focus:ring-[#B20000]/30"
+                  errTech ? "border-green-500 focus:ring-green-200" : "focus:ring-[#04652c]/30"
                 }`}
               />
             )}
-            {errTech ? <p className="text-xs text-red-600 mt-1">{errTech}</p> : null}
+            {errTech ? <p className="text-xs text-green-600 mt-1">{errTech}</p> : null}
           </div>
 
           <div>
-            <label className="block text-xs uppercase tracking-wide text-gray-600 mb-1">Título (opcional)</label>
+            <label className="block text-xs uppercase tracking-wide text-gray-600 mb-1">TÃ­tulo (opcional)</label>
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               maxLength={120}
-              placeholder="Ej: Avance de instalación"
-              className="w-full border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#B20000]/30"
+              placeholder="Ej: Avance de instalaciÃ³n"
+              className="w-full border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#04652c]/30"
             />
             <div className="text-[11px] text-gray-500 mt-1">{title.length}/120</div>
           </div>
@@ -242,11 +242,11 @@ export default function OrderServiceHistoryCreateModal({
             maxLength={2000}
             placeholder="Describe lo realizado, hallazgos, recomendaciones, etc."
             className={`w-full border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 ${
-              errNote ? "border-red-500 focus:ring-red-200" : "focus:ring-[#B20000]/30"
+              errNote ? "border-green-500 focus:ring-green-200" : "focus:ring-[#04652c]/30"
             }`}
           />
           <div className="flex items-center justify-between mt-1">
-            {errNote ? <p className="text-xs text-red-600">{errNote}</p> : <span />}
+            {errNote ? <p className="text-xs text-green-600">{errNote}</p> : <span />}
             <span className="text-[11px] text-gray-500">{note.length}/2000</span>
           </div>
         </div>
@@ -303,3 +303,4 @@ export default function OrderServiceHistoryCreateModal({
     </Modal>
   );
 }
+

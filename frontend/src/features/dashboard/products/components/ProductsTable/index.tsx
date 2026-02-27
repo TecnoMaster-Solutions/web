@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useMemo } from "react";
 import { DataTable } from "@/features/dashboard/components/datatable/DataTable";
@@ -10,13 +10,13 @@ import type { Column } from "@/features/dashboard/components/datatable/types/col
 type ProductRowForXlsx = {
   ID: number;
   Nombre: string;
-  Descripción: string;
-  Categoría: string;
+  DescripciÃ³n: string;
+  CategorÃ­a: string;
   "Cat. proveedor": string;
   "Precio proveedor": string;
   "Precio venta": string;
   Stock: number;
-  Código: string;
+  CÃ³digo: string;
   Estado: string;
 };
 
@@ -36,9 +36,9 @@ type ProductForTable = Product & {
 
 const cleanText = (v: unknown) => {
   const s = String(v ?? "").trim();
-  if (!s) return "—";
+  if (!s) return "â€”";
   const lower = s.toLowerCase();
-  if (lower === "null" || lower === "undefined") return "—";
+  if (lower === "null" || lower === "undefined") return "â€”";
   return s;
 };
 
@@ -68,7 +68,7 @@ const Trunc: React.FC<{
   return (
     <span
       className={["block max-w-full min-w-0 overflow-hidden leading-5", className].join(" ")}
-      title={text !== "—" ? text : undefined}
+      title={text !== "â€”" ? text : undefined}
       style={{
         whiteSpace: "normal",
         wordBreak: "break-word",
@@ -96,7 +96,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
       (a, b) => Number(b.id ?? 0) - Number(a.id ?? 0)
     );
 
-    const total = sortedProducts.length; // <-- ÚNICO EXTRA
+    const total = sortedProducts.length; // <-- ÃšNICO EXTRA
 
     return sortedProducts.map((p, index) => {
       const stateSearch: "activo" | "inactivo" = isActiveState(p.state)
@@ -126,7 +126,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
 
       return {
         ...p,
-        rowNumber: total - index, // <-- ÚNICO CAMBIO (antes era index + 1)
+        rowNumber: total - index, // <-- ÃšNICO CAMBIO (antes era index + 1)
         stateSearch,
         fullSearch: `${fullSearchText} ${fullSearchNums}`.trim(),
       };
@@ -146,7 +146,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
     },
     {
       key: "categoryName",
-      header: "Categoría",
+      header: "CategorÃ­a",
       render: (p) => <Trunc value={p.categoryName} max={22} className="max-w-[190px]" lines={2} />,
     },
     {
@@ -162,7 +162,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
       render: (p) => (
         <div className="whitespace-nowrap text-right tabular-nums">
           {p.salePrice === null || p.salePrice === undefined
-            ? "—"
+            ? "â€”"
             : `$${Number(p.salePrice).toLocaleString("es-CO")}`}
         </div>
       ),
@@ -210,16 +210,16 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
   const xlsxRows: ProductRowForXlsx[] = productsForTable.map((p) => ({
     ID: p.id,
     Nombre: cleanText(p.name),
-    Descripción: cleanText(p.description),
-    Categoría: cleanText(p.categoryName),
+    DescripciÃ³n: cleanText(p.description),
+    CategorÃ­a: cleanText(p.categoryName),
     "Cat. proveedor": cleanText(p.supplierCategory),
     "Precio proveedor": Number(p.supplierPrice ?? 0).toLocaleString("es-CO"),
     "Precio venta":
       p.salePrice === null || p.salePrice === undefined
-        ? "—"
+        ? "â€”"
         : Number(p.salePrice).toLocaleString("es-CO"),
     Stock: Number(p.stock ?? 0),
-    Código: cleanText(p.code),
+    CÃ³digo: cleanText(p.code),
     Estado: p.state,
   }));
 
@@ -264,10 +264,10 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                 headers={[
                   "ID",
                   "Nombre",
-                  "Descripción",
-                  "Categoría",
+                  "DescripciÃ³n",
+                  "CategorÃ­a",
                   "Cat. proveedor",
-                  "Código",
+                  "CÃ³digo",
                   "Precio proveedor",
                   "Precio venta",
                   "Stock",
@@ -281,7 +281,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                 document.querySelector<HTMLButtonElement>("#download-excel-btn")?.click()
               }
               className="fixed bottom-20 right-6 z-50 flex md:hidden items-center justify-center w-12 h-12 rounded-full shadow-lg text-white transition-transform hover:scale-105"
-              style={{ background: "#B20000" }}
+              style={{ background: "#04652c" }}
               type="button"
             >
               <svg

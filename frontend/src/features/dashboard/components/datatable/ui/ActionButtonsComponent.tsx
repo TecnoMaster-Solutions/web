@@ -99,7 +99,7 @@ export function ActionButtonsComponent({
                 className={`w-full text-left px-3 py-2 text-xs ${
                   deleteDisabled
                     ? "opacity-40 cursor-not-allowed text-gray-400"
-                    : "hover:bg-gray-50 text-red-600"
+                    : "hover:bg-[#06a646]/15 text-[#06a646]"
                 }`}
               >
                 Eliminar

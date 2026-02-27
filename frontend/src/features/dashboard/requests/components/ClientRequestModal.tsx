@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import Modal from "@/features/dashboard/components/Modal";
@@ -289,7 +289,7 @@ export default function ClientCreateRequestModal({
       ).trim();
 
       if (!city || !zone || !streetType || !streetNumber || !secondaryNumber) {
-        showInfo("Completa los datos de dirección.");
+        showInfo("Completa los datos de direcciÃ³n.");
         return;
       }
     }
@@ -308,7 +308,7 @@ export default function ClientCreateRequestModal({
 
     const sid = Number(serviceId);
     if (!Number.isFinite(sid) || sid <= 0) {
-      showInfo("Selecciona un servicio válido.");
+      showInfo("Selecciona un servicio vÃ¡lido.");
       return;
     }
 
@@ -388,7 +388,7 @@ export default function ClientCreateRequestModal({
           <button
             type="button"
             onClick={submit}
-            className="rounded-lg bg-black px-3 py-2 text-sm font-semibold text-white hover:bg-neutral-800 disabled:opacity-60"
+            className="rounded-lg bg-[#2a9781] px-3 py-2 text-sm font-semibold text-white hover:bg-[#227a69] disabled:opacity-60"
             disabled={saving || loadingLookups}
             title={loadingLookups ? "Cargando servicios..." : undefined}
           >
@@ -405,7 +405,7 @@ export default function ClientCreateRequestModal({
             {clientDocumentLabel && (
               <>
                 <p className="mt-2 text-[11px] font-medium text-gray-500">
-                  Cédula
+                  CÃ©dula
                 </p>
                 <p className="text-sm font-semibold text-gray-900">
                   {clientDocumentLabel}
@@ -418,7 +418,7 @@ export default function ClientCreateRequestModal({
         {initialAddressFields && (
           <div className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-3">
             <p className="text-[11px] font-medium text-gray-500 mb-2">
-              Dirección de envío (carrito)
+              DirecciÃ³n de envÃ­o (carrito)
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               <div className="rounded-md border border-gray-200 bg-white px-2 py-1.5">
@@ -434,13 +434,13 @@ export default function ClientCreateRequestModal({
                 </p>
               </div>
               <div className="rounded-md border border-gray-200 bg-white px-2 py-1.5">
-                <p className="text-[10px] text-gray-500">Tipo de vía</p>
+                <p className="text-[10px] text-gray-500">Tipo de vÃ­a</p>
                 <p className="text-xs font-medium text-gray-900">
                   {initialAddressFields.streetType || "-"}
                 </p>
               </div>
               <div className="rounded-md border border-gray-200 bg-white px-2 py-1.5">
-                <p className="text-[10px] text-gray-500">Número</p>
+                <p className="text-[10px] text-gray-500">NÃºmero</p>
                 <p className="text-xs font-medium text-gray-900">
                   {initialAddressFields.streetNumber || "-"}
                 </p>
@@ -504,7 +504,7 @@ export default function ClientCreateRequestModal({
           )}
 
           {shouldShowError("tipo") && errors.tipo && (
-            <p className="mt-1 text-xs text-red-600">{errors.tipo}</p>
+            <p className="mt-1 text-xs text-green-600">{errors.tipo}</p>
           )}
         </div>
 
@@ -526,7 +526,7 @@ export default function ClientCreateRequestModal({
                 className={[
                   "w-full appearance-none rounded-lg border bg-gray-50 h-10 px-3 pr-8 text-sm focus:bg-white focus:ring-2 focus:ring-black/15 disabled:opacity-60",
                   shouldShowError("serviceId") && errors.serviceId
-                    ? "border-red-500"
+                    ? "border-green-500"
                     : "border-gray-300",
                 ].join(" ")}
               >
@@ -546,12 +546,12 @@ export default function ClientCreateRequestModal({
                 ))}
               </select>
               <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-gray-500">
-                ▾
+                â–¾
               </span>
             </div>
 
             {shouldShowError("serviceId") && errors.serviceId && (
-              <p className="mt-1 text-xs text-red-600">{errors.serviceId}</p>
+              <p className="mt-1 text-xs text-green-600">{errors.serviceId}</p>
             )}
           </div>
         </div>
@@ -559,7 +559,7 @@ export default function ClientCreateRequestModal({
         {initialAddressFields && onInitialAddressFieldsChange && (
           <div className="grid gap-3 rounded-lg border border-gray-100 bg-gray-50 p-3">
             <p className="text-xs font-semibold text-gray-900">
-              Dirección de envío
+              DirecciÃ³n de envÃ­o
             </p>
 
             <select
@@ -644,7 +644,7 @@ export default function ClientCreateRequestModal({
                     complement: String(initialAddressFields.complement || ""),
                   })
                 }
-                placeholder="Número"
+                placeholder="NÃºmero"
                 className="w-full rounded-lg border border-gray-300 bg-white h-10 px-3 text-sm"
                 disabled={saving}
               />
@@ -695,7 +695,7 @@ export default function ClientCreateRequestModal({
         >
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-900">
-              Dirección
+              DirecciÃ³n
             </label>
             <input
               value={direccion}
@@ -708,19 +708,19 @@ export default function ClientCreateRequestModal({
               className={[
                 "w-full rounded-lg border bg-gray-50 h-10 px-3 text-sm focus:bg-white focus:ring-2 focus:ring-black/15",
                 shouldShowError("direccion") && errors.direccion
-                  ? "border-red-500"
+                  ? "border-green-500"
                   : "border-gray-300",
               ].join(" ")}
             />
             {shouldShowError("direccion") && errors.direccion && (
-              <p className="mt-1 text-xs text-red-600">{errors.direccion}</p>
+              <p className="mt-1 text-xs text-green-600">{errors.direccion}</p>
             )}
           </div>
         </div>
 
         <div>
           <label className="mb-1 block text-xs font-medium text-gray-900">
-            Descripción
+            DescripciÃ³n
           </label>
           <textarea
             value={description}
@@ -733,15 +733,17 @@ export default function ClientCreateRequestModal({
             className={[
               "w-full rounded-lg border bg-gray-50 px-3 py-2 text-sm focus:bg-white focus:ring-2 focus:ring-black/15",
               shouldShowError("description") && errors.description
-                ? "border-red-500"
+                ? "border-green-500"
                 : "border-gray-300",
             ].join(" ")}
           />
           {shouldShowError("description") && errors.description && (
-            <p className="mt-1 text-xs text-red-600">{errors.description}</p>
+            <p className="mt-1 text-xs text-green-600">{errors.description}</p>
           )}
         </div>
       </div>
     </Modal>
   );
 }
+
+

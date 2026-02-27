@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useRef, useState, useEffect } from "react";
 import Modal from "@/features/dashboard/components/Modal";
@@ -38,7 +38,7 @@ interface CreateTechnicianModalProps {
 const TECH_TYPES = ["Cableado estructurado", "Electricista", "Redes"];
 
 const removeBtnClass =
-  "text-xs text-red-500 border border-red-300 rounded-md px-2 py-1 hover:bg-red-50 hover:text-red-700 flex items-center gap-1";
+  "text-xs text-green-500 border border-green-300 rounded-md px-2 py-1 hover:bg-green-50 hover:text-green-700 flex items-center gap-1";
 
 const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
   isOpen,
@@ -176,8 +176,8 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
     if ((field === "name" || field === "lastName") && hasDigits) {
       fieldError =
         field === "name"
-          ? "El nombre no puede contener números"
-          : "El apellido no puede contener números";
+          ? "El nombre no puede contener nÃºmeros"
+          : "El apellido no puede contener nÃºmeros";
     }
 
     setErrors((prev) => ({ ...prev, [field]: fieldError }));
@@ -276,7 +276,7 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
 
   return (
     <Modal
-      title="Crear Técnico"
+      title="Crear TÃ©cnico"
       isOpen={isOpen}
       onClose={() => {
         resetForm();
@@ -294,7 +294,7 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
           <button
             type="submit"
             form="create-technician-form"
-            className="cursor-pointer transition duration-300 hover:bg-black hover:text-white hover:scale-105 px-4 py-2 rounded-lg bg-black text-white w-full sm:w-auto"
+            className="cursor-pointer transition duration-300 hover:bg-[#227a69] hover:text-white hover:scale-105 px-4 py-2 rounded-lg bg-[#2a9781] text-white w-full sm:w-auto"
           >
             Guardar
           </button>
@@ -312,7 +312,7 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
               className="block text-sm font-medium mb-1"
               style={{ color: Colors.texts.primary }}
             >
-              Tipo de Documento <span className="text-red-500">*</span>
+              Tipo de Documento <span className="text-green-500">*</span>
             </label>
 
             <select
@@ -336,7 +336,7 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
             </select>
 
             {errors.documentType && (
-              <p className="mt-1 text-xs text-red-600">
+              <p className="mt-1 text-xs text-green-600">
                 {errors.documentType}
               </p>
             )}
@@ -347,11 +347,11 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
               className="block text-sm font-medium mb-1"
               style={{ color: Colors.texts.primary }}
             >
-              Número de Documento <span className="text-red-500">*</span>
+              NÃºmero de Documento <span className="text-green-500">*</span>
             </label>
             <input
               type="text"
-              placeholder="Número de documento"
+              placeholder="NÃºmero de documento"
               value={numeroDocumento}
               onChange={(e) =>
                 handleFieldChange("documentNumber", e.target.value)
@@ -359,7 +359,7 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
               onBlur={() =>
                 handleFieldChange("documentNumber", numeroDocumento)
               }
-              className="w-full px-2 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+              className="w-full px-2 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
               style={{
                 borderColor: errors.documentNumber
                   ? "red"
@@ -367,7 +367,7 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
               }}
             />
             {errors.documentNumber && (
-              <p className="mt-1 text-xs text-red-600">
+              <p className="mt-1 text-xs text-green-600">
                 {errors.documentNumber}
               </p>
             )}
@@ -378,7 +378,7 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
               className="block text-sm font-medium mb-1"
               style={{ color: Colors.texts.primary }}
             >
-              Nombre <span className="text-red-500">*</span>
+              Nombre <span className="text-green-500">*</span>
             </label>
             <input
               type="text"
@@ -386,11 +386,11 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
               value={nombre}
               onChange={(e) => handleFieldChange("name", e.target.value)}
               onBlur={() => handleFieldChange("name", nombre)}
-              className="w-full px-2 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+              className="w-full px-2 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
               style={{ borderColor: errors.name ? "red" : Colors.table.lines }}
             />
             {errors.name && (
-              <p className="mt-1 text-xs text-red-600">{errors.name}</p>
+              <p className="mt-1 text-xs text-green-600">{errors.name}</p>
             )}
           </div>
 
@@ -399,7 +399,7 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
               className="block text-sm font-medium mb-1"
               style={{ color: Colors.texts.primary }}
             >
-              Apellido <span className="text-red-500">*</span>
+              Apellido <span className="text-green-500">*</span>
             </label>
             <input
               type="text"
@@ -407,13 +407,13 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
               value={apellido}
               onChange={(e) => handleFieldChange("lastName", e.target.value)}
               onBlur={() => handleFieldChange("lastName", apellido)}
-              className="w-full px-2 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+              className="w-full px-2 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
               style={{
                 borderColor: errors.lastName ? "red" : Colors.table.lines,
               }}
             />
             {errors.lastName && (
-              <p className="mt-1 text-xs text-red-600">
+              <p className="mt-1 text-xs text-green-600">
                 {errors.lastName}
               </p>
             )}
@@ -424,21 +424,21 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
               className="block text-sm font-medium mb-1"
               style={{ color: Colors.texts.primary }}
             >
-              Teléfono <span className="text-red-500">*</span>
+              TelÃ©fono <span className="text-green-500">*</span>
             </label>
             <input
               type="text"
-              placeholder="Ingrese teléfono"
+              placeholder="Ingrese telÃ©fono"
               value={telefono}
               onChange={(e) => handleFieldChange("phone", e.target.value)}
               onBlur={() => handleFieldChange("phone", telefono)}
-              className="w-full px-2 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+              className="w-full px-2 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
               style={{
                 borderColor: errors.phone ? "red" : Colors.table.lines,
               }}
             />
             {errors.phone && (
-              <p className="mt-1 text-xs text-red-600">{errors.phone}</p>
+              <p className="mt-1 text-xs text-green-600">{errors.phone}</p>
             )}
           </div>
 
@@ -447,7 +447,7 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
               className="block text-sm font-medium mb-1"
               style={{ color: Colors.texts.primary }}
             >
-              Correo electrónico <span className="text-red-500">*</span>
+              Correo electrÃ³nico <span className="text-green-500">*</span>
             </label>
             <input
               type="email"
@@ -455,13 +455,13 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
               value={correo}
               onChange={(e) => handleFieldChange("email", e.target.value)}
               onBlur={() => handleFieldChange("email", correo)}
-              className="w-full px-2 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+              className="w-full px-2 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
               style={{
                 borderColor: errors.email ? "red" : Colors.table.lines,
               }}
             />
             {errors.email && (
-              <p className="mt-1 text-xs text-red-600">{errors.email}</p>
+              <p className="mt-1 text-xs text-green-600">{errors.email}</p>
             )}
           </div>
 
@@ -470,7 +470,7 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
               className="block text-sm font-medium mb-1"
               style={{ color: Colors.texts.primary }}
             >
-              Tipos de técnico <span className="text-red-500">*</span>
+              Tipos de tÃ©cnico <span className="text-green-500">*</span>
             </label>
             <div className="flex flex-wrap gap-2">
               {(typeOptions ?? TECH_TYPES).map((opt) => {
@@ -493,7 +493,7 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
                       );
                     }}
                     className={`px-3 py-1 rounded-full border text-sm transition ${active
-                      ? "bg-red-600 text-white border-red-600"
+                      ? "bg-green-600 text-white border-green-600"
                       : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
                       }`}
                   >
@@ -503,7 +503,7 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
               })}
             </div>
             {errors.types && (
-              <p className="mt-1 text-xs text-red-600">{errors.types}</p>
+              <p className="mt-1 text-xs text-green-600">{errors.types}</p>
             )}
           </div>
 
@@ -512,7 +512,7 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
               className="block text-sm font-medium mb-1"
               style={{ color: Colors.texts.primary }}
             >
-              Hoja de vida (PDF) <span className="text-red-500">*</span>
+              Hoja de vida (PDF) <span className="text-green-500">*</span>
             </label>
             <div className="flex items-center gap-3">
               <div
@@ -548,7 +548,7 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
               />
             </div>
             {(pdfError || errors.resumePdf) && (
-              <p className="mt-1 text-xs text-red-600">
+              <p className="mt-1 text-xs text-green-600">
                 {pdfError || errors.resumePdf}
               </p>
             )}
@@ -597,7 +597,7 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
               />
             </div>
             {imageError && (
-              <p className="mt-1 text-xs text-red-600">{imageError}</p>
+              <p className="mt-1 text-xs text-green-600">{imageError}</p>
             )}
           </div>
         </div>
@@ -607,3 +607,5 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
 };
 
 export default CreateTechnicianModal;
+
+

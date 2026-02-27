@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useMemo, useState, useEffect, useRef } from "react";
 import Swal from "sweetalert2";
@@ -127,8 +127,8 @@ export default function PurchasesIndex() {
             s === "approved"
               ? "text-green-600 font-medium"
               : s === "revoke"
-                ? "text-red-600 font-medium"
-                : "text-gray-500 font-medium";
+              ? "text-green-600 font-medium"
+              : "text-gray-500 font-medium";
 
           return <span className={cls}>{label}</span>;
         },
@@ -149,6 +149,7 @@ export default function PurchasesIndex() {
     [purchases]
   );
 
+  // Memorizar las funciones de callback con dependencias especÃ­ficas
   const handleCreate = useCallback(() => {
     resetForm();
     setRegisterModalOpen(true);
@@ -179,7 +180,7 @@ export default function PurchasesIndex() {
         Swal.fire({
           icon: "info",
           title: "Compra ya anulada",
-          text: `La compra #${purchase.numberoforder} ya está anulada.`,
+          text: `La compra #${purchase.numberoforder} ya esta anulada.`,
           confirmButtonText: "Aceptar",
           confirmButtonColor: "#3085d6",
         });
@@ -189,7 +190,7 @@ export default function PurchasesIndex() {
       const { value: observation, isConfirmed } = await Swal.fire({
         html: `
         <div class="flex flex-col items-center">
-          <div class="text-red-600 mb-3">
+          <div class="text-green-600 mb-3">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20" fill="none" 
                 viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
@@ -206,7 +207,7 @@ export default function PurchasesIndex() {
           </p>
 
           <p class="text-gray-500 text-sm mb-3">
-            Puedes agregar una observación (opcional)
+            Puedes agregar una observacón (opcional)
           </p>
 
           <textarea id="obs" class="w-full p-2 border rounded resize-none" 
@@ -227,7 +228,7 @@ export default function PurchasesIndex() {
         customClass: {
           popup: "rounded-2xl p-6",
           confirmButton:
-            "bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition",
+            "bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition",
           cancelButton:
             "bg-gray-200 text-gray-800 px-6 py-2 rounded-lg hover:bg-gray-300 transition mr-3",
         },
@@ -369,3 +370,4 @@ export default function PurchasesIndex() {
     </RequireAuth>
   );
 }
+

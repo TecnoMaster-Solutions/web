@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import Modal from "@/features/dashboard/components/Modal";
@@ -25,7 +25,7 @@ export default function SaleDetailModal({ saleId, onClose }: SaleDetailModalProp
                 })
                 .catch((err) => {
                     console.error(err);
-                    setError("No se pudo cargar la información de la venta.");
+                    setError("No se pudo cargar la informaciÃ³n de la venta.");
                 })
                 .finally(() => {
                     setLoading(false);
@@ -55,10 +55,10 @@ export default function SaleDetailModal({ saleId, onClose }: SaleDetailModalProp
             widthClass="max-w-4xl"
         >
             {error ? (
-                <div className="text-red-500 p-4 text-center">{error}</div>
+                <div className="text-green-500 p-4 text-center">{error}</div>
             ) : sale ? (
                 <div className="space-y-6">
-                    {/* Nuevo Header visual: icono + título + subtítulo debajo */}
+                    {/* Nuevo Header visual: icono + tÃ­tulo + subtÃ­tulo debajo */}
                     <div className="flex items-start justify-between">
                         <div className="flex items-start gap-4">
                             <div className="w-10 h-10 rounded bg-gray-100 flex items-center justify-center">
@@ -79,7 +79,7 @@ export default function SaleDetailModal({ saleId, onClose }: SaleDetailModalProp
                     {/* Header Info (dos columnas) */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                         <div className="bg-gray-50 p-4 rounded-lg">
-                            <h4 className="font-bold text-gray-700 mb-2">Información del Cliente</h4>
+                            <h4 className="font-bold text-gray-700 mb-2">InformaciÃ³n del Cliente</h4>
                             <p>
                                 <span className="font-medium">Nombre:</span>{" "}
                                 {sale.customer?.users
@@ -93,7 +93,7 @@ export default function SaleDetailModal({ saleId, onClose }: SaleDetailModalProp
                         <div className="bg-gray-50 p-4 rounded-lg">
                             <h4 className="font-bold text-gray-700 mb-2">Datos de la Venta</h4>
                             <p>
-                                <span className="font-medium">Número Venta:</span>{" "}
+                                <span className="font-medium">NÃºmero Venta:</span>{" "}
                                 {sale.salecode || '-'}
                             </p>
                             <p>
@@ -106,7 +106,7 @@ export default function SaleDetailModal({ saleId, onClose }: SaleDetailModalProp
                                             ? "bg-green-100 text-green-700"
                                             : sale.salestatus === "Pending"
                                                 ? "bg-orange-100 text-orange-700"
-                                                : "bg-red-100 text-red-700"
+                                                : "bg-green-100 text-green-700"
                                         }`}
                                 >
                                     {sale.salestatus === "Completed" ? "Finalizada"
@@ -135,11 +135,11 @@ export default function SaleDetailModal({ saleId, onClose }: SaleDetailModalProp
                             <table className="w-full text-sm text-left">
                                 <thead className="bg-gray-100 text-gray-600">
                                     <tr>
-                                        <th className="p-3">Ítem</th>
+                                        <th className="p-3">Ãtem</th>
                                         <th className="p-3 text-center">Cant.</th>
                                         <th className="p-3 text-right">Precio Unit.</th>
                                         <th className="p-3 text-right">Desc.</th>
-                                        <th className="p-3 text-right">Total Línea</th>
+                                        <th className="p-3 text-right">Total LÃ­nea</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
@@ -147,7 +147,7 @@ export default function SaleDetailModal({ saleId, onClose }: SaleDetailModalProp
                                         <tr key={detail.saledetailid} className="hover:bg-gray-50">
                                             <td className="p-3">
                                                 <div className="font-medium">
-                                                    {detail.products?.productname || "Servicio / Ítem"}
+                                                    {detail.products?.productname || "Servicio / Ãtem"}
                                                 </div>
                                                 {detail.notes && (
                                                     <div className="text-xs text-gray-400">{detail.notes}</div>
@@ -212,7 +212,7 @@ export default function SaleDetailModal({ saleId, onClose }: SaleDetailModalProp
                     <div className="flex justify-end">
                         <button
                             onClick={onClose}
-                            className="px-4 py-2 bg-black text-white rounded-lg hover:opacity-80"
+                            className="px-4 py-2 bg-[#2a9781] text-white rounded-lg hover:opacity-80"
                         >
                             Cerrar
                         </button>
@@ -222,3 +222,4 @@ export default function SaleDetailModal({ saleId, onClose }: SaleDetailModalProp
         </Modal>
     );
 }
+

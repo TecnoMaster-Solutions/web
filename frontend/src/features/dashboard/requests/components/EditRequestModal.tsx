@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Modal from "@/features/dashboard/components/Modal";
@@ -304,7 +304,7 @@ export default function EditRequestModal({
       .map((t: any) => {
         const u = t?.users || t?.user || t?.Users || {};
         const name = [u?.name, u?.lastname].filter(Boolean).join(" ").trim();
-        const label = name || `Técnico #${t?.technicianid ?? t?.id ?? "?"}`;
+        const label = name || `TÃ©cnico #${t?.technicianid ?? t?.id ?? "?"}`;
         return { technicianid: Number(t?.technicianid ?? t?.id), label } as TechnicianOption;
       })
       .filter((x) => Number.isFinite(x.technicianid) && x.technicianid > 0);
@@ -393,15 +393,15 @@ export default function EditRequestModal({
   function validateDateRequired(date: string | null) {
     if (!date) return "Selecciona la fecha.";
     const d = parseYMD(date);
-    if (!d) return "Fecha inválida.";
+    if (!d) return "Fecha invÃ¡lida.";
     if (isPastDateLocal(date)) return "No puedes seleccionar una fecha pasada.";
-    if (!isAllowedDate(date)) return "No se puede agendar los domingos (solo lunes a sábado).";
+    if (!isAllowedDate(date)) return "No se puede agendar los domingos (solo lunes a sÃ¡bado).";
     return null;
   }
 
   function validateStartTimeRequired(date: string | null, start: string | null) {
     if (!start) return "Selecciona la hora inicial.";
-    if (!isAllowedTime(start)) return "Horario permitido: 07:00â€“17:00.";
+    if (!isAllowedTime(start)) return "Horario permitido: 07:00Ã¢â‚¬â€œ17:00.";
     if (timeToMinutes(start) === SCHEDULE_MAX) return "La hora de inicio no puede ser 17:00.";
     if (date && !isPastDateLocal(date) && isPastDateTimeLocal(date, start)) {
       return "La hora inicial no puede estar en el pasado.";
@@ -411,7 +411,7 @@ export default function EditRequestModal({
 
   function validateEndTimeRequired(date: string | null, start: string | null, end: string | null) {
     if (!end) return "Selecciona la hora final.";
-    if (!isAllowedTime(end)) return "Horario permitido: 07:00â€“17:00.";
+    if (!isAllowedTime(end)) return "Horario permitido: 07:00Ã¢â‚¬â€œ17:00.";
     if (date && !isPastDateLocal(date) && isPastDateTimeLocal(date, end)) {
       return "La hora final no puede estar en el pasado.";
     }
@@ -440,9 +440,9 @@ export default function EditRequestModal({
     e.horaFinal = needsTime ? validateEndTimeRequired(programada, horaProgramada, horaFinal) : null;
 
     if (!selectedTechnicians.length) {
-      e.technicians = "Selecciona al menos un técnico.";
+      e.technicians = "Selecciona al menos un tÃ©cnico.";
     } else if (selectedBusyTechnicianIds.length > 0) {
-      e.technicians = "Hay técnicos seleccionados que ya están ocupados en ese horario.";
+      e.technicians = "Hay tÃ©cnicos seleccionados que ya estÃ¡n ocupados en ese horario.";
     } else {
       e.technicians = null;
     }
@@ -524,7 +524,7 @@ export default function EditRequestModal({
   function addTechnician(id: number) {
     if (!Number.isFinite(id) || id <= 0) return;
     if (busyTechnicianIds.has(id)) {
-      showWarning("Este técnico ya está ocupado en el horario seleccionado.");
+      showWarning("Este tÃ©cnico ya estÃ¡ ocupado en el horario seleccionado.");
       return;
     }
     markTouched("technicians");
@@ -688,7 +688,7 @@ export default function EditRequestModal({
           : [];
         if (!cancelled) setTechniciansRaw(list);
       } catch (e: any) {
-        const msg = (e as any)?.response?.data?.message || (e as any)?.message || "Error cargando técnicos.";
+        const msg = (e as any)?.response?.data?.message || (e as any)?.message || "Error cargando tÃ©cnicos.";
         if (!cancelled) {
           setTechError(String(msg));
           setTechniciansRaw([]);
@@ -863,7 +863,7 @@ export default function EditRequestModal({
     }
 
     if (!isAllowedDate(v)) {
-      showWarning("No se puede agendar los domingos. Solo lunes a sábado.");
+      showWarning("No se puede agendar los domingos. Solo lunes a sÃ¡bado.");
       return;
     }
 
@@ -883,7 +883,7 @@ export default function EditRequestModal({
     }
 
     if (!isAllowedTime(v)) {
-      showWarning("Horario permitido: 07:00â€“17:00.");
+      showWarning("Horario permitido: 07:00Ã¢â‚¬â€œ17:00.");
       return;
     }
 
@@ -917,7 +917,7 @@ export default function EditRequestModal({
     }
 
     if (!isAllowedTime(v)) {
-      showWarning("Horario permitido: 07:00â€“17:00.");
+      showWarning("Horario permitido: 07:00Ã¢â‚¬â€œ17:00.");
       return;
     }
 
@@ -945,14 +945,14 @@ export default function EditRequestModal({
     }
 
     if (techLoading) {
-      showInfo("Espera a que carguen los técnicos.");
+      showInfo("Espera a que carguen los tÃ©cnicos.");
       return;
     }
 
     if (!isValidNow()) return;
 
     if (selectedBusyTechnicianIds.length > 0) {
-      showError("Hay técnicos ocupados en ese horario. Ajusta horario o técnicos.");
+      showError("Hay tÃ©cnicos ocupados en ese horario. Ajusta horario o tÃ©cnicos.");
       return;
     }
 
@@ -970,7 +970,7 @@ export default function EditRequestModal({
     const scheduledEndAtISO = combineDateTimeLocal(programada, horaFinal);
 
     if (!scheduledAtISO || !scheduledEndAtISO) {
-      showError("Fecha u horas inválidas.");
+      showError("Fecha u horas invÃ¡lidas.");
       return;
     }
 
@@ -1022,7 +1022,7 @@ export default function EditRequestModal({
           <button
             type="button"
             onClick={submit}
-            className="rounded-lg bg-black px-3 py-2 text-sm font-semibold text-white hover:bg-neutral-800 disabled:opacity-60"
+            className="rounded-lg bg-[#2a9781] px-3 py-2 text-sm font-semibold text-white hover:bg-[#227a69] disabled:opacity-60"
             disabled={saving || loadingLookups || techLoading || serviceTypesLoading}
             title={
               loadingLookups
@@ -1030,7 +1030,7 @@ export default function EditRequestModal({
                 : serviceTypesLoading
                 ? "Cargando tipos..."
                 : techLoading
-                ? "Cargando técnicos..."
+                ? "Cargando tÃ©cnicos..."
                 : undefined
             }
           >
@@ -1090,7 +1090,7 @@ export default function EditRequestModal({
           )}
 
           {shouldShowError("tipo") && errors.tipo && (
-            <p className="mt-1 text-xs text-red-600">{errors.tipo}</p>
+            <p className="mt-1 text-xs text-green-600">{errors.tipo}</p>
           )}
         </div>
 
@@ -1112,7 +1112,7 @@ export default function EditRequestModal({
                 disabled={saving || loadingLookups || serviceTypesLoading}
                 className={[
                   "w-full appearance-none rounded-lg border bg-gray-50 h-10 px-3 pr-8 text-sm focus:bg-white focus:ring-2 focus:ring-black/15 disabled:opacity-60",
-                  shouldShowError("servicio") && errors.servicio ? "border-red-500" : "border-gray-300",
+                  shouldShowError("servicio") && errors.servicio ? "border-green-500" : "border-gray-300",
                 ].join(" ")}
               >
                 <option value="">
@@ -1135,7 +1135,7 @@ export default function EditRequestModal({
               </span>
             </div>
             {shouldShowError("servicio") && errors.servicio && (
-              <p className="mt-1 text-xs text-red-600">{errors.servicio}</p>
+              <p className="mt-1 text-xs text-green-600">{errors.servicio}</p>
             )}
           </div>
 
@@ -1145,7 +1145,7 @@ export default function EditRequestModal({
               ref={clientBoxRef}
               className={[
                 "rounded-lg border bg-gray-50 p-2",
-                shouldShowError("cliente") && errors.cliente ? "border-red-500" : "border-gray-300",
+                shouldShowError("cliente") && errors.cliente ? "border-green-500" : "border-gray-300",
               ].join(" ")}
             >
               {selectedClient ? (
@@ -1259,7 +1259,7 @@ export default function EditRequestModal({
               </div>
             </div>
             {shouldShowError("cliente") && errors.cliente && (
-              <p className="mt-1 text-xs text-red-600">{errors.cliente}</p>
+              <p className="mt-1 text-xs text-green-600">{errors.cliente}</p>
             )}
           </div>
         </div>
@@ -1271,7 +1271,7 @@ export default function EditRequestModal({
           </h4>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <div className="md:col-span-4">
-            <label className="mb-1 block text-xs font-medium text-gray-900">Dirección</label>
+            <label className="mb-1 block text-xs font-medium text-gray-900">DirecciÃ³n</label>
             <input
               value={direccion}
               onChange={(e) => {
@@ -1282,11 +1282,11 @@ export default function EditRequestModal({
               placeholder="Ej. Calle 123 #45-67"
               className={[
                 "w-full rounded-lg border bg-gray-50 h-10 px-3 text-sm focus:bg-white focus:ring-2 focus:ring-black/15",
-                shouldShowError("direccion") && errors.direccion ? "border-red-500" : "border-gray-300",
+                shouldShowError("direccion") && errors.direccion ? "border-green-500" : "border-gray-300",
               ].join(" ")}
             />
             {shouldShowError("direccion") && errors.direccion && (
-              <p className="mt-1 text-xs text-red-600">{errors.direccion}</p>
+              <p className="mt-1 text-xs text-green-600">{errors.direccion}</p>
             )}
           </div>
 
@@ -1300,12 +1300,12 @@ export default function EditRequestModal({
               onBlur={() => markTouched("programada")}
               className={[
                 "w-full rounded-lg border bg-gray-50 h-10 px-3 text-sm focus:bg-white focus:ring-2 focus:ring-black/15",
-                shouldShowError("programada") && errors.programada ? "border-red-500" : "border-gray-300",
+                shouldShowError("programada") && errors.programada ? "border-green-500" : "border-gray-300",
               ].join(" ")}
               required
             />
             {shouldShowError("programada") && errors.programada && (
-              <p className="mt-1 text-xs text-red-600">{errors.programada}</p>
+              <p className="mt-1 text-xs text-green-600">{errors.programada}</p>
             )}
           </div>
 
@@ -1320,13 +1320,13 @@ export default function EditRequestModal({
               onBlur={() => markTouched("horaProgramada")}
               className={[
                 "w-full rounded-lg border bg-gray-50 h-10 px-3 text-sm focus:bg-white focus:ring-2 focus:ring-black/15 disabled:opacity-60",
-                shouldShowError("horaProgramada") && errors.horaProgramada ? "border-red-500" : "border-gray-300",
+                shouldShowError("horaProgramada") && errors.horaProgramada ? "border-green-500" : "border-gray-300",
               ].join(" ")}
               disabled={!programada}
               required
             />
             {shouldShowError("horaProgramada") && errors.horaProgramada && (
-              <p className="mt-1 text-xs text-red-600">{errors.horaProgramada}</p>
+              <p className="mt-1 text-xs text-green-600">{errors.horaProgramada}</p>
             )}
           </div>
 
@@ -1341,13 +1341,13 @@ export default function EditRequestModal({
               onBlur={() => markTouched("horaFinal")}
               className={[
                 "w-full rounded-lg border bg-gray-50 h-10 px-3 text-sm focus:bg-white focus:ring-2 focus:ring-black/15 disabled:opacity-60",
-                shouldShowError("horaFinal") && errors.horaFinal ? "border-red-500" : "border-gray-300",
+                shouldShowError("horaFinal") && errors.horaFinal ? "border-green-500" : "border-gray-300",
               ].join(" ")}
               disabled={!programada}
               required
             />
             {shouldShowError("horaFinal") && errors.horaFinal && (
-              <p className="mt-1 text-xs text-red-600">{errors.horaFinal}</p>
+              <p className="mt-1 text-xs text-green-600">{errors.horaFinal}</p>
             )}
           </div>
 
@@ -1394,12 +1394,12 @@ export default function EditRequestModal({
             className={[
               "rounded-lg border bg-gray-50 p-2",
               shouldShowError("technicians") && errors.technicians
-                ? "border-red-500 ring-1 ring-red-500"
+                ? "border-green-500 ring-1 ring-green-500"
                 : "border-gray-300",
             ].join(" ")}
           >
             {selectedTechniciansFull.length === 0 ? (
-              <div className="text-xs text-gray-500 px-1 py-1">No has seleccionado técnicos.</div>
+              <div className="text-xs text-gray-500 px-1 py-1">No has seleccionado tÃ©cnicos.</div>
             ) : (
               <div className="flex flex-wrap gap-2">
                 {selectedTechniciansFull.map((t) => (
@@ -1453,11 +1453,11 @@ export default function EditRequestModal({
                   setTechOpen(false);
                 }
               }}
-              placeholder={techLoading ? "Cargando técnicos..." : "Buscar por nombre o ID..."}
+              placeholder={techLoading ? "Cargando tÃ©cnicos..." : "Buscar por nombre o ID..."}
               className={[
                 "w-full rounded-lg border bg-gray-50 h-10 px-3 text-sm focus:bg-white focus:ring-2 focus:ring-black/15 disabled:opacity-60",
                 shouldShowError("technicians") && errors.technicians
-                  ? "border-red-500 ring-1 ring-red-500"
+                  ? "border-green-500 ring-1 ring-green-500"
                   : "border-gray-300",
               ].join(" ")}
               disabled={saving || techLoading}
@@ -1469,7 +1469,7 @@ export default function EditRequestModal({
                 {techOptions.length === 0 ? (
                   <div className="px-3 py-2 text-xs text-gray-500">
                     {selectedTechnicians.length === availableTechnicians.length
-                      ? "Ya seleccionaste todos los técnicos."
+                      ? "Ya seleccionaste todos los tÃ©cnicos."
                       : "No hay coincidencias."}
                   </div>
                 ) : (
@@ -1491,7 +1491,7 @@ export default function EditRequestModal({
                           </span>
                           <span className="min-w-0 flex-1">
                             <span className="block truncate font-medium">{t.label}</span>
-                            <span className="block text-xs text-gray-500">Técnico #{t.technicianid}</span>
+                            <span className="block text-xs text-gray-500">TÃ©cnico #{t.technicianid}</span>
                           </span>
                           <span className="text-xs text-gray-400">Agregar</span>
                         </button>
@@ -1503,9 +1503,9 @@ export default function EditRequestModal({
             )}
           </div>
 
-          {techError && <p className="mt-1 text-xs text-red-600">{techError}</p>}
+          {techError && <p className="mt-1 text-xs text-green-600">{techError}</p>}
           {shouldShowError("technicians") && errors.technicians && (
-            <p className="mt-1 text-xs text-red-600">{errors.technicians}</p>
+            <p className="mt-1 text-xs text-green-600">{errors.technicians}</p>
           )}
         </div>
 
@@ -1513,7 +1513,7 @@ export default function EditRequestModal({
           <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
             Descripcion
           </h4>
-          <label className="mb-1 block text-xs font-medium text-gray-900">Descripción</label>
+          <label className="mb-1 block text-xs font-medium text-gray-900">DescripciÃ³n</label>
           <textarea
             value={descripcion}
             onChange={(e) => {
@@ -1525,15 +1525,17 @@ export default function EditRequestModal({
             placeholder="Describe brevemente la solicitud"
             className={[
               "w-full rounded-lg border bg-gray-50 px-3 py-2 text-sm focus:bg-white focus:ring-2 focus:ring-black/15",
-              shouldShowError("descripcion") && errors.descripcion ? "border-red-500" : "border-gray-300",
+              shouldShowError("descripcion") && errors.descripcion ? "border-green-500" : "border-gray-300",
             ].join(" ")}
           />
           {shouldShowError("descripcion") && errors.descripcion && (
-            <p className="mt-1 text-xs text-red-600">{errors.descripcion}</p>
+            <p className="mt-1 text-xs text-green-600">{errors.descripcion}</p>
           )}
         </div>
       </div>
     </Modal>
   );
 }
+
+
 

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import { XMarkIcon, CheckIcon } from "@heroicons/react/24/solid";
@@ -150,7 +150,7 @@ export default function EditRoleModal({
       type="button"
       onClick={onChange}
       className={`w-5 h-5 rounded-md border border-gray-400 flex items-center justify-center transition-all duration-150 
-        ${checked ? "bg-[#B20000] scale-110" : "bg-white"} ${loading ? "opacity-60" : ""}`}
+        ${checked ? "bg-[#04652c] scale-110" : "bg-white"} ${loading ? "opacity-60" : ""}`}
       aria-pressed={checked}
       disabled={loading}
     >
@@ -193,7 +193,7 @@ export default function EditRoleModal({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-base font-semibold mb-1" style={{ color: Colors.texts.primary }}>
-                    Nombre del rol <span className="text-red-500">*</span>
+                    Nombre del rol <span className="text-green-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -207,7 +207,7 @@ export default function EditRoleModal({
                     className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-300 disabled:opacity-60"
                     style={{ borderColor: errors.name ? "red" : Colors.table.lines }}
                   />
-                  {errors.name && <span className="text-xs text-red-500">{errors.name}</span>}
+                  {errors.name && <span className="text-xs text-green-500">{errors.name}</span>}
                 </div>
 
                 <div>
@@ -229,19 +229,19 @@ export default function EditRoleModal({
 
               <div className="flex items-center justify-between">
                 <h3 className="text-base font-semibold" style={{ color: Colors.texts.primary }}>
-                  Permisos Asignados <span className="text-red-500">*</span>
+                  Permisos Asignados <span className="text-green-500">*</span>
                 </h3>
               </div>
 
               {errors.permissions && (
-                <p className="text-left text-xs text-red-500">{errors.permissions}</p>
+                <p className="text-left text-xs text-green-500">{errors.permissions}</p>
               )}
 
               <div className="overflow-hidden rounded-xl border max-h-64 overflow-y-auto custom-scroll">
                 <table className="min-w-full text-sm">
-                  <thead style={{ backgroundColor: "#B20000" }} className="sticky top-0 z-10">
+                  <thead style={{ backgroundColor: "#04652c" }} className="sticky top-0 z-10">
                     <tr>
-                      <th className="px-4 py-3 text-left font-semibold text-white">Módulo</th>
+                      <th className="px-4 py-3 text-left font-semibold text-white">MÃ³dulo</th>
                       <th className="px-4 py-3 text-center font-semibold text-white">
                         Permisos / Privilegios
                       </th>
@@ -303,7 +303,7 @@ export default function EditRoleModal({
                 type="button"
                 onClick={handleSubmit}
                 disabled={loading}
-                className="cursor-pointer transition duration-300 hover:bg-black hover:text-white hover:scale-105 px-4 py-2 rounded-lg bg-black text-white w-full sm:w-auto disabled:opacity-60"
+                className="cursor-pointer transition duration-300 hover:bg-[#227a69] hover:text-white hover:scale-105 px-4 py-2 rounded-lg bg-[#2a9781] text-white w-full sm:w-auto disabled:opacity-60"
               >
                 {loading ? "Guardando..." : "Guardar"}
               </button>
@@ -314,3 +314,4 @@ export default function EditRoleModal({
     </AnimatePresence>
   );
 }
+
