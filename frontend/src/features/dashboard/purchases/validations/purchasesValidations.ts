@@ -1,4 +1,3 @@
-// purchasesValidations.ts
 import { IPurchase } from "@/features/dashboard/purchases/Types/Purchase.type";
 
 export interface PurchaseErrors {
@@ -12,9 +11,6 @@ export interface PurchaseErrors {
   products?: string;
 }
 
-/**
- * Valida un campo individual de una compra
- */
 export const validatePurchaseField = (
   field: any,
   value: any,
@@ -107,7 +103,7 @@ export const validatePurchaseForm = (
     "status",
     "orderNumber",
     "invoiceNumber",
-    "supplier", // ← ✔ CORREGIDO
+    "supplier",
     "amount",
     "description",
   ];

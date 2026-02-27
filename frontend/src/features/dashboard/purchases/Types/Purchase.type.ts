@@ -1,17 +1,16 @@
-export interface ISupplier {
-  name: any;
-  supplierid: number;
-  contactname: string;
-  servicetype: string;
-  nit: string;
-  address: string;
-  rating: number;
-}
-
 export interface IState {
   stateid: number;
   name: string;
 }
+
+export interface IPurchaseOrder {
+  id: number;
+  numeroOrden: string;
+  proveedorId: number;
+  estadoId: number;
+  fecha: string;
+}
+
 export interface IPurchase {
   purchaseorderid: number;
   numberoforder: string;
@@ -22,11 +21,17 @@ export interface IPurchase {
   updatedat: string;
   amount: number | string;
 
+  purchaseOrderId?: number | null;
+  purchaseOrder?: IPurchaseOrder | null;
+
   supplier?: {
     supplierid: number;
     name: string;
     nit: string;
     contactname: string;
+    phone?: string;
+    email?: string;
+    address?: string;
   };
 
   state?: {
@@ -45,8 +50,10 @@ export interface IPurchase {
       productname: string;
       productpriceofsupplier: number;
       productpriceofsale: number;
-      description?: string;
+      productdescription?: string;
       image?: string;
+      productcode?: string;
+      productstock?: number;
     };
   }[];
 }

@@ -2,7 +2,6 @@ import { api } from "@/shared/utils/apiClient";
 import { IPurchase } from "../Types/Purchase.type";
 import { showError } from "@/shared/utils/notifications";
 
-// Obtener todas las compras
 const RETRY_LIMIT = 2;
 
 export const getPurchases = async (
@@ -14,29 +13,25 @@ export const getPurchases = async (
     try {
       const { data } = await api.get("/purchasesmanagement", {
         signal,
-        timeout: 5000, // timeout más realista
-        validateStatus: (status) => status >= 200 && status < 500, // evita throws innecesarios
+        timeout: 5000,
+        validateStatus: (status) => status >= 200 && status < 500,
       });
 
-      // ❗ Si el servidor responde error 4xx/5xx
       if (!Array.isArray(data)) {
         throw new Error(
           `Respuesta inválida del servidor. Se esperaba un arreglo, se recibió: ${typeof data}`
         );
       }
 
-      // Normalizar datos rápido y seguro
       return data.map((p: any) => ({
         ...p,
         amount: Number(p.amount ?? 0),
       }));
     } catch (error: any) {
-      // Si fue cancelado → silencio total
       if (error?.name === "CanceledError" || error?.code === "ERR_CANCELED") {
         return [];
       }
 
-      // ✔ Timeout → reintentar
       if (error?.code === "ECONNABORTED") {
         attempt++;
         if (attempt > RETRY_LIMIT) {
@@ -45,7 +40,6 @@ export const getPurchases = async (
         continue;
       }
 
-      // Errores de red → reintento
       if (!error.response) {
         attempt++;
         if (attempt > RETRY_LIMIT) {
@@ -56,17 +50,14 @@ export const getPurchases = async (
         continue;
       }
 
-      // Errores HTTP
       const status = error.response.status;
 
       if (status >= 500) {
-        throw new Error(
-          `El servidor tuvo un problema (500). Intente más tarde.`
-        );
+        throw new Error(`El servidor tuvo un problema (500). Intente más tarde.`);
       }
 
       if (status === 404) {
-        return []; // colección vacía
+        return [];
       }
 
       if (status === 401 || status === 403) {
@@ -75,13 +66,12 @@ export const getPurchases = async (
 
       console.error("Error cargando compras:", error);
       throw new Error(
-        error?.response?.data?.message ??
-          "No se pudo cargar el listado de compras."
+        error?.response?.data?.message ?? "No se pudo cargar el listado de compras."
       );
     }
   }
 
-  return []; // fallback
+  return [];
 };
 
 export const getPurchaseById = async (id: number): Promise<IPurchase> => {
@@ -94,7 +84,7 @@ export const getPurchaseById = async (id: number): Promise<IPurchase> => {
     throw error;
   }
 };
-// Crear una nueva compra
+
 export const createPurchase = async (purchase: Partial<IPurchase>) => {
   try {
     const { data } = await api.post("/purchasesmanagement", purchase);
@@ -106,15 +96,16 @@ export const createPurchase = async (purchase: Partial<IPurchase>) => {
   }
 };
 
-// Anular una compra (actualizar estado)
 export const cancelPurchase = async (id: number, observation?: string) => {
   try {
     const params: any = {};
     if (observation) params.observation = observation;
 
-    const { data } = await api.post(`/purchasesmanagement/${id}/cancel`, {}, {
-      params,
-    });
+    const { data } = await api.post(
+      `/purchasesmanagement/${id}/cancel`,
+      {},
+      { params }
+    );
 
     return data;
   } catch (error) {
@@ -134,3 +125,16 @@ export const getSuppliersForPurchase = async () => {
   return response.data.data;
 };
 
+/**
+ * NUEVO: Traer OCs por proveedor y estado (Pendiente).
+ * Tu backend: GET /purchase-orders?proveedorId=...&estadoId=...
+ */
+export const getPurchaseOrdersForSupplier = async (
+  proveedorId: number,
+  estadoId: number
+) => {
+  const { data } = await api.get("/purchase-orders", {
+    params: { proveedorId, estadoId },
+  });
+  return Array.isArray(data) ? data : [];
+};
