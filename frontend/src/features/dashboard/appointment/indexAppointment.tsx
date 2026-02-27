@@ -586,7 +586,7 @@ export default function IndexAppointment() {
             <div>
               <p className="text-xs uppercase tracking-wide text-slate-500">Agenda</p>
               <h1 className="text-2xl font-semibold text-slate-900">
-                Calendario de Ã³rdenes y servicios
+                Calendario de Órdenes y servicios
               </h1>
               <p className="text-xs text-slate-500">Mes actual: {periodLabel}</p>
             </div>

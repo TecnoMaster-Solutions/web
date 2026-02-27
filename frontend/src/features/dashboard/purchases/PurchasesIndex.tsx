@@ -90,8 +90,8 @@ export default function PurchasesIndex() {
 
   const columns: Column<IPurchase>[] = useMemo(
     () => [
-      { key: "numberoforder", header: "NÂ° Orden" },
-      { key: "reference", header: "NÂ° Factura" },
+      { key: "numberoforder", header: "N° Orden" },
+      { key: "reference", header: "N° Factura" },
       {
         key: "supplier",
         header: "Proveedor",
@@ -180,7 +180,7 @@ export default function PurchasesIndex() {
         Swal.fire({
           icon: "info",
           title: "Compra ya anulada",
-          text: `La compra #${purchase.numberoforder} ya estÃ¡ anulada.`,
+          text: `La compra #${purchase.numberoforder} ya esta anulada.`,
           confirmButtonText: "Aceptar",
           confirmButtonColor: "#3085d6",
         });
@@ -200,18 +200,18 @@ export default function PurchasesIndex() {
             </svg>
           </div>
 
-          <h2 class="text-xl font-semibold mb-2">Â¿EstÃ¡ seguro?</h2>
+          <h2 class="text-xl font-semibold mb-2">¿Está seguro?</h2>
 
           <p class="text-gray-700 mb-1">
-            Â¿Desea anular la compra #${purchase.numberoforder}?
+            ¿Desea anular la compra #${purchase.numberoforder}?
           </p>
 
           <p class="text-gray-500 text-sm mb-3">
-            Puedes agregar una observaciÃ³n (opcional)
+            Puedes agregar una observacón (opcional)
           </p>
 
           <textarea id="obs" class="w-full p-2 border rounded resize-none" 
-            rows="3" placeholder="Escribe una observaciÃ³n (opcional)..."></textarea>
+            rows="3" placeholder="Escribe una observación (opcional)..."></textarea>
         </div>
       `,
         showCancelButton: true,
@@ -247,7 +247,7 @@ export default function PurchasesIndex() {
 
         Swal.fire({
           icon: "success",
-          title: "Â¡Anulado!",
+          title: "¡Anulado!",
           text: `La compra #${purchase.numberoforder} ha sido anulada correctamente.`,
           timer: 2000,
           showConfirmButton: false,
@@ -303,7 +303,7 @@ export default function PurchasesIndex() {
     <RequireAuth>
       <div className="p-6">
         <ToastContainer position="bottom-right" />
-        <h1 className="text-xl font-semibold mb-4">Listado de Compras</h1>
+        
 
         {(!loading || purchases.length > 0) && memoizedDataTable}
 

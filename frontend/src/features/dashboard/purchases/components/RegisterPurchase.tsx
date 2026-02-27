@@ -103,13 +103,6 @@ export default function RegisterPurchaseForm({
     number | ""
   >(""); // ya lo tenÃ­as
 
-  const filteredProducts = useMemo(() => {
-    if (!searchProduct.trim()) return products;
-    return products.filter((p) =>
-      p.productname.toLowerCase().includes(searchProduct.toLowerCase())
-    );
-  }, [searchProduct, products]);
-
   const { showLoader, hideLoader } = useLoader();
 
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -301,21 +294,6 @@ export default function RegisterPurchaseForm({
     }
   };
 
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(e.target as Node)
-      ) {
-        setDropdownOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
   return (
     <form
       onSubmit={handleFormSubmit}
@@ -461,102 +439,108 @@ export default function RegisterPurchaseForm({
 
         <label className="block text-sm font-medium mb-2">Producto</label>
 
-        <div className="flex flex-col sm:flex-row sm:items-end gap-3">
-          {/* BUSCADOR */}
-          <div className="flex-1">
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              Buscar o seleccionar
-            </label>
+        {!isNewProduct && (
+          <>
+            <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+              {/* BUSCADOR */}
+              <div className="flex-1">
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Buscar o seleccionar
+                </label>
 
-            <div className="relative" ref={dropdownRef}>
-              <input
-                type="text"
-                placeholder="Escribe el nombre del producto"
-                className="w-100 border rounded-md px-3 py-2 text-sm shadow-sm"
-                value={
-                  selectedProduct
-                    ? products.find((p) => p.productid === Number(selectedProduct))
-                        ?.productname
-                    : searchProduct
-                }
-                onChange={(e) => {
-                  setSearchProduct(e.target.value);
-                  setSelectedProduct("");
-                  setDropdownOpen(true);
-                }}
-                onFocus={() => setDropdownOpen(true)}
-              />
+                <div className="relative" ref={dropdownRef}>
+                  <input
+                    type="text"
+                    placeholder="Escribe el nombre del producto"
+                    className="w-100 border rounded-md px-3 py-2 text-sm shadow-sm"
+                    value={
+                      selectedProduct
+                        ? products.find((p) => p.productid === Number(selectedProduct))
+                            ?.productname
+                        : searchProduct
+                    }
+                    onChange={(e) => {
+                      setSearchProduct(e.target.value);
+                      setSelectedProduct("");
+                      setDropdownOpen(true);
+                    }}
+                    onFocus={() => setDropdownOpen(true)}
+                  />
 
-              {dropdownOpen && (
-                <div className="absolute top-full mt-1 w-full bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto z-50">
-                  {filteredProducts.length === 0 ? (
-                    <p className="p-3 text-sm text-gray-500">
-                      No hay productos disponibles (o ya están agregados)
-                    </p>
-                  ) : (
-                    filteredProducts.map((p) => (
-                      <div
-                        key={p.productid}
-                        onClick={() => {
-                          setSelectedProduct(String(p.productid));
-                          setPurchasePrice(p.productpriceofsupplier || "");
-                          setSalePrice("");
-                          setSearchProduct("");
-                          setDropdownOpen(false);
-                        }}
-                        className="p-2 cursor-pointer hover:bg-gray-100 text-sm flex justify-between"
-                      >
-                        <span>{p.productname}</span>
-                        <span className="text-gray-600 font-semibold">
-                          {formatCOP(p.productpriceofsupplier || 0)}
-                        </span>
-                      </div>
-                    ))
+                  {dropdownOpen && (
+                    <div className="absolute top-full mt-1 w-full bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto z-50">
+                      {filteredProducts.length === 0 ? (
+                        <p className="p-3 text-sm text-gray-500">
+                          No hay productos disponibles (o ya están agregados)
+                        </p>
+                      ) : (
+                        filteredProducts.map((p) => (
+                          <div
+                            key={p.productid}
+                            onClick={() => {
+                              setSelectedProduct(String(p.productid));
+                              setPurchasePrice(p.productpriceofsupplier || "");
+                              setSalePrice("");
+                              setSearchProduct("");
+                              setDropdownOpen(false);
+                            }}
+                            className="p-2 cursor-pointer hover:bg-gray-100 text-sm flex justify-between"
+                          >
+                            <span>{p.productname}</span>
+                            <span className="text-gray-600 font-semibold">
+                              {formatCOP(p.productpriceofsupplier || 0)}
+                            </span>
+                          </div>
+                        ))
+                      )}
+                    </div>
                   )}
                 </div>
-              )}
-            </div>
-          </div>
+              </div>
 
-          {/* PRECIO COMPRA */}
-          <div className="flex-1 sm:w-32">
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              Precio compra (unidad)
-            </label>
+              {/* PRECIO COMPRA */}
+              <div className="flex-1 sm:w-32">
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Precio compra (unidad)
+                </label>
 
-            <input
-              type="number"
-              placeholder="Ej. 15000"
-              value={purchasePrice}
-              onChange={(e) =>
-                setPurchasePrice(e.target.value === "" ? "" : Number(e.target.value))
-              }
-              className="w-full rounded-md border px-2 py-2 text-sm shadow-sm"
-            />
-          </div>
+                <input
+                  type="number"
+                  placeholder="Ej. 15000"
+                  value={purchasePrice}
+                  onChange={(e) =>
+                    setPurchasePrice(
+                      e.target.value === "" ? "" : Number(e.target.value)
+                    )
+                  }
+                  className="w-full rounded-md border px-2 py-2 text-sm shadow-sm"
+                />
+              </div>
 
               {/* PRECIO VENTA */}
               <div className="flex-1 sm:w-32">
                 <label className="block text-xs font-medium text-gray-600 mb-1">
-                  Precio venta (unidad) â€” opcional
+                  Precio venta (unidad) - opcional
                 </label>
 
-            <input
-              type="number"
-              placeholder="Ej. 25000"
-              value={salePrice}
-              onChange={(e) =>
-                setSalePrice(e.target.value === "" ? "" : Number(e.target.value))
-              }
-              className="w-full rounded-md border px-2 py-2 text-sm shadow-sm"
-            />
-          </div>
+                <input
+                  type="number"
+                  placeholder="Ej. 25000"
+                  value={salePrice}
+                  onChange={(e) =>
+                    setSalePrice(
+                      e.target.value === "" ? "" : Number(e.target.value)
+                    )
+                  }
+                  className="w-full rounded-md border px-2 py-2 text-sm shadow-sm"
+                />
+              </div>
 
-          {/* CANTIDAD */}
-          <div className="flex-1 sm:w-20">
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              Cantidad
-            </label>
+              {/* CANTIDAD */}
+              <div className="flex-1 sm:w-20">
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Cantidad
+                </label>
 
                 <input
                   type="number"
@@ -683,41 +667,41 @@ export default function RegisterPurchaseForm({
                       <span className="font-medium text-sm text-gray-800">
                         {item.productname}
                       </span>
+                      <span className="bg-green-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                        {item.quantity}
+                      </span>
+                    </div>
 
-                    <span className="bg-green-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                      {item.quantity}
-                    </span>
+                    <p className="text-xs text-gray-600 mt-1">
+                      Compra: {formatCOP(item.unitprice)} • Total:{" "}
+                      {formatCOP(item.unitprice * item.quantity)}
+                    </p>
+
+                    {item.saleprice !== undefined && (
+                      <p className="text-xs text-gray-700">
+                        Venta: {formatCOP(item.saleprice)}
+                      </p>
+                    )}
+
+                    {item.description && (
+                      <p className="text-xs text-gray-500 mt-1 italic">
+                        {item.description}
+                      </p>
+                    )}
                   </div>
 
-                  <p className="text-xs text-gray-600 mt-1">
-                    Compra: {formatCOP(item.unitprice)} â€¢ Total:{" "}
-                    {formatCOP(item.unitprice * item.quantity)}
-                  </p>
-
-                  {item.saleprice !== undefined && (
-                    <p className="text-xs text-gray-700">
-                      Venta: {formatCOP(item.saleprice)}
-                    </p>
-                  )}
-
-                  {item.description && (
-                    <p className="text-xs text-gray-500 mt-1 italic">
-                      {item.description}
-                    </p>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => removeFromCart(index)}
+                    className="p-2 rounded hover:bg-green-100 transition shrink-0"
+                  >
+                    <img
+                      src="/icons/delete.svg"
+                      alt="Eliminar"
+                      className="w-5 h-5 opacity-80 hover:opacity-100"
+                    />
+                  </button>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={() => removeFromCart(index)}
-                  className="p-2 rounded hover:bg-green-100 transition shrink-0"
-                >
-                  <img
-                    src="/icons/delete.svg"
-                    alt="Eliminar"
-                    className="w-5 h-5 opacity-80 hover:opacity-100"
-                  />
-                </button>
               </div>
             ))}
           </div>
