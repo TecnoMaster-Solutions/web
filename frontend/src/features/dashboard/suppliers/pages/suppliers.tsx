@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import Swal from "sweetalert2";
@@ -58,7 +58,7 @@ function getErrorMessage(err: any) {
     err?.response?.data?.message ?? err?.response?.data?.error ?? err?.message;
   if (Array.isArray(msg)) return msg.join(" Â· ");
   if (typeof msg === "string" && msg.trim()) return msg;
-  return "OcurriÃ³ un error inesperado.";
+  return "Ocurrió un error inesperado.";
 }
 
 export default function SuppliersPage() {
@@ -102,7 +102,7 @@ export default function SuppliersPage() {
       render: (r) => <span className="font-medium text-gray-900">{r.name}</span>,
     },
     { key: "nit", header: "NIT" },
-    { key: "phone", header: "TelÃ©fono" },
+    { key: "phone", header: "Teléfono" },
     { key: "contact", header: "Contacto" },
     {
       key: "status",
@@ -149,11 +149,11 @@ export default function SuppliersPage() {
     if (row.status === "Inactivo") return;
 
     const res = await Swal.fire({
-      title: "Â¿Inactivar proveedor?",
-      text: `Se marcarÃ¡ "${row.name}" como Inactivo (no se eliminarÃ¡).`,
+      title: "¿Inactivar proveedor?",
+      text: `Se marcará "${row.name}" como Inactivo (no se eliminará).`,
       icon: "warning",
       showCancelButton: true,
-      confirmButtonText: "SÃ­, inactivar",
+      confirmButtonText: "Sí, inactivar",
       cancelButtonText: "Cancelar",
       confirmButtonColor: "#d33",
       reverseButtons: true,
@@ -161,7 +161,7 @@ export default function SuppliersPage() {
     });
 
     if (!res.isConfirmed) {
-      showInfo("AcciÃ³n cancelada.");
+      showInfo("Acción cancelada.");
       return;
     }
 

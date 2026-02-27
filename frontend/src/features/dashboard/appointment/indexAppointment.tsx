@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Calendar, dateFnsLocalizer, type View } from "react-big-calendar";
@@ -160,7 +160,7 @@ export default function IndexAppointment() {
     async (event: AppointmentEvent, orderId: number) => {
       const technicianId = resolveTechnicianIdFromOrder(event);
       if (!technicianId) {
-        throw new Error("No se pudo identificar el tÃ©cnico asignado para confirmar la orden.");
+        throw new Error("No se pudo identificar el técnico asignado para confirmar la orden.");
       }
 
       const history = await fetchOrderServiceHistory(orderId);
@@ -171,8 +171,8 @@ export default function IndexAppointment() {
 
       await addOrderServiceWorklog(orderId, {
         technicianid: technicianId,
-        title: "ConfirmaciÃ³n tÃ©cnica de finalizaciÃ³n",
-        note: `${TECH_COMPLETE_CONFIRM_TAG} TÃ©cnico confirmÃ³ orden lista para validaciÃ³n del cliente.`,
+        title: "Confirmación técnica de finalización",
+        note: `${TECH_COMPLETE_CONFIRM_TAG} Técnico confirmó orden lista para validación del cliente.`,
         progresspercent: 100,
       });
     },
@@ -410,9 +410,9 @@ export default function IndexAppointment() {
         const res = await Swal.fire({
           icon: "warning",
           title: "Cancelar orden",
-          text: `Â¿Deseas cancelar la orden #${event.id}?`,
+          text: `¿Deseas cancelar la orden #${event.id}?`,
           showCancelButton: true,
-          confirmButtonText: "SÃ­, cancelar",
+          confirmButtonText: "Sí, cancelar",
           cancelButtonText: "Volver",
           confirmButtonColor: "#04652c",
         });
@@ -430,11 +430,11 @@ export default function IndexAppointment() {
       }
 
       const res = await Swal.fire({
-        title: "Â¿Cancelar solicitud?",
-        text: `Se marcarÃ¡ la solicitud #${event.id} como cancelada.`,
+        title: "¿Cancelar solicitud?",
+        text: `Se marcará la solicitud #${event.id} como cancelada.`,
         icon: "warning",
         showCancelButton: true,
-        confirmButtonText: "SÃ­, cancelar",
+        confirmButtonText: "Sí, cancelar",
         cancelButtonText: "Volver",
         confirmButtonColor: "#d33",
         reverseButtons: true,

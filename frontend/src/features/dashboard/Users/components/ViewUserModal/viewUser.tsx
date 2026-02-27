@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import React, { useEffect, useState } from "react";
 import Colors from "@/shared/theme/colors";
 import { ViewUserModalProps } from "../../types/typesUser";

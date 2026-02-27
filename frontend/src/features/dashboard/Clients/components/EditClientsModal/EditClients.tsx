@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import { createPortal } from "react-dom";
 import Colors from "@/shared/theme/colors";
 import { useEditClientForm } from "../../hooks/useClients";
@@ -71,10 +71,10 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
             )}
           </div>
 
-          {/* NÃºmero Documento */}
+          {/* Número Documento */}
           <div>
             <label className="block text-sm text-gray-700 mb-1">
-              NÃºmero de Documento
+              Número de Documento
             </label>
             <input
               type="text"
@@ -116,10 +116,10 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
             />
           </div>
 
-          {/* TelÃ©fono */}
+          {/* Teléfono */}
           <div>
             <label className="block text-sm text-gray-700 mb-1">
-              TelÃ©fono
+              Teléfono
             </label>
             <input
               type="tel"
@@ -134,7 +134,7 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
           {/* Correo */}
           <div>
             <label className="block text-sm text-gray-700 mb-1">
-              Correo ElectrÃ³nico
+              Correo Electrónico
             </label>
             <input
               type="email"
@@ -179,10 +179,10 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
             />
           </div>
 
-          {/* CÃ³digo Postal */}
+          {/* Código Postal */}
           <div>
             <label className="block text-sm text-gray-700 mb-1">
-              CÃ³digo Postal
+              Código Postal
             </label>
             <input
               type="text"

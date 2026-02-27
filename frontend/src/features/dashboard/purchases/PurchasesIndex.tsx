@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useCallback, useMemo, useState, useEffect, useRef } from "react";
 import Swal from "sweetalert2";
@@ -149,7 +149,7 @@ export default function PurchasesIndex() {
     [purchases]
   );
 
-  // Memorizar las funciones de callback con dependencias especÃ­ficas
+  // Memorizar las funciones de callback con dependencias especa­ficas
   const handleCreate = useCallback(() => {
     resetForm();
     setRegisterModalOpen(true);

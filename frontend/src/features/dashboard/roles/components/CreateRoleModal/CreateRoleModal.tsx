@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import { XMarkIcon, CheckIcon } from "@heroicons/react/24/solid";
@@ -195,7 +195,7 @@ export default function CreateRoleModal({
                   >
                     <tr>
                       <th className="px-4 py-3 text-left font-semibold text-white">
-                        MÃ³dulo
+                        Módulo
                       </th>
                       <th className="px-4 py-3 text-center font-semibold text-white">
                         Permisos / Privilegios

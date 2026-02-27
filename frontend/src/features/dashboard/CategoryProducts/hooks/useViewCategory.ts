@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Category } from "../types/typeCategoryProducts";
 
 export const useViewCategory = (category: Category | null) => {

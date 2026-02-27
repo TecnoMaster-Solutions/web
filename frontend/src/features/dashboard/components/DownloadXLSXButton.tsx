@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { MouseEvent } from "react";
 import Colors from "@/shared/theme/colors";
@@ -56,7 +56,7 @@ export default function DownloadXLSXButton<T extends Record<string, unknown>>({
       };
     });
 
-    // FunciÃ³n inteligente de formateo
+    // Función inteligente de formateo
     const formatValue = (key: string, value: unknown) => {
       if (value === null || value === undefined) return "";
 
@@ -69,7 +69,7 @@ export default function DownloadXLSXButton<T extends Record<string, unknown>>({
         return isNaN(num) ? value : `$${num.toLocaleString("es-CO")}`;
       }
 
-      // Otros nÃºmeros normales
+      // Otros números normales
       if (typeof value === "number") {
         return value.toLocaleString("es-CO");
       }

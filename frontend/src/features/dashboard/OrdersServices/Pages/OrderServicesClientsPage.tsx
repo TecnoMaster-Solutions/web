@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useMemo, useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
@@ -425,7 +425,7 @@ export default function OrderServicesClientsPage() {
   const [page, setPage] = useState(1);
   const [reportOpen, setReportOpen] = useState(false);
   const [reportRowId, setReportRowId] = useState<number | null>(null);
-  const [motivo, setMotivo] = useState("DaÃ±o dentro de garantÃ­a");
+  const [motivo, setMotivo] = useState("Daño dentro de garantía");
   const [detalle, setDetalle] = useState("");
   const [notifyClient, setNotifyClient] = useState(false);
   const [errorDetalle, setErrorDetalle] = useState("");
@@ -664,7 +664,7 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
     )}</div></div>
     <div class="item"><div class="label">Tipo</div><div class="val">${escapeHtml(row.tipo)}</div></div>
     <div class="item"><div class="label">Cliente</div><div class="val">${escapeHtml(row.cliente)}</div></div>
-    <div class="item"><div class="label">Tecnicos</div><div class="val">${escapeHtml(row.tecnico || "-")}</div></div>
+    <div class="item"><div class="label">Técnicos</div><div class="val">${escapeHtml(row.tecnico || "-")}</div></div>
     <div class="item"><div class="label">Fecha inicio</div><div class="val">${escapeHtml(formatDateES(row.fechainicio) || "-")}</div></div>
     <div class="item"><div class="label">Fecha fin</div><div class="val">${escapeHtml(formatDateES(row.fechafin) || "-")}</div></div>
     <div class="item"><div class="label">Hora inicio</div><div class="val">${escapeHtml(formatTimeES(row.horainicio) || "-")}</div></div>
@@ -766,7 +766,7 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
   function openReport(row: Row) {
     if (row.estadoKey === "Anulada") return;
     setReportRowId(row.id);
-    setMotivo("DaÃ±o dentro de garantÃ­a");
+    setMotivo("Daño dentro de garantía");
     setDetalle("");
     setNotifyClient(false);
     setErrorDetalle("");
@@ -775,7 +775,7 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
 
   async function submitReport() {
     if (!detalle.trim()) {
-      setErrorDetalle("Describe quÃ© pasÃ³");
+      setErrorDetalle("Describe qué pasó");
       return;
     }
     if (reportRowId == null) return;
@@ -795,7 +795,7 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
       await Swal.fire({
         icon: "success",
         title: "Reporte guardado",
-        text: `Se registrÃ³ el reporte de garantÃ­a para la orden #${reportRowId}.`,
+        text: `Se registró el reporte de garantía para la orden #${reportRowId}.`,
         timer: 1400,
         showConfirmButton: false,
       });
@@ -803,7 +803,7 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
       await Swal.fire({
         icon: "error",
         title: "Error",
-        text: "No se pudo guardar el reporte de garantÃ­a.",
+        text: "No se pudo guardar el reporte de garantía.",
       });
     }
   }
@@ -827,15 +827,15 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
     }
 
     if (!hasTechnicianConfirmation) {
-      showInfo("El tÃ©cnico debe finalizar primero la cita para que puedas completar la orden.");
+      showInfo("El técnico debe finalizar primero la cita para que puedas completar la orden.");
       return;
     }
     const res = await Swal.fire({
       title: "Completar orden de servicio",
-      text: `La orden #${row.id} se marcarÃ¡ como finalizada.`,
+      text: `La orden #${row.id} se marcará como finalizada.`,
       icon: "question",
       showCancelButton: true,
-      confirmButtonText: "SÃ­, completar",
+      confirmButtonText: "Sí, completar",
       cancelButtonText: "Cancelar",
       reverseButtons: true,
     });
@@ -873,10 +873,10 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
     if (row.estadoKey === "Anulada") return;
     const res = await Swal.fire({
       title: "Cancelar orden?",
-      text: `Se cancelarÃ¡ la orden #${row.id}.`,
+      text: `Se cancelará la orden #${row.id}.`,
       icon: "warning",
       showCancelButton: true,
-      confirmButtonText: "SÃ­, cancelar",
+      confirmButtonText: "Sí, cancelar",
       cancelButtonText: "Volver",
       confirmButtonColor: "#d33",
       reverseButtons: true,
@@ -981,7 +981,7 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
 
                     <div className="mt-4 grid grid-cols-1 gap-3">
                       <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5">
-                        <p className="text-[11px] uppercase tracking-wide text-gray-500">TÃ©cnico</p>
+                        <p className="text-[11px] uppercase tracking-wide text-gray-500">Técnico</p>
                         <p className="mt-1 text-sm font-medium text-gray-800 break-words">{row.tecnico}</p>
                       </div>
                       <div className="grid grid-cols-2 gap-3">
@@ -1053,7 +1053,7 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
                             className="inline-flex h-8 items-center justify-center gap-2 rounded-full border border-[#04652c] bg-[#04652c] px-3 text-xs font-semibold text-white shadow-sm hover:opacity-95 disabled:opacity-50"
                           >
                             <img src={ICONS.report} className="h-4 w-4 brightness-0 invert" alt="" />
-                            Reportar garantÃ­a
+                            Reportar garantía
                           </motion.button>
                         )}
                         <motion.button
@@ -1128,7 +1128,7 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
       </main>
 
       <Modal
-        title={reportRowId ? `Reportar garantÃ­a #${reportRowId}` : "Reportar garantÃ­a"}
+        title={reportRowId ? `Reportar garantía #${reportRowId}` : "Reportar garantía"}
         isOpen={reportOpen}
         onClose={() => setReportOpen(false)}
         widthClass="max-w-lg"
@@ -1159,15 +1159,15 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
               onChange={(e) => setMotivo(e.target.value)}
               className="w-full border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#04652c]/30"
             >
-              <option>DaÃ±o dentro de garantÃ­a</option>
+              <option>Daño dentro de garantía</option>
               <option>Producto defectuoso</option>
-              <option>InstalaciÃ³n con falla</option>
+              <option>Instalación con falla</option>
               <option>Otro</option>
             </select>
           </div>
 
           <div>
-            <label className="block text-xs uppercase tracking-wide text-gray-600 mb-1">Â¿QuÃ© pasÃ³?</label>
+            <label className="block text-xs uppercase tracking-wide text-gray-600 mb-1">¿Qué pasó?</label>
             <textarea
               value={detalle}
               onChange={(e) => {
@@ -1175,7 +1175,7 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
                 if (e.target.value.trim()) setErrorDetalle("");
               }}
               rows={4}
-              placeholder="Describe brevemente el caso de garantÃ­a"
+              placeholder="Describe brevemente el caso de garantía"
               className={`w-full border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 ${
                 errorDetalle ? "border-green-500 focus:ring-green-200" : "focus:ring-[#04652c]/30"
               }`}
@@ -1193,7 +1193,7 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
           </label>
 
           <div className="rounded-md bg-blue-50 border border-blue-200 p-3 text-xs text-blue-800">
-            Al guardar, la orden pasarÃ¡ a <b>GarantÃ­a (reportada)</b>.
+            Al guardar, la orden pasará a <b>Garantía (reportada)</b>.
           </div>
         </div>
       </Modal>

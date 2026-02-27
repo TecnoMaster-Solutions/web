@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useRef, useState, useEffect } from "react";
 import Modal from "@/features/dashboard/components/Modal";
@@ -274,7 +274,7 @@ const EditTechnicianModal: React.FC<EditTechnicianModalProps> = ({
 
   return (
     <Modal
-      title="Editar TÃ©cnico"
+      title="Editar Técnico"
       isOpen={isOpen}
       onClose={() => {
         resetForm();
@@ -322,7 +322,7 @@ const EditTechnicianModal: React.FC<EditTechnicianModalProps> = ({
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">NÃºmero de Documento *</label>
+          <label className="block text-sm font-medium mb-1">Número de Documento *</label>
           <input
             type="text"
             value={documentNumber}
@@ -361,7 +361,7 @@ const EditTechnicianModal: React.FC<EditTechnicianModalProps> = ({
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">TelÃ©fono *</label>
+          <label className="block text-sm font-medium mb-1">Teléfono *</label>
           <input
             type="text"
             value={phone}
@@ -403,7 +403,7 @@ const EditTechnicianModal: React.FC<EditTechnicianModalProps> = ({
 
         <div className="col-span-2">
           <label className="block text-sm font-medium mb-1">
-            Tipos de tÃ©cnico *
+            Tipos de técnico *
           </label>
 
           <div className="flex flex-wrap gap-2">

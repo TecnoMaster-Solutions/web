@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import Modal from "@/features/dashboard/components/Modal";
@@ -104,7 +104,7 @@ export default function OrderServiceHistoryCreateModal({
     let ok = true;
 
     if (!techId || techId < 1) {
-      setErrTech("Selecciona o ingresa un tÃ©cnico");
+      setErrTech("Selecciona o ingresa un técnico");
       ok = false;
     } else {
       setErrTech("");
@@ -121,14 +121,14 @@ export default function OrderServiceHistoryCreateModal({
     }
 
     if (t.length > 120) {
-      showWarning("El tÃ­tulo supera 120 caracteres.");
+      showWarning("El título supera 120 caracteres.");
       ok = false;
     }
 
     if (!ok) return;
 
     if (!orderId) {
-      showError("No se encontrÃ³ el ID de la orden.");
+      showError("No se encontró el ID de la orden.");
       return;
     }
 
@@ -181,7 +181,7 @@ export default function OrderServiceHistoryCreateModal({
       <div className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs uppercase tracking-wide text-gray-600 mb-1">TÃ©cnico</label>
+            <label className="block text-xs uppercase tracking-wide text-gray-600 mb-1">Técnico</label>
             {hasTechOptions ? (
               <select
                 value={technicianid ? String(technicianid) : ""}
@@ -208,7 +208,7 @@ export default function OrderServiceHistoryCreateModal({
                   setTechnicianid(Number(e.target.value) || 0);
                   setErrTech("");
                 }}
-                placeholder="ID del tÃ©cnico"
+                placeholder="ID del técnico"
                 className={`w-full border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 ${
                   errTech ? "border-green-500 focus:ring-green-200" : "focus:ring-[#04652c]/30"
                 }`}
@@ -218,12 +218,12 @@ export default function OrderServiceHistoryCreateModal({
           </div>
 
           <div>
-            <label className="block text-xs uppercase tracking-wide text-gray-600 mb-1">TÃ­tulo (opcional)</label>
+            <label className="block text-xs uppercase tracking-wide text-gray-600 mb-1">Título (opcional)</label>
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               maxLength={120}
-              placeholder="Ej: Avance de instalaciÃ³n"
+              placeholder="Ej: Avance de instalación"
               className="w-full border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#04652c]/30"
             />
             <div className="text-[11px] text-gray-500 mt-1">{title.length}/120</div>

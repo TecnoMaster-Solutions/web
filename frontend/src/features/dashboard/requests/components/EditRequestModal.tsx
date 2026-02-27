@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Modal from "@/features/dashboard/components/Modal";
@@ -304,7 +304,7 @@ export default function EditRequestModal({
       .map((t: any) => {
         const u = t?.users || t?.user || t?.Users || {};
         const name = [u?.name, u?.lastname].filter(Boolean).join(" ").trim();
-        const label = name || `TÃ©cnico #${t?.technicianid ?? t?.id ?? "?"}`;
+        const label = name || `Técnico #${t?.technicianid ?? t?.id ?? "?"}`;
         return { technicianid: Number(t?.technicianid ?? t?.id), label } as TechnicianOption;
       })
       .filter((x) => Number.isFinite(x.technicianid) && x.technicianid > 0);
@@ -393,15 +393,15 @@ export default function EditRequestModal({
   function validateDateRequired(date: string | null) {
     if (!date) return "Selecciona la fecha.";
     const d = parseYMD(date);
-    if (!d) return "Fecha invÃ¡lida.";
+    if (!d) return "Fecha inválida.";
     if (isPastDateLocal(date)) return "No puedes seleccionar una fecha pasada.";
-    if (!isAllowedDate(date)) return "No se puede agendar los domingos (solo lunes a sÃ¡bado).";
+    if (!isAllowedDate(date)) return "No se puede agendar los domingos (solo lunes a sábado).";
     return null;
   }
 
   function validateStartTimeRequired(date: string | null, start: string | null) {
     if (!start) return "Selecciona la hora inicial.";
-    if (!isAllowedTime(start)) return "Horario permitido: 07:00Ã¢â‚¬â€œ17:00.";
+    if (!isAllowedTime(start)) return "Horario permitido: 07:00–17:00.";
     if (timeToMinutes(start) === SCHEDULE_MAX) return "La hora de inicio no puede ser 17:00.";
     if (date && !isPastDateLocal(date) && isPastDateTimeLocal(date, start)) {
       return "La hora inicial no puede estar en el pasado.";
@@ -411,7 +411,7 @@ export default function EditRequestModal({
 
   function validateEndTimeRequired(date: string | null, start: string | null, end: string | null) {
     if (!end) return "Selecciona la hora final.";
-    if (!isAllowedTime(end)) return "Horario permitido: 07:00Ã¢â‚¬â€œ17:00.";
+    if (!isAllowedTime(end)) return "Horario permitido: 07:00–17:00.";
     if (date && !isPastDateLocal(date) && isPastDateTimeLocal(date, end)) {
       return "La hora final no puede estar en el pasado.";
     }
@@ -440,9 +440,9 @@ export default function EditRequestModal({
     e.horaFinal = needsTime ? validateEndTimeRequired(programada, horaProgramada, horaFinal) : null;
 
     if (!selectedTechnicians.length) {
-      e.technicians = "Selecciona al menos un tÃ©cnico.";
+      e.technicians = "Selecciona al menos un técnico.";
     } else if (selectedBusyTechnicianIds.length > 0) {
-      e.technicians = "Hay tÃ©cnicos seleccionados que ya estÃ¡n ocupados en ese horario.";
+      e.technicians = "Hay técnicos seleccionados que ya están ocupados en ese horario.";
     } else {
       e.technicians = null;
     }
@@ -524,7 +524,7 @@ export default function EditRequestModal({
   function addTechnician(id: number) {
     if (!Number.isFinite(id) || id <= 0) return;
     if (busyTechnicianIds.has(id)) {
-      showWarning("Este tÃ©cnico ya estÃ¡ ocupado en el horario seleccionado.");
+      showWarning("Este técnico ya está ocupado en el horario seleccionado.");
       return;
     }
     markTouched("technicians");
@@ -688,7 +688,7 @@ export default function EditRequestModal({
           : [];
         if (!cancelled) setTechniciansRaw(list);
       } catch (e: any) {
-        const msg = (e as any)?.response?.data?.message || (e as any)?.message || "Error cargando tÃ©cnicos.";
+        const msg = (e as any)?.response?.data?.message || (e as any)?.message || "Error cargando técnicos.";
         if (!cancelled) {
           setTechError(String(msg));
           setTechniciansRaw([]);
@@ -863,7 +863,7 @@ export default function EditRequestModal({
     }
 
     if (!isAllowedDate(v)) {
-      showWarning("No se puede agendar los domingos. Solo lunes a sÃ¡bado.");
+      showWarning("No se puede agendar los domingos. Solo lunes a sábado.");
       return;
     }
 
@@ -883,7 +883,7 @@ export default function EditRequestModal({
     }
 
     if (!isAllowedTime(v)) {
-      showWarning("Horario permitido: 07:00Ã¢â‚¬â€œ17:00.");
+      showWarning("Horario permitido: 07:00–17:00.");
       return;
     }
 
@@ -917,7 +917,7 @@ export default function EditRequestModal({
     }
 
     if (!isAllowedTime(v)) {
-      showWarning("Horario permitido: 07:00Ã¢â‚¬â€œ17:00.");
+      showWarning("Horario permitido: 07:00–17:00.");
       return;
     }
 
@@ -945,14 +945,14 @@ export default function EditRequestModal({
     }
 
     if (techLoading) {
-      showInfo("Espera a que carguen los tÃ©cnicos.");
+      showInfo("Espera a que carguen los técnicos.");
       return;
     }
 
     if (!isValidNow()) return;
 
     if (selectedBusyTechnicianIds.length > 0) {
-      showError("Hay tÃ©cnicos ocupados en ese horario. Ajusta horario o tÃ©cnicos.");
+      showError("Hay técnicos ocupados en ese horario. Ajusta horario o técnicos.");
       return;
     }
 
@@ -970,7 +970,7 @@ export default function EditRequestModal({
     const scheduledEndAtISO = combineDateTimeLocal(programada, horaFinal);
 
     if (!scheduledAtISO || !scheduledEndAtISO) {
-      showError("Fecha u horas invÃ¡lidas.");
+      showError("Fecha u horas inválidas.");
       return;
     }
 
@@ -1030,7 +1030,7 @@ export default function EditRequestModal({
                 : serviceTypesLoading
                 ? "Cargando tipos..."
                 : techLoading
-                ? "Cargando tÃ©cnicos..."
+                ? "Cargando técnicos..."
                 : undefined
             }
           >
@@ -1267,11 +1267,11 @@ export default function EditRequestModal({
 
         <div className="rounded-xl border border-gray-200 bg-white p-3">
           <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
-            Programacion y estado
+            Programación y estado
           </h4>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <div className="md:col-span-4">
-            <label className="mb-1 block text-xs font-medium text-gray-900">DirecciÃ³n</label>
+            <label className="mb-1 block text-xs font-medium text-gray-900">Dirección</label>
             <input
               value={direccion}
               onChange={(e) => {
@@ -1378,7 +1378,7 @@ export default function EditRequestModal({
         <div className="rounded-xl border border-gray-200 bg-white p-3">
           <div className="mb-1 flex items-center justify-between">
             <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500">
-              Tecnicos
+              Técnicos
             </label>
             <button
               type="button"
@@ -1399,7 +1399,7 @@ export default function EditRequestModal({
             ].join(" ")}
           >
             {selectedTechniciansFull.length === 0 ? (
-              <div className="text-xs text-gray-500 px-1 py-1">No has seleccionado tÃ©cnicos.</div>
+              <div className="text-xs text-gray-500 px-1 py-1">No has seleccionado técnicos.</div>
             ) : (
               <div className="flex flex-wrap gap-2">
                 {selectedTechniciansFull.map((t) => (
@@ -1453,7 +1453,7 @@ export default function EditRequestModal({
                   setTechOpen(false);
                 }
               }}
-              placeholder={techLoading ? "Cargando tÃ©cnicos..." : "Buscar por nombre o ID..."}
+              placeholder={techLoading ? "Cargando técnicos..." : "Buscar por nombre o ID..."}
               className={[
                 "w-full rounded-lg border bg-gray-50 h-10 px-3 text-sm focus:bg-white focus:ring-2 focus:ring-black/15 disabled:opacity-60",
                 shouldShowError("technicians") && errors.technicians
@@ -1469,7 +1469,7 @@ export default function EditRequestModal({
                 {techOptions.length === 0 ? (
                   <div className="px-3 py-2 text-xs text-gray-500">
                     {selectedTechnicians.length === availableTechnicians.length
-                      ? "Ya seleccionaste todos los tÃ©cnicos."
+                      ? "Ya seleccionaste todos los técnicos."
                       : "No hay coincidencias."}
                   </div>
                 ) : (
@@ -1491,7 +1491,7 @@ export default function EditRequestModal({
                           </span>
                           <span className="min-w-0 flex-1">
                             <span className="block truncate font-medium">{t.label}</span>
-                            <span className="block text-xs text-gray-500">TÃ©cnico #{t.technicianid}</span>
+                            <span className="block text-xs text-gray-500">Técnico #{t.technicianid}</span>
                           </span>
                           <span className="text-xs text-gray-400">Agregar</span>
                         </button>
@@ -1513,7 +1513,7 @@ export default function EditRequestModal({
           <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
             Descripcion
           </h4>
-          <label className="mb-1 block text-xs font-medium text-gray-900">DescripciÃ³n</label>
+          <label className="mb-1 block text-xs font-medium text-gray-900">Descripción</label>
           <textarea
             value={descripcion}
             onChange={(e) => {

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -56,7 +56,7 @@ function consumeFlashToast(): FlashToast | null {
   }
 }
 
-type RowTipo = "InstalaciÃ³n" | "Mantenimiento";
+type RowTipo = "Instalación" | "Mantenimiento";
 type LineItem = { nombre: string; cantidad: number; precio?: number };
 
 type WarrantyInfo = {
@@ -114,7 +114,7 @@ function sortRowsByIdDesc(arr: Row[]) {
 }
 
 function formatCOP(n?: number) {
-  if (n == null || !Number.isFinite(n)) return "â€”";
+  if (n == null || !Number.isFinite(n)) return "—";
   return n.toLocaleString("es-CO", {
     style: "currency",
     currency: "COP",
@@ -134,7 +134,7 @@ function EstadoText({ v, colorKey }: { v: Estado; colorKey?: string }) {
   };
 
   const key = colorKey ?? v;
-  const label = key === "GarantiaReportada" ? "GarantÃ­a (reportada)" : v;
+  const label = key === "GarantiaReportada" ? "Garantía (reportada)" : v;
   const colorClass = STYLE[key] ?? "text-slate-700";
 
   return (
@@ -214,7 +214,7 @@ function mapEstadoKey(name?: string | null): Estado {
 
 function inferTipo(desc?: string | null): RowTipo {
   const d = (desc || "").toLowerCase();
-  if (d.includes("instal")) return "InstalaciÃ³n";
+  if (d.includes("instal")) return "Instalación";
   if (d.includes("manten")) return "Mantenimiento";
   return "Mantenimiento";
 }
@@ -335,7 +335,7 @@ function resolveWarrantyFromBackend(o: any): WarrantyInfo | undefined {
 
   if (!w) return undefined;
 
-  const label = String(w.label ?? w.reason ?? w.motivo ?? "GarantÃ­a");
+  const label = String(w.label ?? w.reason ?? w.motivo ?? "Garantí­a");
   const details = w.details ?? w.description ?? w.detalle ?? w.message ?? undefined;
 
   const notifiedClient =
@@ -366,7 +366,7 @@ function resolveWarrantyFromBackend(o: any): WarrantyInfo | undefined {
       ? String(w.reportedbyname)
       : "";
 
-  const reportedBy = rb?.trim() ? rb : "â€”";
+  const reportedBy = rb?.trim() ? rb : "—";
 
   return {
     label,
@@ -437,7 +437,7 @@ function toRow(o: OrderServiceDTO): Row {
         `Cliente #${anyO.client.customerid}`
       : anyO?.client?.customerid
       ? `Cliente #${anyO.client.customerid}`
-      : "â€”";
+      : "—";
 
   const technicians: TechnicianOption[] =
     anyO?.technicians
@@ -446,12 +446,12 @@ function toRow(o: OrderServiceDTO): Row {
         const name = u ? [u.name, u.lastname].filter(Boolean).join(" ") : "";
         return {
           technicianid: Number(t.technicianid) || 0,
-          label: name || `TÃ©cnico #${t.technicianid}`,
+          label: name || `Técnico #${t.technicianid}`,
         };
       })
       ?.filter((t: TechnicianOption) => t.technicianid > 0) ?? [];
 
-  const tecnico = technicians.length ? technicians.map((t) => t.label).join(", ") : "â€”";
+  const tecnico = technicians.length ? technicians.map((t) => t.label).join(", ") : "—";
 
   const fechainicio = anyO?.fechainicio ?? anyO?.fechaInicio ?? anyO?.startdate ?? anyO?.startDate ?? null;
   const fechafin = anyO?.fechafin ?? anyO?.fechaFin ?? anyO?.enddate ?? anyO?.endDate ?? null;
@@ -536,7 +536,7 @@ export default function OrdersServicesIndexPage() {
 
   const [reportOpen, setReportOpen] = useState(false);
   const [reportRowId, setReportRowId] = useState<number | null>(null);
-  const [motivo, setMotivo] = useState("DaÃ±o dentro de garantÃ­a");
+  const [motivo, setMotivo] = useState("Daño dentro de garantía");
   const [detalle, setDetalle] = useState("");
   const [notifyClient, setNotifyClient] = useState(false);
   const [errorDetalle, setErrorDetalle] = useState("");
@@ -613,7 +613,7 @@ export default function OrdersServicesIndexPage() {
     [clientIdFromAuth, isClientRole, isTechnicianRole, technicianIdFromAuth]
   );
 
-  // âœ… Disparar notificaciÃ³n al aterrizar desde /new (flash toast)
+  // âœ… Disparar notificación al aterrizar desde /new (flash toast)
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -633,7 +633,7 @@ export default function OrdersServicesIndexPage() {
     // warning
     Swal.fire({
       icon: "warning",
-      title: "AtenciÃ³n",
+      title: "Atención",
       text: toast.message,
       confirmButtonColor: "#04652c",
     });
@@ -660,7 +660,7 @@ export default function OrdersServicesIndexPage() {
     const row = rows.find((r) => String(r.id) === String(targetId));
     if (!row) {
       cancelHandledRef.current = true;
-      showError("No se encontrÃ³ la orden para cancelar.");
+      showError("No se encontró la orden para cancelar.");
       clearParams();
       return;
     }
@@ -684,7 +684,7 @@ export default function OrdersServicesIndexPage() {
       Swal.fire({
         icon: "error",
         title: "Error",
-        text: "No se pudieron cargar las Ã³rdenes desde el backend.",
+        text: "No se pudieron cargar las órdenes desde el backend.",
       });
     } finally {
       setLoading(false);
@@ -707,7 +707,7 @@ export default function OrdersServicesIndexPage() {
         Swal.fire({
           icon: "error",
           title: "Error",
-          text: "No se pudieron cargar las Ã³rdenes desde el backend.",
+          text: "No se pudieron cargar las órdenes desde el backend.",
         });
       } finally {
         if (!mounted) return;
@@ -761,9 +761,9 @@ export default function OrdersServicesIndexPage() {
       const res = await Swal.fire({
         icon: "warning",
         title: "Cancelar orden",
-        text: `Â¿Deseas cancelar la orden #${row.id}?`,
+        text: `¿Deseas cancelar la orden #${row.id}?`,
         showCancelButton: true,
-        confirmButtonText: "SÃ­, cancelar",
+        confirmButtonText: "Sí, cancelar",
         cancelButtonText: "Volver",
         confirmButtonColor: "#04652c",
       });
@@ -800,10 +800,10 @@ export default function OrdersServicesIndexPage() {
       setBusy(true);
       try {
         await markOrderServiceWarranty(row.id);
-        showSuccess(`La orden #${row.id} quedÃ³ marcada en garantÃ­a.`);
+        showSuccess(`La orden #${row.id} quedó marcada en garantía.`);
         await reloadOrders();
       } catch (e: any) {
-        const message = e?.response?.data?.message?.[0] || e?.response?.data?.message || "No se pudo marcar la garantÃ­a.";
+        const message = e?.response?.data?.message?.[0] || e?.response?.data?.message || "No se pudo marcar la garantía.";
         showError(message);
       } finally {
         setBusy(false);
@@ -814,7 +814,7 @@ export default function OrdersServicesIndexPage() {
 
   const openReport = useCallback((row: Row) => {
     setReportRowId(row.id);
-    setMotivo(row.garantia?.label || "DaÃ±o dentro de garantÃ­a");
+    setMotivo(row.garantia?.label || "Daño dentro de garantía");
     setDetalle(row.garantia?.details || "");
     setNotifyClient(!!row.garantia?.notifiedClient);
     setErrorDetalle("");
@@ -824,7 +824,7 @@ export default function OrdersServicesIndexPage() {
   const submitReport = useCallback(
     async () => {
       if (!detalle.trim()) {
-        setErrorDetalle("Describe quÃ© pasÃ³");
+        setErrorDetalle("Describe qué pasó");
         return;
       }
       if (reportRowId == null) return;
@@ -842,7 +842,7 @@ export default function OrdersServicesIndexPage() {
         await Swal.fire({
           icon: "success",
           title: "Reporte guardado",
-          text: `Se registrÃ³ el reporte de garantÃ­a para la orden #${reportRowId}.`,
+          text: `Se registró el reporte de garantía para la orden #${reportRowId}.`,
           confirmButtonColor: "#04652c",
         });
 
@@ -854,7 +854,7 @@ export default function OrdersServicesIndexPage() {
           text:
             e?.response?.data?.message?.[0] ||
             e?.response?.data?.message ||
-            "No se pudo guardar el reporte de garantÃ­a.",
+            "No se pudo guardar el reporte de garantía.",
           confirmButtonColor: "#04652c",
         });
       } finally {
@@ -897,7 +897,7 @@ export default function OrdersServicesIndexPage() {
 
     const serviciosRows =
       servicios.length === 0
-        ? `<tr><td colspan="4" class="empty">â€”</td></tr>`
+        ? `<tr><td colspan="4" class="empty">—</td></tr>`
         : servicios
             .map((s) => {
               const cant = Number(s.cantidad) || 0;
@@ -914,7 +914,7 @@ export default function OrdersServicesIndexPage() {
 
     const materialesRows =
       materiales.length === 0
-        ? `<tr><td colspan="4" class="empty">â€”</td></tr>`
+        ? `<tr><td colspan="4" class="empty">—</td></tr>`
         : materiales
             .map((m) => {
               const cant = Number(m.cantidad) || 0;
@@ -931,10 +931,10 @@ export default function OrdersServicesIndexPage() {
 
     const garantiaBlock = row.garantia
       ? `<div class="section">
-<div class="label" style="margin-bottom:6px">GarantÃ­a</div>
+<div class="label" style="margin-bottom:6px">Garantía</div>
 <div class="grid">
   <div class="item"><div class="label">Estado</div><div class="val">${
-    estadoKey === "GarantiaReportada" ? "GarantÃ­a (reportada)" : "GarantÃ­a"
+    estadoKey === "GarantiaReportada" ? "Garantía (reportada)" : "Garantía"
   }</div></div>
   <div class="item"><div class="label">Motivo</div><div class="val">${escapeHtml(row.garantia.label)}</div></div>
   <div class="item"><div class="label">Reportado por</div><div class="val">${escapeHtml(row.garantia.reportedBy)}</div></div>
@@ -942,10 +942,10 @@ export default function OrdersServicesIndexPage() {
     formatDateTimeES(row.garantia.reportedAtISO)
   )}</div></div>
   <div class="item" style="grid-column:1 / -1"><div class="label">Detalle</div><div class="val">${
-    row.garantia.details ? nl2br(escapeHtml(row.garantia.details)) : "â€”"
+    row.garantia.details ? nl2br(escapeHtml(row.garantia.details)) : "—"
   }</div></div>
   <div class="item" style="grid-column:1 / -1"><div class="label">Cliente notificado</div><div class="val">${
-    typeof row.garantia.notifiedClient === "boolean" ? (row.garantia.notifiedClient ? "SÃ­" : "No") : "â€”"
+    typeof row.garantia.notifiedClient === "boolean" ? (row.garantia.notifiedClient ? "Sí" : "No") : "—"
   }</div></div>
 </div>
 </div>`
@@ -954,7 +954,7 @@ export default function OrdersServicesIndexPage() {
     const files = row.files ?? [];
     const filesBlock =
       files.length === 0
-        ? `<div class="item" style="grid-column:1 / -1"><div class="label">Archivos</div><div class="val">â€”</div></div>`
+        ? `<div class="item" style="grid-column:1 / -1"><div class="label">Archivos</div><div class="val">—</div></div>`
         : `<div class="item" style="grid-column:1 / -1"><div class="label">Archivos</div>
             <div class="val">
               <ul class="list">
@@ -1009,45 +1009,45 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
   <div class="hwrap">
     <div>
       <div class="h">Orden de servicio #${row.id}</div>
-      <div class="sub">CÃ³digo: <span class="mono">OS-${String(row.id).padStart(6, "0")}</span></div>
+      <div class="sub">Código: <span class="mono">OS-${String(row.id).padStart(6, "0")}</span></div>
     </div>
     <div class="badge"><span class="dot"></span><span style="font-weight:700">Vertecx</span></div>
   </div>
 
   <div class="grid">
     <div class="item"><div class="label">Estado</div><div class="val">${escapeHtml(
-      estadoKey === "GarantiaReportada" ? "GarantÃ­a (reportada)" : row.estado
+      estadoKey === "GarantiaReportada" ? "Garantía (reportada)" : row.estado
     )}</div></div>
 
     <div class="item"><div class="label">Tipo</div><div class="val">${escapeHtml(row.tipo)}</div></div>
 
     <div class="item"><div class="label">Cliente</div><div class="val">${escapeHtml(row.cliente)}</div></div>
 
-    <div class="item"><div class="label">TÃ©cnicos</div><div class="val">${escapeHtml(row.tecnico || "â€”")}</div></div>
+    <div class="item"><div class="label">Técnicos</div><div class="val">${escapeHtml(row.tecnico || "—")}</div></div>
 
-    <div class="item"><div class="label">Fecha inicio</div><div class="val">${escapeHtml(formatDateES(row.fechainicio) || "â€”")}</div></div>
+    <div class="item"><div class="label">Fecha inicio</div><div class="val">${escapeHtml(formatDateES(row.fechainicio) || "—")}</div></div>
 
-    <div class="item"><div class="label">Fecha fin</div><div class="val">${escapeHtml(formatDateES(row.fechafin) || "â€”")}</div></div>
+    <div class="item"><div class="label">Fecha fin</div><div class="val">${escapeHtml(formatDateES(row.fechafin) || "—")}</div></div>
 
-    <div class="item"><div class="label">Hora inicio</div><div class="val">${escapeHtml(formatTimeES(row.horainicio) || "â€”")}</div></div>
+    <div class="item"><div class="label">Hora inicio</div><div class="val">${escapeHtml(formatTimeES(row.horainicio) || "—")}</div></div>
 
-    <div class="item"><div class="label">Hora fin</div><div class="val">${escapeHtml(formatTimeES(row.horafin) || "â€”")}</div></div>
+    <div class="item"><div class="label">Hora fin</div><div class="val">${escapeHtml(formatTimeES(row.horafin) || "—")}</div></div>
 
-    <div class="item"><div class="label">Fecha programada</div><div class="val">${escapeHtml(row.fechaProgramada || "â€”")}</div></div>
+    <div class="item"><div class="label">Fecha programada</div><div class="val">${escapeHtml(row.fechaProgramada || "—")}</div></div>
 
-    <div class="item"><div class="label">ViÃ¡ticos</div><div class="val">${escapeHtml(formatCOP(viaticos))}</div></div>
+    <div class="item"><div class="label">Viáticos</div><div class="val">${escapeHtml(formatCOP(viaticos))}</div></div>
 
     <div class="item"><div class="label">Total (registrado)</div><div class="val"><b>${escapeHtml(
       formatCOP(totalRegistrado)
     )}</b></div></div>
 
-    <div class="item"><div class="label">Creada</div><div class="val">${escapeHtml(formatDateTimeES(row.createdat) || "â€”")}</div></div>
+    <div class="item"><div class="label">Creada</div><div class="val">${escapeHtml(formatDateTimeES(row.createdat) || "—")}</div></div>
 
-    <div class="item"><div class="label">Actualizada</div><div class="val">${escapeHtml(formatDateTimeES(row.updatedat) || "â€”")}</div></div>
+    <div class="item"><div class="label">Actualizada</div><div class="val">${escapeHtml(formatDateTimeES(row.updatedat) || "—")}</div></div>
 
     <div class="item" style="grid-column:1 / -1">
-      <div class="label">DescripciÃ³n</div>
-      <div class="val">${row.descripcion ? nl2br(escapeHtml(row.descripcion)) : "â€”"}</div>
+      <div class="label">Descripción</div>
+      <div class="val">${row.descripcion ? nl2br(escapeHtml(row.descripcion)) : "—"}</div>
     </div>
 
     ${filesBlock}
@@ -1070,16 +1070,16 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
   </div>
 
   <div class="section">
-    <div class="label" style="margin-bottom:6px">Totales (IVA desde subtotal con viÃ¡ticos)</div>
+    <div class="label" style="margin-bottom:6px">Totales (IVA desde subtotal con viáticos)</div>
     <div class="tot">
       <div class="row"><span>Subtotal servicios</span><span>${escapeHtml(formatCOP(subServ))}</span></div>
       <div class="row"><span>Subtotal materiales</span><span>${escapeHtml(formatCOP(subMat))}</span></div>
-      <div class="row"><span>ViÃ¡ticos</span><span>${escapeHtml(formatCOP(viaticos))}</span></div>
+      <div class="row"><span>Viáticos</span><span>${escapeHtml(formatCOP(viaticos))}</span></div>
       <div class="row"><span>Subtotal (base IVA)</span><span>${escapeHtml(formatCOP(subtotalBaseIVA))}</span></div>
       <div class="row"><span>IVA (${IVA_PCT}%)</span><span>${escapeHtml(formatCOP(iva))}</span></div>
       <div class="row b"><span>Total calculado</span><span>${escapeHtml(formatCOP(totalCalculado))}</span></div>
     </div>
-    <div class="note">El IVA se calcula sobre el subtotal (servicios + materiales + viÃ¡ticos).</div>
+    <div class="note">El IVA se calcula sobre el subtotal (servicios + materiales + viáticos).</div>
     ${
       totalRegistrado > 0 && diff !== 0
         ? `<div class="warn">Nota: el <b>Total (registrado)</b> difiere del <b>Total calculado</b> por ${escapeHtml(
@@ -1093,7 +1093,7 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
 
   <div class="footer">
     <span class="muted">Impreso: ${escapeHtml(new Date().toLocaleString("es-CO"))}</span>
-    <span class="muted">MÃ³dulo: ${escapeHtml(MODULE_KEY)}</span>
+    <span class="muted">Módulo: ${escapeHtml(MODULE_KEY)}</span>
   </div>
 </div>
 </body></html>`;
@@ -1145,14 +1145,14 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
     wb.creator = "Vertecx";
     wb.created = new Date();
 
-    const ws = wb.addWorksheet("Ã“rdenes de servicio");
+    const ws = wb.addWorksheet("Órdenes de servicio");
     ws.columns = [
       { header: "Id", key: "id", width: 8 },
       { header: "Cliente", key: "cliente", width: 28 },
       { header: "Tipo", key: "tipo", width: 16 },
       { header: "Fecha programada", key: "fechaProgramada", width: 18 },
       { header: "Estado", key: "estado", width: 18 },
-      { header: "ViÃ¡ticos (COP)", key: "viaticos", width: 16, style: { numFmt: '"$" #,##0' } },
+      { header: "Viáticos (COP)", key: "viaticos", width: 16, style: { numFmt: '"$" #,##0' } },
       { header: "Monto (COP)", key: "monto", width: 16, style: { numFmt: '"$" #,##0' } },
     ];
 
@@ -1163,7 +1163,7 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
         cliente: r.cliente,
         tipo: r.tipo,
         fechaProgramada: r.fechaProgramada,
-        estado: estadoKey === "GarantiaReportada" ? "GarantÃ­a (reportada)" : r.estado,
+        estado: estadoKey === "GarantiaReportada" ? "Garantía (reportada)" : r.estado,
         viaticos: r.viaticos ?? 0,
         monto: r.monto ?? 0,
       });
@@ -1189,8 +1189,8 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
         disableDelete: true,
         disableCancel: true,
         editTitle: "No se puede editar una orden anulada",
-        deleteTitle: "La orden ya estÃ¡ anulada",
-        cancelTitle: "La orden ya estÃ¡ anulada",
+        deleteTitle: "La orden ya está anulada",
+        cancelTitle: "La orden ya está anulada",
       };
     }
     return {};
@@ -1212,8 +1212,8 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
               ? new Date(r.garantia.reportedAtISO).toLocaleDateString("es-CO")
               : "";
             const title = r.garantia
-              ? `Motivo: ${r.garantia.label} Â· Reportado por: ${r.garantia.reportedBy}${fecha ? " Â· " + fecha : ""}`
-              : "GarantÃ­a (reportada)";
+              ? `Motivo: ${r.garantia.label} · Reportado por: ${r.garantia.reportedBy}${fecha ? " · " + fecha : ""}`
+              : "Garantía (reportada)";
             return (
               <span className="inline-flex items-center gap-2" title={title}>
                 <img src={ICONS.report} className="h-4 w-4" alt="" />
@@ -1223,7 +1223,7 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
           }
           if (estadoKey === "Garantia") {
             return (
-              <span className="inline-flex items-center gap-2" title="GarantÃ­a sin reporte">
+              <span className="inline-flex items-center gap-2" title="Garantía sin reporte">
                 <img src={ICONS.report} className="h-4 w-4" alt="" />
                 <EstadoText v={r.estado} colorKey={estadoKey} />
               </span>
@@ -1249,9 +1249,9 @@ const extraActions = useCallback(
     const warrantyTitle =
       estadoKey === "Garantia" || estadoKey === "GarantiaReportada"
         ? estadoKey === "Garantia"
-          ? "Completar reporte de garantÃ­a"
-          : "Editar reporte de garantÃ­a"
-        : "Marcar garantÃ­a (sin reporte)";
+          ? "Completar reporte de garantía"
+          : "Editar reporte de garantía"
+        : "Marcar garantía (sin reporte)";
 
       return (
         <>
@@ -1316,7 +1316,7 @@ const extraActions = useCallback(
                 columns={columns}
                 pageSize={8}
                 searchableKeys={["id", "cliente", "tecnico", "tipo", "fechaProgramada", "estado", "monto", "descripcion"]}
-                searchPlaceholder="Buscar (id, cliente, tipo, estado, fecha, monto, descripciÃ³n)â€¦"
+                searchPlaceholder="Buscar (id, cliente, tipo, estado, fecha, monto, descripción)-"
                 rightActions={rightActions}
                 onCreate={openCreate}
                 createButtonText="Crear Orden"
@@ -1342,7 +1342,7 @@ const extraActions = useCallback(
       />
 
       <Modal
-        title={reportRowId ? `Reportar garantÃ­a #${reportRowId}` : "Reportar garantÃ­a"}
+        title={reportRowId ? `Reportar garantía #${reportRowId}` : "Reportar garantía"}
         isOpen={reportOpen}
         onClose={() => setReportOpen(false)}
         widthClass="max-w-lg"
@@ -1373,15 +1373,15 @@ const extraActions = useCallback(
               onChange={(e) => setMotivo(e.target.value)}
               className="w-full border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#04652c]/30"
             >
-              <option>DaÃ±o dentro de garantÃ­a</option>
+              <option>Daño dentro de garantía</option>
               <option>Producto defectuoso</option>
-              <option>InstalaciÃ³n con falla</option>
+              <option>Instalación con falla</option>
               <option>Otro</option>
             </select>
           </div>
 
           <div>
-            <label className="block text-xs uppercase tracking-wide text-gray-600 mb-1">Â¿QuÃ© pasÃ³?</label>
+            <label className="block text-xs uppercase tracking-wide text-gray-600 mb-1">¿Qué pasó?</label>
             <textarea
               value={detalle}
               onChange={(e) => {
@@ -1389,7 +1389,7 @@ const extraActions = useCallback(
                 if (e.target.value.trim()) setErrorDetalle("");
               }}
               rows={4}
-              placeholder="Describe brevemente el caso de garantÃ­a"
+              placeholder="Describe brevemente el caso de garantía"
               className={`w-full border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 ${
                 errorDetalle ? "border-green-500 focus:ring-green-200" : "focus:ring-[#04652c]/30"
               }`}
@@ -1403,7 +1403,7 @@ const extraActions = useCallback(
           </label>
 
           <div className="rounded-md bg-blue-50 border border-blue-200 p-3 text-xs text-blue-800">
-            Al guardar, la orden pasarÃ¡ a <b>GarantÃ­a (reportada)</b>.
+            Al guardar, la orden pasará a <b>Garantía (reportada)</b>.
           </div>
         </div>
       </Modal>

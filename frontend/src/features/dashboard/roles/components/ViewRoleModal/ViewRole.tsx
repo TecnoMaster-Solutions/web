@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React from "react";
 import { XMarkIcon, CheckIcon } from "@heroicons/react/24/solid";
@@ -146,7 +146,7 @@ export default function ViewRoleModal({ open, onClose, role }: ViewRoleModalProp
                 <table className="min-w-full text-sm">
                   <thead className="sticky top-0 z-10" style={{ backgroundColor: "#04652c" }}>
                     <tr>
-                      <th className="px-4 py-3 text-left font-semibold text-white">MÃ³dulo</th>
+                      <th className="px-4 py-3 text-left font-semibold text-white">Módulo</th>
                       <th className="px-4 py-3 text-center font-semibold text-white">
                         Permisos / Privilegios
                       </th>

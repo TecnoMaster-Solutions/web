@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
@@ -982,7 +982,7 @@ const {
       return;
     }
     if (selectedBusyTechnicianIds.length > 0) {
-      setErrors((p) => ({ ...p, technicians: "Hay tecnicos ocupados en ese horario." }));
+      setErrors((p) => ({ ...p, technicians: "Hay técnicos ocupados en ese horario." }));
       return;
     }
     setErrors((p) => ({ ...p, technicians: undefined }));
@@ -1879,7 +1879,7 @@ const {
     const shouldCreateInlineClient = createClientInlineEnabled && !clientId;
     const erRaw = validateForm(validationContext);
     if (selectedBusyTechnicianIds.length > 0) {
-      erRaw.technicians = "Hay tecnicos ocupados en ese horario.";
+      erRaw.technicians = "Hay técnicos ocupados en ese horario.";
     }
     const er = shouldCreateInlineClient
       ? (Object.fromEntries(Object.entries(erRaw).filter(([k]) => k !== "clientId")) as Errors)
@@ -2091,7 +2091,7 @@ setNavigating(true);
             <div className="mb-4 flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <h1 className="text-xl font-semibold text-gray-900 truncate">Crear orden de servicio</h1>
-                <p className="text-xs text-gray-500 mt-1">Completa el cliente, programacion y detalles del servicio.</p>
+                <p className="text-xs text-gray-500 mt-1">Completa el cliente, programación y detalles del servicio.</p>
               </div>
             </div>
 
@@ -2548,7 +2548,7 @@ setNavigating(true);
 
                 <section className="rounded-xl border bg-white shadow-sm">
                   <header className="border-b px-3 py-2 flex items-center justify-between">
-                    <div className="text-sm font-semibold text-gray-800">Programacion</div>
+                    <div className="text-sm font-semibold text-gray-800">Programación</div>
                     <div className="text-xs text-gray-500">Lun-Sab - 07:00-17:00</div>
                   </header>
 
@@ -2627,7 +2627,7 @@ setNavigating(true);
 
                 <section className="rounded-xl border bg-white shadow-sm" id="field-technicians">
                   <header className="border-b px-4 py-3 flex items-center justify-between">
-                    <div className="text-sm font-semibold text-gray-800">Tecnicos</div>
+                    <div className="text-sm font-semibold text-gray-800">Técnicos</div>
                     <div className="flex items-center gap-2">
                       <div className="text-xs text-gray-500">
                         Seleccionados: <span className="font-semibold text-gray-900">{selectedTechnicians.length}</span>
@@ -2646,7 +2646,7 @@ setNavigating(true);
                   <div className="p-4 grid grid-cols-1 gap-3">
                     <div className={`rounded-lg border bg-gray-50 p-3 ${showFieldError("technicians") ? errorRing : ""}`}>
                       {selectedTechniciansFull.length === 0 ? (
-                        <div className="text-xs text-gray-500">No has seleccionado tecnicos.</div>
+                        <div className="text-xs text-gray-500">No has seleccionado técnicos.</div>
                       ) : (
                         <div className="flex flex-wrap gap-2">
                           {selectedTechniciansFull.map((t) => (
@@ -2726,7 +2726,7 @@ setNavigating(true);
                         <div id="tech-suggest" className="absolute z-20 mt-2 w-full overflow-hidden rounded-lg border bg-white shadow-sm">
                           {techOptions.length === 0 ? (
                             <div className="px-3 py-2 text-xs text-gray-500">
-                              {selectedTechnicians.length === availableTechnicians.length ? "Ya seleccionaste todos los tecnicos." : "No hay coincidencias."}
+                              {selectedTechnicians.length === availableTechnicians.length ? "Ya seleccionaste todos los técnicos." : "No hay coincidencias."}
                             </div>
                           ) : (
                             <ul className="max-h-60 overflow-auto">

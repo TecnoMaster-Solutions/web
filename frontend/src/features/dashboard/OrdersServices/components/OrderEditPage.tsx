@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -82,7 +82,7 @@ function uid() {
 
 function formatCOP(n?: number) {
   return n == null
-    ? "â€”"
+    ? "—"
     : n.toLocaleString("es-CO", {
         style: "currency",
         currency: "COP",
@@ -427,7 +427,7 @@ const {
       .map((t: any) => {
         const u = t?.users || t?.user || t?.Users || {};
         const name = [u?.name, u?.lastname].filter(Boolean).join(" ").trim();
-        const label = name || `TÃ©cnico #${t?.technicianid ?? t?.id ?? "?"}`;
+        const label = name || `Técnico #${t?.technicianid ?? t?.id ?? "?"}`;
         return { technicianid: Number(t?.technicianid ?? t?.id), label } as TechnicianOption;
       })
       .filter((x) => Number.isFinite(x.technicianid) && x.technicianid > 0);
@@ -491,7 +491,7 @@ const {
 
   useEffect(() => {
     if (!orderId) {
-      setOrderError("ID de orden invÃ¡lido.");
+      setOrderError("ID de orden inválido.");
       return;
     }
     let cancelled = false;
@@ -519,7 +519,7 @@ const {
     };
   }, [orderId]);
 
-  // -------- Cliente (tipo tÃ©cnico: buscador + dropdown, 1 solo) --------
+  // -------- Cliente (tipo técnico: buscador + dropdown, 1 solo) --------
   const [clientId, setClientId] = useState<number | "">("");
   const selectedCustomer = useMemo(
     () => customers.find((c) => c.customerid === clientId),
@@ -803,7 +803,7 @@ const {
   function addTechnician(id: number) {
     if (!Number.isFinite(id) || id <= 0) return;
     if (busyTechnicianIds.has(id)) {
-      showWarning("Ese tÃ©cnico ya estÃ¡ ocupado en el horario seleccionado.");
+      showWarning("Ese técnico ya está ocupado en el horario seleccionado.");
       return;
     }
     setSelectedTechnicians((prev) => (prev.includes(id) ? prev : [...prev, id]));
@@ -824,8 +824,8 @@ const {
 
   function addServiceRow() {
     if (!tipoId) {
-      setErrors((p) => ({ ...p, tipo: "Selecciona el tipo de servicio para aÃ±adir un servicio." }));
-      showWarning("Selecciona un tipo de servicio para aÃ±adir un servicio.");
+      setErrors((p) => ({ ...p, tipo: "Selecciona el tipo de servicio para añadir un servicio." }));
+      showWarning("Selecciona un tipo de servicio para añadir un servicio.");
       return;
     }
     const options = getServicesForTipo(tipoId);
@@ -904,7 +904,7 @@ const {
       const isImg = f.type.startsWith("image/");
       const okSize = f.size <= MAX_SIZE;
       if (isImg && okSize) accepteds.push(f);
-      else rejected.push(`${f.name}${!isImg ? " (no es imagen)" : ""}${!okSize ? " (mÃ¡s de 5MB)" : ""}`);
+      else rejected.push(`${f.name}${!isImg ? " (no es imagen)" : ""}${!okSize ? " (más de 5MB)" : ""}`);
     });
 
     const totalCount = accepteds.length + files.length;
@@ -912,10 +912,10 @@ const {
     if (totalCount > MAX_FILES) {
       const allowed = Math.max(0, MAX_FILES - files.length);
       if (allowed > 0) dedupeAppend(accepteds.slice(0, allowed));
-      showWarning(`MÃ¡ximo ${MAX_FILES} imÃ¡genes. ${rejected.length ? "Algunas fueron rechazadas." : ""}`.trim());
+      showWarning(`Máximo ${MAX_FILES} imágenes. ${rejected.length ? "Algunas fueron rechazadas." : ""}`.trim());
     } else {
       dedupeAppend(accepteds);
-      if (rejected.length) showWarning("Algunas imÃ¡genes fueron rechazadas (tipo/tamaÃ±o).");
+      if (rejected.length) showWarning("Algunas imágenes fueron rechazadas (tipo/tamaño).");
     }
 
     e.currentTarget.value = "";
@@ -989,9 +989,9 @@ const {
       errs.schedule = "Completa fecha y hora de inicio y fin.";
     } else {
       if (!isAllowedDate(dateStart) || !isAllowedDate(dateEnd)) {
-        errs.schedule = "Solo se permite agendar de lunes a sÃ¡bado.";
+        errs.schedule = "Solo se permite agendar de lunes a sábado.";
       } else if (!isAllowedTime(timeStart) || !isAllowedTime(timeEnd)) {
-        errs.schedule = "Horario permitido: 07:00â€“17:00.";
+        errs.schedule = "Horario permitido: 07:00–17:00.";
       } else {
         const sDate = parseYMD(dateStart);
         const eDate = parseYMD(dateEnd);
@@ -1004,14 +1004,14 @@ const {
           e.setHours(Math.floor(eMin / 60), eMin % 60, 0, 0);
           if (!(e.getTime() > s.getTime())) errs.schedule = "La fecha/hora fin debe ser mayor que la de inicio.";
         } else {
-          errs.schedule = "Fecha invÃ¡lida.";
+          errs.schedule = "Fecha inválida.";
         }
       }
     }
 
-    if (!selectedTechnicians.length) errs.technicians = "Selecciona al menos un tÃ©cnico.";
+    if (!selectedTechnicians.length) errs.technicians = "Selecciona al menos un técnico.";
     else if (selectedBusyTechnicianIds.length > 0)
-      errs.technicians = "Hay tÃ©cnicos ocupados en ese horario.";
+      errs.technicians = "Hay técnicos ocupados en ese horario.";
 
     if (!Number.isFinite(viaticosValue)) errs.viaticos = "Viaticos debe ser un numero valido.";
     if (Number.isFinite(viaticosValue) && viaticosValue < 0) errs.viaticos = "Viaticos no puede ser negativo.";
@@ -1022,13 +1022,13 @@ const {
     else if (dir.length > 255) errs.direccion = "La direccion no puede superar 255 caracteres.";
 
     const desc = String(descripcion || "").trim();
-    if (!desc) errs.description = "La descripciÃ³n es obligatoria.";
-    else if (desc.length < DESC_MIN) errs.description = `La descripciÃ³n debe tener al menos ${DESC_MIN} caracteres.`;
-    else if (desc.length > DESC_MAX) errs.description = `La descripciÃ³n no puede superar ${DESC_MAX} caracteres.`;
+    if (!desc) errs.description = "La descripción es obligatoria.";
+    else if (desc.length < DESC_MIN) errs.description = `La descripción debe tener al menos ${DESC_MIN} caracteres.`;
+    else if (desc.length > DESC_MAX) errs.description = `La descripción no puede superar ${DESC_MAX} caracteres.`;
 
     if (servicios.length === 0) {
-      errs.servicios = "Debes aÃ±adir al menos un servicio.";
-      if (!tipoId) errs.tipo = "Selecciona el tipo de servicio para aÃ±adir servicios.";
+      errs.servicios = "Debes añadir al menos un servicio.";
+      if (!tipoId) errs.tipo = "Selecciona el tipo de servicio para añadir servicios.";
     }
 
     const invalidSvc =
@@ -1039,7 +1039,7 @@ const {
       });
 
     if (invalidSvc)
-      errs.servicios = (errs.servicios ? errs.servicios + " " : "") + "Hay servicios invÃ¡lidos. Vuelve a seleccionarlos.";
+      errs.servicios = (errs.servicios ? errs.servicios + " " : "") + "Hay servicios inválidos. Vuelve a seleccionarlos.";
 
     const badQtySvc = servicios.some((s) => !s.cantidad || s.cantidad < 1);
     const badPriceSvc = servicios.some((s) => !Number.isFinite(Number(s.precio)) || Number(s.precio) < 0);
@@ -1047,9 +1047,9 @@ const {
     if (badPriceSvc) errs.servicios = (errs.servicios ? errs.servicios + " " : "") + "Corrige precios de servicios.";
 
     if (!productsCatalog.length) errs.materiales = "No hay productos cargados desde la BD.";
-    if (materiales.length === 0) errs.materiales = errs.materiales ? errs.materiales : "Debes aÃ±adir al menos un producto (material).";
+    if (materiales.length === 0) errs.materiales = errs.materiales ? errs.materiales : "Debes añadir al menos un producto (material).";
     if (materiales.some((m) => !productsCatalog.some((p) => p.productname === m.nombre))) {
-      errs.materiales = (errs.materiales ? errs.materiales + " " : "") + "Hay productos invÃ¡lidos. Vuelve a seleccionarlos.";
+      errs.materiales = (errs.materiales ? errs.materiales + " " : "") + "Hay productos inválidos. Vuelve a seleccionarlos.";
     }
     const badQtyMat = materiales.some((m) => !m.cantidad || m.cantidad < 1);
     if (badQtyMat) errs.materiales = (errs.materiales ? errs.materiales + " " : "") + "Corrige cantidades de materiales.";
@@ -1172,7 +1172,7 @@ const {
     appliedOrderRef.current = true;
   }, [lookupsLoading, orderNormalized, customers, technicians, productsCatalog, serviceTypes, servicesCatalog, pendingStateId]);
 
-  // -------- ValidaciÃ³n en tiempo real (sin auto-ajustes â€œsilenciososâ€) --------
+  // -------- Validación en tiempo real (sin auto-ajustes "silenciosos") --------
   useEffect(() => {
     if (clientId) setErrors((p) => ({ ...p, clientId: undefined }));
   }, [clientId]);
@@ -1180,7 +1180,7 @@ const {
   useEffect(() => {
     if (!selectedTechnicians.length) return;
     if (selectedBusyTechnicianIds.length > 0) {
-      setErrors((p) => ({ ...p, technicians: "Hay tÃ©cnicos ocupados en ese horario." }));
+      setErrors((p) => ({ ...p, technicians: "Hay técnicos ocupados en ese horario." }));
       return;
     }
     setErrors((p) => ({ ...p, technicians: undefined }));
@@ -1208,7 +1208,7 @@ const {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!orderId) {
-      showError("ID de orden invÃ¡lido.");
+      showError("ID de orden inválido.");
       return;
     }
 
@@ -1226,7 +1226,7 @@ const {
       if (!rec) {
         const next = { ...er, materiales: `El producto "${m.nombre}" no existe en la BD. Vuelve a seleccionarlo.` };
         setErrors(next);
-        showError(next.materiales || "Producto invÃ¡lido.");
+        showError(next.materiales || "Producto inválido.");
         focusFirstError(next);
         return;
       }
@@ -1243,7 +1243,7 @@ const {
       if (!rec) {
         const next = { ...er, servicios: `El servicio "${s.nombre}" no existe o no corresponde al tipo asignado.` };
         setErrors(next);
-        showError(next.servicios || "Servicio invÃ¡lido.");
+        showError(next.servicios || "Servicio inválido.");
         focusFirstError(next);
         return;
       }
@@ -1256,7 +1256,7 @@ const {
     }
     const services = Array.from(serviceMap.values());
 
-    // Importante: NO se arma descripciÃ³n estructurada. Se envÃ­a SOLO lo que escribiÃ³ el usuario.
+    // Importante: NO se arma descripción estructurada. Se envía SOLO lo que escribió el usuario.
     const finalDescription = String(descripcion || "").trim();
     const hasSchedule = !!(dateStart && dateEnd && timeStart && timeEnd);
     const shouldUseScheduled =
@@ -1360,8 +1360,8 @@ const {
 
   function handleDateStartChange(next: string) {
     if (!isAllowedDate(next)) {
-      showWarning("Solo se permite agendar de lunes a sÃ¡bado.");
-      setErrors((p) => ({ ...p, schedule: "Solo se permite agendar de lunes a sÃ¡bado." }));
+      showWarning("Solo se permite agendar de lunes a sábado.");
+      setErrors((p) => ({ ...p, schedule: "Solo se permite agendar de lunes a sábado." }));
       return;
     }
     setDateStart(next);
@@ -1371,8 +1371,8 @@ const {
 
   function handleDateEndChange(next: string) {
     if (!isAllowedDate(next)) {
-      showWarning("Solo se permite agendar de lunes a sÃ¡bado.");
-      setErrors((p) => ({ ...p, schedule: "Solo se permite agendar de lunes a sÃ¡bado." }));
+      showWarning("Solo se permite agendar de lunes a sábado.");
+      setErrors((p) => ({ ...p, schedule: "Solo se permite agendar de lunes a sábado." }));
       return;
     }
     setDateEnd(next);
@@ -1453,7 +1453,7 @@ const {
                 <h1 className="text-xl font-semibold text-gray-900 truncate">
                   {orderId ? `Editar orden de servicio #${orderId}` : "Editar orden de servicio"}
                 </h1>
-                <p className="text-xs text-gray-500 mt-1">Actualiza el cliente, programaciÃ³n y detalles del servicio.</p>
+                <p className="text-xs text-gray-500 mt-1">Actualiza el cliente, programación y detalles del servicio.</p>
               </div>
             </div>
 
@@ -1603,8 +1603,8 @@ const {
 
                 <section className="rounded-xl border bg-white shadow-sm">
                   <header className="border-b px-3 py-2 flex items-center justify-between">
-                    <div className="text-sm font-semibold text-gray-800">ProgramaciÃ³n</div>
-                    <div className="text-xs text-gray-500">Lunâ€“SÃ¡b Â· 07:00â€“17:00</div>
+                    <div className="text-sm font-semibold text-gray-800">Programación</div>
+                    <div className="text-xs text-gray-500">Lun–Sáb · 07:00–17:00</div>
                   </header>
 
                   <div className="p-4 grid grid-cols-1 md:grid-cols-12 gap-4" id="field-schedule">
@@ -1705,7 +1705,7 @@ const {
 
                 <section className="rounded-xl border bg-white shadow-sm" id="field-technicians">
                   <header className="border-b px-4 py-3 flex items-center justify-between">
-                    <div className="text-sm font-semibold text-gray-800">TÃ©cnicos</div>
+                    <div className="text-sm font-semibold text-gray-800">Técnicos</div>
                     <div className="flex items-center gap-2">
                       <div className="text-xs text-gray-500">
                         Seleccionados: <span className="font-semibold text-gray-900">{selectedTechnicians.length}</span>
@@ -1724,7 +1724,7 @@ const {
                   <div className="p-4 grid grid-cols-1 gap-3">
                     <div className={`rounded-lg border bg-gray-50 p-3 ${errors.technicians ? errorRing : ""}`}>
                       {selectedTechniciansFull.length === 0 ? (
-                        <div className="text-xs text-gray-500">No has seleccionado tÃ©cnicos.</div>
+                        <div className="text-xs text-gray-500">No has seleccionado técnicos.</div>
                       ) : (
                         <div className="flex flex-wrap gap-2">
                           {selectedTechniciansFull.map((t) => (
@@ -1736,13 +1736,13 @@ const {
                                 {initials(t.label)}
                               </span>
                               <span className="max-w-[220px] truncate">
-                                #{t.technicianid} â€” {t.label}
+                                #{t.technicianid} — {t.label}
                               </span>
                               <button
                                 type="button"
                                 onClick={() => removeTechnician(t.technicianid)}
                                 className="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full hover:bg-gray-200"
-                                aria-label="Quitar tÃ©cnico"
+                                aria-label="Quitar técnico"
                                 title="Quitar"
                                 disabled={lookupsLoading}
                               >
@@ -1762,7 +1762,7 @@ const {
 
                     <div ref={techBoxRef} className="relative">
                       <label className="block text-xs text-gray-700 mb-1" htmlFor="field-tech-search">
-                        Buscar y agregar tÃ©cnico
+                        Buscar y agregar técnico
                       </label>
                       <input
                         id="field-tech-search"
@@ -1806,7 +1806,7 @@ const {
                           {techOptions.length === 0 ? (
                             <div className="px-3 py-2 text-xs text-gray-500">
                               {selectedTechnicians.length === availableTechnicians.length
-                                ? "Ya seleccionaste todos los tÃ©cnicos."
+                                ? "Ya seleccionaste todos los técnicos."
                                 : "No hay coincidencias."}
                             </div>
                           ) : (
@@ -1827,7 +1827,7 @@ const {
                                     </span>
                                     <span className="min-w-0 flex-1">
                                       <span className="block truncate font-medium">{t.label}</span>
-                                      <span className="block text-xs text-gray-500">TÃ©cnico #{t.technicianid}</span>
+                                      <span className="block text-xs text-gray-500">Técnico #{t.technicianid}</span>
                                     </span>
                                     <span className="text-xs text-gray-400">Agregar</span>
                                   </button>
@@ -1846,12 +1846,12 @@ const {
                 <section className="rounded-xl border bg-white shadow-sm" id="field-tipo">
                   <header className="border-b px-4 py-3 flex items-center justify-between">
                     <div className="text-sm font-semibold text-gray-800">Detalles del servicio</div>
-                    <div className="text-xs text-gray-500">El tipo de arriba solo aplica para â€œAÃ±adir servicioâ€</div>
+                    <div className="text-xs text-gray-500">El tipo de arriba solo aplica para Añadir servicio</div>
                   </header>
 
                   <div className="p-4 grid grid-cols-1 md:grid-cols-12 gap-4">
                     <div className="md:col-span-12">
-                      <span className="block text-xs text-gray-700 mb-2">Tipo para aÃ±adir un nuevo servicio</span>
+                      <span className="block text-xs text-gray-700 mb-2">Tipo para añadir un nuevo servicio</span>
                       <div
                         className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 ${
                           errors.tipo ? "rounded-lg p-3 border " + errorRing : ""
@@ -1892,7 +1892,7 @@ const {
                         <div>
                           <div className="text-xs text-gray-700">Servicios</div>
                           <div className="text-xs text-gray-500">
-                            Cada fila conserva su tipo. AdemÃ¡s, un servicio ya agregado no vuelve a aparecer en la lista.
+                            Cada fila conserva su tipo. Además, un servicio ya agregado no vuelve a aparecer en la lista.
                           </div>
                         </div>
                         <button
@@ -1901,7 +1901,7 @@ const {
                           className="h-8 rounded-md border bg-white px-3 text-xs hover:bg-gray-50 disabled:opacity-60"
                           disabled={!tipoId || lookupsLoading || servicesForSelectedTipo.length === 0}
                         >
-                          AÃ±adir servicio
+                          Añadir servicio
                         </button>
                       </div>
 
@@ -2017,7 +2017,7 @@ const {
                             {servicios.length === 0 && (
                               <tr>
                                 <td colSpan={5} className="px-3 py-6 text-center text-gray-500">
-                                  AÃºn no has aÃ±adido servicios.
+                                  Aún no has añadido servicios.
                                 </td>
                               </tr>
                             )}
@@ -2057,7 +2057,7 @@ const {
 
                     <div className="md:col-span-12" id="field-description">
                       <label className="block text-xs text-gray-700 mb-1" htmlFor="field-desc">
-                        DescripciÃ³n
+                        Descripción
                       </label>
                       <textarea
                         id="field-desc"
@@ -2066,20 +2066,20 @@ const {
                           const v = e.target.value;
                           setDescripcion(v);
                           const t = String(v || "").trim();
-                          if (!t) setErrors((p) => ({ ...p, description: "La descripciÃ³n es obligatoria." }));
+                          if (!t) setErrors((p) => ({ ...p, description: "La descripción es obligatoria." }));
                           else if (t.length < DESC_MIN)
-                            setErrors((p) => ({ ...p, description: `La descripciÃ³n debe tener al menos ${DESC_MIN} caracteres.` }));
+                            setErrors((p) => ({ ...p, description: `La descripción debe tener al menos ${DESC_MIN} caracteres.` }));
                           else if (t.length > DESC_MAX)
-                            setErrors((p) => ({ ...p, description: `La descripciÃ³n no puede superar ${DESC_MAX} caracteres.` }));
+                            setErrors((p) => ({ ...p, description: `La descripción no puede superar ${DESC_MAX} caracteres.` }));
                           else setErrors((p) => ({ ...p, description: undefined }));
                         }}
                         onBlur={() => {
                           const t = String(descripcion || "").trim();
-                          if (!t) setErrors((p) => ({ ...p, description: "La descripciÃ³n es obligatoria." }));
+                          if (!t) setErrors((p) => ({ ...p, description: "La descripción es obligatoria." }));
                           else if (t.length < DESC_MIN)
-                            setErrors((p) => ({ ...p, description: `La descripciÃ³n debe tener al menos ${DESC_MIN} caracteres.` }));
+                            setErrors((p) => ({ ...p, description: `La descripción debe tener al menos ${DESC_MIN} caracteres.` }));
                           else if (t.length > DESC_MAX)
-                            setErrors((p) => ({ ...p, description: `La descripciÃ³n no puede superar ${DESC_MAX} caracteres.` }));
+                            setErrors((p) => ({ ...p, description: `La descripción no puede superar ${DESC_MAX} caracteres.` }));
                           else setErrors((p) => ({ ...p, description: undefined }));
                         }}
                         rows={3}
@@ -2089,7 +2089,7 @@ const {
                         placeholder="Describe el servicio, alcance, observaciones, etc."
                       />
                       <div className="mt-1 flex items-center justify-between gap-3 text-[11px] text-gray-500">
-                        <span>Se guardarÃ¡ exactamente el texto que escribas aquÃ­ (no se construye una descripciÃ³n automÃ¡tica).</span>
+                        <span>Se guardarán exactamente el texto que escribas aquí (no se construye una descripción automática).</span>
                         <span>
                           {String(descripcion || "").trim().length}/{DESC_MAX}
                         </span>
@@ -2100,15 +2100,15 @@ const {
 
                     <div className="md:col-span-12" id="field-files">
                       <div className="flex items-center justify-between gap-2">
-                        <label className="block text-xs text-gray-700">ImÃ¡genes del servicio</label>
+                        <label className="block text-xs text-gray-700">Imágenes del servicio</label>
                         <button
                           type="button"
                           onClick={() => fileRef.current?.click()}
                           className="h-8 px-3 rounded-md border bg-white text-xs hover:bg-gray-50 disabled:opacity-60"
-                          title="Subir imÃ¡genes"
+                          title="Subir imágenes"
                           disabled={lookupsLoading}
                         >
-                          Subir imÃ¡genes
+                          Subir imágenes
                         </button>
                         <input
                           ref={fileRef}
@@ -2126,7 +2126,7 @@ const {
 
                       {existingFiles.length > 0 && (
                         <div className="mt-3">
-                          <div className="text-xs text-gray-600 mb-1">ImÃ¡genes existentes</div>
+                          <div className="text-xs text-gray-600 mb-1">Imágenes existentes</div>
                           <div className="flex flex-wrap gap-2">
                             {existingFiles.map((url, idx) => (
                               <div key={`${url}_${idx}`} className="relative w-20 h-20 rounded-lg overflow-hidden border bg-white">
@@ -2161,7 +2161,7 @@ const {
 
                       <div className="mt-3 flex flex-wrap gap-2">
                         {files.length === 0 ? (
-                          <div className="text-xs text-gray-500">No hay imÃ¡genes nuevas aÃºn.</div>
+                          <div className="text-xs text-gray-500">No hay imágenes nuevas aún.</div>
                         ) : (
                           files.map((f, idx) => (
                             <div
@@ -2206,7 +2206,7 @@ const {
                   <div className="p-4">
                     <div className={`space-y-2 rounded-lg border bg-white p-2.5 ${errors.materiales ? errorRing : ""}`}>
                       {materiales.length === 0 ? (
-                        <div className="px-2 py-3 text-xs text-gray-500">AÃºn no has aÃ±adido productos.</div>
+                        <div className="px-2 py-3 text-xs text-gray-500">An no has añadido productos.</div>
                       ) : (
                         materiales.map((m) => {
                           const opts = availableProducts(m.nombre);
@@ -2256,7 +2256,7 @@ const {
                                 {materialOpenId === m.id && (
                                   <div className="absolute left-0 right-0 z-20 mt-1 max-h-56 overflow-auto rounded-md border bg-white shadow-sm">
                                     {fallbackCurrent.length === 0 ? (
-                                      <div className="px-3 py-2 text-[11px] text-gray-500">No hay mÃ¡s productos disponibles.</div>
+                                      <div className="px-3 py-2 text-[11px] text-gray-500">No hay más productos disponibles.</div>
                                     ) : (
                                       fallbackCurrent.map((opt) => (
                                         <button
@@ -2327,7 +2327,7 @@ const {
                         disabled={!productsCatalog.length || lookupsLoading || availableProducts().length === 0}
                         title={availableProducts().length === 0 ? "Ya agregaste todos los productos disponibles." : undefined}
                       >
-                        {availableProducts().length === 0 ? "No hay mÃ¡s productos disponibles" : "AÃ±adir producto"}
+                        {availableProducts().length === 0 ? "No hay más productos disponibles" : "Añadir producto"}
                       </button>
                     </div>
                   </div>
@@ -2336,7 +2336,7 @@ const {
                 <section className="rounded-xl border bg-white shadow-sm" id="field-viaticos">
                   <header className="border-b px-4 py-3 flex items-center justify-between">
                     <div>
-                      <div className="text-sm font-semibold text-gray-800">ViÃ¡ticos</div>
+                      <div className="text-sm font-semibold text-gray-800">Viáticos</div>
                       <div className="text-xs text-gray-500">Afecta base e IVA.</div>
                     </div>
                   </header>
@@ -2361,7 +2361,7 @@ const {
                     />
                     {errors.viaticos && <p className={errorText}>{errors.viaticos}</p>}
                     <div className="pt-3 border-t text-sm flex justify-between">
-                      <span className="text-gray-600">Total viÃ¡ticos</span>
+                      <span className="text-gray-600">Total viáticos</span>
                       <span className="font-medium">{formatCOP(Number.isFinite(viaticosValue) ? viaticosValue : 0)}</span>
                     </div>
                   </div>
@@ -2370,7 +2370,7 @@ const {
                 <section className="rounded-xl border bg-white shadow-sm">
                   <header className="border-b px-4 py-3 flex items-center justify-between">
                     <div className="text-sm font-semibold text-gray-800">Totales</div>
-                    <div className="text-xs text-gray-500">EstimaciÃ³n</div>
+                    <div className="text-xs text-gray-500">Estimación</div>
                   </header>
 
                   <div className="p-4 space-y-3 text-sm">
@@ -2384,7 +2384,7 @@ const {
                           {serviciosMiniLista.map((s) => (
                             <li key={`${s.tipoId}-${s.nombre}`} className="flex justify-between gap-2">
                               <span className="truncate">
-                                [{tipoLabelById.get(s.tipoId) || `Tipo #${s.tipoId}`}] {s.nombre} Ã— {s.cantidad}
+                                [{tipoLabelById.get(s.tipoId) || `Tipo #${s.tipoId}`}] {s.nombre} × {s.cantidad}
                               </span>
                               <span>{formatCOP(s.total)}</span>
                             </li>
@@ -2403,7 +2403,7 @@ const {
                           {materialesMiniLista.map((m) => (
                             <li key={m.nombre} className="flex justify-between gap-2">
                               <span className="truncate">
-                                {m.nombre} Ã— {m.cantidad}
+                                {m.nombre} × {m.cantidad}
                               </span>
                               <span>{formatCOP(m.total)}</span>
                             </li>
@@ -2413,7 +2413,7 @@ const {
                     </div>
 
                     <div className="flex justify-between">
-                      <span className="text-gray-600">ViÃ¡ticos</span>
+                      <span className="text-gray-600">Viáticos</span>
                       <span className="font-medium">{formatCOP(Number.isFinite(viaticosValue) ? viaticosValue : 0)}</span>
                     </div>
 

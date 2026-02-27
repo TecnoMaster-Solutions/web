@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import React from "react";
 import "react-toastify/dist/ReactToastify.css";
 import Colors from "@/shared/theme/colors";

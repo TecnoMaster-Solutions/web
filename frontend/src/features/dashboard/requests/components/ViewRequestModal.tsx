@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useMemo } from "react";
 import Modal from "@/features/dashboard/components/Modal";
@@ -76,7 +76,7 @@ export default function ViewRequestModal({
     [data.tipos]
   );
 
-  const codigoMostrar = (data.codigo || "").trim() || "â€”";
+  const codigoMostrar = (data.codigo || "").trim() || "—";
 
   const tecnicos = useMemo(() => {
     const list = Array.isArray(data.tecnicos) ? data.tecnicos : [];
@@ -104,7 +104,7 @@ export default function ViewRequestModal({
         <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div>
             <h3 className="text-sm font-semibold text-gray-900">
-              CÃ³digo: <span className="font-bold">{codigoMostrar}</span>
+              Código: <span className="font-bold">{codigoMostrar}</span>
             </h3>
           </div>
 
@@ -115,7 +115,7 @@ export default function ViewRequestModal({
                 estadoClass(data.estado),
               ].join(" ")}
             >
-              Estado: {data.estado || "â€”"}
+              Estado: {data.estado || "—"}
             </span>
 
             <span className="inline-flex items-center rounded-full bg-gray-800 px-3 py-1 text-[11px] font-medium text-white">
@@ -128,23 +128,23 @@ export default function ViewRequestModal({
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-900">Cliente</label>
             <div className="flex h-10 items-center rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm text-gray-900">
-              <span className="truncate">{data.cliente || "â€”"}</span>
+              <span className="truncate">{data.cliente || "—"}</span>
             </div>
           </div>
 
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-900">Servicio</label>
             <div className="flex h-10 items-center rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm text-gray-900">
-              <span className="truncate">{data.servicio || "â€”"}</span>
+              <span className="truncate">{data.servicio || "—"}</span>
             </div>
           </div>
         </div>
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-900">Fecha de creaciÃ³n</label>
+            <label className="mb-1 block text-xs font-medium text-gray-900">Fecha de creación</label>
             <div className="flex h-10 items-center rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm text-gray-900">
-              <span>{data.fecha || "â€”"}</span>
+              <span>{data.fecha || "—"}</span>
             </div>
           </div>
 
@@ -153,7 +153,7 @@ export default function ViewRequestModal({
               Fecha y hora programada
             </label>
             <div className="flex h-10 items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm text-gray-900">
-              <span>{programadaDate || "â€”"}</span>
+              <span>{programadaDate || "—"}</span>
               <span className="text-xs text-gray-500">{programadaTime ? `Hora: ${programadaTime}` : ""}</span>
             </div>
           </div>
@@ -163,21 +163,21 @@ export default function ViewRequestModal({
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-900">Fecha y hora final</label>
             <div className="flex h-10 items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm text-gray-900">
-              <span>{programadaEndDate || "â€”"}</span>
+              <span>{programadaEndDate || "—"}</span>
               <span className="text-xs text-gray-500">{programadaEndTime ? `Hora: ${programadaEndTime}` : ""}</span>
             </div>
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-900">DirecciÃ³n</label>
+            <label className="mb-1 block text-xs font-medium text-gray-900">Dirección</label>
             <div className="flex h-10 items-center rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm text-gray-900">
-              <span className="truncate">{data.direccion || "â€”"}</span>
+              <span className="truncate">{data.direccion || "—"}</span>
             </div>
           </div>
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-900">TÃ©cnicos</label>
+          <label className="mb-1 block text-xs font-medium text-gray-900">Técnicos</label>
 
           {tecnicos.length ? (
             <div className="flex flex-wrap gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
@@ -193,15 +193,15 @@ export default function ViewRequestModal({
             </div>
           ) : (
             <div className="flex h-10 items-center rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm text-gray-900">
-              <span className="truncate">â€”</span>
+              <span className="truncate">—</span>
             </div>
           )}
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-900">DescripciÃ³n</label>
+          <label className="mb-1 block text-xs font-medium text-gray-900">Descripción</label>
           <div className="min-h-[80px] whitespace-pre-line rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900">
-            {data.descripcion?.trim() ? data.descripcion : "â€”"}
+            {data.descripcion?.trim() ? data.descripcion : "—"}
           </div>
         </div>
       </div>

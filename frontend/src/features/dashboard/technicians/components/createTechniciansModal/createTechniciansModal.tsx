@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useRef, useState, useEffect } from "react";
 import Modal from "@/features/dashboard/components/Modal";
@@ -176,8 +176,8 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
     if ((field === "name" || field === "lastName") && hasDigits) {
       fieldError =
         field === "name"
-          ? "El nombre no puede contener nÃºmeros"
-          : "El apellido no puede contener nÃºmeros";
+          ? "El nombre no puede contener números"
+          : "El apellido no puede contener números";
     }
 
     setErrors((prev) => ({ ...prev, [field]: fieldError }));
@@ -276,7 +276,7 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
 
   return (
     <Modal
-      title="Crear TÃ©cnico"
+      title="Crear Técnico"
       isOpen={isOpen}
       onClose={() => {
         resetForm();
@@ -347,11 +347,11 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
               className="block text-sm font-medium mb-1"
               style={{ color: Colors.texts.primary }}
             >
-              NÃºmero de Documento <span className="text-green-500">*</span>
+              Número de Documento <span className="text-green-500">*</span>
             </label>
             <input
               type="text"
-              placeholder="NÃºmero de documento"
+              placeholder="Número de documento"
               value={numeroDocumento}
               onChange={(e) =>
                 handleFieldChange("documentNumber", e.target.value)
@@ -424,11 +424,11 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
               className="block text-sm font-medium mb-1"
               style={{ color: Colors.texts.primary }}
             >
-              TelÃ©fono <span className="text-green-500">*</span>
+              Teléfono <span className="text-green-500">*</span>
             </label>
             <input
               type="text"
-              placeholder="Ingrese telÃ©fono"
+              placeholder="Ingrese teléfono"
               value={telefono}
               onChange={(e) => handleFieldChange("phone", e.target.value)}
               onBlur={() => handleFieldChange("phone", telefono)}
@@ -447,7 +447,7 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
               className="block text-sm font-medium mb-1"
               style={{ color: Colors.texts.primary }}
             >
-              Correo electrÃ³nico <span className="text-green-500">*</span>
+              Correo electrónico <span className="text-green-500">*</span>
             </label>
             <input
               type="email"
@@ -470,7 +470,7 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
               className="block text-sm font-medium mb-1"
               style={{ color: Colors.texts.primary }}
             >
-              Tipos de tÃ©cnico <span className="text-green-500">*</span>
+              Tipos de técnico <span className="text-green-500">*</span>
             </label>
             <div className="flex flex-wrap gap-2">
               {(typeOptions ?? TECH_TYPES).map((opt) => {

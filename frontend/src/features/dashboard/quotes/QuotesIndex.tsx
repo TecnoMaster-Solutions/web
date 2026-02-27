@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useEffect, useState, useCallback } from "react";
 import Swal from "sweetalert2";
@@ -86,7 +86,7 @@ const getErrorMessage = (error: unknown, fallback: string): string => {
 };
 
 const normalizeQuoteStatus = (status?: string): QuoteStatusConfig => {
-  if (!status) return { label: "â€”", className: "text-slate-500" };
+  if (!status) return { label: "—", className: "text-slate-500" };
 
   const value = String(status).toLowerCase();
 
@@ -359,7 +359,7 @@ export default function QuotesIndex() {
       header: "Fecha",
       render: (row) => {
         const d = row.creationDate ? new Date(row.creationDate) : null;
-        return d && !Number.isNaN(d.getTime()) ? d.toLocaleDateString("es-CO") : "â€”";
+        return d && !Number.isNaN(d.getTime()) ? d.toLocaleDateString("es-CO") : "—";
       },
     },
     {
@@ -393,7 +393,7 @@ export default function QuotesIndex() {
     }
 
     const r = await Swal.fire({
-      title: "Â¿Aprobar cotizaciÃ³n?",
+      title: "¿Aprobar cotización?",
       text: `Total: ${Number(row.amount ?? 0).toLocaleString("es-CO", {
         style: "currency",
         currency: "COP",
@@ -401,7 +401,7 @@ export default function QuotesIndex() {
       })}`,
       icon: "question",
       showCancelButton: true,
-      confirmButtonText: "SÃ­, aprobar",
+      confirmButtonText: "Sí, aprobar",
       cancelButtonText: "Cancelar",
       confirmButtonColor: "#16a34a",
     });
@@ -439,8 +439,8 @@ export default function QuotesIndex() {
     } catch {
       await fetchQuotes();
       await Swal.fire(
-        "CotizaciÃ³n aprobada",
-        "La cotizaciÃ³n quedÃ³ en estado aprobada, pero no se pudo generar la venta.",
+        "Cotización aprobada",
+        "La cotización quedó en estado aprobada, pero no se pudo generar la venta.",
         "warning"
       );
       return;
@@ -449,10 +449,10 @@ export default function QuotesIndex() {
     await fetchQuotes();
 
     await Swal.fire(
-      "CotizaciÃ³n completada",
+      "Cotización completada",
       completionResult?.sale
         ? `Venta generada: ${completionResult.sale.salecode ?? completionResult.sale.saleid}`
-        : "La cotizaciÃ³n se completÃ³ y se creÃ³ la venta asociada.",
+        : "La cotización se completó y se creó la venta asociada.",
       "success"
     );
   }, [canCompleteQuotes, canUpdateQuotes, ensureQuoteHasCustomer, fetchQuotes]);
@@ -464,11 +464,11 @@ export default function QuotesIndex() {
     }
 
     const r = await Swal.fire({
-      title: "Â¿Cancelar cotizaciÃ³n?",
-      text: "Esta acciÃ³n no se puede deshacer",
+      title: "Cancelar cotización?",
+      text: "Esta acción no se puede deshacer",
       icon: "warning",
       showCancelButton: true,
-      confirmButtonText: "SÃ­, cancelar",
+      confirmButtonText: "Sí, cancelar",
       cancelButtonText: "Volver",
       confirmButtonColor: "#058a3c",
     });
@@ -499,8 +499,8 @@ export default function QuotesIndex() {
     if (status !== "aprobada") {
       await Swal.fire({
         icon: "warning",
-        title: "AcciÃ³n no permitida",
-        text: "Solo se pueden anular cotizaciones que estÃ©n aprobadas.",
+        title: "Acción no permitida",
+        text: "Solo se pueden anular cotizaciones que estén aprobadas.",
         confirmButtonText: "Entendido",
         confirmButtonColor: "#b20000",
       });
@@ -508,10 +508,10 @@ export default function QuotesIndex() {
     }
 
     const r = await Swal.fire({
-      title: "Â¿Anular cotizaciÃ³n?",
+      title: "¿Anular cotización?",
       input: "textarea",
-      inputLabel: "ObservaciÃ³n (opcional)",
-      inputPlaceholder: "Motivo de la anulaciÃ³n",
+      inputLabel: "Observación (opcional)",
+      inputPlaceholder: "Motivo de la anulación",
       icon: "warning",
       showCancelButton: true,
       confirmButtonText: "Anular",
@@ -526,8 +526,8 @@ export default function QuotesIndex() {
       await fetchQuotes();
       await Swal.fire({
         icon: "success",
-        title: "CotizaciÃ³n anulada",
-        text: "La cotizaciÃ³n fue anulada correctamente.",
+        title: "Cotización anulada",
+        text: "La cotización fue anulada correctamente.",
       });
     } catch (error: unknown) {
       await Swal.fire(
@@ -578,7 +578,7 @@ export default function QuotesIndex() {
             <button
               type="button"
               className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-[#b20000] text-white text-sm font-semibold hover:bg-[#910000]"
-              onClick={() => Swal.fire("Pendiente", "Conecta aquÃ­ la descarga del reporte.", "info")}
+              onClick={() => Swal.fire("Pendiente", "Conecta aquí la descarga del reporte.", "info")}
             >
               <Image src="/icons/download.svg" alt="Descargar" width={16} height={16} />
               Descargar Reporte

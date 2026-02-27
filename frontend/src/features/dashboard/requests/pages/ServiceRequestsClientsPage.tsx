@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -344,11 +344,11 @@ export default function ServiceRequestsClientsPage() {
   async function handleCancel(row: Row) {
     if (!canCancelRequests || !canMutateRow(row)) return;
     const res = await Swal.fire({
-      title: "Â¿Cancelar solicitud?",
-      text: `Se marcarÃ¡ la solicitud #${row.id} como cancelada.`,
+      title: "¿Cancelar solicitud?",
+      text: `Se marcará la solicitud #${row.id} como cancelada.`,
       icon: "warning",
       showCancelButton: true,
-      confirmButtonText: "SÃ­, cancelar",
+      confirmButtonText: "Sí­, cancelar",
       cancelButtonText: "Volver",
       confirmButtonColor: "#d33",
       reverseButtons: true,

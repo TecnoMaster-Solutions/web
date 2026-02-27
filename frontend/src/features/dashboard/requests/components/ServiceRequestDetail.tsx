@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useMemo } from "react";
 import { useRouter } from "next/navigation";
@@ -111,7 +111,7 @@ const ServiceRequestDetailContent = ({ data }: { data: ServiceRequestDTO }) => {
             className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
           >
             <ArrowLeft className="h-4 w-4" />
-            Volver atrÃ¡s
+            Volver atrás
           </button>
         </div>
 
@@ -191,7 +191,7 @@ const ServiceRequestDetailContent = ({ data }: { data: ServiceRequestDTO }) => {
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-900">Tecnicos asignados</h2>
+        <h2 className="text-lg font-semibold text-slate-900">Técnicos asignados</h2>
         {technicians.length > 0 ? (
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             {technicians.map((tech, index) => (
@@ -210,7 +210,7 @@ const ServiceRequestDetailContent = ({ data }: { data: ServiceRequestDTO }) => {
           </div>
         ) : (
           <p className="mt-4 text-sm text-slate-500">
-            No hay tecnicos asignados.
+            No hay técnicos asignados.
           </p>
         )}
       </section>

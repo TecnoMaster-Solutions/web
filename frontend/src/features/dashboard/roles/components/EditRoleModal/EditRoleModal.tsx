@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import { XMarkIcon, CheckIcon } from "@heroicons/react/24/solid";
@@ -241,7 +241,7 @@ export default function EditRoleModal({
                 <table className="min-w-full text-sm">
                   <thead style={{ backgroundColor: "#04652c" }} className="sticky top-0 z-10">
                     <tr>
-                      <th className="px-4 py-3 text-left font-semibold text-white">MÃ³dulo</th>
+                      <th className="px-4 py-3 text-left font-semibold text-white">Módulo</th>
                       <th className="px-4 py-3 text-center font-semibold text-white">
                         Permisos / Privilegios
                       </th>

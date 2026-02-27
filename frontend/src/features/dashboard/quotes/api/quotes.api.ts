@@ -60,8 +60,8 @@ export const getTechniciansForQuote = async (): Promise<any> => {
     const { data } = await api.get("/technicians");
     return data;
   } catch (error) {
-    console.error("Error al obtener los tecnicos:", error);
-    showError("Error al obtener los tecnicos");
+    console.error("Error al obtener los técnicos:", error);
+    showError("Error al obtener los técnicos");
     throw error;
   }
 };

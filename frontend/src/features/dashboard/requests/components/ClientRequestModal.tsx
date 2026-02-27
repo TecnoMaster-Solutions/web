@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import Modal from "@/features/dashboard/components/Modal";
@@ -289,7 +289,7 @@ export default function ClientCreateRequestModal({
       ).trim();
 
       if (!city || !zone || !streetType || !streetNumber || !secondaryNumber) {
-        showInfo("Completa los datos de direcciÃ³n.");
+        showInfo("Completa los datos de dirección.");
         return;
       }
     }
@@ -308,7 +308,7 @@ export default function ClientCreateRequestModal({
 
     const sid = Number(serviceId);
     if (!Number.isFinite(sid) || sid <= 0) {
-      showInfo("Selecciona un servicio vÃ¡lido.");
+      showInfo("Selecciona un servicio válido.");
       return;
     }
 
@@ -405,7 +405,7 @@ export default function ClientCreateRequestModal({
             {clientDocumentLabel && (
               <>
                 <p className="mt-2 text-[11px] font-medium text-gray-500">
-                  CÃ©dula
+                  Cédula
                 </p>
                 <p className="text-sm font-semibold text-gray-900">
                   {clientDocumentLabel}
@@ -418,7 +418,7 @@ export default function ClientCreateRequestModal({
         {initialAddressFields && (
           <div className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-3">
             <p className="text-[11px] font-medium text-gray-500 mb-2">
-              DirecciÃ³n de envÃ­o (carrito)
+              Dirección de envío (carrito)
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               <div className="rounded-md border border-gray-200 bg-white px-2 py-1.5">
@@ -434,13 +434,13 @@ export default function ClientCreateRequestModal({
                 </p>
               </div>
               <div className="rounded-md border border-gray-200 bg-white px-2 py-1.5">
-                <p className="text-[10px] text-gray-500">Tipo de vÃ­a</p>
+                <p className="text-[10px] text-gray-500">Tipo de vía</p>
                 <p className="text-xs font-medium text-gray-900">
                   {initialAddressFields.streetType || "-"}
                 </p>
               </div>
               <div className="rounded-md border border-gray-200 bg-white px-2 py-1.5">
-                <p className="text-[10px] text-gray-500">NÃºmero</p>
+                <p className="text-[10px] text-gray-500">Número</p>
                 <p className="text-xs font-medium text-gray-900">
                   {initialAddressFields.streetNumber || "-"}
                 </p>
@@ -546,7 +546,7 @@ export default function ClientCreateRequestModal({
                 ))}
               </select>
               <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-gray-500">
-                â–¾
+                ▼
               </span>
             </div>
 
@@ -559,7 +559,7 @@ export default function ClientCreateRequestModal({
         {initialAddressFields && onInitialAddressFieldsChange && (
           <div className="grid gap-3 rounded-lg border border-gray-100 bg-gray-50 p-3">
             <p className="text-xs font-semibold text-gray-900">
-              DirecciÃ³n de envÃ­o
+              Dirección de envío
             </p>
 
             <select
@@ -644,7 +644,7 @@ export default function ClientCreateRequestModal({
                     complement: String(initialAddressFields.complement || ""),
                   })
                 }
-                placeholder="NÃºmero"
+                placeholder="Número"
                 className="w-full rounded-lg border border-gray-300 bg-white h-10 px-3 text-sm"
                 disabled={saving}
               />
@@ -695,7 +695,7 @@ export default function ClientCreateRequestModal({
         >
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-900">
-              DirecciÃ³n
+              Dirección
             </label>
             <input
               value={direccion}
@@ -720,7 +720,7 @@ export default function ClientCreateRequestModal({
 
         <div>
           <label className="mb-1 block text-xs font-medium text-gray-900">
-            DescripciÃ³n
+            Descripción
           </label>
           <textarea
             value={description}
