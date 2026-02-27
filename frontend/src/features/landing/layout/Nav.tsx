@@ -5,7 +5,6 @@ import Image from "next/image";
 import { ShoppingCart, Menu, X, UserCircle, Pencil, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { routes } from "@/shared/routes";
-import CartModal from "../components/CartModal";
 import { useCart } from "../contexts/CartContext";
 import { useAuth } from "@/features/auth/authcontext";
 import ProfileModal from "@/features/auth/porfile/porfilemodal";
@@ -13,7 +12,6 @@ import ProfileModal from "@/features/auth/porfile/porfilemodal";
 const Nav = () => {
   const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isCartOpen, setIsCartOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -208,7 +206,7 @@ const Nav = () => {
 
             {/* Carrito Desktop */}
             <button
-              onClick={() => setIsCartOpen(true)}
+              onClick={() => router.push(routes.landing.cart)}
               className="relative cursor-pointer ml-4 text-black px-4 py-1 rounded-md flex items-center justify-center group transition-colors duration-300"
               aria-label="Abrir carrito"
             >
@@ -324,7 +322,7 @@ const Nav = () => {
           {/* Carrito en movil */}
           <button
             onClick={() => {
-              setIsCartOpen(true);
+              router.push(routes.landing.cart);
               setIsMenuOpen(false);
             }}
             className="relative cursor-pointer bg-red-700 hover:bg-red-800 text-white px-4 py-2 rounded-md flex items-center justify-center transition"
@@ -338,9 +336,6 @@ const Nav = () => {
           </button>
         </div>
       </nav>
-
-      {/* Modal del carrito */}
-      <CartModal isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
       <ProfileModal isOpen={profileOpen} onClose={() => setProfileOpen(false)} />
     </>
   );

@@ -14,6 +14,63 @@ import { ISale } from "./types/sales.type";
 import { getSales, annulSale, updateEstadoPago } from "./services/sales.service";
 import CreateSaleForm from "./components/CreateSaleForm";
 import SaleDetailModal from "./components/SaleDetailModal";
+import { useAuth } from "@/features/auth/authcontext";
+
+function normalizeRoleName(role: any) {
+  return String(role ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+}
+
+function toPositiveId(value: any): number | null {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function extractAuthClientId(user: any, profile: any): number | null {
+  const candidates = [
+    user?.customerid,
+    user?.clientid,
+    user?.clientId,
+    user?.customer?.customerid,
+    user?.customers?.[0]?.customerid,
+    user?.customer?.id,
+    user?.customers?.[0]?.id,
+    profile?.customerid,
+    profile?.clientid,
+    profile?.clientId,
+    profile?.customer?.customerid,
+    profile?.customers?.[0]?.customerid,
+    profile?.customer?.id,
+    profile?.customers?.[0]?.id,
+  ];
+
+  for (const candidate of candidates) {
+    const id = toPositiveId(candidate);
+    if (id) return id;
+  }
+
+  return null;
+}
+
+function decodeJwtPayload(token: string): any | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length < 2) return null;
+
+    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = base64.padEnd(
+      base64.length + ((4 - (base64.length % 4)) % 4),
+      "="
+    );
+    const decoded = atob(padded);
+    return JSON.parse(decoded);
+  } catch {
+    return null;
+  }
+}
 
 // ── Tipo de fila de tabla ────────────────────────────────────────────────────
 type SaleRow = {
@@ -29,6 +86,9 @@ type SaleRow = {
 
 // ── Componente principal ─────────────────────────────────────────────────────
 export default function SalesIndex() {
+  const { user, profile } = useAuth();
+  const [permissionsLoaded, setPermissionsLoaded] = useState(false);
+  const [tokenPermissions, setTokenPermissions] = useState<string[]>([]);
   const [sales, setSales] = useState<SaleRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreateModalOpen, setCreateModalOpen] = useState(false);
@@ -41,11 +101,53 @@ export default function SalesIndex() {
   const [annulReason, setAnnulReason] = useState("");
   const [annulling, setAnnulling] = useState(false);
 
+  const authRole = normalizeRoleName(
+    (user as any)?.rolename ??
+      (profile as any)?.rolename ??
+      (profile as any)?.role?.name ??
+      (profile as any)?.users?.rolename
+  );
+  const authClientId = extractAuthClientId(user, profile);
+  const isClientUser = authRole.includes("cliente");
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const rawToken =
+      localStorage.getItem("accessToken") ?? localStorage.getItem("token");
+
+    if (!rawToken) {
+      setTokenPermissions([]);
+      setPermissionsLoaded(true);
+      return;
+    }
+
+    const payload = decodeJwtPayload(rawToken);
+    const permissions = Array.isArray(payload?.permissions)
+      ? payload.permissions.filter((p: unknown): p is string => typeof p === "string")
+      : [];
+
+    setTokenPermissions(permissions);
+    setPermissionsLoaded(true);
+  }, []);
+
+  const hasSalesRead = tokenPermissions.includes("sales.read");
+  const hasSalesCreate = tokenPermissions.includes("sales.create");
+  const hasSalesUpdate = tokenPermissions.includes("sales.update");
+  const hasSalesDelete = tokenPermissions.includes("sales.delete");
+  const hasSalesCancel =
+    tokenPermissions.includes("sales.cancel") || hasSalesDelete || hasSalesUpdate;
+
   // ── Cargar ventas desde la API ────────────────────────────────────────────
   const loadSales = useCallback(async () => {
     try {
       const data: ISale[] = await getSales();
-      const mapped: SaleRow[] = data.map((s) => ({
+      const visibleSales =
+        isClientUser && authClientId
+          ? data.filter((s) => Number(s.customerid) === authClientId)
+          : data;
+
+      const mapped: SaleRow[] = visibleSales.map((s) => ({
         id: s.saleid,
         codigo: s.salecode,
         cliente: s.customer?.users
@@ -71,17 +173,27 @@ export default function SalesIndex() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [authClientId, isClientUser]);
 
   useEffect(() => {
+    if (!permissionsLoaded) return;
+    if (!hasSalesRead) {
+      setLoading(false);
+      return;
+    }
     loadSales();
-  }, [loadSales]);
+  }, [hasSalesRead, loadSales, permissionsLoaded]);
 
   // ── Cambiar estado de pago (interactivo) ─────────────────────────────────
   const handleEstadoPagoChange = async (
     row: SaleRow,
     nuevoEstado: "Abonada" | "Pagada"
   ) => {
+    if (!hasSalesUpdate) {
+      showError("No tienes permisos para actualizar el estado de pago.");
+      return;
+    }
+
     showLoader();
     try {
       await updateEstadoPago(row.id, nuevoEstado);
@@ -148,6 +260,11 @@ export default function SalesIndex() {
 
   // ── Abrir modal de anulación (con validación de estadoPago) ────────────────
   const handleOpenAnnul = (row: SaleRow) => {
+    if (!hasSalesCancel) {
+      showError("No tienes permisos para anular ventas.");
+      return;
+    }
+
     // Bloquear si tiene pago o abono registrado
     if (row.estadoPago === "Pagada") {
       showError("No se puede anular una venta que ya fue pagada.");
@@ -231,7 +348,11 @@ export default function SalesIndex() {
       header: "Estado Pago",
       render: (row) => {
         // Si la venta está anulada o finalizada, mostrar solo el valor sin botones
-        if (row.estado === "Anulada" || row.estado === "Finalizada") {
+        if (
+          row.estado === "Anulada" ||
+          row.estado === "Finalizada" ||
+          !hasSalesUpdate
+        ) {
           return (
             <span className="text-xs text-gray-400 italic">
               {row.estadoPago ?? "—"}
@@ -268,11 +389,21 @@ export default function SalesIndex() {
   ];
 
   // ── Loading state ────────────────────────────────────────────────────────
-  if (loading) {
+  if (!permissionsLoaded || (loading && hasSalesRead)) {
     return (
       <div className="flex items-center justify-center py-20">
         <div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin" />
         <span className="ml-3 text-gray-500">Cargando ventas...</span>
+      </div>
+    );
+  }
+
+  if (!hasSalesRead) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <span className="text-gray-500">
+          No tienes permisos para visualizar ventas.
+        </span>
       </div>
     );
   }
@@ -299,7 +430,7 @@ export default function SalesIndex() {
           pageSize={10}
           onView={(row) => setViewSaleId(row.id)}
           renderExtraActions={(row) =>
-            row.estado === "Pendiente" ? (
+            hasSalesCancel && row.estado === "Pendiente" ? (
               <button
                 onClick={() => handleOpenAnnul(row)}
                 className="p-1 rounded-full cursor-pointer transition-all duration-300 hover:scale-110 hover:bg-red-300/60 text-red-500"
@@ -345,7 +476,7 @@ export default function SalesIndex() {
               </button>
             </div>
           }
-          onCreate={() => setCreateModalOpen(true)}
+          onCreate={hasSalesCreate ? () => setCreateModalOpen(true) : undefined}
           createButtonText="Nueva Venta"
           module={"Sales"}
         />

@@ -7,8 +7,11 @@ import { useCart } from "../contexts/CartContext";
 import ClientCreateRequestModal from "@/features/dashboard/requests/components/ClientRequestModal";
 import { useCreateServiceRequest } from "@/features/dashboard/requests/hooks/useServiceRequests";
 import { showSuccess, showError } from "@/shared/utils/notifications";
-import { createSale } from "@/features/dashboard/sales/api/sales.api";
-import Swal from "sweetalert2";
+import { useAuth } from "@/features/auth/authcontext";
+import {
+  createSaleCheckoutAndRedirect,
+  openMercadoPagoCheckoutPlaceholderWindow,
+} from "@/features/payments/mercado-pago/services/mercadoPagoCheckout.service";
 
 function getUserFromToken(): SessionUser | null {
   if (typeof window === "undefined") return null;
@@ -49,8 +52,9 @@ type SessionUser = {
 };
 
 interface CartModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+  isOpen?: boolean;
+  onClose?: () => void;
+  mode?: "modal" | "page";
 }
 
 type Address = {
@@ -68,10 +72,10 @@ const STREET_TYPES = ["Calle", "Carrera", "Avenida", "Transversal", "Diagonal"];
 
 function buildSalePayload({
   cart,
-  userId,
+  customerId,
 }: {
   cart: typeof cart;
-  userId: number;
+  customerId: number;
 }) {
   const subtotal = cart.reduce(
     (acc, item) => acc + item.price * item.quantity,
@@ -82,7 +86,7 @@ function buildSalePayload({
   const taxamount = Math.round((subtotal * taxpercent) / 100);
 
   return {
-    customerid: userId,
+    customerid: customerId,
     saledate: new Date().toISOString(),
     salecode: `VEN-${Date.now()}`,
     subtotal,
@@ -102,13 +106,41 @@ function buildSalePayload({
   };
 }
 
-export default function CartModal({ isOpen, onClose }: CartModalProps) {
+export default function CartModal({
+  isOpen = false,
+  onClose,
+  mode = "modal",
+}: CartModalProps) {
+  const extractCustomerId = (userData: any, profileData: any): number => {
+    const candidates = [
+      userData?.customerid,
+      userData?.clientId,
+      userData?.clientid,
+      userData?.customer?.customerid,
+      userData?.customers?.[0]?.customerid,
+      profileData?.customerid,
+      profileData?.clientId,
+      profileData?.clientid,
+      profileData?.customer?.customerid,
+      profileData?.customers?.[0]?.customerid,
+      profileData?.customer?.id,
+      profileData?.customers?.[0]?.id,
+    ];
+
+    for (const c of candidates) {
+      const n = Number(c);
+      if (Number.isFinite(n) && n > 0) return n;
+    }
+    return 0;
+  };
+
   const [openProducts, setOpenProducts] = useState<Set<number>>(new Set());
   const [addressError, setAddressError] = useState("");
   const [error, setError] = useState("");
   const [openServiceModal, setOpenServiceModal] = useState(false);
   const [authUser, setAuthUser] = useState<SessionUser | null>(null);
   const createRequestMut = useCreateServiceRequest();
+  const [isRedirectingToCheckout, setIsRedirectingToCheckout] = useState(false);
   const [serviceDraft, setServiceDraft] = useState<CreateRequestPayload | null>(
     null
   );
@@ -116,6 +148,9 @@ export default function CartModal({ isOpen, onClose }: CartModalProps) {
   const [selectedServiceId, setSelectedServiceId] = useState<number | null>(
     null
   );
+  const [pendingServiceCartItemId, setPendingServiceCartItemId] = useState<
+    string | null
+  >(null);
 
   const [address, setAddress] = useState({
     city: "",
@@ -127,6 +162,7 @@ export default function CartModal({ isOpen, onClose }: CartModalProps) {
   });
 
   const { cart, updateQuantity, toggleService, removeFromCart } = useCart();
+  const { user, profile } = useAuth();
 
   useEffect(() => {
     const user = getUserFromToken();
@@ -151,10 +187,38 @@ export default function CartModal({ isOpen, onClose }: CartModalProps) {
     setOpenProducts(updatedSet);
   }, [cart]);
 
-  if (!isOpen) return null;
+  const isPage = mode === "page";
+
+  if (!isPage && !isOpen) return null;
 
   const hasService = cart.some((item) => item.service);
   const total = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
+  const customerName =
+    profile?.name ??
+    user?.name ??
+    profile?.users?.name ??
+    authUser?.name ??
+    "Cliente";
+  const customerDocument =
+    profile?.documentnumber ??
+    (user as any)?.documentnumber ??
+    profile?.users?.documentnumber ??
+    profile?.customer?.documentnumber ??
+    "-";
+  const customerIdForSale = extractCustomerId(user, profile);
+  const authUserId = Number(
+    authUser?.userid ??
+      (user as any)?.userid ??
+      (profile as any)?.userid ??
+      (profile as any)?.users?.userid ??
+      0
+  );
+  const authUserNameLabel =
+    authUser?.name ??
+    user?.name ??
+    profile?.name ??
+    profile?.users?.name ??
+    customerName;
 
   const validateAddress = (): string | null => {
     if (!address.city) return "Seleccione una ciudad";
@@ -170,30 +234,40 @@ export default function CartModal({ isOpen, onClose }: CartModalProps) {
     }`;
 
   const handlePurchase = async () => {
-    const validationError = validateAddress();
-    if (validationError) {
-      setAddressError(validationError);
+    if (!cart.length || isRedirectingToCheckout) {
       return;
     }
 
-    if (!authUser) {
+    if (hasService) {
+      const validationError = validateAddress();
+      if (validationError) {
+        setAddressError(validationError);
+        return;
+      }
+    } else {
+      setAddressError("");
+    }
+
+    if (!authUserId) {
       showError("Usuario no autenticado.");
       return;
     }
 
+    if (!customerIdForSale) {
+      showError("No se encontró el cliente asociado al usuario.");
+      return;
+    }
+
+    let checkoutPopup: Window | null = null;
+
     try {
+      setIsRedirectingToCheckout(true);
+      checkoutPopup = openMercadoPagoCheckoutPlaceholderWindow();
+
       // Crear solicitud de servicio (si existe)
       if (hasService && serviceDraft) {
         await createRequestMut.mutateAsync(serviceDraft);
       }
-
-      // Crear venta
-      const salePayload = buildSalePayload({
-        cart,
-        userId: authUser.userid,
-      });
-
-      await createSale(salePayload);
 
       // Persistencia auxiliar (opcional)
       localStorage.setItem(
@@ -207,102 +281,250 @@ export default function CartModal({ isOpen, onClose }: CartModalProps) {
         })
       );
 
-      // Mostrar Sweet Alert antes de redireccionar
-      await Swal.fire({
-        title: "¡Compra Exitosa!",
-        text: "La venta y solicitud de servicio han sido creadas correctamente.",
-        icon: "success",
-        confirmButtonText: "Continuar",
-        confirmButtonColor: "#dc2626",
-        timer: 3000,
-        timerProgressBar: true,
-        showClass: {
-          popup: "animate__animated animate__fadeInDown",
-        },
-        hideClass: {
-          popup: "animate__animated animate__fadeOutUp",
-        },
-      });
+      const payerEmail =
+        authUser?.email ??
+        (user as any)?.email ??
+        (profile as any)?.email ??
+        (profile as any)?.users?.email;
 
-      window.location.href = "/payments/register";
-      onClose();
+      const checkoutPayload = {
+        items: cart.map((item) => ({
+          id: String(item.id),
+          title: item.name,
+          quantity: item.quantity,
+          unitPrice: item.price,
+        })),
+        customerId: customerIdForSale,
+        payer: {
+          name: customerName,
+          email: payerEmail,
+        },
+        metadata: {
+          customerId: customerIdForSale,
+          authUserId,
+          hasService,
+          cartItems: cart.length,
+          subtotal: Math.round(total),
+          shipping: 20000,
+          tax: Math.round(total * 0.19),
+          totalAmount: Math.round(total + 20000 + total * 0.19),
+          country: "CO",
+          currency: "COP",
+        },
+      };
+
+      await createSaleCheckoutAndRedirect(checkoutPayload, {
+        popupWindow: checkoutPopup,
+      });
     } catch (err) {
-      showError("No se pudo completar la compra.");
+      if (checkoutPopup && !checkoutPopup.closed) {
+        checkoutPopup.close();
+      }
+      console.error("Error al completar compra desde carrito:", err);
+      showError("No se pudo iniciar el pago con Mercado Pago.");
+      setIsRedirectingToCheckout(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div
+      className={
+        isPage
+          ? "min-h-screen bg-gray-100 px-4 py-8"
+          : "fixed inset-0 z-50 flex items-center justify-center"
+      }
+    >
       {/* Fondo oscuro */}
-      <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={onClose}
-      />
+      {!isPage && (
+        <div
+          className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+          onClick={onClose}
+        />
+      )}
       {/* Contenido */}
       <motion.div
-        initial={{ opacity: 0, y: -50 }}
+        initial={isPage ? { opacity: 0, y: 16 } : { opacity: 0, y: -50 }}
         animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -50 }}
+        exit={isPage ? { opacity: 0, y: 16 } : { opacity: 0, y: -50 }}
         transition={{ duration: 0.4, ease: "easeOut" }}
-        className="relative bg-white rounded-2xl shadow-xl w-full max-w-4xl p-6 z-50 max-h-[95vh] overflow-y-auto scroll-smooth"
+        className={`relative bg-white rounded-2xl shadow-xl w-full max-w-6xl p-6 ${
+          isPage
+            ? "mx-auto overflow-visible"
+            : "z-50 max-h-[95vh] overflow-y-auto scroll-smooth"
+        }`}
       >
         {/* Botón cerrar */}
-        <button
-          className="cursor-pointer absolute top-4 right-4 text-gray-700 hover:text-black"
-          onClick={onClose}
-        >
-          <X className="h-6 w-6" />
-        </button>
+        {!isPage && (
+          <button
+            className="cursor-pointer absolute top-4 right-4 text-gray-700 hover:text-black"
+            onClick={onClose}
+          >
+            <X className="h-6 w-6" />
+          </button>
+        )}
 
         <h2 className="text-3xl font-semibold mb-6">Tu carrito</h2>
 
+        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_340px] gap-6 items-start">
+          <div className="space-y-6 min-w-0">
+        {/* Datos cliente / dirección (izquierda) */}
+        <div className="hidden w-full bg-gray-50 p-4 rounded-xl shadow-inner border border-gray-200 [&>p]:hidden">
+          <div className="space-y-2">
+            <p className="text-gray-800">
+              <span className="font-semibold">Nombre:</span> {customerName}
+            </p>
+            <p className="text-gray-800">
+              <span className="font-semibold">Cédula:</span> {customerDocument}
+            </p>
+          </div>
+          <div className="flex flex-col gap-3 mt-4">
+            <h4 className="font-semibold text-gray-800">Dirección de envío</h4>
+
+            <select
+              value={address.city}
+              onChange={(e) => setAddress({ ...address, city: e.target.value })}
+              className="border rounded p-2 bg-white"
+            >
+              <option value="">Ciudad</option>
+              {CITIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={address.zone}
+              onChange={(e) => setAddress({ ...address, zone: e.target.value })}
+              className="border rounded p-2 bg-white"
+            >
+              <option value="">Zona / Barrio</option>
+              {ZONES.map((z) => (
+                <option key={z} value={z}>
+                  {z}
+                </option>
+              ))}
+            </select>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <select
+                value={address.streetType}
+                onChange={(e) =>
+                  setAddress({ ...address, streetType: e.target.value })
+                }
+                className="border rounded p-2 bg-white"
+              >
+                <option value="">Tipo</option>
+                {STREET_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+
+              <input
+                placeholder="Número"
+                value={address.streetNumber}
+                onChange={(e) =>
+                  setAddress({ ...address, streetNumber: e.target.value })
+                }
+                className="border rounded p-2 bg-white"
+              />
+            </div>
+
+            <input
+              placeholder="# secundaria (ej: 23-18)"
+              value={address.secondaryNumber}
+              onChange={(e) =>
+                setAddress({ ...address, secondaryNumber: e.target.value })
+              }
+              className="border rounded p-2 bg-white"
+            />
+
+            <input
+              placeholder="Complemento (Apto, Casa, Torre...)"
+              value={address.complement}
+              onChange={(e) => setAddress({ ...address, complement: e.target.value })}
+              className="border rounded p-2 bg-white"
+            />
+
+            {addressError && (
+              <p className="text-sm text-red-600 font-medium">{addressError}</p>
+            )}
+          </div>
+
+          {error && <p className="text-red-600 text-sm mt-2">{error}</p>}
+        </div>
+
+        <div className="bg-white border border-gray-200 rounded-xl px-4 py-3 shadow-sm">
+          <div className="flex items-center gap-3 text-gray-800">
+            <input type="checkbox" className="h-4 w-4 rounded border-gray-300" />
+            <span className="font-medium">Todos los productos</span>
+          </div>
+        </div>
+
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+            <p className="font-semibold text-gray-900">
+              Productos del carrito ({cart.length})
+            </p>
+            <p className="text-sm text-gray-600">
+              {cart.reduce((sum, item) => sum + item.quantity, 0)} unidades
+            </p>
+          </div>
+
         {/* productos */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 max-h-96 overflow-y-auto pr-2">
+        <div
+          className={`flex flex-col gap-4 pr-2 ${
+            isPage ? "max-h-none overflow-visible" : "max-h-[42vh] overflow-y-auto"
+          }`}
+        >
           <AnimatePresence>
             {cart.map((item) => (
               <motion.div
                 key={item.id}
-                whileHover={{
-                  boxShadow: "0px 10px 25px rgba(139, 0, 0, 0.7)",
-                }}
+                whileHover={{}}
                 whileTap={{ scale: 0.97 }}
                 layout
                 transition={{ duration: 0.4, ease: "easeInOut" }}
-                className={`cursor-pointer bg-gray-50 rounded-xl shadow-md hover:shadow-xl p-4 relative
-  ${openProducts.has(item.id)
-                    ? "flex flex-col md:flex-row gap-6 items-start md:col-span-3"
-                    : "flex flex-col items-center"
+                className={`cursor-pointer bg-gray-50 rounded-xl shadow-md hover:shadow-xl p-4 relative w-full
+  ${isPage || openProducts.has(item.id)
+                    ? "flex flex-col gap-4"
+                    : "flex flex-col sm:flex-row sm:items-center gap-4"
                   }`}
               >
                 {/* Flecha de despliegue - arriba a la izquierda */}
-                <div className="absolute top-2 left-2 z-10">
-                  <button
-                    className="cursor-pointer p-1 hover:bg-gray-200 rounded transition-colors"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setOpenProducts((prev) => {
-                        const newSet = new Set(prev);
-                        if (newSet.has(item.id)) {
-                          newSet.delete(item.id);
-                        } else {
-                          newSet.add(item.id);
-                        }
-                        return newSet;
-                      });
-                    }}
-                  >
-                    {openProducts.has(item.id) ? (
-                      <ChevronUp className="h-4 w-4 text-gray-600" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4 text-gray-600" />
-                    )}
-                  </button>
-                </div>
+                {!isPage && (
+                  <div className="absolute top-2 left-2 z-10">
+                    <button
+                      className="cursor-pointer p-1 hover:bg-gray-200 rounded transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setOpenProducts((prev) => {
+                          const newSet = new Set(prev);
+                          if (newSet.has(item.id)) {
+                            newSet.delete(item.id);
+                          } else {
+                            newSet.add(item.id);
+                          }
+                          return newSet;
+                        });
+                      }}
+                    >
+                      {openProducts.has(item.id) ? (
+                        <ChevronUp className="h-4 w-4 text-gray-600" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4 text-gray-600" />
+                      )}
+                    </button>
+                  </div>
+                )}
 
                 {/* Vista simple */}
                 <div
-                  className="flex flex-col items-center justify-between w-full md:w-40"
+                  className="flex flex-col sm:flex-row items-center sm:items-center gap-4 w-full pl-5"
                   onClick={() => {
+                    if (isPage) return;
                     setOpenProducts((prev) => {
                       const newSet = new Set(prev);
                       if (newSet.has(item.id)) {
@@ -314,26 +536,31 @@ export default function CartModal({ isOpen, onClose }: CartModalProps) {
                     });
                   }}
                 >
-                  <p className="mt-2 font-medium text-gray-800 text-center">
-                    {item.name}
-                  </p>
                   <Image
                     src={item.image}
                     alt={item.name}
                     width={80}
                     height={80}
-                    className="object-contain mt-2"
+                    className="object-contain shrink-0"
                   />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-800 text-center sm:text-left line-clamp-2">
+                      {item.name}
+                    </p>
+                    <p className="text-sm text-gray-600 mt-1 text-center sm:text-left">
+                      Precio: ${item.price.toLocaleString("es-CO")}
+                    </p>
+                  </div>
                 </div>
 
                 {/* Vista detallada */}
-                {openProducts.has(item.id) && (
+                {(isPage || openProducts.has(item.id)) && (
                   <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
                     transition={{ duration: 0.3, ease: "easeOut" }}
-                    className="flex-1 w-full md:w-auto mt-4 md:mt-0 flex flex-row gap-6 items-start"
+                    className="flex-1 w-full mt-2 flex flex-row gap-6 items-start"
                   >
                     {/* Vista detallada SOLO para el producto seleccionado */}
                     <div className="flex-1 overflow-x-auto">
@@ -418,7 +645,7 @@ export default function CartModal({ isOpen, onClose }: CartModalProps) {
                                   e.stopPropagation();
 
                                   // Debe estar autenticado
-                                  if (!authUser) {
+                                  if (!authUserId) {
                                     setError(
                                       "Debes iniciar sesión para solicitar un servicio."
                                     );
@@ -426,8 +653,7 @@ export default function CartModal({ isOpen, onClose }: CartModalProps) {
                                   }
 
                                   // Validar dirección ANTES de abrir el modal
-                                  const addressValidationError =
-                                    validateAddress();
+                                  const addressValidationError = null;
                                   if (addressValidationError) {
                                     setAddressError(addressValidationError);
                                     setError("");
@@ -437,12 +663,13 @@ export default function CartModal({ isOpen, onClose }: CartModalProps) {
                                   // Todo OK → activar servicio y abrir modal
                                   setAddressError("");
 
-                                  toggleService(item.id);
-
                                   if (!item.service) {
+                                    setPendingServiceCartItemId(item.id);
                                     setSelectedServiceId(Number(item.id));
                                     setOpenServiceModal(true);
                                   } else {
+                                    toggleService(item.id);
+                                    setPendingServiceCartItemId(null);
                                     setSelectedServiceId(null);
                                     setOpenServiceModal(false);
                                   }
@@ -490,11 +717,10 @@ export default function CartModal({ isOpen, onClose }: CartModalProps) {
             ))}
           </AnimatePresence>
         </div>
+        </div>
 
-        {/* Datos + Total */}
-        <div className="flex flex-col lg:flex-row justify-between items-start mt-8 gap-6">
-          {/* Datos cliente */}
-          <div className="flex flex-col gap-3 w-full lg:w-1/2 bg-gray-50 p-4 rounded-xl shadow-inner">
+            {/* Datos cliente */}
+          <div className="hidden flex-col gap-3 w-full bg-gray-50 p-4 rounded-xl shadow-inner">
             <p className="text-gray-800">
               <span className="font-semibold">Nombre:</span> Samuel Córdoba
             </p>
@@ -590,10 +816,16 @@ export default function CartModal({ isOpen, onClose }: CartModalProps) {
             {error && <p className="text-red-600 text-sm">{error}</p>}
           </div>
 
+          </div>
+
+          <div className="w-full xl:sticky xl:top-4">
           {/* Resumen de costos + Botón */}
-          <div className="flex flex-col w-full lg:w-1/2 gap-5 bg-gray-50 p-5 rounded-xl shadow-md">
+          <div className="flex flex-col w-full gap-5 bg-gray-50 p-5 rounded-xl shadow-md">
             {/* Resumen */}
             <div className="space-y-2 text-right text-gray-700">
+              <p className="text-left text-lg font-semibold text-gray-800 mb-3">
+                Resumen de compra
+              </p>
               <p className="flex justify-between text-base">
                 <span className="font-medium">Subtotal:</span>
                 <span>${total.toLocaleString("es-CO")}</span>
@@ -615,7 +847,7 @@ export default function CartModal({ isOpen, onClose }: CartModalProps) {
             </div>
 
             {/* Botón Comprar */}
-            <div className="flex flex-col items-center mt-5">
+            <div className="flex flex-col items-center mt-5 border-t pt-4">
               <p className="text-lg font-medium text-gray-700 flex items-center gap-2 mb-3 text-center">
                 {hasService ? (
                   <>
@@ -630,32 +862,59 @@ export default function CartModal({ isOpen, onClose }: CartModalProps) {
 
               <button
                 onClick={handlePurchase}
+                disabled={isRedirectingToCheckout || cart.length === 0}
                 className="cursor-pointer bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-8 py-3 rounded-lg text-lg font-semibold shadow-md transition"
               >
-                {hasService ? "Confirmar servicio" : "Comprar"}
+                {isRedirectingToCheckout
+                  ? "Redirigiendo a Mercado Pago..."
+                  : hasService
+                    ? "Pagar con Mercado Pago"
+                    : "Pagar ahora"}
               </button>
             </div>
           </div>
         </div>
+        </div>
       </motion.div>{" "}
-      {authUser && (
+      {authUserId > 0 && (
         <ClientCreateRequestModal
           isOpen={openServiceModal}
           onClose={() => {
             setOpenServiceModal(false);
+            setPendingServiceCartItemId(null);
             setSelectedServiceId(null);
           }}
           onSave={async (payload) => {
             // Solo guardar en memoria
             setServiceDraft(payload);
+            if (pendingServiceCartItemId) {
+              toggleService(pendingServiceCartItemId);
+            }
 
             showSuccess("Servicio listo. Confirma el carrito para enviarlo.");
+            setPendingServiceCartItemId(null);
+            setSelectedServiceId(null);
             setOpenServiceModal(false);
           }}
-          clientId={authUser.userid}
-          clientLabel={authUser.name}
+          clientId={authUserId}
+          clientLabel={authUserNameLabel}
+          clientDocumentLabel={String(customerDocument || "")}
           initialServiceId={selectedServiceId}
           initialDireccion={fullAddress}
+          initialAddressFields={{
+            city: address.city,
+            zone: address.zone,
+            streetType: address.streetType,
+            streetNumber: address.streetNumber,
+            secondaryNumber: address.secondaryNumber,
+            complement: address.complement,
+          }}
+          onInitialAddressFieldsChange={(next) => setAddress(next)}
+          addressOptions={{
+            cities: CITIES,
+            zones: ZONES,
+            streetTypes: STREET_TYPES,
+          }}
         />
       )}
     </div>
