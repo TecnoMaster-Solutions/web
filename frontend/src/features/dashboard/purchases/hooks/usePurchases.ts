@@ -1,3 +1,4 @@
+// usePurchases.ts
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -51,6 +52,7 @@ const parseCOP = (input: string): number => {
   return digits ? Number(digits) : 0;
 };
 
+// ✅ NUEVO (único cambio adicional para permitir opcional real)
 const onlyDigits = (s: string) => (s ?? "").replace(/[^\d]/g, "");
 const hasDigits = (s: string) => onlyDigits(s).length > 0;
 
