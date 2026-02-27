@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { useCallback } from "react";
 import Colors from "@/shared/theme/colors";
 import { ToastContainer } from "react-toastify";
@@ -42,12 +42,12 @@ export default function CategoriesPage() {
     { key: "name", header: "Nombre" },
     {
       key: "description",
-      header: "DescripciÃ³n",
+      header: "Descripción",
       render: (row: Category) => {
         const desc =
           row.description && row.description.trim() !== ""
             ? row.description
-            : "No hay descripciÃ³n";
+            : "No hay descripción";
 
         const maxLength = 60;
         const truncated =
@@ -59,7 +59,7 @@ export default function CategoriesPage() {
             className="flex justify-center items-center text-center w-full h-full"
           >
             <span
-              className={`block max-w-[250px] truncate ${desc === "No hay descripciÃ³n"
+              className={`block max-w-[250px] truncate ${desc === "No hay descripción"
                   ? "text-gray-400 italic"
                   : "text-gray-700"
                 }`}
@@ -110,8 +110,8 @@ export default function CategoriesPage() {
 
     const deleteTitle =
       count === 1
-        ? "No se puede eliminar: la categorÃ­a tiene 1 producto asociado"
-        : `No se puede eliminar: la categorÃ­a tiene ${count} productos asociados`;
+        ? "No se puede eliminar: la categoría tiene 1 producto asociado"
+        : `No se puede eliminar: la categoría tiene ${count} productos asociados`;
 
     return {
       disableDelete: true,
@@ -140,7 +140,7 @@ export default function CategoriesPage() {
         <main className="flex-1 flex flex-col">
           <div className="flex-1 px-6 py-6">
 
-            {/* Modal de Crear CategorÃ­a */}
+            {/* Modal de Crear Categoría */}
             <CreateCategoryModal
               isOpen={isCreateModalOpen}
               onClose={() => setIsCreateModalOpen(false)}
@@ -148,7 +148,7 @@ export default function CategoriesPage() {
               categories={categories}
             />
 
-            {/* Modal de Editar CategorÃ­a */}
+            {/* Modal de Editar Categoría */}
             <EditCategoryModal
               isOpen={!!editingCategory}
               category={editingCategory}
@@ -161,7 +161,7 @@ export default function CategoriesPage() {
               categories={categories}
             />
 
-            {/* Modal de Ver CategorÃ­a */}
+            {/* Modal de Ver Categoría */}
             <ViewCategoryModal
               isOpen={!!viewingCategory}
               category={viewingCategory}
@@ -178,8 +178,8 @@ export default function CategoriesPage() {
                 pageSize={10}
                 searchableKeys={["id", "name", "description", "statusSearch"]}
                 onCreate={() => setIsCreateModalOpen(true)}
-                createButtonText="Crear CategorÃ­a"
-                searchPlaceholder="Buscar categorÃ­as..."
+                createButtonText="Crear Categoría"
+                searchPlaceholder="Buscar categorías..."
                 onView={handleView}
                 onEdit={handleEdit}
                 onDelete={handleDeleteCategory}

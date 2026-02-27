@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React from "react";
 import Modal from "@/features/dashboard/components/Modal";
@@ -38,7 +38,7 @@ const ViewTechnicianModal: React.FC<ViewTechnicianModalProps> = ({
 
   return (
     <Modal
-      title="Detalle del TÃ©cnico"
+      title="Detalle del Técnico"
       isOpen={isOpen}
       onClose={onClose}
       footer={
@@ -91,21 +91,21 @@ const ViewTechnicianModal: React.FC<ViewTechnicianModalProps> = ({
           <label className={rowLabel} style={{ color: Colors.texts.primary }}>
             Documento
           </label>
-          <div className={rowBox} title={documento || "â€”"}>
-            {documento || "â€”"}
+          <div className={rowBox} title={documento || "—"}>
+            {documento || "—"}
           </div>
         </div>
 
         <div>
           <label className={rowLabel} style={{ color: Colors.texts.primary }}>
-            TelÃ©fono
+            Teléfono
           </label>
           <div className={rowBox}>{technician.phone}</div>
         </div>
 
         <div>
           <label className={rowLabel} style={{ color: Colors.texts.primary }}>
-            Correo electrÃ³nico
+            Correo electrónico
           </label>
           <div className={rowBox}>{technician.email}</div>
         </div>
@@ -122,7 +122,7 @@ const ViewTechnicianModal: React.FC<ViewTechnicianModalProps> = ({
             className={`${rowLabel} text-center`}
             style={{ color: Colors.texts.primary }}
           >
-            Tipos de tÃ©cnico
+            Tipos de técnico
           </label>
           <div className="flex flex-wrap justify-center gap-1.5 max-w-[640px]">
             {(technician.types ?? []).length ? (

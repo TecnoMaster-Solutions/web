@@ -112,7 +112,7 @@ export default function RegisterPurchaseForm({
 
   const [selectedSupplierPrice, setSelectedSupplierPrice] = useState<
     number | ""
-  >(""); // ya lo tenÃ­as
+  >(""); // ya lo tení­as
 
   const { showLoader, hideLoader } = useLoader();
 
@@ -187,7 +187,7 @@ export default function RegisterPurchaseForm({
       await onSave();
       await fetchPurchases();
 
-      showSuccess("Compra registrada con Ã©xito.");
+      showSuccess("Compra registrada con éxito.");
       onClose();
     } catch (error) {
       console.error(error);
@@ -232,11 +232,11 @@ export default function RegisterPurchaseForm({
         )}
       </div>
 
-      {/* NÂ° Orden y Proveedor */}
+      {/* N° Orden y Proveedor */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className="block text-sm mb-1 font-medium">
-            NÂ° de Orden <span className="text-green-500">*</span>
+            N° de Orden <span className="text-green-500">*</span>
           </label>
           <input
             type="text"
@@ -298,7 +298,7 @@ export default function RegisterPurchaseForm({
         </div>
       </div>
 
-      {/* NÃºmero de Factura */}
+      {/* Número de Factura */}
       <div>
         <label className="block text-sm mb-1 font-medium">
           Orden de compra (Pendiente) <span className="text-red-500">*</span>
@@ -504,7 +504,7 @@ export default function RegisterPurchaseForm({
           style={{ backgroundColor: Colors.buttons.primary }}
           className="cursor-pointer mt-4 w-full px-4 py-2 rounded-md text-white text-sm font-medium shadow hover:scale-[1.02] transition"
         >
-          AÃ±adir producto +
+          Añadir producto +
         </button>
 
         {cart.length > 0 && (

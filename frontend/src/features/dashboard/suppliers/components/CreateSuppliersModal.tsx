@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useRef, useState } from "react";
 import { Star, Upload } from "lucide-react";
@@ -139,7 +139,7 @@ function DecimalStarRating({
         onKeyDown={handleKeyDown}
         role="slider"
         tabIndex={disabled ? -1 : 0}
-        aria-label="CalificaciÃ³n"
+        aria-label="Calificación"
         aria-valuemin={0}
         aria-valuemax={5}
         aria-valuenow={Number(value.toFixed(1))}
@@ -166,10 +166,10 @@ function DecimalStarRating({
 }
 
 function sanitizeName(v: string) {
-  return v.replace(/[^A-Za-z0-9ÃÃ‰ÃÃ“ÃšÃœÃ‘Ã¡Ã©Ã­Ã³ÃºÃ¼Ã±'â€™.\- ]/g, "").replace(/\s{2,}/g, " ").slice(0, 80);
+  return v.replace(/[^A-Za-z0-9ÁÉÍÓÚÜÑáéíóúüñ'’.\- ]/g, "").replace(/\s{2,}/g, " ").slice(0, 80);
 }
 function sanitizeContact(v: string) {
-  return v.replace(/[^A-Za-zÃÃ‰ÃÃ“ÃšÃœÃ‘Ã¡Ã©Ã­Ã³ÃºÃ¼Ã±'â€™.\- ]/g, "").replace(/\s{2,}/g, " ").slice(0, 80);
+  return v.replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ'’.\- ]/g, "").replace(/\s{2,}/g, " ").slice(0, 80);
 }
 function sanitizePhone(v: string) {
   let s = v.replace(/[^\d+]/g, "");
@@ -186,26 +186,26 @@ type ErrorMap = Partial<Record<keyof SupplierForm | "image", string | null>>;
 const validators: Record<keyof SupplierForm | "image", (value: any, form: SupplierForm) => string | null> = {
   name: (v) => {
     const s = String(v ?? "").trim();
-    if (s.length < 3) return "MÃ­nimo 3 caracteres.";
-    if (!/^[A-Za-z0-9ÃÃ‰ÃÃ“ÃšÃœÃ‘Ã¡Ã©Ã­Ã³ÃºÃ¼Ã±'â€™.\- ]+$/.test(s)) return "Solo letras, nÃºmeros y espacios.";
+    if (s.length < 3) return "Mínimo 3 caracteres.";
+    if (!/^[A-Za-z0-9ÁÉÍÓÚÜÑáéíóúüñ'’.\- ]+$/.test(s)) return "Solo letras, números y espacios.";
     return null;
   },
   nit: (v) => {
     const raw = String(v ?? "").replace(/[^\d]/g, "");
-    if (!/^\d{5,12}$/.test(raw)) return "Debe tener entre 5 y 12 dÃ­gitos (solo nÃºmeros).";
+    if (!/^\d{5,12}$/.test(raw)) return "Debe tener entre 5 y 12 dígitos (solo números).";
     return null;
   },
   phone: (v) => {
     const s = String(v ?? "").replace(/[^\d+]/g, "");
     const digits = s.startsWith("+") ? s.slice(1) : s;
-    if (digits.length < 7 || digits.length > 15) return "7â€“15 dÃ­gitos.";
-    if (!/^\+?\d+$/.test(s)) return "Solo nÃºmeros.";
+    if (digits.length < 7 || digits.length > 15) return "7–15 dígitos.";
+    if (!/^\+?\d+$/.test(s)) return "Solo números.";
     return null;
   },
   email: (v) => {
     const s = String(v ?? "").trim();
     if (!s) return "Correo requerido.";
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s)) return "Correo invÃ¡lido.";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s)) return "Correo inválido.";
     return null;
   },
   address: (v) => {
@@ -215,8 +215,8 @@ const validators: Record<keyof SupplierForm | "image", (value: any, form: Suppli
   },
   contactName: (v) => {
     const s = String(v ?? "").trim();
-    if (s.length < 3) return "MÃ­nimo 3 caracteres.";
-    if (!/^[A-Za-zÃÃ‰ÃÃ“ÃšÃœÃ‘Ã¡Ã©Ã­Ã³ÃºÃ¼Ã±'â€™.\- ]+$/.test(s)) return "Solo letras y espacios.";
+    if (s.length < 3) return "Mínimo 3 caracteres.";
+    if (!/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ'’.\- ]+$/.test(s)) return "Solo letras y espacios.";
     return null;
   },
   rating: () => null,
@@ -225,7 +225,7 @@ const validators: Record<keyof SupplierForm | "image", (value: any, form: Suppli
   image: (file: File | null) => {
     if (!file) return "Imagen requerida.";
     if (!file.type.startsWith("image/")) return "Archivo no es una imagen.";
-    if (file.size > MAX_IMG_MB * 1024 * 1024) return `MÃ¡x ${MAX_IMG_MB}MB.`;
+    if (file.size > MAX_IMG_MB * 1024 * 1024) return `Máx ${MAX_IMG_MB}MB.`;
     return null;
   },
 };
@@ -316,8 +316,8 @@ export default function CreateSuppliersModal({ isOpen, onClose, onSave, title = 
 
     const nitBase = String(form.nit ?? "").replace(/[^\d]/g, "");
     if (!/^\d{5,12}$/.test(nitBase)) {
-      showError("NIT invÃ¡lido. Debe tener entre 5 y 12 dÃ­gitos (solo nÃºmeros).");
-      setErrors((er) => ({ ...er, nit: "Debe tener entre 5 y 12 dÃ­gitos (solo nÃºmeros)." }));
+      showError("NIT inválido. Debe tener entre 5 y 12 dígitos (solo números).");
+      setErrors((er) => ({ ...er, nit: "Debe tener entre 5 y 12 dígitos (solo números)." }));
       return;
     }
 
@@ -414,7 +414,7 @@ export default function CreateSuppliersModal({ isOpen, onClose, onSave, title = 
 
         <div>
           <label className="block text-sm font-medium mb-1">
-            TelÃ©fono <span className="text-green-500">*</span>
+            Teléfono <span className="text-green-500">*</span>
           </label>
           <input
             value={form.phone}
@@ -444,7 +444,7 @@ export default function CreateSuppliersModal({ isOpen, onClose, onSave, title = 
 
         <div className="col-span-2">
           <label className="block text-sm font-medium mb-1">
-            DirecciÃ³n <span className="text-green-500">*</span>
+            Dirección <span className="text-green-500">*</span>
           </label>
           <input
             value={form.address}
@@ -505,7 +505,7 @@ export default function CreateSuppliersModal({ isOpen, onClose, onSave, title = 
         </div>
 
         <div className="col-span-2">
-          <label className="block text-sm font-medium mb-1">CalificaciÃ³n</label>
+          <label className="block text-sm font-medium mb-1">Calificación</label>
           <DecimalStarRating
             value={sanitizeRating(form.rating)}
             onChange={(v) => update("rating", v)}

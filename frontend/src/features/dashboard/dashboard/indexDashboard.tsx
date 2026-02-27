@@ -98,7 +98,7 @@ export const IndexDashboard = () => {
         setPurchasesYear(await dashboardApi.getPurchasesByYear(selectedYear));
         setTotalPurchases((await dashboardApi.getTotalPurchases(selectedYear)).total);
 
-        // PRODUCTOS POR CATEGORÃA
+        // PRODUCTOS POR CATEGORÍA
         const rawCategoryProducts =
           (await dashboardApi.getCategoryProducts(selectedYear)) as CategoryProductsResponse[];
         setCategoryProducts(
@@ -108,7 +108,7 @@ export const IndexDashboard = () => {
           }))
         );
 
-        // Ã“RDENES
+        // ÓRDENES
         const rawOrdersState = await dashboardApi.getOrdersByState(selectedYear);
         setOrdersState(
           (rawOrdersState ?? []).map((item: any) => ({
@@ -172,7 +172,7 @@ export const IndexDashboard = () => {
         </div>
       </div>
 
-      {/* PRIMERA FILA: MÃ‰TRICAS PRINCIPALES */}
+      {/* PRIMERA FILA: MÉTRICAS PRINCIPALES */}
       <div className="flex flex-wrap gap-4 justify-center md:justify-start">
         {/* Ventas */}
         <div className="p-3 w-full sm:w-[calc(50%-1rem)] md:w-[calc(25%-1rem)]">
@@ -219,7 +219,7 @@ export const IndexDashboard = () => {
           </div>
         </div>
 
-        {/* Ã“rdenes */}
+        {/* Órdenes */}
         <div className="p-3 w-full sm:w-[calc(50%-1rem)] md:w-[calc(25%-1rem)]">
           <div className="bg-[#F4F4F4] rounded-lg p-5 shadow-md h-full">
             <div className="bg-[#089642] text-white rounded-lg p-4 sm:p-6 h-full flex flex-col justify-between">
@@ -227,7 +227,7 @@ export const IndexDashboard = () => {
                 <h2 className="text-sm sm:text-base font-medium whitespace-nowrap overflow-hidden text-ellipsis leading-tight">
                   Orden de servicio
                 </h2>
-                <Image src="/icons/box.svg" alt="Ã“rdenes" width={32} height={32} className="w-8 h-8 object-contain filter brightness-0 invert" />
+                <Image src="/icons/box.svg" alt="Órdenes" width={32} height={32} className="w-8 h-8 object-contain filter brightness-0 invert" />
               </div>
               <p className="text-lg sm:text-2xl font-bold whitespace-nowrap overflow-hidden text-ellipsis leading-tight">{totalOrders}</p>
             </div>
@@ -267,9 +267,9 @@ export const IndexDashboard = () => {
         </div>
       </div>
 
-      {/* TERCERA FILA: CATEGORÃAS, Ã“RDENES Y SOLICITUDES */}
+      {/* TERCERA FILA: CATEGORÍAS, ÓRDENES Y SOLICITUDES */}
       <div className="flex flex-wrap lg:flex-nowrap gap-4 w-full h-auto mt-6">
-        {/* CategorÃ­as */}
+        {/* Categorí­as */}
         <div className="p-2 w-full md:w-[35%]">
           <div className="bg-[#F4F4F4] rounded-lg p-6 shadow-md h-full">
             <div className="bg-white rounded-lg p-6 flex flex-col h-full">
@@ -281,7 +281,7 @@ export const IndexDashboard = () => {
           </div>
         </div>
 
-        {/* Ã“rdenes */}
+        {/* Órdenes */}
         <div className="p-2 w-full md:w-[35%]">
           <div className="bg-[#F4F4F4] rounded-lg p-6 shadow-md h-full">
             <div className="bg-white rounded-lg p-6 flex flex-col h-full">

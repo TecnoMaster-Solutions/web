@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useMemo, useEffect, useCallback } from "react";
 import Colors from "@/shared/theme/colors";
@@ -249,7 +249,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
   }, []);
 
   /* ================================
-   * MANEJO DE SELECCIÃ“N DE SERVICE REQUEST (OPCIONAL)
+   * MANEJO DE SELECCIiN DE SERVICE REQUEST (OPCIONAL)
    * ================================ */
   const handleServiceRequestChange = (serviceRequestId: number) => {
     const selected = serviceRequests.find(
@@ -334,7 +334,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
         : [],
     );
 
-    // si hay solicitud, no necesitamos crear cliente aquÃ­
+    // si hay solicitud, no necesitamos crear cliente aquí
     setCreateNewClientEnabled(false);
   };
 
@@ -693,7 +693,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 1) Ya NO exigimos solicitud. SÃ­ exigimos tipo de servicio.
+    // 1) Ya NO exigimos solicitud. Sí­ exigimos tipo de servicio.
     if (!form.servicetype) {
       showError("Debe seleccionar el tipo de servicio");
       return;
@@ -779,7 +779,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
 
     try {
       await onSave?.(payload);
-      showSuccess("CotizaciÃ³n guardada exitosamente");
+      showSuccess("Cotización guardada exitosamente");
 
       // Reset
       setForm({
@@ -859,7 +859,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
           onChange={(e) => handleServiceRequestChange(Number(e.target.value))}
           className="h-9 w-full rounded-md border px-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
-          <option value="">Sin solicitud (cotizaciÃ³n directa)</option>
+          <option value="">Sin solicitud (cotización directa)</option>
           {serviceRequests.map((request) => {
             const customerLabel = request.customer?.users
               ? `${request.customer.users.name} ${request.customer.users.lastname}`
@@ -879,7 +879,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
         </div>
       </section>
 
-      {/* INFO AUTOMÃTICA DEL SERVICE REQUEST */}
+      {/* INFO AUTOMÁTICA DEL SERVICE REQUEST */}
       {selectedServiceRequest && (
         <section className="rounded-lg border bg-white shadow-sm">
           <header className="border-b px-3 py-2.5">
@@ -909,7 +909,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
             </div>
 
             <div className="space-y-1">
-              <div className="text-xs text-gray-500">TÃ©cnico asignado</div>
+              <div className="text-xs text-gray-500">Técnico asignado</div>
               {selectedServiceRequest.techniciansMap &&
               selectedServiceRequest.techniciansMap.length > 0 ? (
                 <>
@@ -940,7 +940,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
                 </>
               ) : (
                 <div className="text-sm text-gray-500 italic">
-                  No hay tÃ©cnico asignado
+                  No hay técnico asignado
                 </div>
               )}
             </div>
@@ -953,7 +953,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
             </div>
 
             <div className="space-y-1">
-              <div className="text-xs text-gray-500">DirecciÃ³n</div>
+              <div className="text-xs text-gray-500">Dirección</div>
               <div className="font-medium">
                 {selectedServiceRequest.direccion}
               </div>
@@ -961,7 +961,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
 
             <div className="space-y-1 xl:col-span-2">
               <div className="text-xs text-gray-500">
-                DescripciÃ³n del servicio
+                Descripción del servicio
               </div>
               <div className="font-medium">
                 {selectedServiceRequest.description}
@@ -1042,7 +1042,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
               </div>
 
               <div>
-                <label className="block mb-1 font-medium">TelÃ©fono *</label>
+                <label className="block mb-1 font-medium">Teléfono *</label>
                 <input
                   value={clientForm.telefono}
                   onChange={(e) =>

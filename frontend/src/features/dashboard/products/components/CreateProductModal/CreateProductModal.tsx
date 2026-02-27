@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Modal from "@/features/dashboard/components/Modal";
@@ -215,7 +215,7 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
 
               <div className="col-span-2">
                 <label className="block text-sm font-medium mb-1" style={{ color: Colors.texts.primary }}>
-                  CategorÃ­a del proveedor <span className="text-green-500">*</span>
+                  Categoría del proveedor <span className="text-green-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -236,7 +236,7 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
 
               <div>
                 <label className="block text-sm font-medium mb-1" style={{ color: Colors.texts.primary }}>
-                  CategorÃ­a <span className="text-green-500">*</span>
+                  Categoría <span className="text-green-500">*</span>
                 </label>
                 <select
                   value={categoryId}
@@ -249,7 +249,7 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
                   style={{ borderColor: (errors as any).categoryId ? "red" : Colors.table.lines }}
                 >
                   <option value="" disabled>
-                    Seleccione una categorÃ­a...
+                    Seleccione una categoría...
                   </option>
                   {categories.map((c) => (
                     <option key={c.id} value={String(c.id)}>
@@ -262,7 +262,7 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
 
               <div>
                 <label className="block text-sm font-medium mb-1" style={{ color: Colors.texts.primary }}>
-                  CÃ³digo <span className="text-green-500">*</span>
+                  Código <span className="text-green-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -281,7 +281,7 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
 
               <div className="col-span-2">
                 <label className="block text-sm font-medium mb-1" style={{ color: Colors.texts.primary }}>
-                  DescripciÃ³n
+                  Descripción
                 </label>
                 <textarea
                   value={description}
@@ -298,7 +298,7 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
           <div className="min-h-0 flex flex-col">
             <div className="flex items-end justify-between mb-2">
               <label className="block text-sm font-medium" style={{ color: Colors.texts.primary }}>
-                ImÃ¡genes <span className="text-green-500">*</span>
+                Imágenes <span className="text-green-500">*</span>
               </label>
 
               <div className="flex items-center gap-3">
@@ -326,7 +326,7 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
 
                 <div className="flex items-start justify-between gap-2">
                   <div className="text-xs text-gray-600 leading-4">
-                    PNG, JPG, WEBP Â· MÃ¡ximo {MAX_IMAGES} imÃ¡genes
+                    PNG, JPG, WEBP · Máximo {MAX_IMAGES} imágenes
                     <div className="mt-1">
                       Selecciona una imagen para marcarla como principal.
                     </div>
@@ -360,7 +360,7 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
                     style={{ borderColor: "#9CA3AF" }}
                   >
                     <UploadCloud size={22} />
-                    <div className="text-sm font-medium text-gray-700">Sube tus imÃ¡genes</div>
+                    <div className="text-sm font-medium text-gray-700">Sube tus imágenes</div>
                     <div className="text-xs text-gray-500">Haz clic para seleccionar</div>
                   </div>
                 ) : (
@@ -417,7 +417,7 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
                         onClick={openPicker}
                         className="rounded-md border border-dashed bg-gray-50 hover:bg-gray-100 transition flex items-center justify-center"
                         style={{ borderColor: "#9CA3AF", height: "96px" }}
-                        title="Agregar imÃ¡genes"
+                        title="Agregar imágenes"
                       >
                         <div className="flex flex-col items-center gap-1 text-gray-600">
                           <Plus size={18} />

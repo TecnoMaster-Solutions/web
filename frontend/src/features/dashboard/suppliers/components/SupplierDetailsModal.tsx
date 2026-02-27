@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React from "react";
 import {
@@ -177,7 +177,7 @@ export default function SupplierDetailsModal({
             <div className="text-[13px] text-gray-500">
               Contacto:{" "}
               <span className="font-medium text-gray-800">
-                {supplier.contactName || "â€”"}
+                {supplier.contactName || "—"}
               </span>
             </div>
           </div>
@@ -185,13 +185,13 @@ export default function SupplierDetailsModal({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Item
               label="NIT"
-              value={<span className="font-mono">{supplier.nit || "â€”"}</span>}
+              value={<span className="font-mono">{supplier.nit || "—"}</span>}
               valueClassName="truncate"
             />
 
             <Item
               icon={<Phone size={14} />}
-              label="TelÃ©fono"
+              label="Teléfono"
               value={
                 supplier.phone ? (
                   <a
@@ -201,7 +201,7 @@ export default function SupplierDetailsModal({
                     {supplier.phone}
                   </a>
                 ) : (
-                  "â€”"
+                  "—"
                 )
               }
               valueClassName="truncate"
@@ -220,7 +220,7 @@ export default function SupplierDetailsModal({
                     {supplier.email}
                   </a>
                 ) : (
-                  "â€”"
+                  "—"
                 )
               }
               valueClassName="break-all whitespace-normal"
@@ -228,9 +228,9 @@ export default function SupplierDetailsModal({
 
             <Item
               icon={<MapPin size={14} />}
-              label="DirecciÃ³n"
+              label="Dirección"
               className="sm:col-span-2"
-              value={supplier.address || "â€”"}
+              value={supplier.address || "—"}
               valueClassName="break-words whitespace-normal"
             />
           </div>

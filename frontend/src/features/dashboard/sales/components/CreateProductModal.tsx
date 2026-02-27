@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import { apiClient } from "@/shared/utils/apiClient";
@@ -94,11 +94,11 @@ export default function CreateProductModal({ onClose, onSaved }: CreateProductMo
             </div>
 
             <div>
-                <label className="block text-sm font-medium mb-1">DescripciÃ³n</label>
+                <label className="block text-sm font-medium mb-1">Descripción</label>
                 <textarea
                     className="w-full p-2 border rounded-lg"
                     value={description} onChange={e => setDescription(e.target.value)}
-                    placeholder="Ingrese descripciÃ³n"
+                    placeholder="Ingrese descripción"
                 />
             </div>
 
@@ -126,7 +126,7 @@ export default function CreateProductModal({ onClose, onSaved }: CreateProductMo
             </div>
 
             <div>
-                <label className="block text-sm font-medium mb-1">CategorÃ­a *</label>
+                <label className="block text-sm font-medium mb-1">Categoría *</label>
                 <select
                     className="w-full p-2 border rounded-lg"
                     value={categoryId} onChange={e => setCategoryId(e.target.value)}

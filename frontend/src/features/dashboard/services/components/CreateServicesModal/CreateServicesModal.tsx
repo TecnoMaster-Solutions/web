@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Modal from "@/features/dashboard/components/Modal";
@@ -200,7 +200,7 @@ const CreateServiceModal: React.FC<CreateServiceModalProps> = ({
 
           <div className="text-center">
             <div className="text-xs text-gray-500 mb-1">
-              Haga clic en el cÃ­rculo para{" "}
+              Haga clic en el círculo para{" "}
               {image ? "cambiar" : "seleccionar"} la imagen
             </div>
 
@@ -296,10 +296,10 @@ const CreateServiceModal: React.FC<CreateServiceModalProps> = ({
             className="block text-sm font-medium mb-1"
             style={{ color: Colors.texts.primary }}
           >
-            DescripciÃ³n
+            Descripción
           </label>
           <textarea
-            placeholder="Ingrese descripciÃ³n"
+            placeholder="Ingrese descripción"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={5}

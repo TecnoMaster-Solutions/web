@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Swal from "sweetalert2";
@@ -417,15 +417,15 @@ export default function ServiceRequestsPage() {
     return rows.map((r) => ({
       Id: r.id,
       Cliente: r.cliente,
-      DescripciÃ³n: r.descripcion,
+      Descripción: r.descripcion,
       Servicio: r.servicio,
       Tipo: r.tipo,
-      DirecciÃ³n: r.direccion,
+      Dirección: r.direccion,
       Fecha: r.fecha,
       Estado: r.estado,
       Programada: r.programada ?? "",
       "Programada Fin": r.programadaEnd ?? "",
-      TÃ©cnicos:
+      Técnicos:
         (r.technicianNames || []).join(", ") ||
         (r.technicians || []).join(", "),
     }));
@@ -490,7 +490,7 @@ export default function ServiceRequestsPage() {
     const row = rows.find((r) => String(r.id) === String(targetId));
     if (!row) {
       cancelHandledRef.current = true;
-      showError("No se encontrÃ³ la solicitud para cancelar.");
+      showError("No se encontró la solicitud para cancelar.");
       clearParams();
       return;
     }
@@ -722,11 +722,11 @@ export default function ServiceRequestsPage() {
     }
 
     const res = await Swal.fire({
-      title: "Â¿Cancelar solicitud?",
-      text: `Se marcarÃ¡ la solicitud #${row.id} como cancelada.`,
+      title: "¿Cancelar solicitud?",
+      text: `Se marcará la solicitud #${row.id} como cancelada.`,
       icon: "warning",
       showCancelButton: true,
-      confirmButtonText: "SÃ­, cancelar",
+      confirmButtonText: "Sí, cancelar",
       cancelButtonText: "Volver",
       confirmButtonColor: "#d33",
       reverseButtons: true,
@@ -783,10 +783,10 @@ export default function ServiceRequestsPage() {
         ? row.technicianNames.join(", ")
         : (row.technicians || []).length
         ? row.technicians.join(", ")
-        : "â€”";
+        : "—";
 
-    const fechaProg = row.programada ? row.programada : "â€”";
-    const fechaFin = row.programadaEnd ? row.programadaEnd : "â€”";
+    const fechaProg = row.programada ? row.programada : "—";
+    const fechaFin = row.programadaEnd ? row.programadaEnd : "—";
 
     const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>Solicitud #${
       row.id
@@ -800,13 +800,13 @@ export default function ServiceRequestsPage() {
       row.cliente
     }</div></div><div class="item"><div class="label">Servicio</div><div class="val">${
       row.servicio
-    }</div></div><div class="item"><div class="label">TÃ©cnicos</div><div class="val">${techs}</div></div><div class="item"><div class="label">Programada</div><div class="val">${fechaProg}</div></div><div class="item"><div class="label">Hora final</div><div class="val">${fechaFin}</div></div><div class="item" style="grid-column:1/-1"><div class="label">DirecciÃ³n</div><div class="val">${
-      row.direccion || "â€”"
+    }</div></div><div class="item"><div class="label">Técnicos</div><div class="val">${techs}</div></div><div class="item"><div class="label">Programada</div><div class="val">${fechaProg}</div></div><div class="item"><div class="label">Hora final</div><div class="val">${fechaFin}</div></div><div class="item" style="grid-column:1/-1"><div class="label">Dirección</div><div class="val">${
+      row.direccion || "—"
     }</div></div></div><div class="item" style="margin-top:12px"><div class="label">Tipo de servicio</div><div class="val">${
-      row.tipo || "â€”"
-    }</div></div><div class="item" style="margin-top:12px"><div class="label">DescripciÃ³n</div><div class="val desc">${
-      row.descripcion || "â€”"
-    }</div></div><div class="footer">CÃ³digo: SRV-${String(row.id).padStart(
+      row.tipo || "—"
+    }</div></div><div class="item" style="margin-top:12px"><div class="label">Descripción</div><div class="val desc">${
+      row.descripcion || "—"
+    }</div></div><div class="footer">Código: SRV-${String(row.id).padStart(
       6,
       "0"
     )}</div></div></body></html>`;
@@ -859,7 +859,7 @@ export default function ServiceRequestsPage() {
 
               return {
                 disableCancel: cancelado,
-                cancelTitle: cancelado ? "Ya estÃ¡ cancelada." : "Anular",
+                cancelTitle: cancelado ? "Ya está cancelada." : "Anular",
               };
             }}
             rightActions={
@@ -873,15 +873,15 @@ export default function ServiceRequestsPage() {
                     headers={[
                       "Id",
                       "Cliente",
-                      "DescripciÃ³n",
+                      "Descripción",
                       "Servicio",
                       "Tipo",
-                      "DirecciÃ³n",
+                      "Dirección",
                       "Fecha",
                       "Estado",
                       "Programada",
                       "Programada Fin",
-                      "TÃ©cnicos",
+                      "Técnicos",
                     ]}
                     excludeKeys={[]}
                   />

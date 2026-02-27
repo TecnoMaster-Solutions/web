@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useMemo } from "react";
 import { DataTable } from "@/features/dashboard/components/datatable/DataTable";
@@ -92,7 +92,7 @@ export const ServicesTable: React.FC<ServicesTableProps> = ({
         </div>
       ),
     },
-    { key: "category", header: "CategorÃ­a" },
+    { key: "category", header: "Categoría" },
     {
       key: "image",
       header: "Imagen",
@@ -173,7 +173,7 @@ export const ServicesTable: React.FC<ServicesTableProps> = ({
               id="download-excel-btn-services"
               data={sortedServices as unknown as Record<string, unknown>[]}
               fileName="reporte_servicios.xlsx"
-              headers={["#", "Nombre", "CategorÃ­a", "Estado"]}
+              headers={["#", "Nombre", "Categoría", "Estado"]}
             />
           </div>
 

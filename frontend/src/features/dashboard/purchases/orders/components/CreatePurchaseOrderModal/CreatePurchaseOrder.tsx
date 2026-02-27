@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
@@ -65,8 +65,8 @@ export const CreatePurchaseOrderModal: React.FC<createPurchaseOrderModalProps> =
     }
   }, [isOpen]);
 
-  // Sincronizar rows â†’ formData.items
-  // NOTA: setItems estÃ¡ envuelto en useCallback en el hook (referencia estable)
+  // Sincronizar rows  formData.items
+  // NOTA: setItems está envuelto en useCallback en el hook (referencia estable)
   useEffect(() => {
     setItems(
       rows.map((r) => ({
@@ -189,7 +189,7 @@ export const CreatePurchaseOrderModal: React.FC<createPurchaseOrderModalProps> =
 
         if (result.success) {
           showSuccess(
-            `NotificaciÃ³n enviada por ${result.channel === "both"
+            `Notificación enviada por ${result.channel === "both"
               ? "WhatsApp y correo"
               : result.channel === "email"
                 ? "correo"
@@ -198,12 +198,12 @@ export const CreatePurchaseOrderModal: React.FC<createPurchaseOrderModalProps> =
           );
         }
       } catch {
-        showWarning("No se pudo enviar la notificaciÃ³n, pero la orden se guardarÃ¡.");
+        showWarning("No se pudo enviar la notificación, pero la orden se guardará.");
       } finally {
         setIsSending(false);
       }
     } else {
-      showWarning("El proveedor no tiene contacto registrado. La orden se guardarÃ¡ sin notificaciÃ³n.");
+      showWarning("El proveedor no tiene contacto registrado. La orden se guardará sin notificación.");
     }
 
     handleSubmit();
@@ -233,9 +233,9 @@ export const CreatePurchaseOrderModal: React.FC<createPurchaseOrderModalProps> =
         <form onSubmit={handleSendAndSave} className="p-4 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-            {/* NÂ° ORDEN */}
+            {/* N° ORDEN */}
             <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700">NÂ° Orden (Auto)</label>
+              <label className="block text-sm font-medium mb-2 text-gray-700">N° Orden (Auto)</label>
               <input
                 type="text"
                 value={orderNumber}
@@ -302,7 +302,7 @@ export const CreatePurchaseOrderModal: React.FC<createPurchaseOrderModalProps> =
               {selectedSupplier.phone && <span>ðŸ“± {selectedSupplier.phone}</span>}
               {!selectedSupplier.email && !selectedSupplier.phone && (
                 <span className="text-amber-600 font-medium">
-                  âš ï¸ Sin contacto â€” la orden se guardarÃ¡ sin notificaciÃ³n
+                  ⚠️ ️ Sin contacto ” la orden se guardará sin notificación
                 </span>
               )}
             </div>
@@ -340,7 +340,7 @@ export const CreatePurchaseOrderModal: React.FC<createPurchaseOrderModalProps> =
                         onChange={(e) => handleProductSelect(index, e.target.value)}
                         className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-green-500"
                       >
-                        <option value="">â€” Seleccionar producto â€”</option>
+                        <option value="">— Seleccionar producto —</option>
                         {supplierProducts.map((p) => (
                           <option key={p.productid} value={p.productname}>{p.productname}</option>
                         ))}
@@ -405,7 +405,7 @@ export const CreatePurchaseOrderModal: React.FC<createPurchaseOrderModalProps> =
                       onClick={() => handleRemoveRow(index)}
                       className="text-gray-300 hover:text-green-500 text-lg font-bold leading-none"
                     >
-                      âœ•
+                      ✖
                     </button>
                   </div>
                 </div>

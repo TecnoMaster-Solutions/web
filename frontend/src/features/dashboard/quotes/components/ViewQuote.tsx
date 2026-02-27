@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { IQuote } from "../types/Quote.type";
 

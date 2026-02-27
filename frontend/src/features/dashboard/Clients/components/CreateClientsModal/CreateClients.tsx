@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React from "react";
 import { createPortal } from "react-dom";
@@ -87,10 +87,10 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
             )}
           </div>
 
-          {/* NÃºmero Documento */}
+          {/* Número Documento */}
           <div>
             <label className="block text-sm mb-1 text-gray-700">
-              NÃºmero de Documento
+              Número de Documento
             </label>
             <input
               type="text"
@@ -132,10 +132,10 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
             />
           </div>
 
-          {/* TelÃ©fono */}
+          {/* Teléfono */}
           <div>
             <label className="block text-sm mb-1 text-gray-700">
-              TelÃ©fono
+              Teléfono
             </label>
             <input
               type="tel"
@@ -150,7 +150,7 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
           {/* Correo */}
           <div>
             <label className="block text-sm mb-1 text-gray-700">
-              Correo ElectrÃ³nico
+              Correo Electrónico
             </label>
             <input
               type="email"
@@ -195,10 +195,10 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
             />
           </div>
 
-          {/* CÃ³digo Postal */}
+          {/* Código Postal */}
           <div>
             <label className="block text-sm mb-1 text-gray-700">
-              CÃ³digo Postal
+              Código Postal
             </label>
             <input
               type="text"

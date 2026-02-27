@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import CreateUserModal from "./components/CreateUserModal/CreateUser";
@@ -30,7 +30,7 @@ export default function UsersPage() {
     handleDelete,
     closeModals
   } = useUser();
-  // Determinar si los modales estÃ¡n abiertos basado en el estado
+  // Determinar si los modales están abiertos basado en el estado
   const isEditModalOpen = !!editingUser;
   const isViewModalOpen = !!viewingUser;
 
@@ -76,8 +76,8 @@ export default function UsersPage() {
               user={viewingUser}
             />
 
-            {/* NO necesitas DeleteConfirmation modal aquÃ­ */}
-            {/* SweetAlert2 se encargarÃ¡ del modal de confirmaciÃ³n */}
+            {/* NO necesitas DeleteConfirmation modal aquí */}
+            {/* SweetAlert2 se encargará del modal de confirmación */}
 
             {loading ? (
               <Loader />

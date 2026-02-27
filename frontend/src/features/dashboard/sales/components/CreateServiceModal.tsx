@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import { apiClient } from "@/shared/utils/apiClient";
@@ -34,7 +34,7 @@ export default function CreateServiceModal({ onClose, onSaved }: CreateServiceMo
 
     const handleSubmit = async () => {
         if (!name || !typeId) {
-            showError("Nombre y CategorÃ­a son obligatorios");
+            showError("Nombre y Categoría son obligatorios");
             return;
         }
 
@@ -72,11 +72,11 @@ export default function CreateServiceModal({ onClose, onSaved }: CreateServiceMo
             </div>
 
             <div>
-                <label className="block text-sm font-medium mb-1">DescripciÃ³n</label>
+                <label className="block text-sm font-medium mb-1">Descripción</label>
                 <textarea
                     className="w-full p-2 border rounded-lg"
                     value={description} onChange={e => setDescription(e.target.value)}
-                    placeholder="Ingrese descripciÃ³n"
+                    placeholder="Ingrese descripción"
                 />
             </div>
 
@@ -93,7 +93,7 @@ export default function CreateServiceModal({ onClose, onSaved }: CreateServiceMo
             </div>
 
             <div>
-                <label className="block text-sm font-medium mb-1">CategorÃ­a *</label>
+                <label className="block text-sm font-medium mb-1">Categoría *</label>
                 <select
                     className="w-full p-2 border rounded-lg"
                     value={typeId} onChange={e => setTypeId(e.target.value)}

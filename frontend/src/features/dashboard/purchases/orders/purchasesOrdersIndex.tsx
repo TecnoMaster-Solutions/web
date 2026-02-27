@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useMemo, useState } from "react";
 import { ToastContainer } from "react-toastify";
@@ -68,7 +68,7 @@ export default function PurchaseOrdersIndex() {
         >
           {field === "fecha" ? "Fecha" : "Total"}
           <span className="text-xs">
-            {sortField === field ? (sortDir === "asc" ? " â†‘" : " â†“") : " â†•"}
+            {sortField === field ? (sortDir === "asc" ? " ↑" : " ↓") : " ↕"}
           </span>
         </button>
       ))}

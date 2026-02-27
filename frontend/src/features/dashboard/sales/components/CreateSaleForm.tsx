@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useMemo } from "react";
 import { useSalesForm } from "../hooks/useSalesForm";
@@ -136,7 +136,7 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
 
     const handleAddService = (s: IService, price: number) => {
         if (!price || price <= 0) {
-            alert("Ingrese un precio vÃ¡lido para el servicio");
+            alert("Ingrese un precio válido para el servicio");
             return;
         }
         addServiceToCart(s, price);
@@ -148,7 +148,7 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
 
     return (
         <>
-            {/* Barra superior: flecha + tÃ­tulo grande + botÃ³n Volver */}
+            {/* Barra superior: flecha + tí­tulo grande + botón Volver */}
             <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-4">
                     <button
@@ -166,11 +166,11 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
                         <h1 className="text-3xl font-extrabold" style={{ color: Colors.texts.primary }}>
                             Crear Venta
                         </h1>
-                        <p className="text-sm text-gray-500">Registre una nueva venta â€” complete los datos y guarde</p>
+                        <p className="text-sm text-gray-500">Registre una nueva venta — complete los datos y guarde</p>
                     </div>
                 </div>
 
-                {/* botÃ³n derecho 'Volver' removido */}
+                {/* botón derecho 'Volver' removido */}
             </div>
 
             <div className="flex flex-col gap-6 md:flex-row h-full max-h-[calc(100vh-160px)] overflow-y-auto p-2">
@@ -249,7 +249,7 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
                                 <thead className="bg-gray-100 text-gray-600 font-semibold sticky top-0">
                                     <tr>
                                         <th className="p-3">Productos/Servicios</th>
-                                        <th className="p-3">CategorÃ­a</th>
+                                        <th className="p-3">Categoría</th>
                                         <th className="p-3 text-center">Imagen</th>
                                         <th className="p-3 text-center">Cant.</th>
                                         <th className="p-3 text-right">Precio</th>
@@ -261,7 +261,7 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
                                     {cart.length === 0 ? (
                                         <tr>
                                             <td colSpan={7} className="p-8 text-center text-gray-400">
-                                                No hay Ã­tems agregados
+                                                No hay ítems agregados
                                             </td>
                                         </tr>
                                     ) : (
@@ -344,7 +344,7 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
                         </label>
                         <textarea
                             rows={3}
-                            placeholder="Ingrese su observaciÃ³n (opcional)"
+                            placeholder="Ingrese su observación (opcional)"
                             className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none"
                             style={{ borderColor: Colors.table.lines }}
                             value={notes}
@@ -421,7 +421,7 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
                         <div className="flex gap-2">
                             <input
                                 type="text"
-                                placeholder="Buscar producto por nombre o cÃ³digo..."
+                                placeholder="Buscar producto por nombre o código..."
                                 className="w-full p-2 border rounded-lg"
                                 value={productSearch}
                                 onChange={(e) => setProductSearch(e.target.value)}

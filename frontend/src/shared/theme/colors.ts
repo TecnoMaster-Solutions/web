@@ -1,4 +1,4 @@
-﻿interface IColors {
+interface IColors {
   buttons: {
     primary: string;
     secondary: string;

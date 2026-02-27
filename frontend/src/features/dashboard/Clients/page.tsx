@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useMemo } from "react";
 import * as XLSX from "xlsx";
@@ -64,10 +64,10 @@ export default function ClientsPage() {
       "Nombre completo": `${c.nombre} ${c.apellido}`.trim(),
       "Tipo Documento": c.tipo,
       "Documento": c.documento,
-      "TelÃ©fono": c.telefono,
+      "Teléfono": c.telefono,
       "Correo": c.correoElectronico,
       "Ciudad": c.ciudad,
-      "CÃ³digo Postal": c.codigoPostal,
+      "Código Postal": c.codigoPostal,
       "Estado": c.estado,
     }));
     const ws = XLSX.utils.json_to_sheet(rows);
@@ -86,10 +86,10 @@ export default function ClientsPage() {
       render: (row: Client) =>
         `${row.nombre}${row.apellido ? " " + row.apellido : ""}`,
     },
-    { key: "telefono", header: "TelÃ©fono" },
-    { key: "correoElectronico", header: "Correo electrÃ³nico" },
+    { key: "telefono", header: "Teléfono" },
+    { key: "correoElectronico", header: "Correo electrónico" },
     { key: "ciudad", header: "Ciudad" },
-    { key: "codigoPostal", header: "CÃ³digo Postal" },
+    { key: "codigoPostal", header: "Código Postal" },
     {
       key: "estado",
       header: "Estado",
@@ -177,7 +177,7 @@ export default function ClientsPage() {
                   >
                     {field === "nombre" ? "Nombre" : "Documento"}
                     <span className="text-xs">
-                      {sortField === field ? (sortDir === "asc" ? " â†‘" : " â†“") : " â†•"}
+                      {sortField === field ? (sortDir === "asc" ? " ↑" : "↓") : " ↕"}
                     </span>
                   </button>
                 ))}

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -128,11 +128,11 @@ const FilesGrid: React.FC<{ files: string[] }> = ({ files }) => {
 const TechnicianCard: React.FC<{ tech: OrderServiceDTO["technicians"][0] }> = ({ tech }) => {
   const name = tech?.users
     ? [tech.users.name ?? "", tech.users.lastname ?? ""].filter(Boolean).join(" ").trim()
-    : `TÃ©cnico ${tech?.technicianid ?? "N/A"}`;
+    : `Técnico ${tech?.technicianid ?? "N/A"}`;
 
   return (
     <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-      <p className="min-w-0 truncate text-sm font-semibold text-slate-900">{name || "TÃ©cnico"}</p>
+      <p className="min-w-0 truncate text-sm font-semibold text-slate-900">{name || "Técnico"}</p>
       {(tech as any)?.CV ? (
         <a
           href={(tech as any).CV}
@@ -271,11 +271,11 @@ const HistoryDetailsModal: React.FC<{
         <div className="max-h-[70vh] overflow-y-auto px-6 py-5">
           {body ? (
             <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-              <p className="text-xs uppercase tracking-wide text-slate-500">DescripciÃ³n</p>
+              <p className="text-xs uppercase tracking-wide text-slate-500">Descripción</p>
               <p className="mt-2 whitespace-pre-line text-sm text-slate-800">{body}</p>
             </div>
           ) : (
-            <p className="text-sm text-slate-500">Este evento no tiene descripciÃ³n.</p>
+            <p className="text-sm text-slate-500">Este evento no tiene descripción.</p>
           )}
         </div>
       </div>
@@ -406,7 +406,7 @@ const OrderServiceDetailContent: React.FC<{ order: OrderServiceDTO; embedded?: b
               </div>
 
               <p className="mt-2 text-sm text-slate-700 whitespace-pre-line">
-                {order.description || "Sin descripciÃ³n adicional del servicio."}
+                {order.description || "Sin descripción adicional del servicio."}
               </p>
             </div>
 
@@ -459,7 +459,7 @@ const OrderServiceDetailContent: React.FC<{ order: OrderServiceDTO; embedded?: b
                 <span className="font-semibold text-slate-900">{formatCurrency(totalServices)}</span>
               </div>
               <div className="mt-2 flex items-center justify-between text-sm">
-                <span className="text-slate-600">ViÃ¡ticos</span>
+                <span className="text-slate-600">Viáticos</span>
                 <span className="font-semibold text-slate-900">{formatCurrency(viaticos)}</span>
               </div>
             </div>
@@ -555,7 +555,7 @@ const OrderServiceDetailContent: React.FC<{ order: OrderServiceDTO; embedded?: b
         </div>
 
         <div className="space-y-4 lg:col-span-5">
-          <SectionCard title="TÃ©cnicos">
+          <SectionCard title="Técnicos">
             {(order.technicians ?? []).length > 0 ? (
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
                 {(order.technicians ?? []).map((tech) => (
@@ -563,7 +563,7 @@ const OrderServiceDetailContent: React.FC<{ order: OrderServiceDTO; embedded?: b
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-slate-500">No hay tÃ©cnicos asignados.</p>
+              <p className="text-sm text-slate-500">No hay técnicos asignados.</p>
             )}
           </SectionCard>
 
@@ -662,7 +662,7 @@ const OrderServiceDetail: React.FC<OrderServiceDetailProps> = ({ orderId, embedd
       <Shell>
         <div className="flex items-center justify-center py-10">
           <div className="max-w-xl rounded-2xl border border-rose-200 bg-rose-50 p-6 text-center">
-            <p className="text-sm font-semibold text-rose-700">Identificador invÃ¡lido</p>
+            <p className="text-sm font-semibold text-rose-700">Identificador inválido</p>
             <p className="mt-2 text-sm text-rose-800">No se puede cargar esta orden.</p>
           </div>
         </div>
@@ -683,8 +683,8 @@ const OrderServiceDetail: React.FC<OrderServiceDetailProps> = ({ orderId, embedd
       <Shell>
         <div className="flex min-h-[40vh] items-center justify-center py-10">
           <div className="rounded-2xl border border-rose-200 bg-rose-50 px-6 py-5 text-center">
-            <p className="text-sm font-semibold text-rose-700">No se pudo obtener la informaciÃ³n</p>
-            <p className="mt-1 text-sm text-rose-800">Intenta recargar o revisa tu conexiÃ³n.</p>
+            <p className="text-sm font-semibold text-rose-700">No se pudo obtener la información</p>
+            <p className="mt-1 text-sm text-rose-800">Intenta recargar o revisa tu conexión.</p>
           </div>
         </div>
       </Shell>
