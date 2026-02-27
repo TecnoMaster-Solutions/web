@@ -193,10 +193,10 @@ export default function QuoteDetailPage({ quoteId }: Props) {
         ) : quote ? (
           <ViewQuote
             quote={quote}
-            canComplete={!isQuoteCompleted}
+            canComplete={false}
             isCompleting={isCompletingQuote}
             onComplete={handleCompleteQuote}
-            canFinalize={canFinalize}
+            canFinalize={false}
             isFinalizing={isFinalizingQuote}
             onFinalize={handleFinalizeQuote}
           />

@@ -111,8 +111,23 @@ export const completeQuote = async (quoteId: number): Promise<any> => {
     const { data } = await api.patch(`/quotes/${quoteId}/complete`);
     return data;
   } catch (error) {
-    console.error("Error al completar la cotización:", error);
     showError("Error al completar la cotización. Inténtalo nuevamente.");
+    throw error;
+  }
+};
+
+export const assignCustomerToQuote = async (
+  quoteId: number,
+  customerid: number
+): Promise<any> => {
+  try {
+    const { data } = await api.patch(`/quotes/${quoteId}/assign-customer`, {
+      customerid,
+    });
+    return data;
+  } catch (error) {
+    console.error("Error al asignar cliente a la cotización:", error);
+    showError("Error al asignar cliente a la cotización.");
     throw error;
   }
 };
