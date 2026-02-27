@@ -16,7 +16,6 @@ export default function ViewPurchase({ purchase }: ViewPurchaseProps) {
 
   return (
     <div className="space-y-6 pr-2">
-      {/* ----------------------- INFO GENERAL ----------------------- */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Field label="ID Compra" value={String(purchase.purchaseorderid)} />
 
@@ -30,8 +29,8 @@ export default function ViewPurchase({ purchase }: ViewPurchaseProps) {
             purchase.state?.name?.toLowerCase() === "approved"
               ? "Aprobada"
               : purchase.state?.name?.toLowerCase() === "revoke"
-              ? "Anulada"
-              : "Desconocido"
+                ? "Anulada"
+                : "Desconocido"
           }
         />
 
@@ -57,9 +56,19 @@ export default function ViewPurchase({ purchase }: ViewPurchaseProps) {
           label="Observación"
           value={purchase.observation || "Sin observación"}
         />
+
+        <Field
+          label="Orden de compra"
+          value={
+            purchase.purchaseOrder?.numeroOrden
+              ? purchase.purchaseOrder.numeroOrden
+              : purchase.purchaseOrderId
+                ? String(purchase.purchaseOrderId)
+                : "No aplica"
+          }
+        />
       </div>
 
-      {/* ----------------------- PROVEEDOR ----------------------- */}
       <div className="mt-6">
         <h3 className="text-lg font-semibold mb-2">Proveedor</h3>
 
@@ -76,7 +85,6 @@ export default function ViewPurchase({ purchase }: ViewPurchaseProps) {
         </div>
       </div>
 
-      {/* ----------------------- PRODUCTOS ----------------------- */}
       <div className="mt-6">
         <h3 className="text-lg font-semibold mb-4">Productos</h3>
 
@@ -96,10 +104,9 @@ export default function ViewPurchase({ purchase }: ViewPurchaseProps) {
                   layout
                   transition={{ duration: 0.3 }}
                   className={`cursor-pointer bg-gray-50 rounded-xl shadow-md p-4 
-                    ${
-                      isOpen
-                        ? "flex flex-col gap-4 md:col-span-2 xl:col-span-3"
-                        : "flex flex-col items-center"
+                    ${isOpen
+                      ? "flex flex-col gap-4 md:col-span-2 xl:col-span-3"
+                      : "flex flex-col items-center"
                     }`}
                   onClick={() => {
                     setOpenProducts((prev) => {
@@ -134,7 +141,6 @@ export default function ViewPurchase({ purchase }: ViewPurchaseProps) {
                     />
                   </div>
 
-                  {/* Vista expandida */}
                   {isOpen && (
                     <motion.div
                       initial={{ opacity: 0, y: -10 }}
@@ -143,7 +149,6 @@ export default function ViewPurchase({ purchase }: ViewPurchaseProps) {
                       transition={{ duration: 0.25 }}
                       className="w-full overflow-x-auto"
                     >
-                      {/* INFO DETALLADA DEL PRODUCTO */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
                         <Field
                           label="ID Producto"
@@ -181,7 +186,6 @@ export default function ViewPurchase({ purchase }: ViewPurchaseProps) {
                         />
                       </div>
 
-                      {/* TABLA DE PRECIO / CANTIDAD */}
                       <table className="w-full min-w-[350px] border-collapse">
                         <thead>
                           <tr>
@@ -220,7 +224,6 @@ export default function ViewPurchase({ purchase }: ViewPurchaseProps) {
   );
 }
 
-/**  FIELD COMPONENT MEJORADO */
 function Field({ label, value }: { label: string; value: string }) {
   return (
     <div>

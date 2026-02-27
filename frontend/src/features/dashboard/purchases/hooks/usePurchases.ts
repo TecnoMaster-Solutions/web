@@ -7,8 +7,9 @@ import {
   cancelPurchase,
   getProductsForPurchase,
   getSuppliersForPurchase,
+  getPurchaseOrdersForSupplier,
 } from "../api/purchases.api";
-import { IPurchase } from "../Types/Purchase.type";
+import { IPurchase, IPurchaseOrder } from "../Types/Purchase.type";
 
 export interface PurchaseFormState {
   orderNumber: string;
@@ -18,6 +19,9 @@ export interface PurchaseFormState {
   amount: number;
   status: string;
   description: string;
+
+  // NUEVO
+  purchaseOrderId: string; // string para select controlado
 }
 
 export const months = [
@@ -36,17 +40,17 @@ export const months = [
 ];
 
 type CartItem = {
-  isNew: boolean;
-  productid?: number;
-  productname?: string;
-  description?: string;
-  productpriceofsupplier?: number; // precio del proveedor (compra)
-  saleprice?: number; // precio de venta opcional
+  productid: number;
+  productname: string;
   quantity: number;
-  unitprice: number; // precio unitario de compra
+  unitprice: number;
+  saleprice?: number;
 };
 
 let CACHE: IPurchase[] | null = null;
+
+// Ajusta esto si tu state Pendiente de OC es otro:
+const PO_PENDING_STATE_ID = 5;
 
 export function usePurchases() {
   const [purchases, setPurchases] = useState<IPurchase[]>([]);
@@ -54,6 +58,9 @@ export function usePurchases() {
 
   const [products, setProducts] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
+
+  const [purchaseOrders, setPurchaseOrders] = useState<IPurchaseOrder[]>([]);
+  const [poLoading, setPoLoading] = useState(false);
 
   const [cancelLoading, setCancelLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -68,17 +75,16 @@ export function usePurchases() {
     amount: 0,
     status: "Aprobado",
     description: "",
+    purchaseOrderId: "",
   });
 
   const [selectedProduct, setSelectedProduct] = useState<string>("");
   const [quantity, setQuantity] = useState<number>(1);
-  const [cart, setCart] = useState<CartItem[]>([]);
 
-  const currentYear = new Date().getFullYear();
-  const years = useMemo(
-    () => Array.from({ length: 6 }, (_, i) => currentYear - i),
-    [currentYear]
-  );
+  const [purchasePrice, setPurchasePrice] = useState<number | "">("");
+  const [salePrice, setSalePrice] = useState<number | "">("");
+
+  const [cart, setCart] = useState<CartItem[]>([]);
 
   const total = useMemo(
     () => cart.reduce((sum, item) => sum + item.quantity * item.unitprice, 0),
@@ -114,8 +120,8 @@ export function usePurchases() {
 
       const nextOrder = generateNextOrderNumber(data);
       setForm((prev) => ({ ...prev, orderNumber: nextOrder }));
-    } catch (error) {
-      if (error.name !== "AbortError") {
+    } catch (error: any) {
+      if (error?.name !== "AbortError") {
         console.error("Error fetching purchases:", error);
       }
     } finally {
@@ -123,7 +129,6 @@ export function usePurchases() {
     }
   }, []);
 
-  // Cargar productos
   useEffect(() => {
     const fetchProducts = async () => {
       try {
@@ -133,11 +138,9 @@ export function usePurchases() {
         console.error("Error cargando productos", err);
       }
     };
-
     fetchProducts();
   }, []);
 
-  // Cargar proveedores
   useEffect(() => {
     const fetchSuppliers = async () => {
       try {
@@ -148,7 +151,6 @@ export function usePurchases() {
         console.error("Error cargando proveedores", err);
       }
     };
-
     fetchSuppliers();
   }, []);
 
@@ -157,131 +159,141 @@ export function usePurchases() {
     return () => abortRef.current?.abort();
   }, []);
 
+  useEffect(() => {
+    const supplierId = Number(form.supplier);
+    if (!supplierId) {
+      setPurchaseOrders([]);
+      setForm((prev) => ({ ...prev, purchaseOrderId: "" }));
+      return;
+    }
+
+    (async () => {
+      try {
+        setPoLoading(true);
+        const data = await getPurchaseOrdersForSupplier(
+          supplierId,
+          PO_PENDING_STATE_ID
+        );
+        setPurchaseOrders(data);
+        setForm((prev) => {
+          const stillExists = data.some((po: any) => String(po.id) === prev.purchaseOrderId);
+          return { ...prev, purchaseOrderId: stillExists ? prev.purchaseOrderId : "" };
+        });
+      } catch (err) {
+        console.error("Error cargando órdenes de compra", err);
+        setPurchaseOrders([]);
+      } finally {
+        setPoLoading(false);
+      }
+    })();
+  }, [form.supplier]);
+
   const handleChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
     >
   ) => {
     const { name, value } = e.target;
+
+    // Si cambia proveedor, limpiamos carrito y selector de OC
+    if (name === "supplier") {
+      setCart([]);
+      setSelectedProduct("");
+      setQuantity(1);
+      setPurchasePrice("");
+      setSalePrice("");
+      setForm((prev) => ({ ...prev, supplier: value, purchaseOrderId: "" }));
+      return;
+    }
+
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  /**
-   * Añadir producto al carrito
-   * Soporta:
-   * - Producto existente (productid)
-   * - Producto nuevo (productname + productpriceofsupplier)
-   */
-  const handleAddProduct = ({
-    isNew,
-    productName,
-    supplierPrice,
-    selectedProduct,
-    quantity,
-    description,
-    salePrice,
-  }: {
-    isNew: boolean;
-    productName: string;
-    supplierPrice: number;
-    selectedProduct: string;
-    quantity: number;
-    description: string;
-    salePrice?: number;
-  }) => {
-    if (!isNew) {
-      const product = products.find(
-        (p) => p.productid === Number(selectedProduct)
-      );
-      if (!product) return;
-
-      // Validación: duplicados por productid
-      const exists = cart.some((c) => c.productid === product.productid);
-      if (exists) {
-        setError("Este producto ya fue agregado. No se permiten duplicados.");
-        return;
-      }
-
-      if (quantity <= 0 || supplierPrice <= 0) {
-        setError(
-          "La cantidad y el precio del proveedor deben ser mayores a cero."
-        );
-        return;
-      }
-
-      if (salePrice && salePrice < supplierPrice) {
-        setError(
-          "El precio de venta no puede ser menor que el precio del proveedor."
-        );
-        return;
-      }
-
-      setError("");
-
-      setCart((prev) => [
-        ...prev,
-        {
-          isNew: false,
-          productid: product.productid,
-          quantity,
-          unitprice: supplierPrice,
-          productpriceofsupplier: supplierPrice,
-          saleprice: salePrice,
-          description,
-        },
-      ]);
-    } else {
-      // Producto nuevo: validar por nombre
-      const exists = cart.some(
-        (c) => c.productname?.toLowerCase() === productName.trim().toLowerCase()
-      );
-      if (exists) {
-        setError("Este producto ya fue agregado. No se permiten duplicados.");
-        return;
-      }
-
-      if (!productName.trim() || supplierPrice <= 0 || quantity <= 0) {
-        setError(
-          "Para crear un producto nuevo debes ingresar nombre, precio proveedor y cantidad válidos."
-        );
-        return;
-      }
-
-      if (salePrice && salePrice < supplierPrice) {
-        setError(
-          "El precio de venta no puede ser menor que el precio del proveedor."
-        );
-        return;
-      }
-
-      setError("");
-
-      setCart((prev) => [
-        ...prev,
-        {
-          isNew: true,
-          productname: productName.trim(),
-          productpriceofsupplier: supplierPrice,
-          quantity,
-          unitprice: supplierPrice,
-          saleprice: salePrice,
-          description,
-        },
-      ]);
+  const addToCart = () => {
+    if (!selectedProduct) {
+      setError("Selecciona un producto.");
+      return;
     }
+
+    const product = products.find((p) => p.productid === Number(selectedProduct));
+    if (!product) {
+      setError("Producto inválido.");
+      return;
+    }
+
+    const price = purchasePrice === "" ? 0 : Number(purchasePrice);
+    const sPrice = salePrice === "" ? undefined : Number(salePrice);
+
+    if (price <= 0) {
+      setError("Ingresa un precio de compra válido.");
+      return;
+    }
+    if (quantity <= 0) {
+      setError("La cantidad debe ser mayor que 0.");
+      return;
+    }
+    if (sPrice !== undefined && sPrice < price) {
+      setError("El precio de venta no puede ser menor que el precio de compra.");
+      return;
+    }
+
+    const exists = cart.some((c) => c.productid === product.productid);
+    if (exists) {
+      setError("Este producto ya fue agregado. Edítalo en la lista.");
+      return;
+    }
+
+    setError("");
+    setCart((prev) => [
+      ...prev,
+      {
+        productid: product.productid,
+        productname: product.productname,
+        quantity,
+        unitprice: price,
+        saleprice: sPrice,
+      },
+    ]);
+
+    setSelectedProduct("");
+    setPurchasePrice("");
+    setSalePrice("");
+    setQuantity(1);
+  };
+
+  const updateCartItem = (index: number, patch: Partial<CartItem>) => {
+    setCart((prev) => {
+      const next = [...prev];
+      const current = next[index];
+      if (!current) return prev;
+
+      const merged = { ...current, ...patch };
+
+      // validaciones coherentes con backend
+      if (merged.quantity <= 0) return prev;
+      if (merged.unitprice <= 0) return prev;
+      if (merged.saleprice !== undefined && merged.saleprice < merged.unitprice) return prev;
+
+      next[index] = merged;
+      return next;
+    });
   };
 
   const removeFromCart = (index: number) => {
     setCart((prev) => prev.filter((_, i) => i !== index));
   };
 
-  /**
-   * Construye y envía el payload al endpoint /purchasesmanagement
-   * adaptado a la documentación del backend.
-   */
   const handleAddPurchase = async () => {
     if (cart.length === 0) {
       setError("Agrega al menos un producto.");
+      return;
+    }
+    if (!form.supplier) {
+      setError("Selecciona un proveedor.");
+      return;
+    }
+    if (!form.purchaseOrderId) {
+      setError("Selecciona una orden de compra pendiente.");
       return;
     }
 
@@ -289,33 +301,13 @@ export function usePurchases() {
 
     const created = form.registerDate;
 
-    // Backend espera Date -> enviamos ISO string coherente
-
-    const productsPayload = cart.map((item) => {
-      const base: any = {
-        quantity: item.quantity,
-        unitprice: item.unitprice,
-        description: item.description || "",
-      };
-
-      if (item.productid) {
-        base.productid = item.productid;
-      }
-
-      if (item.productname) {
-        base.productname = item.productname;
-      }
-
-      if (item.productpriceofsupplier) {
-        base.productpriceofsupplier = item.productpriceofsupplier;
-      }
-
-      if (item.saleprice !== undefined) {
-        base.saleprice = item.saleprice;
-      }
-
-      return base;
-    });
+    const productsPayload = cart.map((item) => ({
+      productid: item.productid,
+      quantity: item.quantity,
+      unitprice: item.unitprice,
+      productpriceofsupplier: item.unitprice, // opcional pero útil
+      ...(item.saleprice !== undefined ? { saleprice: item.saleprice } : {}),
+    }));
 
     const payload = {
       numberoforder: form.orderNumber || "TEMP-001",
@@ -326,10 +318,12 @@ export function usePurchases() {
       createdat: created,
       updatedat: new Date().toISOString(),
       products: productsPayload,
+
+      purchaseOrderId: Number(form.purchaseOrderId),
     };
 
     try {
-      return await createPurchase(payload);
+      return await createPurchase(payload as any);
     } finally {
       setSaving(false);
     }
@@ -338,14 +332,8 @@ export function usePurchases() {
   const handleCancelPurchase = async (id: number, observation?: string) => {
     try {
       setCancelLoading(true);
-
-      // Limpiar cache para forzar actualización fresca
       CACHE = null;
-
-      // Enviar con observación opcional
       await cancelPurchase(id, observation);
-
-      // Volver a cargar compras (solo una vez)
       await fetchPurchases();
     } catch (error) {
       console.error("Error canceling purchase:", error);
@@ -364,10 +352,13 @@ export function usePurchases() {
       amount: 0,
       status: "Aprobado",
       description: "",
+      purchaseOrderId: "",
     });
 
     setSelectedProduct("");
     setQuantity(1);
+    setPurchasePrice("");
+    setSalePrice("");
     setCart([]);
     setError("");
 
@@ -392,18 +383,28 @@ export function usePurchases() {
     setSelectedProduct,
     quantity,
     setQuantity,
+
+    purchasePrice,
+    setPurchasePrice,
+    salePrice,
+    setSalePrice,
+
     cart,
     setCart,
     total,
     removeFromCart,
+    updateCartItem,
 
     products,
     suppliers,
-    years,
+
+    purchaseOrders,
+    poLoading,
+
     cancelLoading,
 
     handleChange,
-    handleAddProduct,
+    addToCart,
     handleAddPurchase,
     handleCancelPurchase,
     fetchPurchases,

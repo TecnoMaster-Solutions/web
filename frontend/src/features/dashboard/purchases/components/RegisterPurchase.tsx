@@ -3,18 +3,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Colors from "@/shared/theme/colors";
 import { IPurchase } from "../Types/Purchase.type";
-import {
-  showSuccess,
-  showWarning,
-  showError,
-} from "@/shared/utils/notifications";
+import { showSuccess, showWarning, showError } from "@/shared/utils/notifications";
 import {
   validatePurchaseForm,
   validatePurchaseField,
   PurchaseErrors,
 } from "../validations/purchasesValidations";
 import { useLoader } from "@/shared/components/loader";
-import { months, PurchaseFormState } from "../hooks/usePurchases";
+import { PurchaseFormState } from "../hooks/usePurchases";
 
 const DEFAULT_SUPPLIER_IMAGE =
   "https://cdn-icons-png.flaticon.com/512/1698/1698535.png";
@@ -27,14 +23,11 @@ const formatCOP = (value: number) =>
   }).format(value);
 
 type CartItem = {
-  isNew: boolean;
-  productid?: number;
-  productname?: string;
-  description?: string;
-  productpriceofsupplier?: number;
-  saleprice?: number;
+  productid: number;
+  productname: string;
   quantity: number;
   unitprice: number;
+  saleprice?: number;
 };
 
 interface Props {
@@ -43,31 +36,36 @@ interface Props {
   purchases: IPurchase[];
   fetchPurchases: () => Promise<void>;
   form: PurchaseFormState;
+
   selectedProduct: string;
   setSelectedProduct: (value: string) => void;
+
   quantity: number;
   setQuantity: (value: number) => void;
+
+  purchasePrice: number | "";
+  setPurchasePrice: (value: number | "") => void;
+
+  salePrice: number | "";
+  setSalePrice: (value: number | "") => void;
+
   cart: CartItem[];
-  years: number;
-  daysInMonth: number;
   total: number;
+
   removeFromCart: (index: number) => void;
+  updateCartItem: (index: number, patch: Partial<CartItem>) => void;
+
   handleChange: (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-    >
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => void;
-  handleAddProduct: (args: {
-    isNew: boolean;
-    productName: string;
-    supplierPrice: number;
-    selectedProduct: string;
-    quantity: number;
-    description: string;
-    salePrice?: number;
-  }) => void;
+
+  addToCart: () => void;
+
   products: any[];
   suppliers: any[];
+
+  purchaseOrders: any[];
+  poLoading: boolean;
 }
 
 export default function RegisterPurchaseForm({
@@ -80,26 +78,22 @@ export default function RegisterPurchaseForm({
   setSelectedProduct,
   quantity,
   setQuantity,
+  purchasePrice,
+  setPurchasePrice,
+  salePrice,
+  setSalePrice,
   cart,
   total,
   handleChange,
-  handleAddProduct,
+  addToCart,
   removeFromCart,
+  updateCartItem,
   products,
   suppliers,
+  purchaseOrders,
+  poLoading,
 }: Props) {
   const [errors, setErrors] = useState<PurchaseErrors>({});
-  const [isNewProduct, setIsNewProduct] = useState(false);
-
-  const [newProductName, setNewProductName] = useState("");
-  const [newProductPrice, setNewProductPrice] = useState<number | "">("");
-  const [newProductSalePrice, setNewProductSalePrice] = useState<number | "">(
-    ""
-  );
-
-  const [existingSalePrice, setExistingSalePrice] = useState<number | "">("");
-  const [productDescription, setProductDescription] = useState("");
-  const [duplicateProductError, setDuplicateProductError] = useState("");
   const [saving, setSaving] = useState(false);
 
   const [searchProduct, setSearchProduct] = useState("");
@@ -118,6 +112,18 @@ export default function RegisterPurchaseForm({
 
   const { showLoader, hideLoader } = useLoader();
 
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const handleFieldValidation = (
     field: keyof Omit<IPurchase, "id">,
     value: any
@@ -126,11 +132,32 @@ export default function RegisterPurchaseForm({
     setErrors((prev) => ({ ...prev, [field]: error }));
   };
 
+  const cartProductIds = useMemo(
+    () => new Set(cart.map((c) => c.productid)),
+    [cart]
+  );
+
+  const filteredProducts = useMemo(() => {
+    const base = products.filter((p) => !cartProductIds.has(p.productid));
+    if (!searchProduct.trim()) return base;
+
+    return base.filter((p) =>
+      String(p.productname ?? "")
+        .toLowerCase()
+        .includes(searchProduct.toLowerCase())
+    );
+  }, [searchProduct, products, cartProductIds]);
+
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (cart.length === 0) {
       showWarning("Agrega al menos un producto al carrito.");
+      return;
+    }
+
+    if (!form.purchaseOrderId) {
+      showWarning("Selecciona una orden de compra pendiente.");
       return;
     }
 
@@ -343,20 +370,16 @@ export default function RegisterPurchaseForm({
           {form.supplier && (
             <div className="flex items-center gap-2 mt-2 p-2 border rounded-md bg-gray-50">
               <img
-                src={
-                  suppliers.find((s) => s.supplierid == form.supplier)?.image ||
-                  DEFAULT_SUPPLIER_IMAGE
-                }
+                src={selectedSupplier?.image || DEFAULT_SUPPLIER_IMAGE}
                 alt="Proveedor"
                 className="w-10 h-10 rounded object-cover"
                 onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).src =
-                    DEFAULT_SUPPLIER_IMAGE;
+                  (e.currentTarget as HTMLImageElement).src = DEFAULT_SUPPLIER_IMAGE;
                 }}
               />
 
               <span className="text-sm font-medium text-gray-700">
-                {suppliers.find((s) => s.supplierid == form.supplier)?.name}
+                {selectedSupplier?.name}
               </span>
             </div>
           )}
@@ -436,127 +459,81 @@ export default function RegisterPurchaseForm({
           Productos <span className="text-green-500">*</span>
         </label>
 
-        {/* Toggle Seleccionar / Crear */}
-        <div className="flex gap-2 mb-4">
-          <button
-            type="button"
-            onClick={() => {
-              setIsNewProduct(false);
-              setNewProductName("");
-              setNewProductPrice("");
-              setNewProductSalePrice("");
-              setSelectedSupplierPrice(""); // ***
-            }}
-            className={`text-xs px-3 py-2 rounded-md transition ${
-              !isNewProduct
-                ? "bg-black text-white shadow"
-                : "bg-gray-200 hover:bg-gray-300"
-            }`}
-          >
-            Seleccionar
-          </button>
+        <label className="block text-sm font-medium mb-2">Producto</label>
 
-          <button
-            type="button"
-            onClick={() => {
-              setIsNewProduct(true);
-              setSelectedProduct("");
-              setSearchProduct("");
-              setExistingSalePrice("");
-              setSelectedSupplierPrice(""); // ***
-            }}
-            className={`text-xs px-3 py-2 rounded-md transition ${
-              isNewProduct
-                ? "bg-black text-white shadow"
-                : "bg-gray-200 hover:bg-gray-300"
-            }`}
-          >
-            Crear producto
-          </button>
-        </div>
+        <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+          {/* BUSCADOR */}
+          <div className="flex-1">
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              Buscar o seleccionar
+            </label>
 
-        {/* MODO SELECCIONAR PRODUCTO */}
-        {!isNewProduct && (
-          <>
-            <label className="block text-sm font-medium mb-2">Producto</label>
+            <div className="relative" ref={dropdownRef}>
+              <input
+                type="text"
+                placeholder="Escribe el nombre del producto"
+                className="w-100 border rounded-md px-3 py-2 text-sm shadow-sm"
+                value={
+                  selectedProduct
+                    ? products.find((p) => p.productid === Number(selectedProduct))
+                        ?.productname
+                    : searchProduct
+                }
+                onChange={(e) => {
+                  setSearchProduct(e.target.value);
+                  setSelectedProduct("");
+                  setDropdownOpen(true);
+                }}
+                onFocus={() => setDropdownOpen(true)}
+              />
 
-            <div className="flex flex-col sm:flex-row sm:items-end gap-3">
-              {/* BUSCADOR */}
-              <div className="flex-1">
-                <label className="block text-xs font-medium text-gray-600 mb-1">
-                  Buscar o seleccionar
-                </label>
-
-                <div className="relative" ref={dropdownRef}>
-                  <input
-                    type="text"
-                    placeholder="Escribe el nombre del producto"
-                    className="w-100 border rounded-md px-3 py-2 text-sm shadow-sm"
-                    value={
-                      selectedProduct
-                        ? products.find(
-                            (p) => p.productid === Number(selectedProduct)
-                          )?.productname
-                        : searchProduct
-                    }
-                    onChange={(e) => {
-                      setSearchProduct(e.target.value);
-                      setSelectedProduct("");
-                      setDropdownOpen(true);
-                    }}
-                    onFocus={() => setDropdownOpen(true)}
-                  />
-
-                  {dropdownOpen && (
-                    <div className="absolute top-full mt-1 w-full bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto z-50">
-                      {filteredProducts.length === 0 ? (
-                        <p className="p-3 text-sm text-gray-500">
-                          No hay productos que coincidan
-                        </p>
-                      ) : (
-                        filteredProducts.map((p) => (
-                          <div
-                            key={p.productid}
-                            onClick={() => {
-                              setSelectedProduct(String(p.productid));
-                              setSelectedSupplierPrice(
-                                p.productpriceofsupplier || "" // ***
-                              );
-                              setSearchProduct("");
-                              setDropdownOpen(false);
-                            }}
-                            className="p-2 cursor-pointer hover:bg-gray-100 text-sm flex justify-between"
-                          >
-                            <span>{p.productname}</span>
-                            <span className="text-gray-600 font-semibold">
-                              {formatCOP(p.productpriceofsupplier || 0)}
-                            </span>
-                          </div>
-                        ))
-                      )}
-                    </div>
+              {dropdownOpen && (
+                <div className="absolute top-full mt-1 w-full bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto z-50">
+                  {filteredProducts.length === 0 ? (
+                    <p className="p-3 text-sm text-gray-500">
+                      No hay productos disponibles (o ya están agregados)
+                    </p>
+                  ) : (
+                    filteredProducts.map((p) => (
+                      <div
+                        key={p.productid}
+                        onClick={() => {
+                          setSelectedProduct(String(p.productid));
+                          setPurchasePrice(p.productpriceofsupplier || "");
+                          setSalePrice("");
+                          setSearchProduct("");
+                          setDropdownOpen(false);
+                        }}
+                        className="p-2 cursor-pointer hover:bg-gray-100 text-sm flex justify-between"
+                      >
+                        <span>{p.productname}</span>
+                        <span className="text-gray-600 font-semibold">
+                          {formatCOP(p.productpriceofsupplier || 0)}
+                        </span>
+                      </div>
+                    ))
                   )}
                 </div>
-              </div>
+              )}
+            </div>
+          </div>
 
-              {/* PRECIO COMPRA */}
-              <div className="flex-1 sm:w-32">
-                <label className="block text-xs font-medium text-gray-600 mb-1">
-                  Precio compra (unidad)
-                </label>
+          {/* PRECIO COMPRA */}
+          <div className="flex-1 sm:w-32">
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              Precio compra (unidad)
+            </label>
 
-                <input
-                  type="number"
-                  placeholder="Ej. 15000"
-                  value={selectedSupplierPrice}
-                  onChange={(e) =>
-                    setSelectedSupplierPrice(
-                      e.target.value === "" ? "" : Number(e.target.value)
-                    )
-                  }
-                  className="w-full rounded-md border px-2 py-2 text-sm shadow-sm"
-                />
-              </div>
+            <input
+              type="number"
+              placeholder="Ej. 15000"
+              value={purchasePrice}
+              onChange={(e) =>
+                setPurchasePrice(e.target.value === "" ? "" : Number(e.target.value))
+              }
+              className="w-full rounded-md border px-2 py-2 text-sm shadow-sm"
+            />
+          </div>
 
               {/* PRECIO VENTA */}
               <div className="flex-1 sm:w-32">
@@ -564,24 +541,22 @@ export default function RegisterPurchaseForm({
                   Precio venta (unidad) â€” opcional
                 </label>
 
-                <input
-                  type="number"
-                  placeholder="Ej. 25000"
-                  value={existingSalePrice}
-                  onChange={(e) =>
-                    setExistingSalePrice(
-                      e.target.value === "" ? "" : Number(e.target.value)
-                    )
-                  }
-                  className="w-full rounded-md border px-2 py-2 text-sm shadow-sm"
-                />
-              </div>
+            <input
+              type="number"
+              placeholder="Ej. 25000"
+              value={salePrice}
+              onChange={(e) =>
+                setSalePrice(e.target.value === "" ? "" : Number(e.target.value))
+              }
+              className="w-full rounded-md border px-2 py-2 text-sm shadow-sm"
+            />
+          </div>
 
-              {/* CANTIDAD */}
-              <div className="flex-1 sm:w-20">
-                <label className="block text-xs font-medium text-gray-600 mb-1">
-                  Cantidad
-                </label>
+          {/* CANTIDAD */}
+          <div className="flex-1 sm:w-20">
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              Cantidad
+            </label>
 
                 <input
                   type="number"
@@ -680,28 +655,34 @@ export default function RegisterPurchaseForm({
         {/* BotÃ³n agregar */}
         <button
           type="button"
-          onClick={handleAddProductClick}
+          onClick={() => {
+            // Reglas básicas (UX)
+            if (!form.supplier) {
+              showWarning("Selecciona primero un proveedor.");
+              return;
+            }
+            addToCart();
+          }}
           style={{ backgroundColor: Colors.buttons.primary }}
           className="cursor-pointer mt-4 w-full px-4 py-2 rounded-md text-white text-sm font-medium shadow hover:scale-[1.02] transition"
         >
           AÃ±adir producto +
         </button>
 
-        {/* Carrito */}
+        {/* Carrito editable */}
         {cart.length > 0 && (
           <div className="mt-5 space-y-3">
             {cart.map((item, index) => (
               <div
-                key={index}
-                className="flex items-start justify-between bg-white p-3 rounded-md shadow border hover:shadow-md transition gap-3"
+                key={`${item.productid}-${index}`}
+                className="bg-white p-3 rounded-md shadow border hover:shadow-md transition"
               >
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-sm text-gray-800">
-                      {item.productname ||
-                        products.find((p) => p.productid === item.productid)
-                          ?.productname}
-                    </span>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-sm text-gray-800">
+                        {item.productname}
+                      </span>
 
                     <span className="bg-green-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
                       {item.quantity}
@@ -759,12 +740,11 @@ export default function RegisterPurchaseForm({
         />
       </div>
 
-      {/* Botones */}
       <div className="flex flex-col sm:flex-row justify-end gap-2">
         <button
           type="button"
           onClick={onClose}
-          className=" cursor-pointer transition duration-300 hover:bg-gray-200 hover:text-black hover:scale-105 px-4 py-2 rounded-lg bg-gray-300 text-black w-full sm:w-auto"
+          className="cursor-pointer transition duration-300 hover:bg-gray-200 hover:text-black hover:scale-105 px-4 py-2 rounded-lg bg-gray-300 text-black w-full sm:w-auto"
         >
           Cancelar
         </button>
