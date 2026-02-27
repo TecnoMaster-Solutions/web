@@ -302,7 +302,6 @@ export default function PurchasesIndex() {
     <RequireAuth>
       <div className="p-6">
         <ToastContainer position="bottom-right" />
-        <h1 className="text-xl font-semibold mb-4">Listado de Compras</h1>
 
         {(!loading || purchases.length > 0) && memoizedDataTable}
 

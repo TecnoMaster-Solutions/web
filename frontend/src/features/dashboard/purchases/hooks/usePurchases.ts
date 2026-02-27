@@ -1,3 +1,4 @@
+// usePurchases.ts
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -20,8 +21,7 @@ export interface PurchaseFormState {
   status: string;
   description: string;
 
-  // NUEVO
-  purchaseOrderId: string; // string para select controlado
+  purchaseOrderId: string;
 }
 
 export const months = [
@@ -47,9 +47,16 @@ type CartItem = {
   saleprice?: number;
 };
 
+const parseCOP = (input: string): number => {
+  const digits = (input ?? "").replace(/[^\d]/g, "");
+  return digits ? Number(digits) : 0;
+};
+
+const onlyDigits = (s: string) => (s ?? "").replace(/[^\d]/g, "");
+const hasDigits = (s: string) => onlyDigits(s).length > 0;
+
 let CACHE: IPurchase[] | null = null;
 
-// Ajusta esto si tu state Pendiente de OC es otro:
 const PO_PENDING_STATE_ID = 5;
 
 export function usePurchases() {
@@ -81,8 +88,8 @@ export function usePurchases() {
   const [selectedProduct, setSelectedProduct] = useState<string>("");
   const [quantity, setQuantity] = useState<number>(1);
 
-  const [purchasePrice, setPurchasePrice] = useState<number | "">("");
-  const [salePrice, setSalePrice] = useState<number | "">("");
+  const [purchasePrice, setPurchasePrice] = useState<string>("");
+  const [salePrice, setSalePrice] = useState<string>("");
 
   const [cart, setCart] = useState<CartItem[]>([]);
 
@@ -157,7 +164,7 @@ export function usePurchases() {
   useEffect(() => {
     fetchPurchases();
     return () => abortRef.current?.abort();
-  }, []);
+  }, [fetchPurchases]);
 
   useEffect(() => {
     const supplierId = Number(form.supplier);
@@ -174,10 +181,18 @@ export function usePurchases() {
           supplierId,
           PO_PENDING_STATE_ID
         );
+
         setPurchaseOrders(data);
+
+        // Si ya había una OC seleccionada, la mantenemos solo si aún existe
         setForm((prev) => {
-          const stillExists = data.some((po: any) => String(po.id) === prev.purchaseOrderId);
-          return { ...prev, purchaseOrderId: stillExists ? prev.purchaseOrderId : "" };
+          const stillExists = data.some(
+            (po: any) => String(po.id) === prev.purchaseOrderId
+          );
+          return {
+            ...prev,
+            purchaseOrderId: stillExists ? prev.purchaseOrderId : "",
+          };
         });
       } catch (err) {
         console.error("Error cargando órdenes de compra", err);
@@ -203,6 +218,7 @@ export function usePurchases() {
       setPurchasePrice("");
       setSalePrice("");
       setForm((prev) => ({ ...prev, supplier: value, purchaseOrderId: "" }));
+      setError("");
       return;
     }
 
@@ -221,8 +237,9 @@ export function usePurchases() {
       return;
     }
 
-    const price = purchasePrice === "" ? 0 : Number(purchasePrice);
-    const sPrice = salePrice === "" ? undefined : Number(salePrice);
+    const price = parseCOP(purchasePrice);
+    // ✅ CAMBIO: salePrice es opcional real (solo si hay dígitos)
+    const sPrice = hasDigits(salePrice) ? parseCOP(salePrice) : undefined;
 
     if (price <= 0) {
       setError("Ingresa un precio de compra válido.");
@@ -261,6 +278,13 @@ export function usePurchases() {
     setQuantity(1);
   };
 
+  /**
+   * ✅ FIX: permitir borrar saleprice y volver a escribir
+   * No bloqueamos el update por "saleprice < unitprice" aquí,
+   * porque eso hace imposible editar cuando el usuario borra o escribe parcial.
+   * La validación final debe quedar en el submit (RegisterPurchaseForm / validatePurchaseForm)
+   * o al momento de guardar.
+   */
   const updateCartItem = (index: number, patch: Partial<CartItem>) => {
     setCart((prev) => {
       const next = [...prev];
@@ -269,11 +293,12 @@ export function usePurchases() {
 
       const merged = { ...current, ...patch };
 
-      // validaciones coherentes con backend
-      if (merged.quantity <= 0) return prev;
-      if (merged.unitprice <= 0) return prev;
-      if (merged.saleprice !== undefined && merged.saleprice < merged.unitprice) return prev;
+      // Mantén validaciones mínimas para no romper el carrito
+      // (si quieres permitir limpiar cantidad/precio mientras escribe, eso ya sería otra lógica con inputs string)
+      if (!Number.isFinite(merged.quantity) || merged.quantity <= 0) return prev;
+      if (!Number.isFinite(merged.unitprice) || merged.unitprice < 0) return prev;
 
+      // ✅ saleprice puede ser undefined y NO bloquea el update
       next[index] = merged;
       return next;
     });
@@ -292,9 +317,14 @@ export function usePurchases() {
       setError("Selecciona un proveedor.");
       return;
     }
-    if (!form.purchaseOrderId) {
-      setError("Selecciona una orden de compra pendiente.");
-      return;
+
+    for (const item of cart) {
+      if (item.saleprice !== undefined && item.saleprice < item.unitprice) {
+        setError(
+          `El precio de venta del producto ID ${item.productid} no puede ser menor que el precio de compra.`
+        );
+        return;
+      }
     }
 
     setSaving(true);
@@ -305,7 +335,7 @@ export function usePurchases() {
       productid: item.productid,
       quantity: item.quantity,
       unitprice: item.unitprice,
-      productpriceofsupplier: item.unitprice, // opcional pero útil
+      productpriceofsupplier: item.unitprice,
       ...(item.saleprice !== undefined ? { saleprice: item.saleprice } : {}),
     }));
 
@@ -314,12 +344,14 @@ export function usePurchases() {
       reference: form.invoiceNumber,
       supplierid: Number(form.supplier),
       observation: form.description || "",
-      stateid: 3, // Aprobado
+      stateid: 3,
       createdat: created,
       updatedat: new Date().toISOString(),
       products: productsPayload,
 
-      purchaseOrderId: Number(form.purchaseOrderId),
+      ...(form.purchaseOrderId
+        ? { purchaseOrderId: Number(form.purchaseOrderId) }
+        : {}),
     };
 
     try {

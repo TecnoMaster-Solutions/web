@@ -125,10 +125,6 @@ export const getSuppliersForPurchase = async () => {
   return response.data.data;
 };
 
-/**
- * NUEVO: Traer OCs por proveedor y estado (Pendiente).
- * Tu backend: GET /purchase-orders?proveedorId=...&estadoId=...
- */
 export const getPurchaseOrdersForSupplier = async (
   proveedorId: number,
   estadoId: number
