@@ -249,6 +249,16 @@ export default function EditRequestModal({
     String((initial as any)?.estado ?? (initial as any)?.stateId ?? "").trim()
   );
   const { stateOptions, isLoading: statesLoading } = useRequestStates();
+  const stateOptionsForSelect = useMemo(() => {
+    if (!estado) return stateOptions;
+    if (stateOptions.some((s) => String(s.id) === String(estado))) return stateOptions;
+
+    const fallbackLabel = String(
+      (initial as any)?.estadoLabel ?? (initial as any)?.estadoName ?? `Estado #${estado}`
+    ).trim();
+
+    return [{ id: String(estado), label: fallbackLabel || `Estado #${estado}` }, ...stateOptions];
+  }, [estado, initial, stateOptions]);
 
   const [touched, setTouched] = useState<Touched>({});
   const [submitAttempted, setSubmitAttempted] = useState(false);
@@ -974,7 +984,7 @@ export default function EditRequestModal({
       scheduledEndAt: scheduledEndAtISO,
       estado: estado || undefined,
       stateId: estado ? Number(estado) : undefined,
-      estadoLabel: stateOptions.find((s) => String(s.id) === String(estado))?.label,
+      estadoLabel: stateOptionsForSelect.find((s) => String(s.id) === String(estado))?.label,
       technicians: selectedTechnicians,
     };
 
@@ -1351,7 +1361,7 @@ export default function EditRequestModal({
                 className="w-full appearance-none rounded-lg border bg-gray-50 h-10 px-3 pr-8 text-sm focus:bg-white focus:ring-2 focus:ring-black/15 disabled:opacity-60 border-gray-300"
               >
                 <option value="">{statesLoading ? "Cargando estados..." : "Selecciona estado"}</option>
-                {stateOptions.map((s) => (
+                {stateOptionsForSelect.map((s) => (
                   <option key={s.id} value={String(s.id)}>
                     {s.label}
                   </option>

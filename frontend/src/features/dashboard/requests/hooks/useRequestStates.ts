@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { listStates  } from "../services/servicerequests.service";
+import { isServiceRequestStateLike } from "../../shared/stateFilters";
 
 function normalizeKey(v: any) {
   return String(v ?? "")
@@ -21,9 +22,10 @@ export function useRequestStates() {
     queryFn: listStates,
     staleTime: 5 * 60 * 1000,
   });
-  const stateOptions = (data ?? []).map(s => ({ id: String(s.stateid), label: s.name }));
-  const pendingStateId = findStateId(data, (name) => name === "pendiente" || name.includes("pendiente"));
-  const scheduledStateId = findStateId(data, (name) => name.includes("agend"));
+  const filteredStates = (data ?? []).filter((s) => isServiceRequestStateLike(s?.name));
+  const stateOptions = filteredStates.map(s => ({ id: String(s.stateid), label: s.name }));
+  const pendingStateId = findStateId(filteredStates, (name) => name === "pendiente" || name.includes("pendiente"));
+  const scheduledStateId = findStateId(filteredStates, (name) => name.includes("agend"));
 
   return { data, isLoading, error, stateOptions, pendingStateId, scheduledStateId };
 }

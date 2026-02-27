@@ -12,6 +12,7 @@ import {
   buildWindowFromLocalSchedule,
   getBusyTechnicianIdsForWindow,
 } from "@/features/dashboard/shared/technicianAvailability";
+import { isOrderServiceStateLike } from "@/features/dashboard/shared/stateFilters";
 import type { UpdateOrdersServiceDto } from "../types/ordersServices.types";
 
 type ServiceLineItem = {
@@ -460,7 +461,8 @@ const {
         const name = String(s?.name ?? s?.state ?? s?.label ?? s?.statename ?? "").trim();
         return { stateid, name, label: titleCase(name) || `Estado #${stateid}` } as OrderStateOption;
       })
-      .filter((x) => Number.isFinite(x.stateid) && x.stateid > 0);
+      .filter((x) => Number.isFinite(x.stateid) && x.stateid > 0)
+      .filter((x) => isOrderServiceStateLike(x.name));
   }, [statesRaw]);
 
   const servicesCatalog = useMemo<ServiceOption[]>(() => {
