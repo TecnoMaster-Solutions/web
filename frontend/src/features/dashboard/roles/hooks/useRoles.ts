@@ -21,6 +21,7 @@ import {
   uiActionToPrivilegeName,
   MODULE_BACK_TO_UI,
   privilegeNameToUiActions,
+  ALL_MODULE_PERMISSIONS,
 } from "../constants/roleMatrix.constants";
 
 function isValidConfig(
@@ -200,7 +201,11 @@ export const useRoles = () => {
           cfg.permission.module;
 
         const actions = privilegeNameToUiActions(moduleUi as any, cfg.privilege.name);
-        return actions.map((a) => `${moduleUi}-${a}`);
+
+        const allowed = (ALL_MODULE_PERMISSIONS as any)[moduleUi] ?? [];
+        const filtered = actions.filter((a: string) => allowed.includes(a));
+
+        return filtered.map((a: string) => `${moduleUi}-${a}`);
       });
 
       setViewingRole({
@@ -232,7 +237,11 @@ export const useRoles = () => {
           cfg.permission.module;
 
         const actions = privilegeNameToUiActions(moduleUi as any, cfg.privilege.name);
-        return actions.map((a) => `${moduleUi}-${a}`);
+
+        const allowed = (ALL_MODULE_PERMISSIONS as any)[moduleUi] ?? [];
+        const filtered = actions.filter((a: string) => allowed.includes(a));
+
+        return filtered.map((a: string) => `${moduleUi}-${a}`);
       });
 
       setEditingRole({
@@ -286,7 +295,7 @@ export const useRoles = () => {
           } else if (ax.response?.status === 400 || ax.response?.status === 409) {
             showWarning(
               ax.response?.data?.message ??
-                "No se puede eliminar el rol (está vinculado a usuarios)."
+              "No se puede eliminar el rol (está vinculado a usuarios)."
             );
           } else {
             showWarning("Ocurrió un error al eliminar el rol.");

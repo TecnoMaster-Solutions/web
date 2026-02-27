@@ -11,7 +11,6 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-// 📊 Datos por año
 const purchaseData: Record<string, { month: string; purchases: number }[]> = {
   2023: [
     { month: "Enero", purchases: 5 },

@@ -1,3 +1,4 @@
+// RegisterPurchaseForm.tsx
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -20,7 +21,17 @@ const formatCOP = (value: number) =>
     style: "currency",
     currency: "COP",
     minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   }).format(value);
+
+const parseCOP = (input: string): number => {
+  const digits = (input ?? "").replace(/[^\d]/g, "");
+  return digits ? Number(digits) : 0;
+};
+
+// ✅ NUEVO (único cambio adicional para permitir opcional real)
+const onlyDigits = (s: string) => (s ?? "").replace(/[^\d]/g, "");
+const hasDigits = (s: string) => onlyDigits(s).length > 0;
 
 type CartItem = {
   productid: number;
@@ -43,11 +54,11 @@ interface Props {
   quantity: number;
   setQuantity: (value: number) => void;
 
-  purchasePrice: number | "";
-  setPurchasePrice: (value: number | "") => void;
+  purchasePrice: string;
+  setPurchasePrice: (value: string) => void;
 
-  salePrice: number | "";
-  setSalePrice: (value: number | "") => void;
+  salePrice: string;
+  setSalePrice: (value: string) => void;
 
   cart: CartItem[];
   total: number;
@@ -145,11 +156,6 @@ export default function RegisterPurchaseForm({
       return;
     }
 
-    if (!form.purchaseOrderId) {
-      showWarning("Selecciona una orden de compra pendiente.");
-      return;
-    }
-
     const validationErrors = validatePurchaseForm(
       {
         orderNumber: form.orderNumber,
@@ -188,7 +194,9 @@ export default function RegisterPurchaseForm({
     }
   };
 
-  const selectedSupplier = suppliers.find((s) => String(s.supplierid) === String(form.supplier));
+  const selectedSupplier = suppliers.find(
+    (s) => String(s.supplierid) === String(form.supplier)
+  );
 
   return (
     <form
@@ -325,7 +333,6 @@ export default function RegisterPurchaseForm({
         )}
       </div>
 
-      {/* Número de Factura */}
       <div>
         <label className="block text-sm mb-1 font-medium">
           Número de Factura <span className="text-red-500">*</span>
@@ -348,7 +355,6 @@ export default function RegisterPurchaseForm({
         )}
       </div>
 
-      {/* Total */}
       <div>
         <label className="block text-sm mb-1 font-medium">
           Total <span className="text-red-500">*</span>
@@ -373,7 +379,6 @@ export default function RegisterPurchaseForm({
         <label className="block text-sm font-medium mb-2">Producto</label>
 
         <div className="flex flex-col sm:flex-row sm:items-end gap-3">
-          {/* BUSCADOR */}
           <div className="flex-1">
             <label className="block text-xs font-medium text-gray-600 mb-1">
               Buscar o seleccionar
@@ -410,7 +415,11 @@ export default function RegisterPurchaseForm({
                         key={p.productid}
                         onClick={() => {
                           setSelectedProduct(String(p.productid));
-                          setPurchasePrice(p.productpriceofsupplier || "");
+                          setPurchasePrice(
+                            p.productpriceofsupplier
+                              ? String(p.productpriceofsupplier)
+                              : ""
+                          );
                           setSalePrice("");
                           setSearchProduct("");
                           setDropdownOpen(false);
@@ -429,41 +438,38 @@ export default function RegisterPurchaseForm({
             </div>
           </div>
 
-          {/* PRECIO COMPRA */}
           <div className="flex-1 sm:w-32">
             <label className="block text-xs font-medium text-gray-600 mb-1">
               Precio compra (unidad)
             </label>
 
             <input
-              type="number"
-              placeholder="Ej. 15000"
-              value={purchasePrice}
-              onChange={(e) =>
-                setPurchasePrice(e.target.value === "" ? "" : Number(e.target.value))
-              }
+              type="text"
+              inputMode="numeric"
+              placeholder="$ 15.000"
+              // ✅ CAMBIO: solo formatea si hay dígitos
+              value={hasDigits(purchasePrice) ? formatCOP(parseCOP(purchasePrice)) : ""}
+              onChange={(e) => setPurchasePrice(e.target.value)}
               className="w-full rounded-md border px-2 py-2 text-sm shadow-sm"
             />
           </div>
 
-          {/* PRECIO VENTA */}
           <div className="flex-1 sm:w-32">
             <label className="block text-xs font-medium text-gray-600 mb-1">
               Precio venta (unidad) — opcional
             </label>
 
             <input
-              type="number"
-              placeholder="Ej. 25000"
-              value={salePrice}
-              onChange={(e) =>
-                setSalePrice(e.target.value === "" ? "" : Number(e.target.value))
-              }
+              type="text"
+              inputMode="numeric"
+              placeholder="$ 25.000"
+              // ✅ CAMBIO: solo formatea si hay dígitos (así queda realmente vacío si borran)
+              value={hasDigits(salePrice) ? formatCOP(parseCOP(salePrice)) : ""}
+              onChange={(e) => setSalePrice(e.target.value)}
               className="w-full rounded-md border px-2 py-2 text-sm shadow-sm"
             />
           </div>
 
-          {/* CANTIDAD */}
           <div className="flex-1 sm:w-20">
             <label className="block text-xs font-medium text-gray-600 mb-1">
               Cantidad
@@ -480,11 +486,9 @@ export default function RegisterPurchaseForm({
           </div>
         </div>
 
-        {/* Botón agregar */}
         <button
           type="button"
           onClick={() => {
-            // Reglas básicas (UX)
             if (!form.supplier) {
               showWarning("Selecciona primero un proveedor.");
               return;
@@ -497,7 +501,6 @@ export default function RegisterPurchaseForm({
           Añadir producto +
         </button>
 
-        {/* Carrito editable */}
         {cart.length > 0 && (
           <div className="mt-5 space-y-3">
             {cart.map((item, index) => (
@@ -536,7 +539,6 @@ export default function RegisterPurchaseForm({
                   </button>
                 </div>
 
-                {/* Editor inline */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">
@@ -558,12 +560,13 @@ export default function RegisterPurchaseForm({
                       Precio compra (unidad)
                     </label>
                     <input
-                      type="number"
-                      min={1}
-                      value={item.unitprice}
-                      onChange={(e) =>
-                        updateCartItem(index, { unitprice: Number(e.target.value) })
-                      }
+                      type="text"
+                      inputMode="numeric"
+                      value={formatCOP(item.unitprice)}
+                      onChange={(e) => {
+                        const v = parseCOP(e.target.value);
+                        updateCartItem(index, { unitprice: v });
+                      }}
                       className="w-full rounded-md border px-2 py-2 text-sm"
                     />
                   </div>
@@ -573,13 +576,17 @@ export default function RegisterPurchaseForm({
                       Precio venta (unidad) — opcional
                     </label>
                     <input
-                      type="number"
-                      min={0}
-                      value={item.saleprice ?? ""}
+                      type="text"
+                      inputMode="numeric"
+                      value={
+                        item.saleprice === undefined ? "" : formatCOP(item.saleprice)
+                      }
                       onChange={(e) =>
                         updateCartItem(index, {
                           saleprice:
-                            e.target.value === "" ? undefined : Number(e.target.value),
+                            e.target.value.trim() === ""
+                              ? undefined
+                              : parseCOP(e.target.value),
                         })
                       }
                       className="w-full rounded-md border px-2 py-2 text-sm"
@@ -597,7 +604,6 @@ export default function RegisterPurchaseForm({
         )}
       </div>
 
-      {/* Observaciones */}
       <div>
         <label className="block text-sm mb-1 font-medium">Observaciones</label>
         <textarea

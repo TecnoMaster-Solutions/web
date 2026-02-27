@@ -9,6 +9,8 @@ import { Role } from "../../types/typeRoles";
 import {
   MODULE_BACK_TO_UI,
   privilegeNameToUiActions,
+  ALL_MODULE_PERMISSIONS,
+  RoleUiModule,
 } from "../../constants/roleMatrix.constants";
 
 interface ViewRoleModalProps {
@@ -20,29 +22,56 @@ interface ViewRoleModalProps {
 export default function ViewRoleModal({ open, onClose, role }: ViewRoleModalProps) {
   if (!open || !role) return null;
 
-  const groupedPermissions: Record<string, string[]> = {};
+  const isAdmin = Number((role as any)?.id) === 1; // admin por id=1
 
-  role.permissions?.forEach((p) => {
-    const idx = p.lastIndexOf("-");
+  // 1) Parsear tokens "Modulo-Accion" y construir Set por módulo con acciones asignadas
+  const assignedByModule = new Map<RoleUiModule, Set<string>>();
+
+  (role.permissions ?? []).forEach((token) => {
+    const idx = token.lastIndexOf("-");
     if (idx === -1) return;
 
-    const rawModule = p.slice(0, idx).trim();
-    const rawPrivName = p.slice(idx + 1).trim(); 
+    const rawModule = token.slice(0, idx).trim();
+    const rawPrivName = token.slice(idx + 1).trim();
 
-    const moduleName =
-      MODULE_BACK_TO_UI[rawModule] ??
-      MODULE_BACK_TO_UI[rawModule.toLowerCase()] ??
-      rawModule;
+    const moduleUi =
+      (MODULE_BACK_TO_UI[rawModule] ??
+        MODULE_BACK_TO_UI[String(rawModule).toLowerCase()] ??
+        rawModule) as RoleUiModule;
 
-    const actions = privilegeNameToUiActions(moduleName as any, rawPrivName);
+    const actions = privilegeNameToUiActions(moduleUi, rawPrivName);
 
-    if (!groupedPermissions[moduleName]) groupedPermissions[moduleName] = [];
-    groupedPermissions[moduleName].push(...actions);
+    if (!assignedByModule.has(moduleUi)) assignedByModule.set(moduleUi, new Set());
+    const set = assignedByModule.get(moduleUi)!;
+
+    actions.forEach((a) => set.add(a));
   });
 
-  // Evita duplicados dentro de cada módulo
-  Object.keys(groupedPermissions).forEach((m) => {
-    groupedPermissions[m] = Array.from(new Set(groupedPermissions[m]));
+  const rows: Array<{ module: RoleUiModule; actions: Array<{ name: string; checked: boolean }> }> =
+    [];
+
+  (Object.keys(ALL_MODULE_PERMISSIONS) as RoleUiModule[]).forEach((moduleUi) => {
+    const allowed = ALL_MODULE_PERMISSIONS[moduleUi] ?? [];
+    const assigned = assignedByModule.get(moduleUi) ?? new Set<string>();
+
+    if (isAdmin) {
+      // Admin: lista completa permitida por UI
+      const actions = allowed.map((a) => ({
+        name: a,
+        checked: assigned.has(a),
+      }));
+      rows.push({ module: moduleUi, actions });
+      return;
+    }
+
+    // No admin: solo lo asignado (y que esté permitido por constants)
+    const onlyAssigned = allowed.filter((a) => assigned.has(a));
+    if (onlyAssigned.length === 0) return;
+
+    rows.push({
+      module: moduleUi,
+      actions: onlyAssigned.map((a) => ({ name: a, checked: true })),
+    });
   });
 
   const Checkbox = ({ checked }: { checked: boolean }) => (
@@ -125,25 +154,33 @@ export default function ViewRoleModal({ open, onClose, role }: ViewRoleModalProp
                   </thead>
 
                   <tbody className="divide-y">
-                    {Object.keys(groupedPermissions).map((moduleName) => (
-                      <tr key={moduleName}>
-                        <td className="px-4 py-3 font-medium text-gray-800">{moduleName}</td>
+                    {rows.map((row) => (
+                      <tr key={row.module}>
+                        <td className="px-4 py-3 font-medium text-gray-800">{row.module}</td>
 
                         <td className="px-4 py-3">
                           <div className="flex flex-wrap justify-center gap-4">
-                            {groupedPermissions[moduleName].map((privilege, idx) => (
+                            {row.actions.map((a) => (
                               <div
-                                key={`${moduleName}-${privilege}-${idx}`}
+                                key={`${row.module}-${a.name}`}
                                 className="flex items-center gap-2"
                               >
-                                <Checkbox checked />
-                                <span className="text-sm">{privilege}</span>
+                                <Checkbox checked={a.checked} />
+                                <span className="text-sm">{a.name}</span>
                               </div>
                             ))}
                           </div>
                         </td>
                       </tr>
                     ))}
+
+                    {rows.length === 0 && (
+                      <tr>
+                        <td className="px-4 py-6 text-center text-gray-500" colSpan={2}>
+                          Este rol no tiene permisos asignados.
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
