@@ -5,10 +5,15 @@ import RegisterQuoteForm from "@/features/dashboard/quotes/components/RegisterQu
 import { createQuote } from "@/features/dashboard/quotes/api/quotes.api";
 import { QuoteCreatePayload } from "@/features/dashboard/quotes/types/Quote.type";
 import { useRouter } from "next/navigation";
+import { usePermissions } from "@/features/auth/hooks/usePermissions";
 
 export default function QuotesRegisterPage() {
   const router = useRouter();
+  const { canCreate } = usePermissions();
+  const canCreateQuotes = canCreate("quotes");
+
   const handleSave = async (payload: QuoteCreatePayload) => {
+    if (!canCreateQuotes) return;
     await createQuote(payload);
     router.push("/dashboard/quotes");
   };
@@ -28,7 +33,15 @@ export default function QuotesRegisterPage() {
           </button>
         </div>
 
-        <RegisterQuoteForm onSave={handleSave} />
+        {!canCreateQuotes ? (
+          <div className="flex items-center justify-center py-20">
+            <span className="text-gray-500">
+              No tienes permisos para crear cotizaciones.
+            </span>
+          </div>
+        ) : (
+          <RegisterQuoteForm onSave={handleSave} />
+        )}
       </div>
     </RequireAuth>
   );

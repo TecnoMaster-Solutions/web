@@ -8,6 +8,7 @@ import { ToastContainer } from "react-toastify";
 import { Column } from "../components/datatable/types/column.types";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { usePermissions } from "@/features/auth/hooks/usePermissions";
 
 import {
   getQuotes,
@@ -150,6 +151,16 @@ const normalizeText = (value: string) =>
 
 export default function QuotesIndex() {
   const router = useRouter();
+  const { canView, canCreate, canUpdate, canDelete, has } = usePermissions();
+  const canViewQuotes = canView("quotes");
+  const canCreateQuotes = canCreate("quotes");
+  const canUpdateQuotes = canUpdate("quotes");
+  const canDeleteQuotes = canDelete("quotes");
+  const canCompleteQuotes = has("quotes", "complete");
+  const canDeactivateQuotes = has("quotes", "deactivate");
+  const canCancelQuotes = canUpdateQuotes || canDeactivateQuotes;
+  const canExportQuotes =
+    canViewQuotes || has("quotes", "export") || has("quotes", "download_report");
 
   const [quotesData, setQuotesData] = useState<QuoteTableRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -302,6 +313,12 @@ export default function QuotesIndex() {
   );
 
   const fetchQuotes = useCallback(async () => {
+    if (!canViewQuotes) {
+      setQuotesData([]);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
       const data = await getQuotes();
@@ -327,7 +344,7 @@ export default function QuotesIndex() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [canViewQuotes]);
 
   useEffect(() => {
     fetchQuotes();
@@ -370,6 +387,11 @@ export default function QuotesIndex() {
   ];
 
   const handleApproveQuote = useCallback(async (row: QuoteTableRow) => {
+    if (!canUpdateQuotes) {
+      await Swal.fire("Sin permisos", "No tienes permisos para aprobar cotizaciones.", "warning");
+      return;
+    }
+
     const r = await Swal.fire({
       title: "¿Aprobar cotización?",
       text: `Total: ${Number(row.amount ?? 0).toLocaleString("es-CO", {
@@ -400,6 +422,17 @@ export default function QuotesIndex() {
       return;
     }
 
+    await fetchQuotes();
+
+    if (!canCompleteQuotes) {
+      await Swal.fire(
+        "Cotización aprobada",
+        "La cotización quedó aprobada.",
+        "success",
+      );
+      return;
+    }
+
     let completionResult: { sale?: { salecode?: string; saleid?: number } } | null = null;
     try {
       completionResult = await completeQuote(row.id);
@@ -422,9 +455,14 @@ export default function QuotesIndex() {
         : "La cotización se completó y se creó la venta asociada.",
       "success"
     );
-  }, [ensureQuoteHasCustomer, fetchQuotes]);
+  }, [canCompleteQuotes, canUpdateQuotes, ensureQuoteHasCustomer, fetchQuotes]);
 
   const handleCancelQuote = async (row: QuoteTableRow) => {
+    if (!canCancelQuotes) {
+      await Swal.fire("Sin permisos", "No tienes permisos para cancelar cotizaciones.", "warning");
+      return;
+    }
+
     const r = await Swal.fire({
       title: "¿Cancelar cotización?",
       text: "Esta acción no se puede deshacer",
@@ -451,6 +489,11 @@ export default function QuotesIndex() {
   };
 
   const handleRevokeQuote = async (row: QuoteTableRow) => {
+    if (!canDeleteQuotes) {
+      await Swal.fire("Sin permisos", "No tienes permisos para anular cotizaciones.", "warning");
+      return;
+    }
+
     const status = row.statusSearch;
 
     if (status !== "aprobada") {
@@ -502,6 +545,14 @@ export default function QuotesIndex() {
 
         <h1 className="text-xl font-semibold mb-4">Listado de Cotizaciones</h1>
 
+        {!canViewQuotes ? (
+          <div className="flex items-center justify-center py-20">
+            <span className="text-gray-500">
+              No tienes permisos para visualizar cotizaciones.
+            </span>
+          </div>
+        ) : (
+
         <DataTable<QuoteTableRow>
           module="quotes"
           data={quotesData}
@@ -517,12 +568,13 @@ export default function QuotesIndex() {
           ]}
           pageSize={8}
           onView={(row) => router.push(`/dashboard/quotes/${row.id}`)}
-          onCreate={() => router.push("/dashboard/quotes/register")}
+          onCreate={canCreateQuotes ? () => router.push("/dashboard/quotes/register") : undefined}
           createButtonText="Crear Cotización"
-          onCheck={handleApproveQuote}
-          onCancel={handleCancelQuote}
-          onDelete={handleRevokeQuote}
+          onCheck={canUpdateQuotes ? handleApproveQuote : undefined}
+          onCancel={canCancelQuotes ? handleCancelQuote : undefined}
+          onDelete={canDeleteQuotes ? handleRevokeQuote : undefined}
           rightActions={
+            canExportQuotes ? (
             <button
               type="button"
               className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-[#b20000] text-white text-sm font-semibold hover:bg-[#910000]"
@@ -531,8 +583,10 @@ export default function QuotesIndex() {
               <Image src="/icons/download.svg" alt="Descargar" width={16} height={16} />
               Descargar Reporte
             </button>
+            ) : null
           }
         />
+        )}
       </div>
     </RequireAuth>
   );
