@@ -1,15 +1,15 @@
-"use client";
+﻿"use client";
 
 import type { AppointmentPalette } from "../types/typeAppointment";
 
 export const appointmentStatePalette: Record<string, AppointmentPalette> = {
   activo: { background: "#059669", border: "#047857", text: "#dcfce7" },
   pendiente: { background: "#fbbf24", border: "#d97706", text: "#78350f" },
-  anulada: { background: "#dc2626", border: "#b91c1c", text: "#fee2e2" },
+  anulada: { background: "#06a646", border: "#058a3c", text: "#fee2e2" },
   garantia: { background: "#0ea5e9", border: "#0284c7", text: "#e0f2fe" },
   garantiareportada: { background: "#0369a1", border: "#075985", text: "#e0f2fe" },
   finalizado: { background: "#10b981", border: "#047857", text: "#ecfdf5" },
-  cancelado: { background: "#dc2626", border: "#991b1b", text: "#fee2e2" },
+  cancelado: { background: "#06a646", border: "#991b1b", text: "#fee2e2" },
   "en-progreso": { background: "#f97316", border: "#c2410c", text: "#fff7ed" },
   agendado: { background: "#f472b6", border: "#be185d", text: "#fff1f2" },
 };
@@ -70,3 +70,4 @@ export const getStateLabel = (value?: string | null): string => {
   const key = STATE_ALIASES[rawKey] ?? rawKey;
   return STATE_LABELS[key] ?? (value ?? "").trim();
 };
+

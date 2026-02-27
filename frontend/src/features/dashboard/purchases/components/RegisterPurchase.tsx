@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Colors from "@/shared/theme/colors";
@@ -107,7 +107,7 @@ export default function RegisterPurchaseForm({
 
   const [selectedSupplierPrice, setSelectedSupplierPrice] = useState<
     number | ""
-  >(""); // ya lo tenías
+  >(""); // ya lo tenÃ­as
 
   const filteredProducts = useMemo(() => {
     if (!searchProduct.trim()) return products;
@@ -161,7 +161,7 @@ export default function RegisterPurchaseForm({
       await onSave();
       await fetchPurchases();
 
-      showSuccess("Compra registrada con éxito.");
+      showSuccess("Compra registrada con Ã©xito.");
       onClose();
     } catch (error) {
       console.error(error);
@@ -195,7 +195,7 @@ export default function RegisterPurchaseForm({
       // *** Validar que haya cantidad y precio en el input
       if (!selectedSupplierPrice || Number(selectedSupplierPrice) <= 0) {
         showWarning(
-          "Ingresa un precio de compra válido para el producto seleccionado."
+          "Ingresa un precio de compra vÃ¡lido para el producto seleccionado."
         );
         return;
       }
@@ -215,11 +215,11 @@ export default function RegisterPurchaseForm({
     } else {
       const product = getSelectedProduct();
       if (!product) {
-        showWarning("Selecciona un producto válido.");
+        showWarning("Selecciona un producto vÃ¡lido.");
         return;
       }
 
-      // *** AQUÍ USAMOS EL VALOR DEL INPUT, NO EL DE BD
+      // *** AQUÃ USAMOS EL VALOR DEL INPUT, NO EL DE BD
       supplierPrice =
         selectedSupplierPrice === "" ? 0 : Number(selectedSupplierPrice);
 
@@ -227,7 +227,7 @@ export default function RegisterPurchaseForm({
         existingSalePrice === "" ? undefined : Number(existingSalePrice);
     }
 
-    // Validación rápida coherente con backend
+    // ValidaciÃ³n rÃ¡pida coherente con backend
     if (salePrice !== undefined && salePrice < supplierPrice) {
       showError(
         "El precio de venta no puede ser menor que el precio proveedor."
@@ -297,7 +297,7 @@ export default function RegisterPurchaseForm({
       {/* Fecha */}
       <div>
         <label className="block text-sm font-medium mb-1">
-          Fecha de Registro <span className="text-red-500">*</span>
+          Fecha de Registro <span className="text-green-500">*</span>
         </label>
 
         <input
@@ -310,20 +310,20 @@ export default function RegisterPurchaseForm({
           }}
           required
           className={`w-full rounded-md border px-2 py-2 text-sm ${
-            errors.createdAt ? "border-red-500" : "border-gray-300"
+            errors.createdAt ? "border-green-500" : "border-gray-300"
           }`}
         />
 
         {errors.registerDate && (
-          <p className="text-xs text-red-500 mt-1">{errors.registerDate}</p>
+          <p className="text-xs text-green-500 mt-1">{errors.registerDate}</p>
         )}
       </div>
 
-      {/* N° Orden y Proveedor */}
+      {/* NÂ° Orden y Proveedor */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className="block text-sm mb-1 font-medium">
-            N° de Orden <span className="text-red-500">*</span>
+            NÂ° de Orden <span className="text-green-500">*</span>
           </label>
           <input
             type="text"
@@ -331,11 +331,11 @@ export default function RegisterPurchaseForm({
             value={form.orderNumber}
             readOnly
             className={`w-full rounded-md border px-2 py-2 text-sm bg-gray-100 ${
-              errors.orderNumber ? "border-red-500" : "border-gray-300"
+              errors.orderNumber ? "border-green-500" : "border-gray-300"
             }`}
           />
           {errors.orderNumber && (
-            <p className="text-xs text-red-500">{errors.orderNumber}</p>
+            <p className="text-xs text-green-500">{errors.orderNumber}</p>
           )}
         </div>
 
@@ -362,7 +362,7 @@ export default function RegisterPurchaseForm({
           )}
 
           <label className="block text-sm mb-1 font-medium">
-            Proveedor <span className="text-red-500">*</span>
+            Proveedor <span className="text-green-500">*</span>
           </label>
           <select
             name="supplier"
@@ -372,7 +372,7 @@ export default function RegisterPurchaseForm({
               handleFieldValidation("supplier", e.target.value);
             }}
             className={`w-full rounded-md border px-2 py-2 text-sm ${
-              errors.supplier ? "border-red-500" : "border-gray-300"
+              errors.supplier ? "border-green-500" : "border-gray-300"
             }`}
           >
             <option value="">Selecciona el proveedor</option>
@@ -384,15 +384,15 @@ export default function RegisterPurchaseForm({
           </select>
 
           {errors.supplier && (
-            <p className="text-xs text-red-500">{errors.supplier}</p>
+            <p className="text-xs text-green-500">{errors.supplier}</p>
           )}
         </div>
       </div>
 
-      {/* Número de Factura */}
+      {/* NÃºmero de Factura */}
       <div>
         <label className="block text-sm mb-1 font-medium">
-          Número de Factura <span className="text-red-500">*</span>
+          NÃºmero de Factura <span className="text-green-500">*</span>
         </label>
         <input
           type="text"
@@ -404,36 +404,36 @@ export default function RegisterPurchaseForm({
             handleFieldValidation("invoiceNumber", e.target.value);
           }}
           className={`w-full rounded-md border px-2 py-2 text-sm ${
-            errors.invoiceNumber ? "border-red-500" : "border-gray-300"
+            errors.invoiceNumber ? "border-green-500" : "border-gray-300"
           }`}
         />
         {errors.invoiceNumber && (
-          <p className="text-xs text-red-500">{errors.invoiceNumber}</p>
+          <p className="text-xs text-green-500">{errors.invoiceNumber}</p>
         )}
       </div>
 
       {/* Total */}
       <div>
         <label className="block text-sm mb-1 font-medium">
-          Total <span className="text-red-500">*</span>
+          Total <span className="text-green-500">*</span>
         </label>
         <input
           type="text"
           value={formatCOP(total)}
           readOnly
           className={`w-full rounded-md border px-2 py-2 text-sm bg-gray-100 ${
-            errors.amount ? "border-red-500" : "border-gray-300"
+            errors.amount ? "border-green-500" : "border-gray-300"
           }`}
         />
         {errors.amount && (
-          <p className="text-xs text-red-500">{errors.amount}</p>
+          <p className="text-xs text-green-500">{errors.amount}</p>
         )}
       </div>
 
       {/* Productos */}
       <div className="p-4 border rounded-lg bg-gray-50 shadow-sm">
         <label className="block text-center text-xl font-semibold mb-3">
-          Productos <span className="text-red-500">*</span>
+          Productos <span className="text-green-500">*</span>
         </label>
 
         {/* Toggle Seleccionar / Crear */}
@@ -561,7 +561,7 @@ export default function RegisterPurchaseForm({
               {/* PRECIO VENTA */}
               <div className="flex-1 sm:w-32">
                 <label className="block text-xs font-medium text-gray-600 mb-1">
-                  Precio venta (unidad) — opcional
+                  Precio venta (unidad) â€” opcional
                 </label>
 
                 <input
@@ -595,7 +595,7 @@ export default function RegisterPurchaseForm({
             </div>
 
             {duplicateProductError && (
-              <p className="text-xs text-red-500 mt-1">
+              <p className="text-xs text-green-500 mt-1">
                 {duplicateProductError}
               </p>
             )}
@@ -637,7 +637,7 @@ export default function RegisterPurchaseForm({
 
             <div className="flex-1 sm:w-32">
               <label className="block text-xs font-medium text-gray-600 mb-1">
-                Precio venta (unidad) — opcional
+                Precio venta (unidad) â€” opcional
               </label>
               <input
                 type="number"
@@ -668,23 +668,23 @@ export default function RegisterPurchaseForm({
           </div>
         )}
 
-        {/* Descripción */}
+        {/* DescripciÃ³n */}
         <textarea
-          placeholder="Descripción del producto"
+          placeholder="DescripciÃ³n del producto"
           value={productDescription}
           onChange={(e) => setProductDescription(e.target.value)}
           className="w-full rounded-md border px-3 py-2 text-sm resize-none mt-3 shadow-sm"
           rows={2}
         />
 
-        {/* Botón agregar */}
+        {/* BotÃ³n agregar */}
         <button
           type="button"
           onClick={handleAddProductClick}
           style={{ backgroundColor: Colors.buttons.primary }}
           className="cursor-pointer mt-4 w-full px-4 py-2 rounded-md text-white text-sm font-medium shadow hover:scale-[1.02] transition"
         >
-          Añadir producto +
+          AÃ±adir producto +
         </button>
 
         {/* Carrito */}
@@ -703,13 +703,13 @@ export default function RegisterPurchaseForm({
                           ?.productname}
                     </span>
 
-                    <span className="bg-red-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                    <span className="bg-green-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
                       {item.quantity}
                     </span>
                   </div>
 
                   <p className="text-xs text-gray-600 mt-1">
-                    Compra: {formatCOP(item.unitprice)} • Total:{" "}
+                    Compra: {formatCOP(item.unitprice)} â€¢ Total:{" "}
                     {formatCOP(item.unitprice * item.quantity)}
                   </p>
 
@@ -729,7 +729,7 @@ export default function RegisterPurchaseForm({
                 <button
                   type="button"
                   onClick={() => removeFromCart(index)}
-                  className="p-2 rounded hover:bg-red-100 transition shrink-0"
+                  className="p-2 rounded hover:bg-green-100 transition shrink-0"
                 >
                   <img
                     src="/icons/delete.svg"
@@ -771,7 +771,7 @@ export default function RegisterPurchaseForm({
         <button
           type="submit"
           disabled={saving}
-          className="cursor-pointer transition duration-300 hover:bg-black hover:text-white hover:scale-105 px-4 py-2 rounded-lg bg-black text-white w-full sm:w-auto"
+          className="cursor-pointer transition duration-300 hover:bg-[#227a69] hover:text-white hover:scale-105 px-4 py-2 rounded-lg bg-[#2a9781] text-white w-full sm:w-auto"
         >
           {saving ? "Guardando..." : "Guardar"}
         </button>
@@ -779,3 +779,5 @@ export default function RegisterPurchaseForm({
     </form>
   );
 }
+
+

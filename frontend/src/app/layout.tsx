@@ -4,13 +4,13 @@ import AppProviders from './providers';
 
 export const metadata = {
   metadataBase: new URL('http://localhost:3000'),
-  title: 'Vertecx',
-  description: 'Dashboard Vertecx',
-  openGraph: { images: ['/assets/imgs/preview.png'] },
-  twitter: { images: ['/assets/imgs/preview.png'] },
+  title: 'TecnoMaster',
+  description: 'Dashboard TecnoMaster',
+  openGraph: { images: ['/assets/imgs/favico.ico'] },
+  twitter: { images: ['/assets/imgs/favico.ico'] },
   icons: {
-    icon: '/assets/imgs/preview.png',
-    shortcut: '/assets/imgs/favicon.ico',
+    icon: '/assets/imgs/favico.ico',
+    shortcut: '/assets/imgs/favico.ico',
     apple: '/assets/imgs/apple-touch-icon.png',
   },
 };

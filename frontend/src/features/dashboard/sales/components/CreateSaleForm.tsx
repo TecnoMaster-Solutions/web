@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useMemo } from "react";
 import { useSalesForm } from "../hooks/useSalesForm";
@@ -17,7 +17,7 @@ interface CreateSaleFormProps {
     onSaved: () => void;
 }
 
-// ── Portal Modal Helper ──
+// â”€â”€ Portal Modal Helper â”€â”€
 const PortalModal = ({
     isOpen,
     onClose,
@@ -90,23 +90,23 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
          onClose();
      });
     
-    // ── Selection Modals State ──
+    // â”€â”€ Selection Modals State â”€â”€
     const [isProductModalOpen, setIsProductModalOpen] = useState(false);
     const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
 
-    // ── Creation Modals State ──
+    // â”€â”€ Creation Modals State â”€â”€
     const [isNewProductModalOpen, setIsNewProductModalOpen] = useState(false);
     const [isNewServiceModalOpen, setIsNewServiceModalOpen] = useState(false);
 
-    // ── Product Selection State ──
+    // â”€â”€ Product Selection State â”€â”€
     const [productSearch, setProductSearch] = useState("");
     const [qty, setQty] = useState(1);
 
-    // ── Service Selection State ──
+    // â”€â”€ Service Selection State â”€â”€
     const [serviceSearch, setServiceSearch] = useState("");
     const [servicePrice, setServicePrice] = useState<number | "">("");
 
-    // ── Filter Products ──
+    // â”€â”€ Filter Products â”€â”€
     const filteredProducts = useMemo(() => {
         const term = productSearch.toLowerCase();
         return products.filter(
@@ -117,7 +117,7 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
         );
     }, [products, productSearch]);
 
-    // ── Filter Services ──
+    // â”€â”€ Filter Services â”€â”€
     const filteredServices = useMemo(() => {
         const term = serviceSearch.toLowerCase();
         return services.filter(
@@ -127,7 +127,7 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
         );
     }, [services, serviceSearch]);
 
-    // ── Handlers ──
+    // â”€â”€ Handlers â”€â”€
     const handleAddProduct = (p: IProduct) => {
         addProductToCart(p, qty);
         setQty(1);
@@ -136,7 +136,7 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
 
     const handleAddService = (s: IService, price: number) => {
         if (!price || price <= 0) {
-            alert("Ingrese un precio válido para el servicio");
+            alert("Ingrese un precio vÃ¡lido para el servicio");
             return;
         }
         addServiceToCart(s, price);
@@ -148,7 +148,7 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
 
     return (
         <>
-            {/* Barra superior: flecha + título grande + botón Volver */}
+            {/* Barra superior: flecha + tÃ­tulo grande + botÃ³n Volver */}
             <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-4">
                     <button
@@ -166,15 +166,15 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
                         <h1 className="text-3xl font-extrabold" style={{ color: Colors.texts.primary }}>
                             Crear Venta
                         </h1>
-                        <p className="text-sm text-gray-500">Registre una nueva venta — complete los datos y guarde</p>
+                        <p className="text-sm text-gray-500">Registre una nueva venta â€” complete los datos y guarde</p>
                     </div>
                 </div>
 
-                {/* botón derecho 'Volver' removido */}
+                {/* botÃ³n derecho 'Volver' removido */}
             </div>
 
             <div className="flex flex-col gap-6 md:flex-row h-full max-h-[calc(100vh-160px)] overflow-y-auto p-2">
-                {/* ── Left Column: Form & Details (65%) ── */}
+                {/* â”€â”€ Left Column: Form & Details (65%) â”€â”€ */}
                 <div className="md:w-[65%] flex flex-col gap-6">
 
                     {/* Card: Datos de Venta */}
@@ -249,7 +249,7 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
                                 <thead className="bg-gray-100 text-gray-600 font-semibold sticky top-0">
                                     <tr>
                                         <th className="p-3">Productos/Servicios</th>
-                                        <th className="p-3">Categoría</th>
+                                        <th className="p-3">CategorÃ­a</th>
                                         <th className="p-3 text-center">Imagen</th>
                                         <th className="p-3 text-center">Cant.</th>
                                         <th className="p-3 text-right">Precio</th>
@@ -261,7 +261,7 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
                                     {cart.length === 0 ? (
                                         <tr>
                                             <td colSpan={7} className="p-8 text-center text-gray-400">
-                                                No hay ítems agregados
+                                                No hay Ã­tems agregados
                                             </td>
                                         </tr>
                                     ) : (
@@ -292,7 +292,7 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
                                                 <td className="p-3 text-center">
                                                     <button
                                                         onClick={() => removeFromCart(item.id)}
-                                                        className="text-red-500 hover:text-red-700 transition"
+                                                        className="text-green-500 hover:text-green-700 transition"
                                                         title="Eliminar"
                                                     >
                                                         <svg
@@ -344,7 +344,7 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
                         </label>
                         <textarea
                             rows={3}
-                            placeholder="Ingrese su observación (opcional)"
+                            placeholder="Ingrese su observaciÃ³n (opcional)"
                             className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none"
                             style={{ borderColor: Colors.table.lines }}
                             value={notes}
@@ -353,7 +353,7 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
                     </div>
                 </div>
 
-                {/* ── Right Column: Totals & Actions (35%) ── */}
+                {/* â”€â”€ Right Column: Totals & Actions (35%) â”€â”€ */}
                 <div className="md:w-[35%] flex flex-col gap-6">
                     {/* Totals Card */}
                     <div className="p-6 bg-white rounded-lg border border-gray-200 shadow-sm sticky top-4">
@@ -411,7 +411,7 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
                     </div>
                 </div>
 
-                {/* ── Product Selection Modal ── */}
+                {/* â”€â”€ Product Selection Modal â”€â”€ */}
                 <PortalModal
                     isOpen={isProductModalOpen}
                     onClose={() => setIsProductModalOpen(false)}
@@ -421,7 +421,7 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
                         <div className="flex gap-2">
                             <input
                                 type="text"
-                                placeholder="Buscar producto por nombre o código..."
+                                placeholder="Buscar producto por nombre o cÃ³digo..."
                                 className="w-full p-2 border rounded-lg"
                                 value={productSearch}
                                 onChange={(e) => setProductSearch(e.target.value)}
@@ -451,7 +451,7 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
                                                     <div className="text-xs text-gray-500">{p.productcode}</div>
                                                 </td>
                                                 <td className="p-2 text-right">
-                                                    <span className={p.productstock === 0 ? "text-red-500 font-bold" : "text-gray-700"}>
+                                                    <span className={p.productstock === 0 ? "text-green-500 font-bold" : "text-gray-700"}>
                                                         {p.productstock}
                                                     </span>
                                                 </td>
@@ -487,7 +487,7 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
                     </div>
                 </PortalModal>
 
-                {/* ── CREATE Product Modal (New) ── */}
+                {/* â”€â”€ CREATE Product Modal (New) â”€â”€ */}
                 <PortalModal
                     isOpen={isNewProductModalOpen}
                     onClose={() => setIsNewProductModalOpen(false)}
@@ -504,7 +504,7 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
                 </PortalModal>
 
 
-                {/* ── Service Selection Modal ── */}
+                {/* â”€â”€ Service Selection Modal â”€â”€ */}
                 <PortalModal
                     isOpen={isServiceModalOpen}
                     onClose={() => setIsServiceModalOpen(false)}
@@ -589,7 +589,7 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
                     </div>
                 </PortalModal>
 
-                {/* ── CREATE Service Modal (New) ── */}
+                {/* â”€â”€ CREATE Service Modal (New) â”€â”€ */}
                 <PortalModal
                     isOpen={isNewServiceModalOpen}
                     onClose={() => setIsNewServiceModalOpen(false)}

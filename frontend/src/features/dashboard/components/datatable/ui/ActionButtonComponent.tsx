@@ -83,7 +83,7 @@ export function ActionButtonComponent({
         className={
           disabled
             ? "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full opacity-40 cursor-not-allowed"
-            : "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full cursor-pointer transition-all duration-300 hover:scale-110 hover:bg-red-300/60"
+            : "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full cursor-pointer transition-all duration-300 hover:scale-110 hover:bg-[#06a646]/30"
         }
         onMouseEnter={handleEnter}
         onMouseLeave={handleLeave}

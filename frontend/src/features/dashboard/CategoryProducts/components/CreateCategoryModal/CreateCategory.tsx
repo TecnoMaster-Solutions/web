@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import React, { useRef } from "react";
 import Modal from "../../../components/Modal";
 import Colors from "@/shared/theme/colors";
@@ -49,7 +49,7 @@ const CreateCategoryModal: React.FC<CreateCategoryModalProps> = ({
 
       <button
         type="submit"
-        className="cursor-pointer transition duration-300 hover:bg-black hover:text-white hover:scale-105 px-4 py-2 rounded-lg bg-black text-white w-full sm:w-auto"
+        className="cursor-pointer transition duration-300 hover:bg-[#227a69] hover:text-white hover:scale-105 px-4 py-2 rounded-lg bg-[#2a9781] text-white w-full sm:w-auto"
       >
         Guardar
       </button>
@@ -59,7 +59,7 @@ const CreateCategoryModal: React.FC<CreateCategoryModalProps> = ({
 
   return (
     <Modal
-      title="Crear Categoría de Producto"
+      title="Crear CategorÃ­a de Producto"
       isOpen={isOpen}
       onClose={onClose}
       widthClass="max-w-md"
@@ -85,7 +85,7 @@ const CreateCategoryModal: React.FC<CreateCategoryModalProps> = ({
               ref={fileInputRef}
             />
 
-            {/* Círculo del icono */}
+            {/* CÃ­rculo del icono */}
             <div
               className="w-16 h-16 rounded-full border-2 border-dashed flex items-center justify-center bg-gray-50 hover:bg-gray-100 transition-colors mb-2 cursor-pointer"
               onClick={handleCircleClick}
@@ -95,7 +95,7 @@ const CreateCategoryModal: React.FC<CreateCategoryModalProps> = ({
                 <div className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center bg-white">
                   <img
                     src={getIconPreviewUrl(formData.icon) || ""}
-                    alt="Icono de categoría"
+                    alt="Icono de categorÃ­a"
                     className="w-full h-full object-cover"
                   />
                 </div>
@@ -121,8 +121,8 @@ const CreateCategoryModal: React.FC<CreateCategoryModalProps> = ({
             <div className="text-center">
               <div className="text-xs text-gray-500 mb-1">
                 {formData.icon
-                  ? "Haga clic en el círculo para cambiar el icono"
-                  : "Haga clic en el círculo para seleccionar un icono"}
+                  ? "Haga clic en el cÃ­rculo para cambiar el icono"
+                  : "Haga clic en el cÃ­rculo para seleccionar un icono"}
               </div>
 
               {formData.icon && (
@@ -135,7 +135,7 @@ const CreateCategoryModal: React.FC<CreateCategoryModalProps> = ({
                   <button
                     type="button"
                     onClick={handleRemoveIcon}
-                    className="text-red-500 text-xs hover:text-red-700 px-2 py-1 border border-red-200 rounded-md"
+                    className="text-green-500 text-xs hover:text-green-700 px-2 py-1 border border-green-200 rounded-md"
                     style={{ borderColor: Colors.states.nullable }}
                   >
                     Eliminar icono
@@ -155,42 +155,42 @@ const CreateCategoryModal: React.FC<CreateCategoryModalProps> = ({
             className="block text-sm font-medium mb-1"
             style={{ color: Colors.texts.primary }}
           >
-            Nombre <span className="text-red-500">*</span>
+            Nombre <span className="text-green-500">*</span>
           </label>
           <input
             type="text"
             name="name"
-            placeholder="Ingrese el nombre de la categoría del producto"
+            placeholder="Ingrese el nombre de la categorÃ­a del producto"
             value={formData.name}
             onChange={handleInputChange}
             onBlur={handleBlur}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
             style={{
               borderColor: errors.name && touched.name ? "red" : Colors.table.lines,
             }}
           />
           {errors.name && touched.name && (
-            <span className="text-red-500 text-xs mt-1">{errors.name}</span>
+            <span className="text-green-500 text-xs mt-1">{errors.name}</span>
           )}
         </div>
 
-        {/* Descripción */}
+        {/* DescripciÃ³n */}
         <div>
           <label
             className="block text-sm font-medium mb-1"
             style={{ color: Colors.texts.primary }}
           >
-            Descripción
+            DescripciÃ³n
           </label>
           <textarea
             name="description"
-            placeholder="Ingrese la descripción de la categoría del producto"
+            placeholder="Ingrese la descripciÃ³n de la categorÃ­a del producto"
             value={formData.description}
             onChange={handleInputChange}
             onBlur={handleBlur}
             rows={3}
             maxLength={255}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
             style={{
               borderColor:
                 errors.description && touched.description
@@ -202,7 +202,7 @@ const CreateCategoryModal: React.FC<CreateCategoryModalProps> = ({
             {formData.description.length}/255
           </div>
           {errors.description && touched.description && (
-            <span className="text-red-500 text-xs mt-1">
+            <span className="text-green-500 text-xs mt-1">
               {errors.description}
             </span>
           )}
@@ -218,3 +218,5 @@ const CreateCategoryModal: React.FC<CreateCategoryModalProps> = ({
 };
 
 export default CreateCategoryModal;
+
+

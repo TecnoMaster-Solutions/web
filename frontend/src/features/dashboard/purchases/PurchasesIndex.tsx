@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useMemo, useState, useEffect, useRef } from "react";
 import Swal from "sweetalert2";
@@ -88,8 +88,8 @@ export default function PurchasesIndex() {
   // Memorizar columnas - MANTENER ESTE ORDEN
   const columns: Column<IPurchase>[] = useMemo(
     () => [
-      { key: "numberoforder", header: "N° Orden" },
-      { key: "reference", header: "N° Factura" },
+      { key: "numberoforder", header: "NÂ° Orden" },
+      { key: "reference", header: "NÂ° Factura" },
       {
         key: "supplier",
         header: "Proveedor",
@@ -125,7 +125,7 @@ export default function PurchasesIndex() {
             s === "approved"
               ? "text-green-600 font-medium"
               : s === "revoke"
-              ? "text-red-600 font-medium"
+              ? "text-green-600 font-medium"
               : "text-gray-500 font-medium";
 
           return <span className={cls}>{label}</span>;
@@ -147,7 +147,7 @@ export default function PurchasesIndex() {
     [purchases]
   );
 
-  // Memorizar las funciones de callback con dependencias específicas
+  // Memorizar las funciones de callback con dependencias especÃ­ficas
   const handleCreate = useCallback(() => {
     resetForm();
     setRegisterModalOpen(true);
@@ -178,7 +178,7 @@ export default function PurchasesIndex() {
         Swal.fire({
           icon: "info",
           title: "Compra ya anulada",
-          text: `La compra #${purchase.numberoforder} ya está anulada.`,
+          text: `La compra #${purchase.numberoforder} ya estÃ¡ anulada.`,
           confirmButtonText: "Aceptar",
           confirmButtonColor: "#3085d6",
         });
@@ -188,7 +188,7 @@ export default function PurchasesIndex() {
       const { value: observation, isConfirmed } = await Swal.fire({
         html: `
         <div class="flex flex-col items-center">
-          <div class="text-red-600 mb-3">
+          <div class="text-green-600 mb-3">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20" fill="none" 
                 viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
@@ -198,18 +198,18 @@ export default function PurchasesIndex() {
             </svg>
           </div>
 
-          <h2 class="text-xl font-semibold mb-2">¿Está seguro?</h2>
+          <h2 class="text-xl font-semibold mb-2">Â¿EstÃ¡ seguro?</h2>
 
           <p class="text-gray-700 mb-1">
-            ¿Desea anular la compra #${purchase.numberoforder}?
+            Â¿Desea anular la compra #${purchase.numberoforder}?
           </p>
 
           <p class="text-gray-500 text-sm mb-3">
-            Puedes agregar una observación (opcional)
+            Puedes agregar una observaciÃ³n (opcional)
           </p>
 
           <textarea id="obs" class="w-full p-2 border rounded resize-none" 
-            rows="3" placeholder="Escribe una observación (opcional)..."></textarea>
+            rows="3" placeholder="Escribe una observaciÃ³n (opcional)..."></textarea>
         </div>
       `,
         showCancelButton: true,
@@ -226,7 +226,7 @@ export default function PurchasesIndex() {
         customClass: {
           popup: "rounded-2xl p-6",
           confirmButton:
-            "bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition",
+            "bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition",
           cancelButton:
             "bg-gray-200 text-gray-800 px-6 py-2 rounded-lg hover:bg-gray-300 transition mr-3",
         },
@@ -245,7 +245,7 @@ export default function PurchasesIndex() {
 
         Swal.fire({
           icon: "success",
-          title: "¡Anulado!",
+          title: "Â¡Anulado!",
           text: `La compra #${purchase.numberoforder} ha sido anulada correctamente.`,
           timer: 2000,
           showConfirmButton: false,
@@ -365,3 +365,4 @@ export default function PurchasesIndex() {
     </RequireAuth>
   );
 }
+

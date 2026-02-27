@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useMemo } from "react";
 import { useRouter } from "next/navigation";
@@ -23,7 +23,7 @@ const formatDateTime = (value?: string | null) => {
 
 const RequestLoader = () => (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-    <div className="h-16 w-16 animate-spin rounded-full border-4 border-red-600 border-t-transparent" />
+    <div className="h-16 w-16 animate-spin rounded-full border-4 border-green-600 border-t-transparent" />
   </div>
 );
 
@@ -59,7 +59,7 @@ const ServiceRequestDetailContent = ({ data }: { data: ServiceRequestDTO }) => {
       data.customer.customercity ?? "",
     ].filter(Boolean);
     return parts.length
-      ? parts.join(" · ")
+      ? parts.join(" Â· ")
       : `Cliente ${data.customer.customerid ?? data.clientId ?? ""}`;
   }, [data]);
 
@@ -111,7 +111,7 @@ const ServiceRequestDetailContent = ({ data }: { data: ServiceRequestDTO }) => {
             className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
           >
             <ArrowLeft className="h-4 w-4" />
-            Volver atrás
+            Volver atrÃ¡s
           </button>
         </div>
 
@@ -138,7 +138,7 @@ const ServiceRequestDetailContent = ({ data }: { data: ServiceRequestDTO }) => {
             <p className="text-xs uppercase tracking-wide text-slate-500">Cliente</p>
             <p className="mt-2 text-sm font-medium text-slate-800">{clientLabel}</p>
             <p className="text-xs text-slate-500">
-              Ciudad: {customerCity} · Codigo postal: {customerZip}
+              Ciudad: {customerCity} Â· Codigo postal: {customerZip}
             </p>
           </div>
           <div className="rounded-xl border border-slate-100 bg-slate-50 p-4">
@@ -226,9 +226,9 @@ const ServiceRequestDetail: React.FC<Props> = ({ requestId }) => {
     return (
       <RequireAuth>
         <div className="flex min-h-screen items-center justify-center px-4 py-10">
-          <div className="max-w-xl rounded-2xl border border-red-200 bg-red-50 p-6 text-center">
-            <p className="text-sm font-semibold text-red-600">Identificador invalido</p>
-            <p className="mt-2 text-sm text-red-800">No se puede cargar la solicitud.</p>
+          <div className="max-w-xl rounded-2xl border border-green-200 bg-green-50 p-6 text-center">
+            <p className="text-sm font-semibold text-green-600">Identificador invalido</p>
+            <p className="mt-2 text-sm text-green-800">No se puede cargar la solicitud.</p>
           </div>
         </div>
       </RequireAuth>
@@ -247,7 +247,7 @@ const ServiceRequestDetail: React.FC<Props> = ({ requestId }) => {
     return (
       <RequireAuth>
         <div className="flex min-h-[60vh] items-center justify-center px-4 py-6">
-          <p className="text-sm font-medium text-red-500">
+          <p className="text-sm font-medium text-green-500">
             No se pudo obtener la informacion de la solicitud.
           </p>
         </div>
@@ -263,3 +263,4 @@ const ServiceRequestDetail: React.FC<Props> = ({ requestId }) => {
 };
 
 export default ServiceRequestDetail;
+

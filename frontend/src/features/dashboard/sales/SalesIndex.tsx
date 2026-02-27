@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import * as XLSX from "xlsx";
@@ -72,7 +72,7 @@ function decodeJwtPayload(token: string): any | null {
   }
 }
 
-// ── Tipo de fila de tabla ────────────────────────────────────────────────────
+// â”€â”€ Tipo de fila de tabla â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 type SaleRow = {
   id: number;
   codigo: string;
@@ -84,7 +84,7 @@ type SaleRow = {
   estadoPago: "Abonada" | "Pagada" | null;
 };
 
-// ── Componente principal ─────────────────────────────────────────────────────
+// â”€â”€ Componente principal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function SalesIndex() {
   const { user, profile } = useAuth();
   const [permissionsLoaded, setPermissionsLoaded] = useState(false);
@@ -95,7 +95,7 @@ export default function SalesIndex() {
   const [viewSaleId, setViewSaleId] = useState<number | null>(null);
   const { showLoader, hideLoader } = useLoader();
 
-  // ── Estado de Anulación ──
+  // â”€â”€ Estado de AnulaciÃ³n â”€â”€
   const [isAnnulModalOpen, setAnnulModalOpen] = useState(false);
   const [saleToAnnul, setSaleToAnnul] = useState<SaleRow | null>(null);
   const [annulReason, setAnnulReason] = useState("");
@@ -138,7 +138,7 @@ export default function SalesIndex() {
   const hasSalesCancel =
     tokenPermissions.includes("sales.cancel") || hasSalesDelete || hasSalesUpdate;
 
-  // ── Cargar ventas desde la API ────────────────────────────────────────────
+  // â”€â”€ Cargar ventas desde la API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const loadSales = useCallback(async () => {
     try {
       const data: ISale[] = await getSales();
@@ -184,7 +184,7 @@ export default function SalesIndex() {
     loadSales();
   }, [hasSalesRead, loadSales, permissionsLoaded]);
 
-  // ── Cambiar estado de pago (interactivo) ─────────────────────────────────
+  // â”€â”€ Cambiar estado de pago (interactivo) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleEstadoPagoChange = async (
     row: SaleRow,
     nuevoEstado: "Abonada" | "Pagada"
@@ -199,7 +199,7 @@ export default function SalesIndex() {
       await updateEstadoPago(row.id, nuevoEstado);
       showSuccess(
         nuevoEstado === "Pagada"
-          ? "Venta marcada como Pagada — ahora está Finalizada."
+          ? "Venta marcada como Pagada â€” ahora estÃ¡ Finalizada."
           : "Venta marcada como Abonada."
       );
       await loadSales();
@@ -210,7 +210,7 @@ export default function SalesIndex() {
     }
   };
 
-  // ── Ordenamiento ──────────────────────────────────────────────────────────
+  // â”€â”€ Ordenamiento â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   type SortField = "fecha" | "total";
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
@@ -240,16 +240,16 @@ export default function SalesIndex() {
     });
   }, [sales, sortField, sortDir]);
 
-  // ── Exportar a Excel ──────────────────────────────────────────────────────
+  // â”€â”€ Exportar a Excel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const exportToExcel = () => {
     const rows = sales.map((s) => ({
       "#": s.id,
-      "Código": s.codigo,
+      "CÃ³digo": s.codigo,
       "Cliente": s.cliente,
       "Fecha": s.fecha,
       "Total": s.total,
       "Estado": s.estado,
-      "Estado Pago": s.estadoPago ?? "—",
+      "Estado Pago": s.estadoPago ?? "â€”",
     }));
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
@@ -258,7 +258,7 @@ export default function SalesIndex() {
   };
 
 
-  // ── Abrir modal de anulación (con validación de estadoPago) ────────────────
+  // â”€â”€ Abrir modal de anulaciÃ³n (con validaciÃ³n de estadoPago) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleOpenAnnul = (row: SaleRow) => {
     if (!hasSalesCancel) {
       showError("No tienes permisos para anular ventas.");
@@ -279,11 +279,11 @@ export default function SalesIndex() {
     setAnnulModalOpen(true);
   };
 
-  // ── Confirmar anulación ───────────────────────────────────────────────────
+  // â”€â”€ Confirmar anulaciÃ³n â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleConfirmAnnul = async () => {
     if (!saleToAnnul) return;
     if (!annulReason.trim()) {
-      showError("Debe ingresar un motivo para la anulación.");
+      showError("Debe ingresar un motivo para la anulaciÃ³n.");
       return;
     }
 
@@ -300,14 +300,14 @@ export default function SalesIndex() {
     }
   };
 
-  // ── Columnas de la tabla ─────────────────────────────────────────────────
+  // â”€â”€ Columnas de la tabla â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const columns: Column<SaleRow>[] = [
     {
       key: "id",
       header: "#",
       render: (row) => row.id.toString(),
     },
-    { key: "codigo", header: "Código Venta" },
+    { key: "codigo", header: "CÃ³digo Venta" },
     { key: "cliente", header: "Cliente" },
     { key: "fecha", header: "Fecha" },
     {
@@ -347,7 +347,7 @@ export default function SalesIndex() {
       key: "estadoPago",
       header: "Estado Pago",
       render: (row) => {
-        // Si la venta está anulada o finalizada, mostrar solo el valor sin botones
+        // Si la venta estÃ¡ anulada o finalizada, mostrar solo el valor sin botones
         if (
           row.estado === "Anulada" ||
           row.estado === "Finalizada" ||
@@ -355,7 +355,7 @@ export default function SalesIndex() {
         ) {
           return (
             <span className="text-xs text-gray-400 italic">
-              {row.estadoPago ?? "—"}
+              {row.estadoPago ?? "â€”"}
             </span>
           );
         }
@@ -388,11 +388,11 @@ export default function SalesIndex() {
     },
   ];
 
-  // ── Loading state ────────────────────────────────────────────────────────
+  // â”€â”€ Loading state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (!permissionsLoaded || (loading && hasSalesRead)) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin" />
+        <div className="w-12 h-12 border-4 border-green-600 border-t-transparent rounded-full animate-spin" />
         <span className="ml-3 text-gray-500">Cargando ventas...</span>
       </div>
     );
@@ -412,7 +412,7 @@ export default function SalesIndex() {
     <div className="flex flex-col gap-4">
       <ToastContainer position="bottom-right" />
 
-      {/* Crear venta — formulario de página completa */}
+      {/* Crear venta â€” formulario de pÃ¡gina completa */}
       {isCreateModalOpen ? (
         <div className="w-full">
           <CreateSaleForm
@@ -433,7 +433,7 @@ export default function SalesIndex() {
             hasSalesCancel && row.estado === "Pendiente" ? (
               <button
                 onClick={() => handleOpenAnnul(row)}
-                className="p-1 rounded-full cursor-pointer transition-all duration-300 hover:scale-110 hover:bg-red-300/60 text-red-500"
+                className="p-1 rounded-full cursor-pointer transition-all duration-300 hover:scale-110 hover:bg-green-300/60 text-green-500"
                 title="Anular Venta"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -452,21 +452,21 @@ export default function SalesIndex() {
                   key={field}
                   onClick={() => handleSort(field)}
                   className={`flex items-center gap-1 px-3 py-1.5 text-sm font-medium border rounded-lg transition-colors ${sortField === field
-                    ? "bg-red-600 text-white border-red-600"
+                    ? "bg-green-600 text-white border-green-600"
                     : "text-gray-600 bg-white hover:bg-gray-50 border-gray-300"
                     }`}
                   title={`Ordenar por ${field === "fecha" ? "Fecha" : "Total"}`}
                 >
                   {field === "fecha" ? "Fecha" : "Total"}
                   <span className="text-xs">
-                    {sortField === field ? (sortDir === "asc" ? " ↑" : " ↓") : " ↕"}
+                    {sortField === field ? (sortDir === "asc" ? " â†‘" : " â†“") : " â†•"}
                   </span>
                 </button>
               ))}
               {/* Excel */}
               <button
                 onClick={exportToExcel}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 border border-red-300 rounded-lg transition-colors"
+                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-green-700 bg-green-50 hover:bg-green-100 border border-green-300 rounded-lg transition-colors"
                 title="Exportar a Excel"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -494,7 +494,7 @@ export default function SalesIndex() {
         <div className="bg-white p-4 rounded-md">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             <div>
-              <div className="text-xs text-gray-500">Código Venta</div>
+              <div className="text-xs text-gray-500">CÃ³digo Venta</div>
               <div className="font-medium text-gray-800">{saleToAnnul?.codigo || "-"}</div>
             </div>
             <div>
@@ -511,12 +511,12 @@ export default function SalesIndex() {
 
           <div className="mb-4">
             <label className="block text-sm font-medium mb-2 text-gray-700">
-              Motivo de anulación
+              Motivo de anulaciÃ³n
             </label>
             <textarea
               rows={5}
-              className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-red-500 outline-none resize-none"
-              placeholder="Especifique la razón..."
+              className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-green-500 outline-none resize-none"
+              placeholder="Especifique la razÃ³n..."
               value={annulReason}
               onChange={(e) => setAnnulReason(e.target.value)}
             />
@@ -525,10 +525,10 @@ export default function SalesIndex() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center mb-4">
             <div>
               <div className="text-xs text-gray-500">Usuario que anula</div>
-              <div className="font-medium text-gray-800">Automático</div>
+              <div className="font-medium text-gray-800">AutomÃ¡tico</div>
             </div>
             <div>
-              <div className="text-xs text-gray-500">Fecha Anulación</div>
+              <div className="text-xs text-gray-500">Fecha AnulaciÃ³n</div>
               <div className="font-medium text-gray-800">{new Date().toLocaleDateString("es-CO")}</div>
             </div>
           </div>
@@ -559,3 +559,4 @@ export default function SalesIndex() {
     </div>
   );
 }
+

@@ -78,7 +78,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
         type="submit"
         form="create-user-form"
         disabled={isSubmitting}
-        className="cursor-pointer transition duration-300 hover:bg-black hover:text-white hover:scale-105 px-4 py-2 rounded-lg bg-black text-white w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
+        className="cursor-pointer transition duration-300 hover:bg-[#227a69] hover:text-white hover:scale-105 px-4 py-2 rounded-lg bg-[#2a9781] text-white w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
       >
         Guardar
       </button>
@@ -100,7 +100,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
         {/* Documento */}
         <div>
           <label className="block text-sm font-medium mb-1">
-            Documento <span className="text-red-500">*</span>
+            Documento <span className="text-green-500">*</span>
           </label>
           <div className="flex flex-col sm:flex-row gap-2">
             {/* Tipo */}
@@ -109,7 +109,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
               value={formData.typeid}
               onChange={handleSelectChange}
               onBlur={() => handleBlur("typeid")}
-              className="w-full sm:w-32 px-3 py-2 border rounded-md focus:ring-2 focus:ring-red-500"
+              className="w-full sm:w-32 px-3 py-2 border rounded-md focus:ring-2 focus:ring-green-500"
               style={{
                 borderColor:
                   errors.typeid && touched.typeid ? "red" : Colors.table.lines,
@@ -139,7 +139,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
                 value={formData.documentnumber}
                 onChange={handleTextChange}
                 onBlur={() => handleBlur("documentnumber")}
-                className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-red-500"
+                className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-green-500"
                 style={{
                   borderColor:
                     errors.documentnumber && touched.documentnumber
@@ -148,7 +148,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
                 }}
               />
               {errors.documentnumber && touched.documentnumber && (
-                <span className="text-red-500 text-xs mt-1">
+                <span className="text-green-500 text-xs mt-1">
                   {errors.documentnumber}
                 </span>
               )}
@@ -164,7 +164,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
           <div className={isNit ? "col-span-2" : ""}>
             <label className="block text-sm font-medium mb-1">
               {isNit ? "Nombre de la empresa" : "Nombre"}{" "}
-              <span className="text-red-500">*</span>
+              <span className="text-green-500">*</span>
             </label>
             <input
               type="text"
@@ -175,14 +175,14 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
               value={formData.name}
               onChange={handleTextChange}
               onBlur={() => handleBlur("name")}
-              className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-red-500"
+              className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-green-500"
               style={{
                 borderColor:
                   errors.name && touched.name ? "red" : Colors.table.lines,
               }}
             />
             {errors.name && touched.name && (
-              <span className="text-red-500 text-xs mt-1">{errors.name}</span>
+              <span className="text-green-500 text-xs mt-1">{errors.name}</span>
             )}
           </div>
 
@@ -197,7 +197,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
                 value={formData.lastname || ""}
                 onChange={handleTextChange}
                 onBlur={() => handleBlur("lastname")}
-                className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-red-500"
+                className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-green-500"
                 style={{
                   borderColor:
                     errors.lastname && touched.lastname
@@ -206,7 +206,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
                 }}
               />
               {errors.lastname && touched.lastname && (
-                <span className="text-red-500 text-xs mt-1">
+                <span className="text-green-500 text-xs mt-1">
                   {errors.lastname}
                 </span>
               )}
@@ -219,7 +219,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
           <div>
             <label className="block text-sm font-medium mb-1">
               {isNit ? "Teléfono de la empresa" : "Teléfono"}{" "}
-              <span className="text-red-500">*</span>
+              <span className="text-green-500">*</span>
             </label>
             <input
               type="tel"
@@ -228,21 +228,21 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
               value={formData.phone}
               onChange={handleTextChange}
               onBlur={() => handleBlur("phone")}
-              className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-red-500"
+              className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-green-500"
               style={{
                 borderColor:
                   errors.phone && touched.phone ? "red" : Colors.table.lines,
               }}
             />
             {errors.phone && touched.phone && (
-              <span className="text-red-500 text-xs mt-1">{errors.phone}</span>
+              <span className="text-green-500 text-xs mt-1">{errors.phone}</span>
             )}
           </div>
 
           <div>
             <label className="block text-sm font-medium mb-1">
               {isNit ? "Correo de la empresa" : "Correo"}{" "}
-              <span className="text-red-500">*</span>
+              <span className="text-green-500">*</span>
             </label>
             <input
               type="email"
@@ -251,14 +251,14 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
               value={formData.email}
               onChange={handleTextChange}
               onBlur={() => handleBlur("email")}
-              className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-red-500"
+              className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-green-500"
               style={{
                 borderColor:
                   errors.email && touched.email ? "red" : Colors.table.lines,
               }}
             />
             {errors.email && touched.email && (
-              <span className="text-red-500 text-xs mt-1">{errors.email}</span>
+              <span className="text-green-500 text-xs mt-1">{errors.email}</span>
             )}
           </div>
         </div>
@@ -266,7 +266,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
         {/* Rol */}
         <div>
           <label className="block text-sm font-medium mb-1">
-            Rol <span className="text-red-500">*</span>
+            Rol <span className="text-green-500">*</span>
           </label>
           <select
             name="roleid"
@@ -274,7 +274,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
             onChange={handleSelectChange}
             onBlur={() => handleBlur("roleid")}
             disabled={isNit}
-            className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-red-500 ${isNit ? "bg-gray-100 cursor-not-allowed" : ""
+            className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-green-500 ${isNit ? "bg-gray-100 cursor-not-allowed" : ""
               }`}
             style={{
               borderColor:
@@ -297,7 +297,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
             )}
           </select>
           {errors.roleid && touched.roleid && (
-            <span className="text-red-500 text-xs mt-1">
+            <span className="text-green-500 text-xs mt-1">
               {errors.roleid}
             </span>
           )}
@@ -317,7 +317,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
                 <button
                   type="button"
                   onClick={removeImage}
-                  className="text-xs text-red-500 underline"
+                  className="text-xs text-green-500 underline"
                 >
                   Eliminar imagen
                 </button>
@@ -348,7 +348,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
             {/* CV */}
             <div>
               <label className="block text-sm font-medium mb-1">
-                CV (PDF, DOC, DOCX) <span className="text-red-500">*</span>
+                CV (PDF, DOC, DOCX) <span className="text-green-500">*</span>
               </label>
               <div
                 className="border border-dashed rounded-md px-4 py-3 text-center flex flex-col items-center justify-center gap-2"
@@ -363,7 +363,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
                     <button
                       type="button"
                       onClick={removeCV}
-                      className="text-xs text-red-500 underline"
+                      className="text-xs text-green-500 underline"
                     >
                       Eliminar CV
                     </button>
@@ -388,14 +388,14 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
                 )}
               </div>
               {errors.CV && touched.CV && (
-                <span className="text-red-500 text-xs mt-1">{errors.CV}</span>
+                <span className="text-green-500 text-xs mt-1">{errors.CV}</span>
               )}
             </div>
 
             {/* Tipos de tecnico */}
             <div>
               <label className="block text-sm font-medium mb-1">
-                Tipos de técnico <span className="text-red-500">*</span>
+                Tipos de técnico <span className="text-green-500">*</span>
               </label>
               {loadingTechnicianTypes ? (
                 <p className="text-sm text-gray-500">Cargando tipos...</p>
@@ -424,7 +424,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
                           }
                           onBlur={() => handleBlur("techniciantypeids")}
                           className={`px-4 py-2 rounded-full border text-sm transition ${selected
-                              ? "bg-red-600 text-white border-red-600 shadow-sm"
+                              ? "bg-green-600 text-white border-green-600 shadow-sm"
                               : "bg-white text-gray-600 border-gray-300 hover:border-gray-400"
                             }`}
                           aria-pressed={selected}
@@ -435,7 +435,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
                     })}
                   </div>
                   {errors.techniciantypeids && touched.techniciantypeids && (
-                    <span className="text-red-500 text-xs mt-1 block">
+                    <span className="text-green-500 text-xs mt-1 block">
                       {errors.techniciantypeids}
                     </span>
                   )}
@@ -450,7 +450,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1">
-                Ciudad <span className="text-red-500">*</span>
+                Ciudad <span className="text-green-500">*</span>
               </label>
               <input
                 type="text"
@@ -461,7 +461,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
                   handleInputChange("customercity", e.target.value)
                 }
                 onBlur={() => handleBlur("customercity")}
-                className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-red-500"
+                className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-green-500"
                 style={{
                   borderColor:
                     errors.customercity && touched.customercity
@@ -473,7 +473,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
 
             <div>
               <label className="block text-sm font-medium mb-1">
-                Código Postal <span className="text-red-500">*</span>
+                Código Postal <span className="text-green-500">*</span>
               </label>
               <input
                 type="text"
@@ -484,7 +484,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
                   handleInputChange("customerzipcode", e.target.value)
                 }
                 onBlur={() => handleBlur("customerzipcode")}
-                className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-red-500"
+                className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-green-500"
                 style={{
                   borderColor:
                     errors.customerzipcode && touched.customerzipcode
@@ -501,6 +501,8 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
 };
 
 export default CreateUserModal;
+
+
 
 
 

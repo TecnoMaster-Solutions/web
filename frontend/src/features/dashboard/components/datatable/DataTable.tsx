@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useMemo, useState, useCallback, useEffect, useRef } from "react";
 import Colors from "@/shared/theme/colors";
@@ -80,7 +80,7 @@ const DataTableComponent = <T extends { [key: string]: any }>(
     onCheck,
     onApprove,
     onCreate,
-    searchPlaceholder = "Buscar…",
+    searchPlaceholder = "Buscarâ€¦",
     createButtonText = "Crear",
     rightActions,
     renderActions,
@@ -532,7 +532,7 @@ const DataTableComponent = <T extends { [key: string]: any }>(
                   setPage(1);
                 }}
                 placeholder={searchPlaceholder}
-                className="w-full rounded-full bg-white px-9 py-2 text-sm shadow-sm border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-transparent"
+                className="w-full rounded-full bg-white px-9 py-2 text-sm shadow-sm border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent"
               />
             </div>
 
@@ -551,7 +551,7 @@ const DataTableComponent = <T extends { [key: string]: any }>(
                   }
                   setPage(1);
                 }}
-                className="rounded-md border border-gray-300 px-2 py-1 text-sm focus:ring-2 focus:ring-red-400"
+                className="rounded-md border border-gray-300 px-2 py-1 text-sm focus:ring-2 focus:ring-green-400"
               >
                 <option value="">Mostrar</option>
                 <option value={8}>8</option>
@@ -665,7 +665,7 @@ const DataTableComponent = <T extends { [key: string]: any }>(
       {onCreate && canCreate(module) && (
         <button
           className="fixed bottom-6 right-6 z-50 flex md:hidden items-center justify-center w-12 h-12 rounded-full shadow-lg text-white transition-transform hover:scale-105"
-          style={{ background: Colors.buttons.primary }}
+          style={{ background: "#2a9781" }}
           onClick={onCreate}
         >
           <PlusIcon className="h-5 w-5" />
@@ -689,3 +689,4 @@ export const DataTable = React.memo(
     );
   }
 ) as typeof DataTableComponent;
+

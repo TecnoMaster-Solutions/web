@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useMemo } from "react";
 import { DataTable } from "@/features/dashboard/components/datatable/DataTable";
@@ -92,7 +92,7 @@ export const ServicesTable: React.FC<ServicesTableProps> = ({
         </div>
       ),
     },
-    { key: "category", header: "Categoría" },
+    { key: "category", header: "CategorÃ­a" },
     {
       key: "image",
       header: "Imagen",
@@ -173,7 +173,7 @@ export const ServicesTable: React.FC<ServicesTableProps> = ({
               id="download-excel-btn-services"
               data={sortedServices as unknown as Record<string, unknown>[]}
               fileName="reporte_servicios.xlsx"
-              headers={["#", "Nombre", "Categoría", "Estado"]}
+              headers={["#", "Nombre", "CategorÃ­a", "Estado"]}
             />
           </div>
 
@@ -184,7 +184,7 @@ export const ServicesTable: React.FC<ServicesTableProps> = ({
                 ?.click()
             }
             className="fixed bottom-20 right-6 z-50 flex md:hidden items-center justify-center w-12 h-12 rounded-full shadow-lg text-white transition-transform hover:scale-105"
-            style={{ background: "#B20000" }}
+            style={{ background: "#04652c" }}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -208,3 +208,4 @@ export const ServicesTable: React.FC<ServicesTableProps> = ({
 };
 
 export default ServicesTable;
+

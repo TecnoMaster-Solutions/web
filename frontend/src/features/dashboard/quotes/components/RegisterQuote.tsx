@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
 import Colors from "@/shared/theme/colors";
@@ -179,7 +179,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
   }, []);
 
   /* ================================
-   * MANEJO DE SELECCIÓN DE SERVICE REQUEST (OPCIONAL)
+   * MANEJO DE SELECCIÃ“N DE SERVICE REQUEST (OPCIONAL)
    * ================================ */
   const handleServiceRequestChange = (serviceRequestId: number) => {
     const selected = serviceRequests.find(
@@ -193,7 +193,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
         serviceRequestId: "",
         servicetype: "",
       }));
-      // si no hay solicitud, por defecto habilitamos creación de cliente
+      // si no hay solicitud, por defecto habilitamos creaciÃ³n de cliente
       setCreateNewClientEnabled(true);
       return;
     }
@@ -205,7 +205,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
       servicetype: selected.serviceType,
     }));
 
-    // si hay solicitud, no necesitamos crear cliente aquí
+    // si hay solicitud, no necesitamos crear cliente aquÃ­
     setCreateNewClientEnabled(false);
   };
 
@@ -302,17 +302,17 @@ export default function RegisterQuoteForm({ onSave }: Props) {
     const description = detailForm.description.trim();
 
     if (!description) {
-      showError("La descripción es obligatoria");
+      showError("La descripciÃ³n es obligatoria");
       return;
     }
     if (description.length > DETAIL_DESCRIPTION_MAX) {
       showError(
-        `La descripción no puede superar ${DETAIL_DESCRIPTION_MAX} caracteres`,
+        `La descripciÃ³n no puede superar ${DETAIL_DESCRIPTION_MAX} caracteres`,
       );
       return;
     }
     if (detailForm.quantity <= 0 || detailForm.unitprice < 0) {
-      showError("Cantidad y precio inválidos");
+      showError("Cantidad y precio invÃ¡lidos");
       return;
     }
 
@@ -450,7 +450,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 1) Ya NO exigimos solicitud. Sí exigimos tipo de servicio.
+    // 1) Ya NO exigimos solicitud. SÃ­ exigimos tipo de servicio.
     if (!form.servicetype) {
       showError("Debe seleccionar el tipo de servicio");
       return;
@@ -461,7 +461,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
       return;
     }
 
-    // Preparar el payload según la especificación del endpoint
+    // Preparar el payload segÃºn la especificaciÃ³n del endpoint
     const payload: QuoteCreatePayload = {
       serviceRequestId: Number(form.serviceRequestId),
       statesid: form.statesid,
@@ -475,7 +475,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
 
     try {
       await onSave?.(payload);
-      showSuccess("Cotización guardada exitosamente");
+      showSuccess("CotizaciÃ³n guardada exitosamente");
 
       // Reset
       setForm({
@@ -507,7 +507,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
         isBackorder: false,
       });
     } catch (error) {
-      showError("Error al guardar la cotización");
+      showError("Error al guardar la cotizaciÃ³n");
     }
   };
 
@@ -546,7 +546,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
           onChange={(e) => handleServiceRequestChange(Number(e.target.value))}
           className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
-          <option value="">Sin solicitud (cotización directa)</option>
+          <option value="">Sin solicitud (cotizaciÃ³n directa)</option>
           {serviceRequests.map((request) => {
             const customerLabel = request.customer?.users
               ? `${request.customer.users.name} ${request.customer.users.lastname}`
@@ -572,11 +572,11 @@ export default function RegisterQuoteForm({ onSave }: Props) {
         </button>
       </div>
 
-      {/* INFO AUTOMÁTICA DEL SERVICE REQUEST */}
+      {/* INFO AUTOMÃTICA DEL SERVICE REQUEST */}
       {selectedServiceRequest && (
         <div className="border p-4 rounded-lg bg-gray-50 space-y-3">
           <h3 className="font-bold text-gray-700">
-            Información de la solicitud seleccionada
+            InformaciÃ³n de la solicitud seleccionada
           </h3>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -596,7 +596,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
             </div>
 
             <div className="space-y-1">
-              <div className="text-xs text-gray-500">Técnico asignado</div>
+              <div className="text-xs text-gray-500">TÃ©cnico asignado</div>
               {selectedServiceRequest.techniciansMap &&
               selectedServiceRequest.techniciansMap.length > 0 ? (
                 <>
@@ -627,7 +627,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
                 </>
               ) : (
                 <div className="text-sm text-gray-500 italic">
-                  No hay técnico asignado
+                  No hay tÃ©cnico asignado
                 </div>
               )}
             </div>
@@ -640,7 +640,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
             </div>
 
             <div className="space-y-1">
-              <div className="text-xs text-gray-500">Dirección</div>
+              <div className="text-xs text-gray-500">DirecciÃ³n</div>
               <div className="font-medium">
                 {selectedServiceRequest.direccion}
               </div>
@@ -648,7 +648,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
 
             <div className="space-y-1 md:col-span-2">
               <div className="text-xs text-gray-500">
-                Descripción del servicio
+                DescripciÃ³n del servicio
               </div>
               <div className="font-medium">
                 {selectedServiceRequest.description}
@@ -726,7 +726,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
               </div>
 
               <div>
-                <label className="block mb-1 font-medium">Teléfono *</label>
+                <label className="block mb-1 font-medium">TelÃ©fono *</label>
                 <input
                   value={clientForm.telefono}
                   onChange={(e) =>
@@ -749,7 +749,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
               </div>
 
               <div className="md:col-span-2">
-                <label className="block mb-1 font-medium">Contraseña *</label>
+                <label className="block mb-1 font-medium">ContraseÃ±a *</label>
                 <input
                   type="password"
                   value={clientForm.contrasena}
@@ -759,7 +759,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
                   className="w-full border rounded px-3 py-2"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Se creará el usuario con rol Cliente
+                  Se crearÃ¡ el usuario con rol Cliente
                 </p>
               </div>
             </div>
@@ -784,7 +784,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
               className="w-full border rounded px-3 py-2 bg-gray-100"
             />
             <p className="text-xs text-gray-500 mt-1">
-              Este campo se completa automáticamente desde la solicitud de
+              Este campo se completa automÃ¡ticamente desde la solicitud de
               servicio
             </p>
           </>
@@ -809,11 +809,11 @@ export default function RegisterQuoteForm({ onSave }: Props) {
         )}
       </div>
 
-      {/* OBSERVACIÓN */}
+      {/* OBSERVACIÃ“N */}
       <div>
-        <label className="block mb-1 font-medium">Observación</label>
+        <label className="block mb-1 font-medium">ObservaciÃ³n</label>
         <textarea
-          placeholder="Observaciones adicionales sobre la cotización"
+          placeholder="Observaciones adicionales sobre la cotizaciÃ³n"
           value={form.observation}
           onChange={(e) => setForm({ ...form, observation: e.target.value })}
           className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -876,7 +876,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
                         <span
                           className={
                             p.productstock === 0
-                              ? "font-semibold text-red-600"
+                              ? "font-semibold text-green-600"
                               : "font-medium"
                           }
                         >
@@ -885,7 +885,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
                             : p.productstock}
                         </span>
                         {p.productstock === 0 && (
-                          <span className="px-2 py-0.5 text-[11px] font-semibold text-red-600 rounded-full border border-red-200 bg-red-50">
+                          <span className="px-2 py-0.5 text-[11px] font-semibold text-green-600 rounded-full border border-green-200 bg-green-50">
                             Bajo pedido
                           </span>
                         )}
@@ -909,8 +909,8 @@ export default function RegisterQuoteForm({ onSave }: Props) {
             {pendingBackorderProduct && (
               <div className="mt-3 border border-yellow-200 rounded-lg bg-yellow-50 p-3 text-sm text-gray-800">
                 <p className="font-medium">
-                  Este producto no tiene stock disponible. ¿Desea agregarlo a la
-                  cotización como bajo pedido?
+                  Este producto no tiene stock disponible. Â¿Desea agregarlo a la
+                  cotizaciÃ³n como bajo pedido?
                 </p>
                 <p className="text-xs text-gray-600">
                   {pendingBackorderProduct.productname}
@@ -953,9 +953,9 @@ export default function RegisterQuoteForm({ onSave }: Props) {
           </div>
 
           <div className="md:col-span-2">
-            <label className="block mb-1 font-medium">Descripción *</label>
+            <label className="block mb-1 font-medium">DescripciÃ³n *</label>
             <AutoGrowTextarea
-              placeholder="Descripción del producto"
+              placeholder="DescripciÃ³n del producto"
               value={detailForm.description}
               onChange={(e) =>
                 setDetailForm({ ...detailForm, description: e.target.value })
@@ -1004,7 +1004,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
           </div>
         </div>
 
-        {/* INFORMACIÓN DEL PRODUCTO */}
+        {/* INFORMACIÃ“N DEL PRODUCTO */}
         <div className="mb-4 p-3 bg-blue-50 rounded">
           <div className="text-sm">
             <strong>Tipo:</strong>{" "}
@@ -1025,7 +1025,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
           </div>
         </div>
 
-        {/* BOTÓN AGREGAR */}
+        {/* BOTÃ“N AGREGAR */}
         <button
           type="button"
           onClick={handleAddDetail}
@@ -1058,7 +1058,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
                       <button
                         type="button"
                         onClick={() => handleRemoveDetail(i)}
-                        className="cursor-pointer text-red-500 hover:text-red-700 text-sm focus:outline-none"
+                        className="cursor-pointer text-green-500 hover:text-green-700 text-sm focus:outline-none"
                       >
                         Eliminar
                       </button>
@@ -1159,7 +1159,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
         </div>
       </div>
 
-      {/* BOTÓN GUARDAR */}
+      {/* BOTÃ“N GUARDAR */}
       <button
         type="submit"
         style={{ backgroundColor: Colors.buttons.primary }}
@@ -1171,8 +1171,9 @@ export default function RegisterQuoteForm({ onSave }: Props) {
             : ""
         }
       >
-        Guardar Cotización
+        Guardar CotizaciÃ³n
       </button>
     </form>
   );
 }
+

@@ -40,7 +40,7 @@ const translateDashboardState = (value: string) => {
 function Loader() {
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
-      <div className="w-16 h-16 border-4 border-red-600 border-t-transparent rounded-full animate-spin" />
+      <div className="w-16 h-16 border-4 border-green-600 border-t-transparent rounded-full animate-spin" />
     </div>
   );
 }
@@ -161,7 +161,7 @@ export const IndexDashboard = () => {
             id="year-selector"
             value={selectedYear}
             onChange={handleYearChange}
-            className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring focus:ring-red-200"
+            className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring focus:ring-green-200"
           >
             {availableYears.map((yearOption) => (
               <option key={yearOption} value={yearOption}>
@@ -177,7 +177,7 @@ export const IndexDashboard = () => {
         {/* Ventas */}
         <div className="p-3 w-full sm:w-[calc(50%-1rem)] md:w-[calc(25%-1rem)]">
           <div className="bg-[#F4F4F4] rounded-lg p-5 shadow-md h-full">
-            <div className="bg-[#B20000] text-white rounded-lg p-4 sm:p-6 h-full flex flex-col justify-between">
+            <div className="bg-[#08873c] text-white rounded-lg p-4 sm:p-6 h-full flex flex-col justify-between">
               <div className="flex items-start justify-between gap-3 min-h-10">
                 <h2 className="text-sm sm:text-base font-medium whitespace-nowrap overflow-hidden text-ellipsis leading-tight">
                   Ventas
@@ -192,7 +192,7 @@ export const IndexDashboard = () => {
         {/* Compras */}
         <div className="p-3 w-full sm:w-[calc(50%-1rem)] md:w-[calc(25%-1rem)]">
           <div className="bg-[#F4F4F4] rounded-lg p-5 shadow-md h-full">
-            <div className="bg-[#B20000] text-white rounded-lg p-4 sm:p-6 h-full flex flex-col justify-between">
+            <div className="bg-[#089642] text-white rounded-lg p-4 sm:p-6 h-full flex flex-col justify-between">
               <div className="flex items-start justify-between gap-3 min-h-10">
                 <h2 className="text-sm sm:text-base font-medium whitespace-nowrap overflow-hidden text-ellipsis leading-tight">
                   Compras
@@ -207,7 +207,7 @@ export const IndexDashboard = () => {
         {/* Solicitudes de servicio */}
         <div className="p-3 w-full sm:w-[calc(50%-1rem)] md:w-[calc(25%-1rem)]">
           <div className="bg-[#F4F4F4] rounded-lg p-5 shadow-md h-full">
-            <div className="bg-[#B20000] text-white rounded-lg p-4 sm:p-6 h-full flex flex-col justify-between">
+            <div className="bg-[#089642] text-white rounded-lg p-4 sm:p-6 h-full flex flex-col justify-between">
               <div className="flex items-start justify-between gap-3 min-h-10">
                 <h2 className="text-sm sm:text-base font-medium whitespace-nowrap overflow-hidden text-ellipsis leading-tight">
                   Solicitud de servicio
@@ -222,7 +222,7 @@ export const IndexDashboard = () => {
         {/* Ã“rdenes */}
         <div className="p-3 w-full sm:w-[calc(50%-1rem)] md:w-[calc(25%-1rem)]">
           <div className="bg-[#F4F4F4] rounded-lg p-5 shadow-md h-full">
-            <div className="bg-[#B20000] text-white rounded-lg p-4 sm:p-6 h-full flex flex-col justify-between">
+            <div className="bg-[#089642] text-white rounded-lg p-4 sm:p-6 h-full flex flex-col justify-between">
               <div className="flex items-start justify-between gap-3 min-h-10">
                 <h2 className="text-sm sm:text-base font-medium whitespace-nowrap overflow-hidden text-ellipsis leading-tight">
                   Orden de servicio
@@ -356,5 +356,6 @@ export const IndexDashboard = () => {
     </div>
   );
 };
+
 
 

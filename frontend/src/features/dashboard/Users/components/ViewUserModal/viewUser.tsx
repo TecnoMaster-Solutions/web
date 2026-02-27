@@ -222,7 +222,7 @@ const ViewUserModal: React.FC<ViewUserModalProps> = ({
                     {technician.technicianTypeMaps.map((tm, index) => (
                       <span
                         key={`${tm.techniciantypeid}-${index}`}
-                        className="px-4 py-2 rounded-full text-sm border bg-red-600 text-white border-red-600 shadow-sm"
+                        className="px-4 py-2 rounded-full text-sm border bg-green-600 text-white border-green-600 shadow-sm"
                       >
                         {tm.techniciantype?.name ||
                           `Tipo ID: ${tm.techniciantypeid}`}
@@ -318,3 +318,4 @@ const ViewUserModal: React.FC<ViewUserModalProps> = ({
 };
 
 export default ViewUserModal;
+

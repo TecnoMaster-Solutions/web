@@ -37,10 +37,10 @@ const MenuItem = React.memo(
     <Link
       href={href}
       onClick={onClick}
-      className={`flex items-center gap-2 px-4 py-3 rounded-md text-base transition transform duration-200 ${
+      className={`flex items-center gap-2 px-4 py-3 rounded-md text-base transition-all duration-300 ease-in-out transform ${
         isActive
-          ? "bg-red-800 text-white hover:scale-105"
-          : "hover:bg-red-600 hover:scale-105"
+          ? "bg-[#08873c] text-white border border-[#6feda6] hover:bg-[#058a3c] hover:scale-105"
+          : "text-white hover:bg-[#058a3c] hover:scale-105"
       }`}
     >
       <Icon size={20} /> {label}
@@ -82,10 +82,10 @@ const SubMenu = React.memo(
       >
         <button
           onClick={() => toggleMenu(parent)}
-          className={`cursor-pointer flex items-center justify-between w-full px-4 py-3 rounded-md text-base transition transform duration-200 ${
+          className={`cursor-pointer flex items-center justify-between w-full px-4 py-3 rounded-md text-base transition-all duration-300 ease-in-out transform ${
             isActive
-              ? "bg-red-800 text-white hover:scale-105"
-              : "hover:bg-red-600 hover:scale-105"
+              ? "bg-[#06a646] text-white border border-[#c3e6d2] hover:bg-[#058a3c] hover:scale-105"
+              : "text-white hover:bg-[#058a3c] hover:scale-105"
           }`}
         >
           <span className="flex items-center gap-2">
@@ -106,14 +106,14 @@ const SubMenu = React.memo(
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: 20, opacity: 0 }}
               transition={{ duration: 0.25 }}
-              className="absolute top-0 left-full ml-1 bg-white text-red-800 rounded-md shadow-lg flex flex-col w-60 z-50"
+              className="absolute top-0 left-full ml-1 bg-[#d0f0dc] text-[#012e14] rounded-md border border-[#c3e6d2] shadow-lg flex flex-col w-60 z-50"
             >
               {items.map(({ href, label }) => (
                 <Link
                   key={href}
                   href={href}
                   onClick={() => setOpenMenu(null)}
-                  className="px-4 py-3 hover:bg-red-100 hover:text-red-700 transition rounded-md"
+                  className="px-4 py-3 text-[#012e14] hover:bg-[#e6f6ec] hover:text-[#012e14] transition-all duration-300 ease-in-out rounded-md"
                 >
                   {label}
                 </Link>
@@ -327,23 +327,21 @@ const AsideNav = ({
       initial={{ x: -260 }}
       animate={{ x: isCollapsed ? -260 : 0 }}
       transition={{ duration: 0.3 }}
-      className="text-white w-64 h-screen flex flex-col fixed left-0 top-0 z-50 shadow-[6px_0_12px_-2px_rgba(0,0,0,0.25)]"
-      style={{ backgroundColor: Colors.asideNavBackground.primary }}
+      className="text-white w-64 h-screen flex flex-col fixed left-0 top-0 z-50 border-r border-[#c3e6d2] shadow-[6px_0_12px_-2px_rgba(1,46,20,0.25)]"
+      style={{ backgroundColor: "#04652c" }}
     >
       <button
         onClick={() => setIsCollapsed(!isCollapsed)}
-        className="cursor-pointer absolute -right-5 top-4 bg-red-700 text-white rounded-full p-1 drop-shadow-[0_10px_25px_rgba(0,0,0,0.35)] hover:bg-red-600 transition"
+        className="cursor-pointer absolute -right-5 top-4 bg-[#034a21] text-white border border-[#c3e6d2] rounded-full p-1 drop-shadow-[0_10px_25px_rgba(1,46,20,0.28)] hover:bg-[#058a3c] transition-all duration-300 ease-in-out"
       >
         {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
       </button>
 
       <div className="flex items-center gap-2 px-4 py-3 mb-4">
-        <div className="w-8 h-8 flex items-center justify-center bg-red-600 rounded-lg text-white font-bold">
-          V
-        </div>
+        
         <div>
-          <h1 className="text-5xl font-bold text-white">Vertecx</h1>
-          <p className="text-xs text-center text-white">Panel de gestión</p>
+          <h1 className="text-4xl font-bold text-white">TecnoMaster</h1>
+          <p className="text-xs text-center text-[#e6f6ec]">Panel de gestión</p>
         </div>
       </div>
 

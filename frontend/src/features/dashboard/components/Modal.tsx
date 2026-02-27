@@ -20,7 +20,7 @@ export default function Modal({
   onClose,
   children,
   footer,
-  widthClass = "md:max-w-lg", //  por defecto, igual a antes
+  widthClass = "md:max-w-lg", 
 }: ModalProps) {
   const [mounted, setMounted] = useState(false);
 

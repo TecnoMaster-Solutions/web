@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React from "react";
 import {
@@ -50,7 +50,7 @@ function StatusBadge({ status }: { status: Supplier["status"] }) {
       className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium border ${
         active
           ? "bg-green-50 text-green-700 border-green-200"
-          : "bg-red-50 text-red-700 border-red-200"
+          : "bg-green-50 text-green-700 border-green-200"
       }`}
     >
       {active ? <BadgeCheck size={12} /> : <BadgeX size={12} />}
@@ -177,7 +177,7 @@ export default function SupplierDetailsModal({
             <div className="text-[13px] text-gray-500">
               Contacto:{" "}
               <span className="font-medium text-gray-800">
-                {supplier.contactName || "—"}
+                {supplier.contactName || "â€”"}
               </span>
             </div>
           </div>
@@ -185,13 +185,13 @@ export default function SupplierDetailsModal({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Item
               label="NIT"
-              value={<span className="font-mono">{supplier.nit || "—"}</span>}
+              value={<span className="font-mono">{supplier.nit || "â€”"}</span>}
               valueClassName="truncate"
             />
 
             <Item
               icon={<Phone size={14} />}
-              label="Teléfono"
+              label="TelÃ©fono"
               value={
                 supplier.phone ? (
                   <a
@@ -201,7 +201,7 @@ export default function SupplierDetailsModal({
                     {supplier.phone}
                   </a>
                 ) : (
-                  "—"
+                  "â€”"
                 )
               }
               valueClassName="truncate"
@@ -220,7 +220,7 @@ export default function SupplierDetailsModal({
                     {supplier.email}
                   </a>
                 ) : (
-                  "—"
+                  "â€”"
                 )
               }
               valueClassName="break-all whitespace-normal"
@@ -228,9 +228,9 @@ export default function SupplierDetailsModal({
 
             <Item
               icon={<MapPin size={14} />}
-              label="Dirección"
+              label="DirecciÃ³n"
               className="sm:col-span-2"
-              value={supplier.address || "—"}
+              value={supplier.address || "â€”"}
               valueClassName="break-words whitespace-normal"
             />
           </div>
@@ -239,3 +239,4 @@ export default function SupplierDetailsModal({
     </Modal>
   );
 }
+
