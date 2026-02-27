@@ -28,9 +28,16 @@ const parseCOP = (input: string): number => {
   return digits ? Number(digits) : 0;
 };
 
-// ✅ NUEVO (único cambio adicional para permitir opcional real)
 const onlyDigits = (s: string) => (s ?? "").replace(/[^\d]/g, "");
 const hasDigits = (s: string) => onlyDigits(s).length > 0;
+
+const autoSalePrice = (purchaseUnitPrice: number): number => {
+  const p = Number(purchaseUnitPrice) || 0;
+  if (p <= 0) return 0;
+
+  const sale = p < 10000 ? p * 2 : p * 1.5;
+  return Math.round(sale);
+};
 
 type CartItem = {
   productid: number;
@@ -66,7 +73,9 @@ interface Props {
   updateCartItem: (index: number, patch: Partial<CartItem>) => void;
 
   handleChange: (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >
   ) => void;
 
   addToCart: () => void;
@@ -202,7 +211,6 @@ export default function RegisterPurchaseForm({
       onSubmit={handleFormSubmit}
       className="space-y-6 p-6 md:p-8 w-full mx-auto rounded-lg"
     >
-      {/* Fecha */}
       <div>
         <label className="block text-sm font-medium mb-1">
           Fecha de Registro <span className="text-red-500">*</span>
@@ -217,8 +225,9 @@ export default function RegisterPurchaseForm({
             handleFieldValidation("registerDate", e.target.value);
           }}
           required
-          className={`w-full rounded-md border px-2 py-2 text-sm ${errors.createdAt ? "border-red-500" : "border-gray-300"
-            }`}
+          className={`w-full rounded-md border px-2 py-2 text-sm ${
+            errors.createdAt ? "border-red-500" : "border-gray-300"
+          }`}
         />
 
         {errors.registerDate && (
@@ -226,7 +235,6 @@ export default function RegisterPurchaseForm({
         )}
       </div>
 
-      {/* N° Orden y Proveedor */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className="block text-sm mb-1 font-medium">
@@ -237,8 +245,9 @@ export default function RegisterPurchaseForm({
             name="orderNumber"
             value={form.orderNumber}
             readOnly
-            className={`w-full rounded-md border px-2 py-2 text-sm bg-gray-100 ${errors.orderNumber ? "border-red-500" : "border-gray-300"
-              }`}
+            className={`w-full rounded-md border px-2 py-2 text-sm bg-gray-100 ${
+              errors.orderNumber ? "border-red-500" : "border-gray-300"
+            }`}
           />
           {errors.orderNumber && (
             <p className="text-xs text-red-500">{errors.orderNumber}</p>
@@ -273,8 +282,9 @@ export default function RegisterPurchaseForm({
               handleChange(e);
               handleFieldValidation("supplier", e.target.value);
             }}
-            className={`w-full rounded-md border px-2 py-2 text-sm ${errors.supplier ? "border-red-500" : "border-gray-300"
-              }`}
+            className={`w-full rounded-md border px-2 py-2 text-sm ${
+              errors.supplier ? "border-red-500" : "border-gray-300"
+            }`}
           >
             <option value="">Selecciona el proveedor</option>
             {suppliers.map((s) => (
@@ -290,10 +300,9 @@ export default function RegisterPurchaseForm({
         </div>
       </div>
 
-      {/* NUEVO: Orden de compra (habilitado solo si hay proveedor) */}
       <div>
         <label className="block text-sm mb-1 font-medium">
-          Orden de compra (Pendiente) <span className="text-red-500">*</span>
+          Orden de compra (Pendiente)
         </label>
 
         <select
@@ -301,17 +310,18 @@ export default function RegisterPurchaseForm({
           value={form.purchaseOrderId}
           onChange={handleChange}
           disabled={!form.supplier || poLoading}
-          className={`w-full rounded-md border px-2 py-2 text-sm ${!form.supplier || poLoading ? "bg-gray-100" : "bg-white"
-            }`}
+          className={`w-full rounded-md border px-2 py-2 text-sm ${
+            !form.supplier || poLoading ? "bg-gray-100" : "bg-white"
+          }`}
         >
           <option value="">
             {!form.supplier
               ? "Selecciona primero un proveedor"
               : poLoading
-                ? "Cargando órdenes..."
-                : purchaseOrders.length === 0
-                  ? "No hay órdenes pendientes para este proveedor"
-                  : "Selecciona la orden"}
+              ? "Cargando órdenes..."
+              : purchaseOrders.length === 0
+              ? "No hay órdenes pendientes para este proveedor"
+              : "Selecciona la orden"}
           </option>
 
           {purchaseOrders.map((po: any) => (
@@ -341,8 +351,9 @@ export default function RegisterPurchaseForm({
             handleChange(e);
             handleFieldValidation("invoiceNumber", e.target.value);
           }}
-          className={`w-full rounded-md border px-2 py-2 text-sm ${errors.invoiceNumber ? "border-red-500" : "border-gray-300"
-            }`}
+          className={`w-full rounded-md border px-2 py-2 text-sm ${
+            errors.invoiceNumber ? "border-red-500" : "border-gray-300"
+          }`}
         />
         {errors.invoiceNumber && (
           <p className="text-xs text-red-500">{errors.invoiceNumber}</p>
@@ -357,13 +368,13 @@ export default function RegisterPurchaseForm({
           type="text"
           value={formatCOP(total)}
           readOnly
-          className={`w-full rounded-md border px-2 py-2 text-sm bg-gray-100 ${errors.amount ? "border-red-500" : "border-gray-300"
-            }`}
+          className={`w-full rounded-md border px-2 py-2 text-sm bg-gray-100 ${
+            errors.amount ? "border-red-500" : "border-gray-300"
+          }`}
         />
         {errors.amount && <p className="text-xs text-red-500">{errors.amount}</p>}
       </div>
 
-      {/* Productos */}
       <div className="p-4 border rounded-lg bg-gray-50 shadow-sm">
         <label className="block text-center text-xl font-semibold mb-3">
           Productos <span className="text-red-500">*</span>
@@ -385,7 +396,7 @@ export default function RegisterPurchaseForm({
                 value={
                   selectedProduct
                     ? products.find((p) => p.productid === Number(selectedProduct))
-                      ?.productname
+                        ?.productname
                     : searchProduct
                 }
                 onChange={(e) => {
@@ -440,7 +451,6 @@ export default function RegisterPurchaseForm({
               type="text"
               inputMode="numeric"
               placeholder="$ 15.000"
-              // ✅ CAMBIO: solo formatea si hay dígitos
               value={hasDigits(purchasePrice) ? formatCOP(parseCOP(purchasePrice)) : ""}
               onChange={(e) => setPurchasePrice(e.target.value)}
               className="w-full rounded-md border px-2 py-2 text-sm shadow-sm"
@@ -458,6 +468,13 @@ export default function RegisterPurchaseForm({
               placeholder="$ 25.000"
               value={hasDigits(salePrice) ? formatCOP(parseCOP(salePrice)) : ""}
               onChange={(e) => setSalePrice(e.target.value)}
+              onBlur={() => {
+                if (!hasDigits(salePrice) && hasDigits(purchasePrice)) {
+                  const price = parseCOP(purchasePrice);
+                  const auto = autoSalePrice(price);
+                  if (auto > 0) setSalePrice(String(auto));
+                }
+              }}
               className="w-full rounded-md border px-2 py-2 text-sm shadow-sm"
             />
           </div>
@@ -573,7 +590,9 @@ export default function RegisterPurchaseForm({
                       value={item.saleprice === undefined ? "" : formatCOP(item.saleprice)}
                       onChange={(e) =>
                         updateCartItem(index, {
-                          saleprice: hasDigits(e.target.value) ? parseCOP(e.target.value) : undefined,
+                          saleprice: hasDigits(e.target.value)
+                            ? parseCOP(e.target.value)
+                            : undefined,
                         })
                       }
                       className="w-full rounded-md border px-2 py-2 text-sm"
