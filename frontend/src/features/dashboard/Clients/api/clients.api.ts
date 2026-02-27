@@ -8,22 +8,40 @@ import { api } from "@/shared/utils/apiClient";
 
 export type CustomerFromApi = {
   customerid: number;
+  userid?: number;
   customercity: string;
   customerzipcode: string;
-  users: {
+  hasAssociations?: boolean;
+  users?: {
     userid: number;
     name: string;
     lastname: string;
     email: string;
     documentnumber: string;
     phone: string;
+    typeid?: number;
+    stateid?: number;
     image?: string | null;
-    typeofdocuments?: { id: number; name: string };
+    typeofdocuments?: { id?: number; typeofdocumentid?: number; name: string };
     states?: { stateid?: number; id?: number; name: string };
     roles?: { id: number; name: string };
   };
   sales: { salestatus: string }[];
 };
+
+const stateLabelMap: Record<number, string> = {
+  1: "Activo",
+  2: "Inactivo",
+};
+
+function unwrapList<T>(payload: unknown): T[] {
+  if (Array.isArray(payload)) return payload as T[];
+  if (payload && typeof payload === "object" && "data" in (payload as Record<string, unknown>)) {
+    const nested = (payload as { data?: unknown }).data;
+    return Array.isArray(nested) ? (nested as T[]) : [];
+  }
+  return [];
+}
 
 // ================================
 // UI TYPE
@@ -31,6 +49,7 @@ export type CustomerFromApi = {
 
 export type ClientUI = {
   id: number;
+  userid: number;
   nombre: string;
   apellido: string;
   /** Nombre del tipo de documento (CC, TI…) */
@@ -43,6 +62,7 @@ export type ClientUI = {
   estado: string;
   ciudad: string;
   codigoPostal: string;
+  hasAssociations: boolean;
 };
 
 // ================================
@@ -51,16 +71,18 @@ export type ClientUI = {
 
 export const toUiClient = (c: CustomerFromApi): ClientUI => ({
   id: c.customerid,
+  userid: c.userid ?? c.users?.userid ?? 0,
   nombre: c.users?.name ?? "",
   apellido: c.users?.lastname ?? "",
   tipo: c.users?.typeofdocuments?.name ?? "",
-  tipoId: c.users?.typeofdocuments?.id ?? 0,
+  tipoId: c.users?.typeofdocuments?.id ?? c.users?.typeofdocuments?.typeofdocumentid ?? c.users?.typeid ?? 0,
   documento: c.users?.documentnumber ?? "",
   telefono: c.users?.phone ?? "",
   correoElectronico: c.users?.email ?? "",
-  estado: c.users?.states?.name ?? "",
+  estado: c.users?.states?.name ?? (c.users?.stateid ? stateLabelMap[c.users.stateid] ?? "" : ""),
   ciudad: c.customercity ?? "",
   codigoPostal: c.customerzipcode ?? "",
+  hasAssociations: Boolean(c.hasAssociations),
 });
 
 // ================================
@@ -69,12 +91,12 @@ export const toUiClient = (c: CustomerFromApi): ClientUI => ({
 
 export async function getClients(): Promise<ClientUI[]> {
   // El backend devuelve el array directamente (sin envoltorio)
-  const response = await api.get<CustomerFromApi[]>("/customers");
+  const response = await api.get<CustomerFromApi[] | { data?: CustomerFromApi[] }>("/customers", {
+    params: { includeRelations: true },
+  });
   // axios pone la respuesta en response.data — pero nosotros llamamos api.get que ya extrae .data
   // Si el backend envuelve en {data:[...]}, necesitamos acc ese campo extra:
-  const list = Array.isArray(response)
-    ? response
-    : (response as unknown as { data: CustomerFromApi[] }).data ?? [];
+  const list = unwrapList<CustomerFromApi>(response.data);
   return list.map(toUiClient);
 }
 

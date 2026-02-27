@@ -43,7 +43,10 @@ export interface ICustomer {
         userid: number;
         name: string;
         lastname: string;
+        documentnumber?: string | null;
+        phone?: string | null;
         email: string;
+        image?: string | null;
     };
 }
 

@@ -7,6 +7,56 @@ import {
     IService,
 } from "../types/sales.type";
 
+type CustomerApi = {
+    customerid?: number;
+    id?: number;
+    userid?: number;
+    customercity?: string | null;
+    customerzipcode?: string | null;
+    users?: {
+        userid?: number;
+        name?: string | null;
+        lastname?: string | null;
+        documentnumber?: string | null;
+        phone?: string | null;
+        email?: string | null;
+        image?: string | null;
+    } | null;
+};
+
+function unwrapList<T>(payload: any): T[] {
+    const data =
+        payload && typeof payload === "object" && "data" in payload
+            ? (payload as any).data
+            : payload;
+    return Array.isArray(data) ? (data as T[]) : [];
+}
+
+function normalizeCustomer(customer: CustomerApi): ICustomer | null {
+    const customerid = Number(customer.customerid ?? customer.id);
+    if (!Number.isFinite(customerid) || customerid <= 0) return null;
+
+    const user = customer.users ?? null;
+
+    return {
+        customerid,
+        userid: Number(customer.userid ?? user?.userid ?? 0) || 0,
+        customercity: customer.customercity ?? null,
+        customerzipcode: customer.customerzipcode ?? null,
+        users: user
+            ? {
+                userid: Number(user.userid ?? 0) || 0,
+                name: String(user.name ?? "").trim(),
+                lastname: String(user.lastname ?? "").trim(),
+                documentnumber: user.documentnumber != null ? String(user.documentnumber).trim() : null,
+                phone: user.phone != null ? String(user.phone).trim() : null,
+                email: String(user.email ?? "").trim(),
+                image: user.image != null ? String(user.image).trim() : null,
+            }
+            : undefined,
+    };
+}
+
 // ─────────────────────────────────────────────────────
 // Servicio de Ventas — conecta con el backend NestJS
 // ─────────────────────────────────────────────────────
@@ -53,7 +103,13 @@ export async function getProducts(): Promise<IProduct[]> {
 
 /** Obtener todos los clientes (para el selector) */
 export async function getCustomers(): Promise<ICustomer[]> {
-    return apiClient.get<ICustomer[]>("/customers");
+    const response = await apiClient.get<any>("/customers", {
+        params: { includeRelations: true },
+    });
+
+    return unwrapList<CustomerApi>(response)
+        .map(normalizeCustomer)
+        .filter(Boolean) as ICustomer[];
 }
 
 /** Obtener todos los servicios */

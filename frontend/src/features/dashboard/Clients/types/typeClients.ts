@@ -4,6 +4,7 @@
 
 export interface Client {
   id: number;
+  userid: number;
   nombre: string;
   apellido: string;
   tipo: string; // nombre del tipo (CC, TI, CE...)
@@ -14,6 +15,7 @@ export interface Client {
   estado: string;
   ciudad: string;
   codigoPostal: string;
+  hasAssociations: boolean;
 }
 
 // ================================
@@ -59,14 +61,16 @@ export type ClientFormTouched = Partial<
 export interface CreateClientModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: CreateClientData) => Promise<void>;
+  onSave: (data: CreateClientData) => Promise<boolean>;
+  clients: Client[];
 }
 
 export interface EditClientModalProps {
   isOpen: boolean;
   onClose: () => void;
   client: Client | null;
-  onSave: (data: EditClientData) => Promise<void>;
+  onSave: (data: EditClientData) => Promise<void> | void;
+  clients: Client[];
 }
 
 export interface ViewClientModalProps {
