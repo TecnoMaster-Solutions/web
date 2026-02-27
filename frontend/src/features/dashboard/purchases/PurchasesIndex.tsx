@@ -19,7 +19,6 @@ export default function PurchasesIndex() {
   const [isCancelling, setIsCancelling] = useState<number | null>(null);
   const { fetchPurchases } = purchasesHook;
 
-  // Solo extraer lo necesario para el DataTable
   const {
     purchases,
     loading,
@@ -34,11 +33,19 @@ export default function PurchasesIndex() {
     cart,
     total,
     handleChange,
-    handleAddProduct,
     products,
     suppliers,
     removeFromCart,
     resetForm,
+
+    purchaseOrders,
+    poLoading,
+    addToCart,
+    updateCartItem,
+    purchasePrice,
+    setPurchasePrice,
+    salePrice,
+    setSalePrice,
   } = purchasesHook;
 
   const [isRegisterModalOpen, setRegisterModalOpen] = useState(false);
@@ -47,11 +54,9 @@ export default function PurchasesIndex() {
     null
   );
 
-  // Refs para controlar renderizados
   const initialLoadDone = useRef(false);
   const dataLoaded = useRef(false);
 
-  // Ejecutar solo cuando el componente se monta (primera carga)
   useEffect(() => {
     if (!initialLoadDone.current) {
       initialLoadDone.current = true;
@@ -62,7 +67,6 @@ export default function PurchasesIndex() {
     }
   }, []);
 
-  // Manejar el loader basado en el estado de loading
   useEffect(() => {
     if (!loading && initialLoadDone.current) {
       const timer = setTimeout(() => {
@@ -74,7 +78,6 @@ export default function PurchasesIndex() {
     }
   }, [loading, hideLoader]);
 
-  // Manejar el loader durante el guardado
   useEffect(() => {
     if (saving) {
       showLoader();
@@ -85,7 +88,6 @@ export default function PurchasesIndex() {
     }
   }, [saving, loading, showLoader, hideLoader]);
 
-  // Memorizar columnas - MANTENER ESTE ORDEN
   const columns: Column<IPurchase>[] = useMemo(
     () => [
       { key: "numberoforder", header: "N° Orden" },
@@ -118,15 +120,15 @@ export default function PurchasesIndex() {
             s === "approved"
               ? "Aprobado"
               : s === "revoke"
-              ? "Anulado"
-              : row.state?.name ?? "Desconocido";
+                ? "Anulado"
+                : row.state?.name ?? "Desconocido";
 
           const cls =
             s === "approved"
               ? "text-green-600 font-medium"
               : s === "revoke"
-              ? "text-red-600 font-medium"
-              : "text-gray-500 font-medium";
+                ? "text-red-600 font-medium"
+                : "text-gray-500 font-medium";
 
           return <span className={cls}>{label}</span>;
         },
@@ -147,7 +149,6 @@ export default function PurchasesIndex() {
     [purchases]
   );
 
-  // Memorizar las funciones de callback con dependencias específicas
   const handleCreate = useCallback(() => {
     resetForm();
     setRegisterModalOpen(true);
@@ -270,7 +271,6 @@ export default function PurchasesIndex() {
     return row.state?.name?.toLowerCase() === "revoke";
   }, []);
 
-  // Limpieza al desmontar el componente
   useEffect(() => {
     return () => {
       hideLoader();
@@ -279,7 +279,6 @@ export default function PurchasesIndex() {
     };
   }, [hideLoader]);
 
-  // Memorizar el DataTable con dependencias estrictas
   const memoizedDataTable = useMemo(() => {
     return (
       <DataTable
@@ -305,10 +304,8 @@ export default function PurchasesIndex() {
         <ToastContainer position="bottom-right" />
         <h1 className="text-xl font-semibold mb-4">Listado de Compras</h1>
 
-        {/* Renderizar DataTable memoizado */}
         {(!loading || purchases.length > 0) && memoizedDataTable}
 
-        {/* Mostrar skeleton/placeholder mientras carga */}
         {loading && purchases.length === 0 && (
           <div className="bg-white rounded-xl shadow-lg p-4">
             <div className="animate-pulse space-y-4">
@@ -337,11 +334,19 @@ export default function PurchasesIndex() {
             cart={cart}
             total={total}
             handleChange={handleChange}
-            handleAddProduct={handleAddProduct}
             products={products}
             suppliers={suppliers}
             removeFromCart={removeFromCart}
             fetchPurchases={fetchPurchases}
+
+            purchaseOrders={purchaseOrders}
+            poLoading={poLoading}
+            addToCart={addToCart}
+            updateCartItem={updateCartItem}
+            purchasePrice={purchasePrice}
+            setPurchasePrice={setPurchasePrice}
+            salePrice={salePrice}
+            setSalePrice={setSalePrice}
           />
         </Modal>
 
