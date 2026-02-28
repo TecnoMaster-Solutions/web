@@ -8,6 +8,7 @@ import RequireAuth from "@/features/auth/requireauth";
 import { useAuth } from "@/features/auth/authcontext";
 import { usePermissions } from "@/features/auth/hooks/usePermissions";
 import Modal from "@/features/dashboard/components/Modal";
+import DownloadXLSXButton from "@/features/dashboard/components/DownloadXLSXButton";
 import { showInfo } from "@/shared/utils/notifications";
 import {
   cancelOrderService,
@@ -504,7 +505,23 @@ export default function OrderServicesClientsPage() {
   const canViewOrder = canView(MODULE_KEY);
   const canUpdateOrder = canUpdate(MODULE_KEY);
   const canDeleteOrder = canDelete(MODULE_KEY);
+  const canExportOrder =
+    canViewOrder || has(MODULE_KEY, "export") || has(MODULE_KEY, "download_report");
   const canReportWarranty = canUpdateOrder || has(MODULE_KEY, "report_warranty");
+
+  const xlsxRows = useMemo(() => {
+    return [...rows]
+      .sort((a, b) => b.id - a.id)
+      .map((r) => ({
+        Id: r.id,
+        Cliente: r.cliente,
+        Tipo: r.tipo,
+        "Fecha programada": r.fechaProgramada,
+        Estado: r.estadoKey === "GarantiaReportada" ? "Garantia (reportada)" : r.estado,
+        "Viaticos (COP)": r.viaticos ?? 0,
+        "Monto (COP)": r.monto ?? 0,
+      }));
+  }, [rows]);
 
   function openCreate() {
     router.push(`/dashboard/orders-services/new?returnTo=${encodeURIComponent(pathname)}`);
@@ -917,14 +934,35 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
                   placeholder="Buscar (id, tecnico, cliente, tipo, estado, fecha)"
                   className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-gray-200 md:flex-1"
                 />
-                {canCreateOrder && (
-                  <button
-                    onClick={openCreate}
-                    className="inline-flex h-10 items-center rounded-md bg-[#04652c] px-3 text-sm font-semibold text-white shadow-sm hover:opacity-90 whitespace-nowrap"
-                  >
-                    Crear Orden
-                  </button>
-                )}
+                <div className="flex items-center gap-2">
+                  {canExportOrder && (
+                    <div className="hidden md:block">
+                      <DownloadXLSXButton
+                        id="download-excel-btn-orders-clients"
+                        data={xlsxRows as unknown as Record<string, unknown>[]}
+                        fileName="reporte_ordenes.xlsx"
+                        headers={[
+                          "Id",
+                          "Cliente",
+                          "Tipo",
+                          "Fecha programada",
+                          "Estado",
+                          "Viaticos (COP)",
+                          "Monto (COP)",
+                        ]}
+                        excludeKeys={[]}
+                      />
+                    </div>
+                  )}
+                  {canCreateOrder && (
+                    <button
+                      onClick={openCreate}
+                      className="inline-flex h-10 items-center rounded-md bg-[#04652c] px-3 text-sm font-semibold text-white shadow-sm hover:opacity-90 whitespace-nowrap"
+                    >
+                      Crear Orden
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -1125,6 +1163,35 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
             </div>
           </div>
         </div>
+
+        {canExportOrder && (
+          <button
+            onClick={() =>
+              document
+                .querySelector<HTMLButtonElement>("#download-excel-btn-orders-clients")
+                ?.click()
+            }
+            className="fixed bottom-20 right-6 z-50 flex md:hidden items-center justify-center w-12 h-12 rounded-full shadow-lg text-white transition-transform hover:scale-105"
+            style={{ background: "#04652c" }}
+            type="button"
+            title="Descargar reporte"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5 text-white"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4"
+              />
+            </svg>
+          </button>
+        )}
       </main>
 
       <Modal
@@ -1177,10 +1244,10 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
               rows={4}
               placeholder="Describe brevemente el caso de garantía"
               className={`w-full border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 ${
-                errorDetalle ? "border-green-500 focus:ring-green-200" : "focus:ring-[#04652c]/30"
+                errorDetalle ? "border-red-500 focus:ring-red-200" : "focus:ring-[#04652c]/30"
               }`}
             />
-            {errorDetalle ? <p className="text-xs text-green-600 mt-1">{errorDetalle}</p> : null}
+            {errorDetalle ? <p className="text-xs text-red-600 mt-1">{errorDetalle}</p> : null}
           </div>
 
           <label className="inline-flex items-center gap-2">
@@ -1200,5 +1267,6 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
     </RequireAuth>
   );
 }
+
 
 

@@ -56,7 +56,7 @@ function Loader() {
 function getErrorMessage(err: any) {
   const msg =
     err?.response?.data?.message ?? err?.response?.data?.error ?? err?.message;
-  if (Array.isArray(msg)) return msg.join(" Â· ");
+  if (Array.isArray(msg)) return msg.join(" · ");
   if (typeof msg === "string" && msg.trim()) return msg;
   return "Ocurrió un error inesperado.";
 }
@@ -338,4 +338,3 @@ export default function SuppliersPage() {
     </RequireAuth>
   );
 }
-

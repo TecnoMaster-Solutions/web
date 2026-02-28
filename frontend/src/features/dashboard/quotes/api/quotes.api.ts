@@ -46,7 +46,9 @@ export const getQuoteById = async (id: number) => {
 
 export const getCustomersForQuote = async (): Promise<any> => {
   try {
-    const { data } = await api.get("/customers");
+    const { data } = await api.get("/customers", {
+      params: { includeRelations: true },
+    });
     return data;
   } catch (error) {
     console.error("Error al obtener los clientes:", error);
@@ -125,9 +127,24 @@ export const assignCustomerToQuote = async (
       customerid,
     });
     return data;
-  } catch (error) {
-    console.error("Error al asignar cliente a la cotización:", error);
-    showError("Error al asignar cliente a la cotización.");
+  } catch (error: any) {
+    const status = error?.response?.status;
+    const backendMessage = error?.response?.data?.message;
+    const fallbackMessage =
+      status === 403
+        ? "No tienes permisos para asociar cliente a la cotizacion (quotes.update)."
+        : "Error al asignar cliente a la cotizacion.";
+    const message = Array.isArray(backendMessage)
+      ? backendMessage.join(", ")
+      : backendMessage || fallbackMessage;
+
+    console.error("Error al asignar cliente a la cotizacion:", {
+      status,
+      message,
+      data: error?.response?.data,
+    });
+
+    error.message = message;
     throw error;
   }
 };
@@ -159,3 +176,4 @@ export const cancelQuote = async (quoteId: number): Promise<void> => {
     throw error;
   }
 };
+
