@@ -1381,8 +1381,8 @@ const {
 
   function handleTimeStartChange(next: string) {
     if (!isAllowedTime(next)) {
-      showWarning("Horario permitido: 07:00â€“17:00.");
-      setErrors((p) => ({ ...p, schedule: "Horario permitido: 07:00â€“17:00." }));
+      showWarning("Horario permitido: 07:00 17:00.");
+      setErrors((p) => ({ ...p, schedule: "Horario permitido: 07:00 17:00." }));
       return;
     }
     const sMin = timeToMinutes(next);
@@ -1400,8 +1400,8 @@ const {
 
   function handleTimeEndChange(next: string) {
     if (!isAllowedTime(next)) {
-      showWarning("Horario permitido: 07:00â€“17:00.");
-      setErrors((p) => ({ ...p, schedule: "Horario permitido: 07:00â€“17:00." }));
+      showWarning("Horario permitido: 07:00 17:00.");
+      setErrors((p) => ({ ...p, schedule: "Horario permitido: 07:00 17:00." }));
       return;
     }
     setTimeEnd(next);

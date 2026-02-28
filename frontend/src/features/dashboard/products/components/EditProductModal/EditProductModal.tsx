@@ -192,7 +192,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
       supplierCategory: supplierCategory.trim(),
       code: code.trim(),
       categoryId: Number(categoryId),
-      images, // âœ… images[0] = principal
+      images, //  images[0] = principal
       state,
     } as any;
 
@@ -487,7 +487,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
               </div>
             </div>
 
-            {/* âœ… ESTADO ABAJO DE IMAGENES */}
+            {/*  ESTADO ABAJO DE IMAGENES */}
             <div>
               <label className="block text-sm font-medium mb-1" style={{ color: Colors.texts.primary }}>
                 Estado

@@ -352,7 +352,7 @@ export default function CreateRequestModal({
 
   function validateStartTimeRequired(date: string | null, start: string | null) {
     if (!start) return "Selecciona la hora inicial.";
-    if (!isAllowedTime(start)) return "Horario permitido: 07:00â€“17:00.";
+    if (!isAllowedTime(start)) return "Horario permitido: 07:00 17:00.";
     if (timeToMinutes(start) === SCHEDULE_MAX) return "La hora de inicio no puede ser 17:00.";
     if (date && !isPastDateLocal(date) && isPastDateTimeLocal(date, start)) {
       return "La hora inicial no puede estar en el pasado.";
@@ -362,7 +362,7 @@ export default function CreateRequestModal({
 
   function validateEndTimeRequired(date: string | null, start: string | null, end: string | null) {
     if (!end) return "Selecciona la hora final.";
-    if (!isAllowedTime(end)) return "Horario permitido: 07:00â€“17:00.";
+    if (!isAllowedTime(end)) return "Horario permitido: 07:00 17:00.";
 
     if (date && !isPastDateLocal(date) && isPastDateTimeLocal(date, end)) {
       return "La hora final no puede estar en el pasado.";
@@ -529,7 +529,7 @@ export default function CreateRequestModal({
             ? `No se pudieron cargar los servicios (${status}).`
             : "No se pudieron cargar los servicios."
         );
-        console.error("LOOKUP services ERROR â†’", sr.reason);
+        console.error("LOOKUP services ERROR", sr.reason);
       }
 
       if (cr.status === "fulfilled") setClientesLocal(cr.value as Option[]);
@@ -541,7 +541,7 @@ export default function CreateRequestModal({
             ? `No se pudieron cargar los clientes (${status}).`
             : "No se pudieron cargar los clientes."
         );
-        console.error("LOOKUP customers ERROR â†’", cr.reason);
+        console.error("LOOKUP customers ERROR ", cr.reason);
       }
 
       setLoadingLookups(false);
@@ -742,7 +742,7 @@ export default function CreateRequestModal({
     }
 
     if (!isAllowedTime(v)) {
-      showWarning("Horario permitido: 07:00â€“17:00.");
+      showWarning("Horario permitido: 07:00–17:00.");
       return;
     }
 
@@ -769,7 +769,7 @@ export default function CreateRequestModal({
     }
 
     if (!isAllowedTime(v)) {
-      showWarning("Horario permitido: 07:00â€“17:00.");
+      showWarning("Horario permitido: 07:00–17:00.");
       return;
     }
 

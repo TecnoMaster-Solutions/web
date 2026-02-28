@@ -153,7 +153,7 @@ export default function OrderServiceHistoryCreateModal({
 
   return (
     <Modal
-      title={orderId ? `Agregar historial Â· Orden #${orderId}` : "Agregar historial"}
+      title={orderId ? `Agregar historial · Orden #${orderId}` : "Agregar historial"}
       isOpen={isOpen}
       onClose={onClose}
       widthClass={widthClass}

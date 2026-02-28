@@ -24,7 +24,7 @@ export default function PurchaseOrdersIndex() {
 
   const isViewModalOpen = !!viewingPurchaseOrder;
 
-  // â”€â”€ Ordenamiento â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Ordenamiento 
   type SortField = "fecha" | "total";
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
@@ -53,7 +53,7 @@ export default function PurchaseOrdersIndex() {
     });
   }, [purchaseOrders, sortField, sortDir]);
 
-  // â”€â”€ Botones de sort para pasar via prop al DataTable â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Botones de sort para pasar via prop al DataTable 
   const sortButtons = (
     <div className="flex items-center gap-2">
       {(["fecha", "total"] as const).map((field) => (

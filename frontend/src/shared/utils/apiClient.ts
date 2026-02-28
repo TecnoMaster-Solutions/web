@@ -1,17 +1,9 @@
-import axios, { type AxiosRequestConfig } from "axios";
-
-const DEFAULT_API_BASE =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-
-export const api = axios.create({
-  baseURL: DEFAULT_API_BASE,
-  withCredentials: true,
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
+import { type AxiosRequestConfig } from "axios";
+import { api } from "@/lib/api";
 
 type RequestOptions = AxiosRequestConfig;
+
+export { api };
 
 export const apiClient = {
   async get<T>(path: string, config?: RequestOptions): Promise<T> {
