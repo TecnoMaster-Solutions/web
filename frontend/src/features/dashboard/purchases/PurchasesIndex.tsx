@@ -2,57 +2,25 @@
 
 import { useCallback, useMemo, useState, useEffect, useRef } from "react";
 import Swal from "sweetalert2";
+import { useRouter } from "next/navigation";
+
 import RequireAuth from "../../auth/requireauth";
 import { DataTable } from "../components/datatable/DataTable";
-import Modal from "../components/Modal";
-import RegisterPurchaseForm from "./components/RegisterPurchase";
-import { IPurchase } from "./Types/Purchase.type";
-import ViewPurchase from "./components/ViewPurchase";
 import { ToastContainer } from "react-toastify";
 import { Column } from "../components/datatable/types/column.types";
 import { usePurchases } from "./hooks/usePurchases";
 import { useLoader } from "@/shared/components/loader";
+import { IPurchase } from "./Types/Purchase.type";
 
 export default function PurchasesIndex() {
+  const router = useRouter();
   const purchasesHook = usePurchases();
   const { showLoader, hideLoader } = useLoader();
+
   const [isCancelling, setIsCancelling] = useState<number | null>(null);
   const { fetchPurchases } = purchasesHook;
 
-  const {
-    purchases,
-    loading,
-    saving,
-    handleAddPurchase,
-    handleCancelPurchase,
-    form,
-    selectedProduct,
-    setSelectedProduct,
-    quantity,
-    setQuantity,
-    cart,
-    total,
-    handleChange,
-    products,
-    suppliers,
-    removeFromCart,
-    resetForm,
-
-    purchaseOrders,
-    poLoading,
-    addToCart,
-    updateCartItem,
-    purchasePrice,
-    setPurchasePrice,
-    salePrice,
-    setSalePrice,
-  } = purchasesHook;
-
-  const [isRegisterModalOpen, setRegisterModalOpen] = useState(false);
-  const [isDetailModalOpen, setDetailModalOpen] = useState(false);
-  const [selectedPurchase, setSelectedPurchase] = useState<IPurchase | null>(
-    null
-  );
+  const { purchases, loading, saving, handleCancelPurchase } = purchasesHook;
 
   const initialLoadDone = useRef(false);
   const dataLoaded = useRef(false);
@@ -65,7 +33,7 @@ export default function PurchasesIndex() {
         dataLoaded.current = true;
       });
     }
-  }, []);
+  }, [fetchPurchases, showLoader]);
 
   useEffect(() => {
     if (!loading && initialLoadDone.current) {
@@ -120,8 +88,8 @@ export default function PurchasesIndex() {
             s === "approved"
               ? "Aprobado"
               : s === "revoke"
-                ? "Anulado"
-                : row.state?.name ?? "Desconocido";
+              ? "Anulado"
+              : row.state?.name ?? "Desconocido";
 
           const cls =
             s === "approved"
@@ -137,8 +105,8 @@ export default function PurchasesIndex() {
     []
   );
 
-  const buildSearchablePurchases = (purchases: IPurchase[]) => {
-    return purchases.map((purchase) => ({
+  const buildSearchablePurchases = (items: IPurchase[]) => {
+    return items.map((purchase) => ({
       ...purchase,
       supplierName: purchase.supplier?.name ?? "",
     }));
@@ -149,18 +117,18 @@ export default function PurchasesIndex() {
     [purchases]
   );
 
-  // Memorizar las funciones de callback con dependencias especa­ficas
+  // Crear -> página
   const handleCreate = useCallback(() => {
-    resetForm();
-    setRegisterModalOpen(true);
-  }, [resetForm]);
+    router.push("/dashboard/purchases/create");
+  }, [router]);
 
-  const handleView = useCallback((row: IPurchase) => {
-    setSelectedPurchase(row);
-    setDetailModalOpen(true);
-  }, []);
-
-  console.log("purchases:", purchases);
+  // Ver detalle -> página dinámica
+  const handleView = useCallback(
+    (row: IPurchase) => {
+      router.push(`/dashboard/purchases/${row.purchaseorderid}`);
+    },
+    [router]
+  );
 
   const searchableKeys = useMemo(
     () => [
@@ -294,10 +262,19 @@ export default function PurchasesIndex() {
         createButtonText="Registrar compra"
         isCancelDisabled={isCancelDisabled}
         disabled={isCancelling !== null}
-        freeze={isRegisterModalOpen || isDetailModalOpen}
+        freeze={false}
       />
     );
-  }, [purchases]);
+  }, [
+    purchasesForSearch,
+    columns,
+    searchableKeys,
+    confirmCancelPurchase,
+    handleCreate,
+    handleView,
+    isCancelDisabled,
+    isCancelling,
+  ]);
 
   return (
     <RequireAuth>
@@ -314,60 +291,7 @@ export default function PurchasesIndex() {
             </div>
           </div>
         )}
-
-        <Modal
-          title="Registrar compra"
-          isOpen={isRegisterModalOpen}
-          onClose={() => setRegisterModalOpen(false)}
-          footer={null}
-          widthClass="md:max-w-6xl"
-        >
-          <RegisterPurchaseForm
-            onClose={() => setRegisterModalOpen(false)}
-            onSave={handleAddPurchase}
-            purchases={purchases}
-            form={form}
-            selectedProduct={selectedProduct}
-            setSelectedProduct={setSelectedProduct}
-            quantity={quantity}
-            setQuantity={setQuantity}
-            cart={cart}
-            total={total}
-            handleChange={handleChange}
-            products={products}
-            suppliers={suppliers}
-            removeFromCart={removeFromCart}
-            fetchPurchases={fetchPurchases}
-
-            purchaseOrders={purchaseOrders}
-            poLoading={poLoading}
-            addToCart={addToCart}
-            updateCartItem={updateCartItem}
-            purchasePrice={purchasePrice}
-            setPurchasePrice={setPurchasePrice}
-            salePrice={salePrice}
-            setSalePrice={setSalePrice}
-          />
-        </Modal>
-
-        <Modal
-          title="Detalle de compra"
-          isOpen={isDetailModalOpen}
-          onClose={() => setDetailModalOpen(false)}
-          widthClass="md:max-w-6xl"
-          footer={
-            <button
-              onClick={() => setDetailModalOpen(false)}
-              className="cursor-pointer px-4 py-2 rounded-lg bg-gray-300 hover:bg-gray-200"
-            >
-              Cerrar
-            </button>
-          }
-        >
-          {selectedPurchase && <ViewPurchase purchase={selectedPurchase} />}
-        </Modal>
       </div>
     </RequireAuth>
   );
 }
-

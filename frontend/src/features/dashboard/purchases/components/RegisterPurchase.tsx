@@ -119,12 +119,22 @@ export default function RegisterPurchaseForm({
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const { showLoader, hideLoader } = useLoader();
-
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // === SOLO AJUSTES DE TAMAÑO (fuentes/campos) ===
+  const inputBase = "w-full rounded-lg border px-3 py-2 text-base shadow-sm";
+  const inputBaseNoShadow = "w-full rounded-lg border px-3 py-2 text-base";
+  const selectBase = "w-full rounded-lg border px-3 py-2 text-base";
+  const labelBase = "block text-sm font-medium mb-1";
+  const labelMuted = "block text-sm font-medium text-gray-600 mb-1";
+  // ==============================================
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target as Node)
+      ) {
         setDropdownOpen(false);
       }
     };
@@ -209,190 +219,218 @@ export default function RegisterPurchaseForm({
   return (
     <form
       onSubmit={handleFormSubmit}
-      className="space-y-6 p-6 md:p-8 w-full mx-auto rounded-lg"
+      className="space-y-6 p-6 md:p-8 w-full max-w-screen-2xl mx-auto rounded-lg"
     >
-      <div>
-        <label className="block text-sm font-medium mb-1">
-          Fecha de Registro <span className="text-red-500">*</span>
-        </label>
+      <div className="bg-white border rounded-lg px-5 py-4 md:px-6 md:py-5">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-base md:text-lg font-semibold">Resumen</h2>
 
-        <input
-          type="date"
-          name="registerDate"
-          value={form.registerDate}
-          onChange={(e) => {
-            handleChange(e);
-            handleFieldValidation("registerDate", e.target.value);
-          }}
-          required
-          className={`w-full rounded-md border px-2 py-2 text-sm ${
-            errors.createdAt ? "border-red-500" : "border-gray-300"
-          }`}
-        />
-
-        {errors.registerDate && (
-          <p className="text-xs text-red-500 mt-1">{errors.registerDate}</p>
-        )}
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm mb-1 font-medium">
-            N° de Orden <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            name="orderNumber"
-            value={form.orderNumber}
-            readOnly
-            className={`w-full rounded-md border px-2 py-2 text-sm bg-gray-100 ${
-              errors.orderNumber ? "border-red-500" : "border-gray-300"
-            }`}
-          />
-          {errors.orderNumber && (
-            <p className="text-xs text-red-500">{errors.orderNumber}</p>
-          )}
+          {/* Total con el MISMO estilo del "Monto" en ver detalle */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-500">Total</span>
+            <span className="text-lg md:text-l font-bold text-green-700 bg-green-50 px-3 py-1 rounded-lg border border-green-200 shadow-sm">
+              {formatCOP(total)}
+            </span>
+          </div>
         </div>
 
-        <div>
-          {form.supplier && (
-            <div className="flex items-center gap-2 mt-2 p-2 border rounded-md bg-gray-50">
-              <img
-                src={selectedSupplier?.image || DEFAULT_SUPPLIER_IMAGE}
-                alt="Proveedor"
-                className="w-10 h-10 rounded object-cover"
-                onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).src = DEFAULT_SUPPLIER_IMAGE;
-                }}
-              />
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="md:col-span-1">
+            <label className={labelBase}>
+              Fecha de Registro <span className="text-red-500">*</span>
+            </label>
 
-              <span className="text-sm font-medium text-gray-700">
-                {selectedSupplier?.name}
-              </span>
+            <input
+              type="date"
+              name="registerDate"
+              value={form.registerDate}
+              onChange={(e) => {
+                handleChange(e);
+                handleFieldValidation("registerDate", e.target.value);
+              }}
+              required
+              className={`${inputBaseNoShadow} ${
+                (errors as any).createdAt ? "border-red-500" : "border-gray-300"
+              }`}
+            />
+
+            {errors.registerDate && (
+              <p className="text-xs text-red-500 mt-1">{errors.registerDate}</p>
+            )}
+          </div>
+
+          <div className="md:col-span-1">
+            <label className={labelBase}>
+              N° de Orden <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              name="orderNumber"
+              value={form.orderNumber}
+              readOnly
+              className={`${inputBaseNoShadow} bg-gray-100 ${
+                errors.orderNumber ? "border-red-500" : "border-gray-300"
+              }`}
+            />
+            {errors.orderNumber && (
+              <p className="text-xs text-red-500">{errors.orderNumber}</p>
+            )}
+          </div>
+
+          <div className="md:col-span-2">
+            <label className={labelBase}>
+              Número de Factura <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              placeholder="FAC-2025-1001"
+              name="invoiceNumber"
+              value={form.invoiceNumber}
+              onChange={(e) => {
+                handleChange(e);
+                handleFieldValidation("invoiceNumber", e.target.value);
+              }}
+              className={`${inputBaseNoShadow} ${
+                errors.invoiceNumber ? "border-red-500" : "border-gray-300"
+              }`}
+            />
+            {errors.invoiceNumber && (
+              <p className="text-xs text-red-500">{errors.invoiceNumber}</p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white border rounded-lg px-5 py-4 md:px-6 md:py-5">
+        <h2 className="text-base md:text-lg font-semibold mb-3">Proveedor</h2>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-stretch">
+          <div className="lg:col-span-2">
+            <label className={labelBase}>
+              Proveedor <span className="text-red-500">*</span>
+            </label>
+
+            <select
+              name="supplier"
+              value={form.supplier}
+              onChange={(e) => {
+                handleChange(e);
+                handleFieldValidation("supplier", e.target.value);
+              }}
+              className={`${selectBase} ${
+                errors.supplier ? "border-red-500" : "border-gray-300"
+              }`}
+            >
+              <option value="">Selecciona el proveedor</option>
+              {suppliers.map((s) => (
+                <option key={s.supplierid} value={s.supplierid}>
+                  {s.name} - {s.nit}
+                </option>
+              ))}
+            </select>
+
+            {errors.supplier && (
+              <p className="text-xs text-red-500 mt-1">{errors.supplier}</p>
+            )}
+
+            <div className="mt-4">
+              <label className={labelBase}>Orden de compra (Pendiente)</label>
+
+              <select
+                name="purchaseOrderId"
+                value={form.purchaseOrderId}
+                onChange={handleChange}
+                disabled={!form.supplier || poLoading}
+                className={`${selectBase} ${
+                  !form.supplier || poLoading ? "bg-gray-100" : "bg-white"
+                }`}
+              >
+                <option value="">
+                  {!form.supplier
+                    ? "Selecciona primero un proveedor"
+                    : poLoading
+                    ? "Cargando órdenes..."
+                    : purchaseOrders.length === 0
+                    ? "No hay órdenes pendientes para este proveedor"
+                    : "Selecciona la orden"}
+                </option>
+
+                {purchaseOrders.map((po: any) => (
+                  <option key={po.id} value={po.id}>
+                    {po.numeroOrden} — {new Date(po.fecha).toLocaleDateString()}
+                  </option>
+                ))}
+              </select>
+
+              {!form.purchaseOrderId && form.supplier && !poLoading && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Solo aparecen OCs del proveedor en estado Pendiente.
+                </p>
+              )}
             </div>
-          )}
+          </div>
 
-          <label className="block text-sm mb-1 font-medium">
-            Proveedor <span className="text-red-500">*</span>
-          </label>
-          <select
-            name="supplier"
-            value={form.supplier}
-            onChange={(e) => {
-              handleChange(e);
-              handleFieldValidation("supplier", e.target.value);
-            }}
-            className={`w-full rounded-md border px-2 py-2 text-sm ${
-              errors.supplier ? "border-red-500" : "border-gray-300"
-            }`}
-          >
-            <option value="">Selecciona el proveedor</option>
-            {suppliers.map((s) => (
-              <option key={s.supplierid} value={s.supplierid}>
-                {s.name} - {s.nit}
-              </option>
-            ))}
-          </select>
+          {/* Tarjeta proveedor */}
+          <div className="lg:col-span-1">
+            <div className="border rounded-lg bg-gray-50 p-3 h-full min-h-[108px] flex items-center">
+              {form.supplier ? (
+                <div className="flex items-center gap-3 w-full min-w-0">
+                  <div className="w-14 h-14 rounded-md bg-white border overflow-hidden flex items-center justify-center shrink-0">
+                    <img
+                      src={selectedSupplier?.image || DEFAULT_SUPPLIER_IMAGE}
+                      alt="Proveedor"
+                      className="w-full h-full object-contain"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).src =
+                          DEFAULT_SUPPLIER_IMAGE;
+                      }}
+                    />
+                  </div>
 
-          {errors.supplier && (
-            <p className="text-xs text-red-500">{errors.supplier}</p>
-          )}
+                  <div className="min-w-0">
+                    <p className="text-base font-semibold text-gray-800 truncate">
+                      {selectedSupplier?.name}
+                    </p>
+                    <p className="text-sm text-gray-600 truncate">
+                      {selectedSupplier?.nit}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-base text-gray-500">
+                  Selecciona un proveedor para ver información rápida.
+                </p>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
-      <div>
-        <label className="block text-sm mb-1 font-medium">
-          Orden de compra (Pendiente)
-        </label>
+      {/* ====== SECCIÓN 3: Productos (UNA sola card) ====== */}
+      <div className="bg-white border rounded-lg px-5 py-4 md:px-6 md:py-5">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-base md:text-lg font-semibold">
+            Productos <span className="text-red-500">*</span>
+          </h2>
 
-        <select
-          name="purchaseOrderId"
-          value={form.purchaseOrderId}
-          onChange={handleChange}
-          disabled={!form.supplier || poLoading}
-          className={`w-full rounded-md border px-2 py-2 text-sm ${
-            !form.supplier || poLoading ? "bg-gray-100" : "bg-white"
-          }`}
-        >
-          <option value="">
-            {!form.supplier
-              ? "Selecciona primero un proveedor"
-              : poLoading
-              ? "Cargando órdenes..."
-              : purchaseOrders.length === 0
-              ? "No hay órdenes pendientes para este proveedor"
-              : "Selecciona la orden"}
-          </option>
+          <div className="text-sm text-gray-600">
+            {cart.length} item(s) en carrito
+          </div>
+        </div>
 
-          {purchaseOrders.map((po: any) => (
-            <option key={po.id} value={po.id}>
-              {po.numeroOrden} — {new Date(po.fecha).toLocaleDateString()}
-            </option>
-          ))}
-        </select>
+        <div className="grid grid-cols-1 xl:grid-cols-5 gap-5 xl:min-h-[460px]">
+          <div className="xl:col-span-2">
+            <label className="block text-base font-medium mb-2">Producto</label>
 
-        {!form.purchaseOrderId && form.supplier && !poLoading && (
-          <p className="text-xs text-gray-500 mt-1">
-            Solo aparecen OCs del proveedor en estado Pendiente.
-          </p>
-        )}
-      </div>
-
-      <div>
-        <label className="block text-sm mb-1 font-medium">
-          Número de Factura <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="text"
-          placeholder="FAC-2025-1001"
-          name="invoiceNumber"
-          value={form.invoiceNumber}
-          onChange={(e) => {
-            handleChange(e);
-            handleFieldValidation("invoiceNumber", e.target.value);
-          }}
-          className={`w-full rounded-md border px-2 py-2 text-sm ${
-            errors.invoiceNumber ? "border-red-500" : "border-gray-300"
-          }`}
-        />
-        {errors.invoiceNumber && (
-          <p className="text-xs text-red-500">{errors.invoiceNumber}</p>
-        )}
-      </div>
-
-      <div>
-        <label className="block text-sm mb-1 font-medium">
-          Total <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="text"
-          value={formatCOP(total)}
-          readOnly
-          className={`w-full rounded-md border px-2 py-2 text-sm bg-gray-100 ${
-            errors.amount ? "border-red-500" : "border-gray-300"
-          }`}
-        />
-        {errors.amount && <p className="text-xs text-red-500">{errors.amount}</p>}
-      </div>
-
-      <div className="p-4 border rounded-lg bg-gray-50 shadow-sm">
-        <label className="block text-center text-xl font-semibold mb-3">
-          Productos <span className="text-red-500">*</span>
-        </label>
-
-        <label className="block text-sm font-medium mb-2">Producto</label>
-
-        <div className="flex flex-col sm:flex-row sm:items-end gap-3">
-          <div className="flex-1">
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              Buscar o seleccionar
+            <label className={labelMuted}>
+              Buscar o seleccionar <span className="text-red-500">*</span>
             </label>
 
             <div className="relative" ref={dropdownRef}>
               <input
                 type="text"
                 placeholder="Escribe el nombre del producto"
-                className="w-100 border rounded-md px-3 py-2 text-sm shadow-sm"
+                className={inputBase}
                 value={
                   selectedProduct
                     ? products.find((p) => p.productid === Number(selectedProduct))
@@ -408,9 +446,9 @@ export default function RegisterPurchaseForm({
               />
 
               {dropdownOpen && (
-                <div className="absolute top-full mt-1 w-full bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto z-50">
+                <div className="absolute top-full mt-1 w-full bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto z-50">
                   {filteredProducts.length === 0 ? (
-                    <p className="p-3 text-sm text-gray-500">
+                    <p className="p-3 text-base text-gray-500">
                       No hay productos disponibles (o ya están agregados)
                     </p>
                   ) : (
@@ -428,9 +466,9 @@ export default function RegisterPurchaseForm({
                           setSearchProduct("");
                           setDropdownOpen(false);
                         }}
-                        className="p-2 cursor-pointer hover:bg-gray-100 text-sm flex justify-between"
+                        className="p-2 cursor-pointer hover:bg-gray-100 text-base flex justify-between"
                       >
-                        <span>{p.productname}</span>
+                        <span className="truncate pr-2">{p.productname}</span>
                         <span className="text-gray-600 font-semibold">
                           {formatCOP(p.productpriceofsupplier || 0)}
                         </span>
@@ -440,178 +478,197 @@ export default function RegisterPurchaseForm({
                 </div>
               )}
             </div>
-          </div>
 
-          <div className="flex-1 sm:w-32">
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              Precio compra (unidad)
-            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+              <div>
+                <label className={labelMuted}>
+                  Precio compra (unidad) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="$ 15.000"
+                  value={
+                    hasDigits(purchasePrice)
+                      ? formatCOP(parseCOP(purchasePrice))
+                      : ""
+                  }
+                  onChange={(e) => setPurchasePrice(e.target.value)}
+                  className={inputBase}
+                />
+              </div>
 
-            <input
-              type="text"
-              inputMode="numeric"
-              placeholder="$ 15.000"
-              value={hasDigits(purchasePrice) ? formatCOP(parseCOP(purchasePrice)) : ""}
-              onChange={(e) => setPurchasePrice(e.target.value)}
-              className="w-full rounded-md border px-2 py-2 text-sm shadow-sm"
-            />
-          </div>
+              <div>
+                <label className={labelMuted}>Precio venta (unidad)</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="$ 25.000"
+                  value={hasDigits(salePrice) ? formatCOP(parseCOP(salePrice)) : ""}
+                  onChange={(e) => setSalePrice(e.target.value)}
+                  onBlur={() => {
+                    if (!hasDigits(salePrice) && hasDigits(purchasePrice)) {
+                      const price = parseCOP(purchasePrice);
+                      const auto = autoSalePrice(price);
+                      if (auto > 0) setSalePrice(String(auto));
+                    }
+                  }}
+                  className={inputBase}
+                />
+              </div>
 
-          <div className="flex-1 sm:w-32">
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              Precio venta (unidad) — opcional
-            </label>
+              <div className="sm:col-span-2">
+                <label className={labelMuted}>
+                  Cantidad <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  value={quantity}
+                  min={1}
+                  placeholder="0"
+                  onChange={(e) => setQuantity(Number(e.target.value))}
+                  className={inputBase}
+                />
+              </div>
+            </div>
 
-            <input
-              type="text"
-              inputMode="numeric"
-              placeholder="$ 25.000"
-              value={hasDigits(salePrice) ? formatCOP(parseCOP(salePrice)) : ""}
-              onChange={(e) => setSalePrice(e.target.value)}
-              onBlur={() => {
-                if (!hasDigits(salePrice) && hasDigits(purchasePrice)) {
-                  const price = parseCOP(purchasePrice);
-                  const auto = autoSalePrice(price);
-                  if (auto > 0) setSalePrice(String(auto));
+            <button
+              type="button"
+              onClick={() => {
+                if (!form.supplier) {
+                  showWarning("Selecciona primero un proveedor.");
+                  return;
                 }
+                addToCart();
               }}
-              className="w-full rounded-md border px-2 py-2 text-sm shadow-sm"
-            />
+              style={{ backgroundColor: Colors.buttons.primary }}
+              className="cursor-pointer mt-4 w-full px-4 py-2.5 rounded-lg text-white text-base font-medium shadow hover:scale-[1.02] transition"
+            >
+              Añadir producto +
+            </button>
           </div>
 
-          <div className="flex-1 sm:w-20">
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              Cantidad
-            </label>
+          {/* Área carrito (misma card) */}
+          <div className="xl:col-span-3">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-base font-semibold text-gray-800">Carrito</p>
 
-            <input
-              type="number"
-              value={quantity}
-              min={1}
-              placeholder="0"
-              onChange={(e) => setQuantity(Number(e.target.value))}
-              className="w-12 rounded-md border px-2 py-2 text-center text-sm shadow-sm"
-            />
-          </div>
-        </div>
+              {/* Subtotal compra con el MISMO estilo del Subt. en ver detalle */}
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold text-green-700 bg-green-50 border border-green-200">
+                Subt. {formatCOP(total)}
+              </span>
+            </div>
 
-        <button
-          type="button"
-          onClick={() => {
-            if (!form.supplier) {
-              showWarning("Selecciona primero un proveedor.");
-              return;
-            }
-            addToCart();
-          }}
-          style={{ backgroundColor: Colors.buttons.primary }}
-          className="cursor-pointer mt-4 w-full px-4 py-2 rounded-md text-white text-sm font-medium shadow hover:scale-[1.02] transition"
-        >
-          Añadir producto +
-        </button>
+            {cart.length === 0 ? (
+              <div className="border rounded-lg bg-gray-50 p-4 text-base text-gray-600">
+                Agrega productos desde el panel izquierdo.
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
+                {cart.map((item, index) => (
+                  <div
+                    key={`${item.productid}-${index}`}
+                    className="bg-white p-3 rounded-lg shadow border hover:shadow-md transition"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-base text-gray-800 truncate">
+                            {item.productname}
+                          </span>
 
-        {cart.length > 0 && (
-          <div className="mt-5 space-y-3">
-            {cart.map((item, index) => (
-              <div
-                key={`${item.productid}-${index}`}
-                className="bg-white p-3 rounded-md shadow border hover:shadow-md transition"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-sm text-gray-800">
-                        {item.productname}
-                      </span>
+                          {/* Tag ID en gris claro */}
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-sm font-semibold text-gray-700 bg-gray-100 border border-gray-200 shrink-0">
+                            ID {item.productid}
+                          </span>
+                        </div>
 
-                      <span className="bg-red-600 text-white text-xs font-bold rounded-full px-2 py-0.5">
-                        ID {item.productid}
-                      </span>
+                        <p className="text-sm text-gray-600 mt-1">
+                          Subtotal: {formatCOP(item.unitprice * item.quantity)}
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => removeFromCart(index)}
+                        className="p-2 rounded hover:bg-red-100 transition shrink-0"
+                        title="Eliminar"
+                      >
+                        <img
+                          src="/icons/delete.svg"
+                          alt="Eliminar"
+                          className="w-5 h-5 opacity-80 hover:opacity-100"
+                        />
+                      </button>
                     </div>
 
-                    <p className="text-xs text-gray-600 mt-1">
-                      Subtotal: {formatCOP(item.unitprice * item.quantity)}
-                    </p>
-                  </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+                      <div>
+                        <label className={labelMuted}>Cantidad</label>
+                        <input
+                          type="number"
+                          min={1}
+                          value={item.quantity}
+                          onChange={(e) =>
+                            updateCartItem(index, {
+                              quantity: Number(e.target.value),
+                            })
+                          }
+                          className={inputBaseNoShadow}
+                        />
+                      </div>
 
-                  <button
-                    type="button"
-                    onClick={() => removeFromCart(index)}
-                    className="p-2 rounded hover:bg-red-100 transition shrink-0"
-                    title="Eliminar"
-                  >
-                    <img
-                      src="/icons/delete.svg"
-                      alt="Eliminar"
-                      className="w-5 h-5 opacity-80 hover:opacity-100"
-                    />
-                  </button>
-                </div>
+                      <div>
+                        <label className={labelMuted}>Precio compra (unidad)</label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={formatCOP(item.unitprice)}
+                          onChange={(e) => {
+                            const v = parseCOP(e.target.value);
+                            updateCartItem(index, { unitprice: v });
+                          }}
+                          className={inputBaseNoShadow}
+                        />
+                      </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      Cantidad
-                    </label>
-                    <input
-                      type="number"
-                      min={1}
-                      value={item.quantity}
-                      onChange={(e) =>
-                        updateCartItem(index, { quantity: Number(e.target.value) })
-                      }
-                      className="w-full rounded-md border px-2 py-2 text-sm"
-                    />
+                      <div>
+                        <label className={labelMuted}>Precio venta (unidad)</label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={
+                            item.saleprice === undefined
+                              ? ""
+                              : formatCOP(item.saleprice)
+                          }
+                          onChange={(e) =>
+                            updateCartItem(index, {
+                              saleprice: hasDigits(e.target.value)
+                                ? parseCOP(e.target.value)
+                                : undefined,
+                            })
+                          }
+                          className={inputBaseNoShadow}
+                        />
+                        {item.saleprice !== undefined &&
+                          item.saleprice < item.unitprice && (
+                            <p className="text-xs text-red-500 mt-1">
+                              El precio de venta no puede ser menor que el de compra.
+                            </p>
+                          )}
+                      </div>
+                    </div>
                   </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      Precio compra (unidad)
-                    </label>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={formatCOP(item.unitprice)}
-                      onChange={(e) => {
-                        const v = parseCOP(e.target.value);
-                        updateCartItem(index, { unitprice: v });
-                      }}
-                      className="w-full rounded-md border px-2 py-2 text-sm"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      Precio venta (unidad) — opcional
-                    </label>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={item.saleprice === undefined ? "" : formatCOP(item.saleprice)}
-                      onChange={(e) =>
-                        updateCartItem(index, {
-                          saleprice: hasDigits(e.target.value)
-                            ? parseCOP(e.target.value)
-                            : undefined,
-                        })
-                      }
-                      className="w-full rounded-md border px-2 py-2 text-sm"
-                    />
-                    {item.saleprice !== undefined && item.saleprice < item.unitprice && (
-                      <p className="text-xs text-red-500 mt-1">
-                        El precio de venta no puede ser menor que el de compra.
-                      </p>
-                    )}
-                  </div>
-                </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
-        )}
+        </div>
       </div>
 
-      <div>
-        <label className="block text-sm mb-1 font-medium">Observaciones</label>
+      <div className="bg-white border rounded-lg px-5 py-4 md:px-6 md:py-5">
+        <label className={labelBase}>Observaciones</label>
         <textarea
           name="description"
           value={form.description}
@@ -619,7 +676,7 @@ export default function RegisterPurchaseForm({
             handleChange(e);
             handleFieldValidation("description" as any, e.target.value);
           }}
-          className="w-full rounded-md border px-2 py-2 text-sm resize-none"
+          className="w-full rounded-lg border px-3 py-2 text-base resize-none"
           rows={3}
           placeholder="Notas adicionales de la compra"
         />
@@ -629,14 +686,14 @@ export default function RegisterPurchaseForm({
         <button
           type="button"
           onClick={onClose}
-          className="cursor-pointer transition duration-300 hover:bg-gray-200 hover:text-black hover:scale-105 px-4 py-2 rounded-lg bg-gray-300 text-black w-full sm:w-auto"
+          className="cursor-pointer transition duration-300 hover:bg-gray-200 hover:text-black hover:scale-105 px-4 py-2.5 rounded-lg bg-gray-300 text-black text-base w-full sm:w-auto"
         >
           Cancelar
         </button>
         <button
           type="submit"
           disabled={saving}
-          className="cursor-pointer transition duration-300 hover:bg-black hover:text-white hover:scale-105 px-4 py-2 rounded-lg bg-black text-white w-full sm:w-auto"
+          className="cursor-pointer transition duration-300 hover:bg-black hover:text-white hover:scale-105 px-4 py-2.5 rounded-lg bg-black text-white text-base w-full sm:w-auto"
         >
           {saving ? "Guardando..." : "Guardar"}
         </button>
