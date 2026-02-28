@@ -639,7 +639,7 @@ export default function OrdersServicesIndexPage() {
     [clientIdFromAuth, isClientRole, isTechnicianRole, technicianIdFromAuth]
   );
 
-  // âœ… Disparar notificación al aterrizar desde /new (flash toast)
+  // Disparar notificación al aterrizar desde /new (flash toast)
   useEffect(() => {
     if (typeof window === "undefined") return;
 
