@@ -31,7 +31,7 @@ export const ALL_MODULE_PERMISSIONS: Record<RoleUiModule, string[]> = {
   Técnicos: ["Crear", "Ver", "Editar", "Eliminar"],
   Clientes: ["Crear", "Ver", "Editar", "Eliminar"],
 
-  "Cotización de Servicio": ["Crear", "Ver", "Cancelar", "Aprobar", "Descargar reporte"],
+  "Cotización de Servicio": ["Crear", "Ver", "Cancelar", "Aprobar","Completar", "Descargar reporte"],
 
   Citas: ["Ver", "Editar", "Cancelar", "Finalizar"],
   Ventas: ["Crear", "Ver", "Anular"],
@@ -80,8 +80,7 @@ export const PRIVILEGE_NAME_TO_ID: Record<string, number> = {
   add_history: 6,
   report_warranty: 7,
   download_report: 8,
-
-  // ✅ Nuevo
+  complete: 9,
   approve: 10,
 };
 
@@ -171,6 +170,7 @@ export const uiActionToPrivilegeName = (
   if (module === "Cotización de Servicio") {
     if (a === "cancelar") return "deactivate";
     if (a === "aprobar") return "approve";
+    if (a === "completar") return "complete";
     if (a === "descargar reporte") return "download_report";
   }
 
@@ -209,6 +209,8 @@ export const privilegeNameToUiActions = (
     if (module === "Productos" || module === "Servicios") return ["Descargar excel"];
     return ["Descargar reporte"];
   }
+  
+  if (p === "complete") return ["Completar"];
 
   if (p === "approve") return ["Aprobar"];
 

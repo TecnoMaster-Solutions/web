@@ -352,7 +352,7 @@ export default function CreateRequestModal({
 
   function validateStartTimeRequired(date: string | null, start: string | null) {
     if (!start) return "Selecciona la hora inicial.";
-    if (!isAllowedTime(start)) return "Horario permitido: 07:00â€“17:00.";
+    if (!isAllowedTime(start)) return "Horario permitido: 07:00–17:00.";
     if (timeToMinutes(start) === SCHEDULE_MAX) return "La hora de inicio no puede ser 17:00.";
     if (date && !isPastDateLocal(date) && isPastDateTimeLocal(date, start)) {
       return "La hora inicial no puede estar en el pasado.";
@@ -362,7 +362,7 @@ export default function CreateRequestModal({
 
   function validateEndTimeRequired(date: string | null, start: string | null, end: string | null) {
     if (!end) return "Selecciona la hora final.";
-    if (!isAllowedTime(end)) return "Horario permitido: 07:00â€“17:00.";
+    if (!isAllowedTime(end)) return "Horario permitido: 07:00–17:00.";
 
     if (date && !isPastDateLocal(date) && isPastDateTimeLocal(date, end)) {
       return "La hora final no puede estar en el pasado.";
@@ -529,7 +529,7 @@ export default function CreateRequestModal({
             ? `No se pudieron cargar los servicios (${status}).`
             : "No se pudieron cargar los servicios."
         );
-        console.error("LOOKUP services ERROR â†’", sr.reason);
+        console.error("LOOKUP services ERROR ->", sr.reason);
       }
 
       if (cr.status === "fulfilled") setClientesLocal(cr.value as Option[]);
@@ -541,7 +541,7 @@ export default function CreateRequestModal({
             ? `No se pudieron cargar los clientes (${status}).`
             : "No se pudieron cargar los clientes."
         );
-        console.error("LOOKUP customers ERROR â†’", cr.reason);
+        console.error("LOOKUP customers ERROR ->", cr.reason);
       }
 
       setLoadingLookups(false);
@@ -742,7 +742,7 @@ export default function CreateRequestModal({
     }
 
     if (!isAllowedTime(v)) {
-      showWarning("Horario permitido: 07:00â€“17:00.");
+      showWarning("Horario permitido: 07:00–17:00.");
       return;
     }
 
@@ -769,7 +769,7 @@ export default function CreateRequestModal({
     }
 
     if (!isAllowedTime(v)) {
-      showWarning("Horario permitido: 07:00â€“17:00.");
+      showWarning("Horario permitido: 07:00–17:00.");
       return;
     }
 
@@ -926,7 +926,7 @@ export default function CreateRequestModal({
           )}
 
           {shouldShowError("tipo") && errors.tipo && (
-            <p className="mt-1 text-xs text-green-600">{errors.tipo}</p>
+            <p className="mt-1 text-xs text-red-600">{errors.tipo}</p>
           )}
         </div>
 
@@ -945,7 +945,7 @@ export default function CreateRequestModal({
                 className={[
                   "w-full appearance-none rounded-lg border bg-gray-50 h-10 px-3 pr-8 text-sm focus:bg-white focus:ring-2 focus:ring-black/15 disabled:opacity-60",
                   shouldShowError("serviceId") && errors.serviceId
-                    ? "border-green-500"
+                    ? "border-red-500"
                     : "border-gray-300",
                 ].join(" ")}
               >
@@ -969,7 +969,7 @@ export default function CreateRequestModal({
               </span>
             </div>
             {shouldShowError("serviceId") && errors.serviceId && (
-              <p className="mt-1 text-xs text-green-600">{errors.serviceId}</p>
+              <p className="mt-1 text-xs text-red-600">{errors.serviceId}</p>
             )}
           </div>
 
@@ -979,7 +979,7 @@ export default function CreateRequestModal({
               ref={clientBoxRef}
               className={[
                 "rounded-lg border bg-gray-50 p-2",
-                shouldShowError("clientId") && errors.clientId ? "border-green-500" : "border-gray-300",
+                shouldShowError("clientId") && errors.clientId ? "border-red-500" : "border-gray-300",
               ].join(" ")}
             >
               {selectedClient ? (
@@ -1093,7 +1093,7 @@ export default function CreateRequestModal({
               </div>
             </div>
             {shouldShowError("clientId") && errors.clientId && (
-              <p className="mt-1 text-xs text-green-600">{errors.clientId}</p>
+              <p className="mt-1 text-xs text-red-600">{errors.clientId}</p>
             )}
           </div>
         </div>
@@ -1112,12 +1112,12 @@ export default function CreateRequestModal({
               className={[
                 "w-full rounded-lg border bg-gray-50 h-10 px-3 text-sm focus:bg-white focus:ring-2 focus:ring-black/15",
                 shouldShowError("direccion") && errors.direccion
-                  ? "border-green-500"
+                  ? "border-red-500"
                   : "border-gray-300",
               ].join(" ")}
             />
             {shouldShowError("direccion") && errors.direccion && (
-              <p className="mt-1 text-xs text-green-600">{errors.direccion}</p>
+              <p className="mt-1 text-xs text-red-600">{errors.direccion}</p>
             )}
           </div>
 
@@ -1132,13 +1132,13 @@ export default function CreateRequestModal({
               className={[
                 "w-full rounded-lg border bg-gray-50 h-10 px-3 text-sm focus:bg-white focus:ring-2 focus:ring-black/15",
                 shouldShowError("programada") && errors.programada
-                  ? "border-green-500"
+                  ? "border-red-500"
                   : "border-gray-300",
               ].join(" ")}
               required
             />
             {shouldShowError("programada") && errors.programada && (
-              <p className="mt-1 text-xs text-green-600">{errors.programada}</p>
+              <p className="mt-1 text-xs text-red-600">{errors.programada}</p>
             )}
           </div>
 
@@ -1154,14 +1154,14 @@ export default function CreateRequestModal({
               className={[
                 "w-full rounded-lg border bg-gray-50 h-10 px-3 text-sm focus:bg-white focus:ring-2 focus:ring-black/15 disabled:opacity-60",
                 shouldShowError("horaProgramada") && errors.horaProgramada
-                  ? "border-green-500"
+                  ? "border-red-500"
                   : "border-gray-300",
               ].join(" ")}
               disabled={!programada}
               required
             />
             {shouldShowError("horaProgramada") && errors.horaProgramada && (
-              <p className="mt-1 text-xs text-green-600">{errors.horaProgramada}</p>
+              <p className="mt-1 text-xs text-red-600">{errors.horaProgramada}</p>
             )}
           </div>
 
@@ -1177,14 +1177,14 @@ export default function CreateRequestModal({
               className={[
                 "w-full rounded-lg border bg-gray-50 h-10 px-3 text-sm focus:bg-white focus:ring-2 focus:ring-black/15 disabled:opacity-60",
                 shouldShowError("horaFinal") && errors.horaFinal
-                  ? "border-green-500"
+                  ? "border-red-500"
                   : "border-gray-300",
               ].join(" ")}
               disabled={!programada}
               required
             />
             {shouldShowError("horaFinal") && errors.horaFinal && (
-              <p className="mt-1 text-xs text-green-600">{errors.horaFinal}</p>
+              <p className="mt-1 text-xs text-red-600">{errors.horaFinal}</p>
             )}
           </div>
         </div>
@@ -1206,7 +1206,7 @@ export default function CreateRequestModal({
             className={[
               "rounded-lg border bg-gray-50 p-2",
               shouldShowError("technicians") && errors.technicians
-                ? "border-green-500 ring-1 ring-green-500"
+                ? "border-red-500 ring-1 ring-red-500"
                 : "border-gray-300",
             ].join(" ")}
           >
@@ -1271,7 +1271,7 @@ export default function CreateRequestModal({
               className={[
                 "w-full rounded-lg border bg-gray-50 h-10 px-3 text-sm focus:bg-white focus:ring-2 focus:ring-black/15 disabled:opacity-60",
                 shouldShowError("technicians") && errors.technicians
-                  ? "border-green-500 ring-1 ring-green-500"
+                  ? "border-red-500 ring-1 ring-red-500"
                   : "border-gray-300",
               ].join(" ")}
               disabled={saving || techLoading}
@@ -1319,9 +1319,9 @@ export default function CreateRequestModal({
             )}
           </div>
 
-          {techError && <p className="mt-1 text-xs text-green-600">{techError}</p>}
+          {techError && <p className="mt-1 text-xs text-red-600">{techError}</p>}
           {shouldShowError("technicians") && errors.technicians && (
-            <p className="mt-1 text-xs text-green-600">{errors.technicians}</p>
+            <p className="mt-1 text-xs text-red-600">{errors.technicians}</p>
           )}
         </div>
 
@@ -1339,17 +1339,16 @@ export default function CreateRequestModal({
             className={[
               "w-full rounded-lg border bg-gray-50 px-3 py-2 text-sm focus:bg-white focus:ring-2 focus:ring-black/15",
               shouldShowError("description") && errors.description
-                ? "border-green-500"
+                ? "border-red-500"
                 : "border-gray-300",
             ].join(" ")}
           />
           {shouldShowError("description") && errors.description && (
-            <p className="mt-1 text-xs text-green-600">{errors.description}</p>
+            <p className="mt-1 text-xs text-red-600">{errors.description}</p>
           )}
         </div>
       </div>
     </Modal>
   );
 }
-
 

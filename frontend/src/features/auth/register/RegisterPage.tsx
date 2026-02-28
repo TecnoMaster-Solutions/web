@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
@@ -367,11 +367,12 @@ export default function RegisterPage() {
   };
 
   const inputClass = (name: keyof FormState) => {
-    const base = "w-full h-11 mt-1 px-3 rounded-lg border bg-white outline-none";
+    const base =
+      "w-full h-9 mt-1 px-3 rounded-xl border bg-slate-50 outline-none text-sm transition-colors duration-200";
     const err =
       touched[name] && errors[name]
-        ? " border-red-600 focus:border-red-600"
-        : " border-gray-300 focus:border-gray-400";
+        ? " border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200"
+        : " border-gray-300 focus:border-[#06a646] focus:ring-2 focus:ring-[#06a646]/25";
     return base + err;
   };
 
@@ -382,184 +383,201 @@ export default function RegisterPage() {
     checking[name] ? <p className="mt-1 text-xs text-gray-500">Verificando...</p> : null;
 
   const isNit = Number(form.typeid || 0) === 4;
+  const labelClass = "text-sm font-semibold text-slate-700";
 
   return (
     <div className="min-h-screen w-full bg-[#f6f3f3] flex flex-col overflow-hidden">
       <Nav />
 
-      <div className="flex flex-col lg:flex-row flex-1 px-6 lg:px-20 items-center justify-center gap-10 py-10">
-        <div className="w-full lg:w-[55%] max-w-3xl">
-          <h2 className="text-3xl font-black mb-2">Crear cuenta</h2>
-          <p className="text-gray-600 mb-6">Regístrate para continuar.</p>
+      <main className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-1 lg:py-2 flex-1 flex items-start lg:items-center">
+        <div className="w-full">
+          <div className="flex flex-col lg:flex-row">
+            <div className="w-full lg:w-1/2 p-4 sm:p-5 lg:p-5">
+              <div className="mb-3">
+                <h2 className="text-[1.85rem] font-extrabold tracking-tight mb-1 bg-gradient-to-r from-[#04652c] via-[#06a646] to-[#2a9781] bg-clip-text text-transparent">
+                  Crear cuenta
+                </h2>
+                <p className="text-sm font-medium text-[#3b5f73]">
+                  Regístrate para acceder a nuestros servicios y soluciones.
+                </p>
+              </div>
 
-          <form
-            noValidate
-            onSubmit={handleSubmit}
-            className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5"
-          >
-            <div>
-              <label className="text-sm font-semibold">Tipo de Documento</label>
-              <select
-                name="typeid"
-                value={form.typeid}
-                onChange={onChange}
-                onBlur={onBlur}
-                className={inputClass("typeid")}
-                aria-invalid={!!(touched.typeid && errors.typeid)}
-              >
-                <option value="">Seleccionar...</option>
-                {documentTypes.map((t: any) => (
-                  <option key={t.typeofdocumentid} value={t.typeofdocumentid}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-              {errorText("typeid")}
+              <form noValidate onSubmit={handleSubmit} className="space-y-2.5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                  <div>
+                    <label className={labelClass}>Tipo de Documento</label>
+                    <select
+                      name="typeid"
+                      value={form.typeid}
+                      onChange={onChange}
+                      onBlur={onBlur}
+                      className={inputClass("typeid")}
+                      aria-invalid={!!(touched.typeid && errors.typeid)}
+                    >
+                      <option value="">Seleccionar...</option>
+                      {documentTypes.map((t: any) => (
+                        <option key={t.typeofdocumentid} value={t.typeofdocumentid}>
+                          {t.name}
+                        </option>
+                      ))}
+                    </select>
+                    {errorText("typeid")}
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>Número</label>
+                    <input
+                      name="documentnumber"
+                      value={form.documentnumber}
+                      onChange={onChange}
+                      onBlur={onBlur}
+                      placeholder="Número de documento"
+                      className={inputClass("documentnumber")}
+                      aria-invalid={!!(touched.documentnumber && errors.documentnumber)}
+                      inputMode="text"
+                      autoComplete="off"
+                    />
+                    {errorText("documentnumber")}
+                    {checkingText("documentnumber")}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                  <div>
+                    <label className={labelClass}>{isNit ? "Nombre de empresa" : "Nombre"}</label>
+                    <input
+                      name="name"
+                      value={form.name}
+                      onChange={onChange}
+                      onBlur={onBlur}
+                      placeholder={isNit ? "Nombre de la empresa" : "Tu nombre"}
+                      className={inputClass("name")}
+                      aria-invalid={!!(touched.name && errors.name)}
+                      autoComplete="given-name"
+                    />
+                    {errorText("name")}
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>Apellido</label>
+                    <input
+                      name="lastname"
+                      value={form.lastname}
+                      onChange={onChange}
+                      onBlur={onBlur}
+                      placeholder="Tu apellido"
+                      className={inputClass("lastname")}
+                      aria-invalid={!!(touched.lastname && errors.lastname)}
+                      autoComplete="family-name"
+                      disabled={isNit}
+                    />
+                    {errorText("lastname")}
+                  </div>
+                </div>
+
+                <div>
+                  <label className={labelClass}>Email</label>
+                  <input
+                    type="text"
+                    inputMode="email"
+                    name="email"
+                    value={form.email}
+                    onChange={onChange}
+                    onBlur={onBlur}
+                    placeholder="correo@empresa.com"
+                    className={inputClass("email")}
+                    aria-invalid={!!(touched.email && errors.email)}
+                    autoComplete="email"
+                  />
+                  {errorText("email")}
+                  {checkingText("email")}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                  <div>
+                    <label className={labelClass}>Teléfono</label>
+                    <input
+                      name="phone"
+                      value={form.phone}
+                      onChange={onChange}
+                      onBlur={onBlur}
+                      placeholder="Teléfono"
+                      className={inputClass("phone")}
+                      aria-invalid={!!(touched.phone && errors.phone)}
+                      inputMode="numeric"
+                      autoComplete="tel"
+                    />
+                    {errorText("phone")}
+                    {checkingText("phone")}
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>Ciudad</label>
+                    <input
+                      name="city"
+                      value={form.city}
+                      onChange={onChange}
+                      onBlur={onBlur}
+                      placeholder="Ciudad"
+                      className={inputClass("city")}
+                      aria-invalid={!!(touched.city && errors.city)}
+                      autoComplete="address-level2"
+                    />
+                    {errorText("city")}
+                  </div>
+                </div>
+
+                <div>
+                  <label className={labelClass}>Código Postal</label>
+                  <input
+                    name="zipcode"
+                    value={form.zipcode}
+                    onChange={onChange}
+                    onBlur={onBlur}
+                    placeholder="Código postal"
+                    className={inputClass("zipcode")}
+                    aria-invalid={!!(touched.zipcode && errors.zipcode)}
+                    inputMode="numeric"
+                    autoComplete="postal-code"
+                  />
+                  {errorText("zipcode")}
+                </div>
+
+                <div className="pt-0">
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full h-9 rounded-xl bg-[#06a646] text-white text-base font-bold hover:bg-[#058a3c] disabled:bg-[#6ecf94] disabled:cursor-not-allowed transition-colors duration-200"
+                  >
+                    {loading ? "Creando cuenta..." : "Crear cuenta"}
+                  </button>
+
+                  <p className="text-sm text-center text-gray-600 mt-1.5">
+                    ¿Ya tienes cuenta?{" "}
+                    <a href="/auth/login" className="text-[#06a646] hover:text-[#04652c] font-semibold hover:underline">
+                      Iniciar sesión
+                    </a>
+                  </p>
+                </div>
+              </form>
             </div>
 
-            <div>
-              <label className="text-sm font-semibold">Numero</label>
-              <input
-                name="documentnumber"
-                value={form.documentnumber}
-                onChange={onChange}
-                onBlur={onBlur}
-                placeholder="Numero de documento"
-                className={inputClass("documentnumber")}
-                aria-invalid={!!(touched.documentnumber && errors.documentnumber)}
-                inputMode="text"
-                autoComplete="off"
-              />
-              {errorText("documentnumber")}
-              {checkingText("documentnumber")}
+            <div className="hidden lg:flex w-1/2 p-4 xl:p-5 items-center justify-center">
+              <div className="w-full p-0 flex items-center justify-center min-h-[360px]">
+                <Image
+                  src="/assets/imgs/ImageRegister.png"
+                  alt="preview"
+                  width={700}
+                  height={700}
+                  className="w-[96%] h-auto object-contain"
+                />
+              </div>
             </div>
-
-            <div>
-              <label className="text-sm font-semibold">{isNit ? "Nombre de empresa" : "Nombre"}</label>
-              <input
-                name="name"
-                value={form.name}
-                onChange={onChange}
-                onBlur={onBlur}
-                placeholder={isNit ? "Nombre de la empresa" : "Tu nombre"}
-                className={inputClass("name")}
-                aria-invalid={!!(touched.name && errors.name)}
-                autoComplete="given-name"
-              />
-              {errorText("name")}
-            </div>
-
-            <div>
-              <label className="text-sm font-semibold">Apellido</label>
-              <input
-                name="lastname"
-                value={form.lastname}
-                onChange={onChange}
-                onBlur={onBlur}
-                placeholder="Tu apellido"
-                className={inputClass("lastname")}
-                aria-invalid={!!(touched.lastname && errors.lastname)}
-                autoComplete="family-name"
-                disabled={isNit}
-              />
-              {errorText("lastname")}
-            </div>
-
-            <div>
-              <label className="text-sm font-semibold">Telefono</label>
-              <input
-                name="phone"
-                value={form.phone}
-                onChange={onChange}
-                onBlur={onBlur}
-                placeholder="Telefono"
-                className={inputClass("phone")}
-                aria-invalid={!!(touched.phone && errors.phone)}
-                inputMode="numeric"
-                autoComplete="tel"
-              />
-              {errorText("phone")}
-              {checkingText("phone")}
-            </div>
-
-            <div>
-              <label className="text-sm font-semibold">Email</label>
-              <input
-                type="text"
-                inputMode="email"
-                name="email"
-                value={form.email}
-                onChange={onChange}
-                onBlur={onBlur}
-                placeholder="correo@empresa.com"
-                className={inputClass("email")}
-                aria-invalid={!!(touched.email && errors.email)}
-                autoComplete="email"
-              />
-              {errorText("email")}
-              {checkingText("email")}
-            </div>
-
-            <div>
-              <label className="text-sm font-semibold">Ciudad</label>
-              <input
-                name="city"
-                value={form.city}
-                onChange={onChange}
-                onBlur={onBlur}
-                placeholder="Ciudad"
-                className={inputClass("city")}
-                aria-invalid={!!(touched.city && errors.city)}
-                autoComplete="address-level2"
-              />
-              {errorText("city")}
-            </div>
-
-            <div>
-              <label className="text-sm font-semibold">Código Postal</label>
-              <input
-                name="zipcode"
-                value={form.zipcode}
-                onChange={onChange}
-                onBlur={onBlur}
-                placeholder="Código postal"
-                className={inputClass("zipcode")}
-                aria-invalid={!!(touched.zipcode && errors.zipcode)}
-                inputMode="numeric"
-                autoComplete="postal-code"
-              />
-              {errorText("zipcode")}
-            </div>
-
-            <div className="md:col-span-2 mt-4">
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full h-11 rounded-lg bg-red-700 text-white font-semibold hover:bg-red-800 disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {loading ? "Creando cuenta..." : "Crear cuenta"}
-              </button>
-
-              <p className="text-sm text-center text-gray-600 mt-3">
-                ¿Ya tienes cuenta?{" "}
-                <a href="/auth/login" className="text-red-700 font-medium hover:underline">
-                  Iniciar sesión
-                </a>
-              </p>
-            </div>
-          </form>
+          </div>
         </div>
-
-        <div className="hidden lg:flex w-[40%] justify-center">
-          <Image
-            src="/assets/imgs/previewSinFondo.png"
-            alt="preview"
-            width={420}
-            height={420}
-            className="rounded-xl object-contain"
-          />
-        </div>
-      </div>
+      </main>
     </div>
   );
 }
+
+

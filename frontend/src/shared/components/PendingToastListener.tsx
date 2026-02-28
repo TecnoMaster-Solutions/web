@@ -23,6 +23,12 @@ export default function PendingToastListener() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
+    // Never show deferred toasts on auth routes (e.g., after logout redirect).
+    if (pathname?.startsWith("/auth")) {
+      sessionStorage.removeItem(KEY);
+      return;
+    }
+
     const raw = sessionStorage.getItem(KEY);
     if (!raw) return;
 

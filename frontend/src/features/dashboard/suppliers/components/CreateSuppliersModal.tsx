@@ -393,7 +393,7 @@ export default function CreateSuppliersModal({ isOpen, onClose, onSave, title = 
             placeholder="Ingrese el nombre"
             className="w-full px-2 py-1 border rounded-md"
           />
-          {errors.name && <p className="text-xs text-green-600 mt-1">{errors.name}</p>}
+          {errors.name && <p className="text-xs text-red-600 mt-1">{errors.name}</p>}
         </div>
 
         <div>
@@ -409,7 +409,7 @@ export default function CreateSuppliersModal({ isOpen, onClose, onSave, title = 
             pattern="\d*"
             className="w-full px-2 py-1 border rounded-md"
           />
-          {errors.nit && <p className="text-xs text-green-600 mt-1">{errors.nit}</p>}
+          {errors.nit && <p className="text-xs text-red-600 mt-1">{errors.nit}</p>}
         </div>
 
         <div>
@@ -424,7 +424,7 @@ export default function CreateSuppliersModal({ isOpen, onClose, onSave, title = 
             inputMode="tel"
             className="w-full px-2 py-1 border rounded-md"
           />
-          {errors.phone && <p className="text-xs text-green-600 mt-1">{errors.phone}</p>}
+          {errors.phone && <p className="text-xs text-red-600 mt-1">{errors.phone}</p>}
         </div>
 
         <div>
@@ -439,7 +439,7 @@ export default function CreateSuppliersModal({ isOpen, onClose, onSave, title = 
             placeholder="correo@dominio.com"
             className="w-full px-2 py-1 border rounded-md"
           />
-          {errors.email && <p className="text-xs text-green-600 mt-1">{errors.email}</p>}
+          {errors.email && <p className="text-xs text-red-600 mt-1">{errors.email}</p>}
         </div>
 
         <div className="col-span-2">
@@ -453,7 +453,7 @@ export default function CreateSuppliersModal({ isOpen, onClose, onSave, title = 
             placeholder="Calle 123 #45-67"
             className="w-full px-2 py-1 border rounded-md"
           />
-          {errors.address && <p className="text-xs text-green-600 mt-1">{errors.address}</p>}
+          {errors.address && <p className="text-xs text-red-600 mt-1">{errors.address}</p>}
         </div>
 
         <div>
@@ -467,7 +467,7 @@ export default function CreateSuppliersModal({ isOpen, onClose, onSave, title = 
             placeholder="Nombre del contacto"
             className="w-full px-2 py-1 border rounded-md"
           />
-          {errors.contactName && <p className="text-xs text-green-600 mt-1">{errors.contactName}</p>}
+          {errors.contactName && <p className="text-xs text-red-600 mt-1">{errors.contactName}</p>}
         </div>
 
         <div>
@@ -501,7 +501,7 @@ export default function CreateSuppliersModal({ isOpen, onClose, onSave, title = 
               onBlur={() => validateAndSet("image", form)}
             />
           </div>
-          {errors.image && <p className="text-xs text-green-600 mt-1">{errors.image}</p>}
+          {errors.image && <p className="text-xs text-red-600 mt-1">{errors.image}</p>}
         </div>
 
         <div className="col-span-2">
@@ -517,5 +517,6 @@ export default function CreateSuppliersModal({ isOpen, onClose, onSave, title = 
     </Modal>
   );
 }
+
 
 

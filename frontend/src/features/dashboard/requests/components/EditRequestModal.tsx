@@ -1090,7 +1090,7 @@ export default function EditRequestModal({
           )}
 
           {shouldShowError("tipo") && errors.tipo && (
-            <p className="mt-1 text-xs text-green-600">{errors.tipo}</p>
+            <p className="mt-1 text-xs text-red-600">{errors.tipo}</p>
           )}
         </div>
 
@@ -1112,7 +1112,7 @@ export default function EditRequestModal({
                 disabled={saving || loadingLookups || serviceTypesLoading}
                 className={[
                   "w-full appearance-none rounded-lg border bg-gray-50 h-10 px-3 pr-8 text-sm focus:bg-white focus:ring-2 focus:ring-black/15 disabled:opacity-60",
-                  shouldShowError("servicio") && errors.servicio ? "border-green-500" : "border-gray-300",
+                  shouldShowError("servicio") && errors.servicio ? "border-red-500" : "border-gray-300",
                 ].join(" ")}
               >
                 <option value="">
@@ -1135,7 +1135,7 @@ export default function EditRequestModal({
               </span>
             </div>
             {shouldShowError("servicio") && errors.servicio && (
-              <p className="mt-1 text-xs text-green-600">{errors.servicio}</p>
+              <p className="mt-1 text-xs text-red-600">{errors.servicio}</p>
             )}
           </div>
 
@@ -1145,7 +1145,7 @@ export default function EditRequestModal({
               ref={clientBoxRef}
               className={[
                 "rounded-lg border bg-gray-50 p-2",
-                shouldShowError("cliente") && errors.cliente ? "border-green-500" : "border-gray-300",
+                shouldShowError("cliente") && errors.cliente ? "border-red-500" : "border-gray-300",
               ].join(" ")}
             >
               {selectedClient ? (
@@ -1259,7 +1259,7 @@ export default function EditRequestModal({
               </div>
             </div>
             {shouldShowError("cliente") && errors.cliente && (
-              <p className="mt-1 text-xs text-green-600">{errors.cliente}</p>
+              <p className="mt-1 text-xs text-red-600">{errors.cliente}</p>
             )}
           </div>
         </div>
@@ -1282,11 +1282,11 @@ export default function EditRequestModal({
               placeholder="Ej. Calle 123 #45-67"
               className={[
                 "w-full rounded-lg border bg-gray-50 h-10 px-3 text-sm focus:bg-white focus:ring-2 focus:ring-black/15",
-                shouldShowError("direccion") && errors.direccion ? "border-green-500" : "border-gray-300",
+                shouldShowError("direccion") && errors.direccion ? "border-red-500" : "border-gray-300",
               ].join(" ")}
             />
             {shouldShowError("direccion") && errors.direccion && (
-              <p className="mt-1 text-xs text-green-600">{errors.direccion}</p>
+              <p className="mt-1 text-xs text-red-600">{errors.direccion}</p>
             )}
           </div>
 
@@ -1300,12 +1300,12 @@ export default function EditRequestModal({
               onBlur={() => markTouched("programada")}
               className={[
                 "w-full rounded-lg border bg-gray-50 h-10 px-3 text-sm focus:bg-white focus:ring-2 focus:ring-black/15",
-                shouldShowError("programada") && errors.programada ? "border-green-500" : "border-gray-300",
+                shouldShowError("programada") && errors.programada ? "border-red-500" : "border-gray-300",
               ].join(" ")}
               required
             />
             {shouldShowError("programada") && errors.programada && (
-              <p className="mt-1 text-xs text-green-600">{errors.programada}</p>
+              <p className="mt-1 text-xs text-red-600">{errors.programada}</p>
             )}
           </div>
 
@@ -1320,13 +1320,13 @@ export default function EditRequestModal({
               onBlur={() => markTouched("horaProgramada")}
               className={[
                 "w-full rounded-lg border bg-gray-50 h-10 px-3 text-sm focus:bg-white focus:ring-2 focus:ring-black/15 disabled:opacity-60",
-                shouldShowError("horaProgramada") && errors.horaProgramada ? "border-green-500" : "border-gray-300",
+                shouldShowError("horaProgramada") && errors.horaProgramada ? "border-red-500" : "border-gray-300",
               ].join(" ")}
               disabled={!programada}
               required
             />
             {shouldShowError("horaProgramada") && errors.horaProgramada && (
-              <p className="mt-1 text-xs text-green-600">{errors.horaProgramada}</p>
+              <p className="mt-1 text-xs text-red-600">{errors.horaProgramada}</p>
             )}
           </div>
 
@@ -1341,13 +1341,13 @@ export default function EditRequestModal({
               onBlur={() => markTouched("horaFinal")}
               className={[
                 "w-full rounded-lg border bg-gray-50 h-10 px-3 text-sm focus:bg-white focus:ring-2 focus:ring-black/15 disabled:opacity-60",
-                shouldShowError("horaFinal") && errors.horaFinal ? "border-green-500" : "border-gray-300",
+                shouldShowError("horaFinal") && errors.horaFinal ? "border-red-500" : "border-gray-300",
               ].join(" ")}
               disabled={!programada}
               required
             />
             {shouldShowError("horaFinal") && errors.horaFinal && (
-              <p className="mt-1 text-xs text-green-600">{errors.horaFinal}</p>
+              <p className="mt-1 text-xs text-red-600">{errors.horaFinal}</p>
             )}
           </div>
 
@@ -1394,7 +1394,7 @@ export default function EditRequestModal({
             className={[
               "rounded-lg border bg-gray-50 p-2",
               shouldShowError("technicians") && errors.technicians
-                ? "border-green-500 ring-1 ring-green-500"
+                ? "border-red-500 ring-1 ring-red-500"
                 : "border-gray-300",
             ].join(" ")}
           >
@@ -1457,7 +1457,7 @@ export default function EditRequestModal({
               className={[
                 "w-full rounded-lg border bg-gray-50 h-10 px-3 text-sm focus:bg-white focus:ring-2 focus:ring-black/15 disabled:opacity-60",
                 shouldShowError("technicians") && errors.technicians
-                  ? "border-green-500 ring-1 ring-green-500"
+                  ? "border-red-500 ring-1 ring-red-500"
                   : "border-gray-300",
               ].join(" ")}
               disabled={saving || techLoading}
@@ -1503,9 +1503,9 @@ export default function EditRequestModal({
             )}
           </div>
 
-          {techError && <p className="mt-1 text-xs text-green-600">{techError}</p>}
+          {techError && <p className="mt-1 text-xs text-red-600">{techError}</p>}
           {shouldShowError("technicians") && errors.technicians && (
-            <p className="mt-1 text-xs text-green-600">{errors.technicians}</p>
+            <p className="mt-1 text-xs text-red-600">{errors.technicians}</p>
           )}
         </div>
 
@@ -1525,17 +1525,18 @@ export default function EditRequestModal({
             placeholder="Describe brevemente la solicitud"
             className={[
               "w-full rounded-lg border bg-gray-50 px-3 py-2 text-sm focus:bg-white focus:ring-2 focus:ring-black/15",
-              shouldShowError("descripcion") && errors.descripcion ? "border-green-500" : "border-gray-300",
+              shouldShowError("descripcion") && errors.descripcion ? "border-red-500" : "border-gray-300",
             ].join(" ")}
           />
           {shouldShowError("descripcion") && errors.descripcion && (
-            <p className="mt-1 text-xs text-green-600">{errors.descripcion}</p>
+            <p className="mt-1 text-xs text-red-600">{errors.descripcion}</p>
           )}
         </div>
       </div>
     </Modal>
   );
 }
+
 
 
 

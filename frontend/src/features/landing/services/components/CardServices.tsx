@@ -52,7 +52,7 @@ export default function CardServices({
   const [open, setOpen] = useState(false);
 
   const { ready, isAuthenticated, user, profile } = useAuth();
-  const { pendingStateId, scheduledStateId } = useRequestStates();
+  const { pendingStateId } = useRequestStates();
 
   const serviceType = useMemo(() => resolveServiceType(category), [category]);
 
@@ -103,24 +103,13 @@ export default function CardServices({
       return;
     }
 
-    const hasSchedule = Boolean(
-      (data.scheduledAt && String(data.scheduledAt).trim()) ||
-        (data.scheduledEndAt && String(data.scheduledEndAt).trim())
-    );
-
     const fromPayloadState = Number(data?.stateId);
     const resolvedPending =
       pendingStateId && Number.isFinite(pendingStateId) && pendingStateId > 0
         ? Number(pendingStateId)
         : null;
-    const resolvedScheduled =
-      scheduledStateId && Number.isFinite(scheduledStateId) && scheduledStateId > 0
-        ? Number(scheduledStateId)
-        : null;
-
     const stateIdToSend =
       (Number.isFinite(fromPayloadState) && fromPayloadState > 0 && fromPayloadState) ||
-      (hasSchedule && resolvedScheduled) ||
       resolvedPending ||
       5;
 
@@ -201,7 +190,6 @@ export default function CardServices({
         clientLabel={clientLabel}
         initialServiceId={serviceId}
         pendingStateId={pendingStateId ?? undefined}
-        scheduledStateId={scheduledStateId ?? undefined}
       />
     </>
   );
