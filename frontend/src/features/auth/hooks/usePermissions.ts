@@ -59,6 +59,8 @@ const PRIVILEGE_ALIASES: Record<string, string> = {
 
   deactivate: "deactivate",
   desactivar: "deactivate",
+  approve: "approve",
+  aprobar: "approve",
 
   complete: "complete",
   completar: "complete",

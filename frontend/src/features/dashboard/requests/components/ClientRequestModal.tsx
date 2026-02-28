@@ -63,7 +63,6 @@ type Props = {
     streetTypes?: string[];
   } | null;
   pendingStateId?: number | null;
-  scheduledStateId?: number | null;
 };
 
 type ErrorKey = "tipo" | "serviceId" | "description" | "direccion";
@@ -92,7 +91,6 @@ export default function ClientCreateRequestModal({
   onInitialAddressFieldsChange,
   addressOptions,
   pendingStateId = null,
-  scheduledStateId = null,
 }: Props) {
   const [serviceTypeId, setServiceTypeId] = useState<number | null>(null);
   const [serviceId, setServiceId] = useState<number | "">("");
@@ -341,16 +339,9 @@ export default function ClientCreateRequestModal({
         clientId,
       };
 
-      const hasProgrammedDate =
-        (basePayload.scheduledAt && String(basePayload.scheduledAt).trim()) ||
-        (basePayload.scheduledEndAt && String(basePayload.scheduledEndAt).trim());
-
+      const fromPayloadState = Number(basePayload.stateId);
       const stateIdToSend =
-        (hasProgrammedDate &&
-          scheduledStateId &&
-          Number.isFinite(scheduledStateId) &&
-          scheduledStateId > 0 &&
-          scheduledStateId) ||
+        (Number.isFinite(fromPayloadState) && fromPayloadState > 0 && fromPayloadState) ||
         (pendingStateId && Number.isFinite(pendingStateId) && pendingStateId > 0 && pendingStateId) ||
         5;
 
@@ -504,7 +495,7 @@ export default function ClientCreateRequestModal({
           )}
 
           {shouldShowError("tipo") && errors.tipo && (
-            <p className="mt-1 text-xs text-green-600">{errors.tipo}</p>
+            <p className="mt-1 text-xs text-red-600">{errors.tipo}</p>
           )}
         </div>
 
@@ -526,7 +517,7 @@ export default function ClientCreateRequestModal({
                 className={[
                   "w-full appearance-none rounded-lg border bg-gray-50 h-10 px-3 pr-8 text-sm focus:bg-white focus:ring-2 focus:ring-black/15 disabled:opacity-60",
                   shouldShowError("serviceId") && errors.serviceId
-                    ? "border-green-500"
+                    ? "border-red-500"
                     : "border-gray-300",
                 ].join(" ")}
               >
@@ -551,7 +542,7 @@ export default function ClientCreateRequestModal({
             </div>
 
             {shouldShowError("serviceId") && errors.serviceId && (
-              <p className="mt-1 text-xs text-green-600">{errors.serviceId}</p>
+              <p className="mt-1 text-xs text-red-600">{errors.serviceId}</p>
             )}
           </div>
         </div>
@@ -708,12 +699,12 @@ export default function ClientCreateRequestModal({
               className={[
                 "w-full rounded-lg border bg-gray-50 h-10 px-3 text-sm focus:bg-white focus:ring-2 focus:ring-black/15",
                 shouldShowError("direccion") && errors.direccion
-                  ? "border-green-500"
+                  ? "border-red-500"
                   : "border-gray-300",
               ].join(" ")}
             />
             {shouldShowError("direccion") && errors.direccion && (
-              <p className="mt-1 text-xs text-green-600">{errors.direccion}</p>
+              <p className="mt-1 text-xs text-red-600">{errors.direccion}</p>
             )}
           </div>
         </div>
@@ -733,17 +724,16 @@ export default function ClientCreateRequestModal({
             className={[
               "w-full rounded-lg border bg-gray-50 px-3 py-2 text-sm focus:bg-white focus:ring-2 focus:ring-black/15",
               shouldShowError("description") && errors.description
-                ? "border-green-500"
+                ? "border-red-500"
                 : "border-gray-300",
             ].join(" ")}
           />
           {shouldShowError("description") && errors.description && (
-            <p className="mt-1 text-xs text-green-600">{errors.description}</p>
+            <p className="mt-1 text-xs text-red-600">{errors.description}</p>
           )}
         </div>
       </div>
     </Modal>
   );
 }
-
 

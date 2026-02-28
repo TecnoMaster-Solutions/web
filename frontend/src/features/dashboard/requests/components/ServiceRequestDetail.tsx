@@ -263,4 +263,3 @@ const ServiceRequestDetail: React.FC<Props> = ({ requestId }) => {
 };
 
 export default ServiceRequestDetail;
-

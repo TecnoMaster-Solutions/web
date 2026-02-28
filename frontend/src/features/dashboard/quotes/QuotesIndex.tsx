@@ -156,12 +156,11 @@ export default function QuotesIndex() {
   const canCreateQuotes = canCreate("quotes");
   const canUpdateQuotes = canUpdate("quotes");
   const canDeleteQuotes = canDelete("quotes");
+  const canApproveQuotes = has("quotes", "approve");
   const canCompleteQuotes = has("quotes", "complete");
   const canDeactivateQuotes = has("quotes", "deactivate");
   const canCancelQuotes = canUpdateQuotes || canDeactivateQuotes;
-  const canExportQuotes =
-    canViewQuotes || has("quotes", "export") || has("quotes", "download_report");
-
+  const canExportQuotes = has("quotes", "download_report") || has("quotes", "export");
   const [quotesData, setQuotesData] = useState<QuoteTableRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -387,7 +386,7 @@ export default function QuotesIndex() {
   ];
 
   const handleApproveQuote = useCallback(async (row: QuoteTableRow) => {
-    if (!canUpdateQuotes) {
+    if (!canApproveQuotes) {
       await Swal.fire("Sin permisos", "No tienes permisos para aprobar cotizaciones.", "warning");
       return;
     }
@@ -455,7 +454,7 @@ export default function QuotesIndex() {
         : "La cotización se completó y se creó la venta asociada.",
       "success"
     );
-  }, [canCompleteQuotes, canUpdateQuotes, ensureQuoteHasCustomer, fetchQuotes]);
+  }, [canApproveQuotes, canCompleteQuotes, ensureQuoteHasCustomer, fetchQuotes]);
 
   const handleCancelQuote = async (row: QuoteTableRow) => {
     if (!canCancelQuotes) {
@@ -570,18 +569,22 @@ export default function QuotesIndex() {
           onView={(row) => router.push(`/dashboard/quotes/${row.id}`)}
           onCreate={canCreateQuotes ? () => router.push("/dashboard/quotes/register") : undefined}
           createButtonText="Crear Cotización"
-          onCheck={canUpdateQuotes ? handleApproveQuote : undefined}
+          onCheck={canApproveQuotes ? handleApproveQuote : undefined}
           onCancel={canCancelQuotes ? handleCancelQuote : undefined}
           onDelete={canDeleteQuotes ? handleRevokeQuote : undefined}
           rightActions={
             canExportQuotes ? (
             <button
               type="button"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-[#b20000] text-white text-sm font-semibold hover:bg-[#910000]"
+              className="relative cursor-pointer inline-flex h-9 items-center gap-2 overflow-hidden rounded-md px-4 text-sm font-semibold text-white transition-transform duration-200 hover:scale-105 group"
+              style={{ background: Colors.buttons.primary }}
               onClick={() => Swal.fire("Pendiente", "Conecta aquí la descarga del reporte.", "info")}
             >
-              <Image src="/icons/download.svg" alt="Descargar" width={16} height={16} />
-              Descargar Reporte
+              <span className="absolute inset-0 bg-[#227a69] scale-x-0 origin-left transition-transform duration-300 ease-out group-hover:scale-x-100"></span>
+              <span className="relative z-10 flex items-center gap-2 group-hover:text-white transition-colors duration-300">
+                <Image src="/icons/download.svg" alt="Descargar" width={16} height={16} />
+                Descargar Reporte
+              </span>
             </button>
             ) : null
           }
@@ -591,4 +594,3 @@ export default function QuotesIndex() {
     </RequireAuth>
   );
 }
-

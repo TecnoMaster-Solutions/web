@@ -154,16 +154,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const redirectTo =
           pickPostLoginRedirect(perms, nextPath) || "/dashboard";
 
-        if (typeof window !== "undefined") {
-          sessionStorage.setItem(
-            "__pending_toast__",
-            JSON.stringify({
-              type: "success",
-              message: "Inicio de sesión exitoso.",
-            })
-          );
-        }
-
         setLastAuthAction("login");
         setReady(true);
         return { ok: true, redirectTo };
@@ -179,6 +169,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const logout = useCallback(() => {
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("__pending_toast__");
+      sessionStorage.removeItem("__toast_login_success__");
+    }
     clearTokens();
     setUser(null);
     setProfile(null);
