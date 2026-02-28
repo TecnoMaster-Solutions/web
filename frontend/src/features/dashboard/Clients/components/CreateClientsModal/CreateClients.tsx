@@ -1,8 +1,8 @@
 "use client";
 
 import React from "react";
-import { createPortal } from "react-dom";
 import Colors from "@/shared/theme/colors";
+import Modal from "@/features/dashboard/components/Modal";
 import { useCreateClientForm } from "../../hooks/useClients";
 import { CreateClientModalProps } from "../../types/typeClients";
 
@@ -10,6 +10,7 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
   isOpen,
   onClose,
   onSave,
+  clients,
 }) => {
   const {
     formData,
@@ -18,40 +19,26 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
     handleInputChange,
     handleBlur,
     handleSubmit,
-    setFormData,
   } = useCreateClientForm({
     isOpen,
     onClose,
     onSave,
+    clients,
   });
 
   if (!isOpen) return null;
 
-  return createPortal(
-    <div className="fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl relative">
-        {/* Header */}
-        <div className="px-6 pt-5 pb-3 relative">
-          <h2 className="text-xl font-semibold text-gray-800">
-            Crear Cliente
-          </h2>
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="absolute top-5 right-5"
-          >
-            <img src="/icons/X.svg" alt="Cerrar" className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="border-t border-gray-300" />
-
-        {/* Formulario */}
-        <form
-          onSubmit={handleSubmit}
-          className="px-6 py-5 grid grid-cols-1 sm:grid-cols-2 gap-4"
-        >
+  return (
+    <Modal
+      title="Crear Cliente"
+      isOpen={isOpen}
+      onClose={onClose}
+      widthClass="md:max-w-2xl"
+    >
+      <form
+        onSubmit={handleSubmit}
+        className="grid grid-cols-1 gap-4 sm:grid-cols-2"
+      >
           {/* Tipo Documento */}
           <div>
             <label className="block text-sm mb-1 text-gray-700">
@@ -60,12 +47,7 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
             <select
               name="tipo"
               value={formData.tipo || ""}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  tipo: e.target.value ? Number(e.target.value) : 0,
-                })
-              }
+              onChange={handleInputChange}
               onBlur={handleBlur}
               className="w-full px-3 py-2 border rounded-md text-sm"
               style={{
@@ -83,7 +65,7 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
             </select>
 
             {errors.tipo && touched.tipo && (
-              <span className="text-green-500 text-xs">{errors.tipo}</span>
+              <span className="text-red-500 text-xs">{errors.tipo}</span>
             )}
           </div>
 
@@ -95,11 +77,21 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
             <input
               type="text"
               name="documento"
+              placeholder="Número de documento"
               value={formData.documento}
               onChange={handleInputChange}
               onBlur={handleBlur}
               className="w-full px-3 py-2 border rounded-md text-sm"
+              style={{
+                borderColor:
+                  errors.documento && touched.documento
+                    ? "red"
+                    : Colors.table.lines,
+              }}
             />
+            {errors.documento && touched.documento && (
+              <span className="text-red-500 text-xs">{errors.documento}</span>
+            )}
           </div>
 
           {/* Nombres */}
@@ -110,11 +102,21 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
             <input
               type="text"
               name="nombre"
+              placeholder="Ingrese su nombre"
               value={formData.nombre}
               onChange={handleInputChange}
               onBlur={handleBlur}
               className="w-full px-3 py-2 border rounded-md text-sm"
+              style={{
+                borderColor:
+                  errors.nombre && touched.nombre
+                    ? "red"
+                    : Colors.table.lines,
+              }}
             />
+            {errors.nombre && touched.nombre && (
+              <span className="text-red-500 text-xs">{errors.nombre}</span>
+            )}
           </div>
 
           {/* Apellidos */}
@@ -125,11 +127,21 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
             <input
               type="text"
               name="apellido"
+              placeholder="Ingrese su apellido"
               value={formData.apellido}
               onChange={handleInputChange}
               onBlur={handleBlur}
               className="w-full px-3 py-2 border rounded-md text-sm"
+              style={{
+                borderColor:
+                  errors.apellido && touched.apellido
+                    ? "red"
+                    : Colors.table.lines,
+              }}
             />
+            {errors.apellido && touched.apellido && (
+              <span className="text-red-500 text-xs">{errors.apellido}</span>
+            )}
           </div>
 
           {/* Teléfono */}
@@ -140,11 +152,21 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
             <input
               type="tel"
               name="telefono"
+              placeholder="Ingrese su Teléfono"
               value={formData.telefono}
               onChange={handleInputChange}
               onBlur={handleBlur}
               className="w-full px-3 py-2 border rounded-md text-sm"
+              style={{
+                borderColor:
+                  errors.telefono && touched.telefono
+                    ? "red"
+                    : Colors.table.lines,
+              }}
             />
+            {errors.telefono && touched.telefono && (
+              <span className="text-red-500 text-xs">{errors.telefono}</span>
+            )}
           </div>
 
           {/* Correo */}
@@ -155,29 +177,23 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
             <input
               type="email"
               name="correoElectronico"
+              placeholder="Ingrese su correo"
               value={formData.correoElectronico}
               onChange={handleInputChange}
               onBlur={handleBlur}
               className="w-full px-3 py-2 border rounded-md text-sm"
+              style={{
+                borderColor:
+                  errors.correoElectronico && touched.correoElectronico
+                    ? "red"
+                    : Colors.table.lines,
+              }}
             />
-          </div>
-
-          {/* Estado */}
-          <div>
-            <label className="block text-sm mb-1 text-gray-700">
-              Estado
-            </label>
-            <select
-              name="estado"
-              value={formData.estado}
-              onChange={handleInputChange}
-              onBlur={handleBlur}
-              className="w-full px-3 py-2 border rounded-md text-sm"
-            >
-              <option value="">Seleccione</option>
-              <option value="Activo">Activo</option>
-              <option value="Inactivo">Inactivo</option>
-            </select>
+            {errors.correoElectronico && touched.correoElectronico && (
+              <span className="text-red-500 text-xs">
+                {errors.correoElectronico}
+              </span>
+            )}
           </div>
 
           {/* Ciudad */}
@@ -188,11 +204,21 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
             <input
               type="text"
               name="ciudad"
+              placeholder="Ciudad"
               value={formData.ciudad}
               onChange={handleInputChange}
               onBlur={handleBlur}
               className="w-full px-3 py-2 border rounded-md text-sm"
+              style={{
+                borderColor:
+                  errors.ciudad && touched.ciudad
+                    ? "red"
+                    : Colors.table.lines,
+              }}
             />
+            {errors.ciudad && touched.ciudad && (
+              <span className="text-red-500 text-xs">{errors.ciudad}</span>
+            )}
           </div>
 
           {/* Código Postal */}
@@ -203,15 +229,25 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
             <input
               type="text"
               name="codigoPostal"
+              placeholder="Código postal"
               value={formData.codigoPostal}
               onChange={handleInputChange}
               onBlur={handleBlur}
               className="w-full px-3 py-2 border rounded-md text-sm"
+              style={{
+                borderColor:
+                  errors.codigoPostal && touched.codigoPostal
+                    ? "red"
+                    : Colors.table.lines,
+              }}
             />
+            {errors.codigoPostal && touched.codigoPostal && (
+              <span className="text-red-500 text-xs">{errors.codigoPostal}</span>
+            )}
           </div>
 
           {/* Botones */}
-          <div className="col-span-1 sm:col-span-2 flex justify-end gap-3 pt-4 border-t border-gray-300 mt-2">
+          <div className="col-span-1 mt-2 flex justify-end gap-3 border-t border-gray-300 pt-4 sm:col-span-2">
             <button
               type="button"
               onClick={onClose}
@@ -222,15 +258,13 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
 
             <button
               type="submit"
-              className="px-5 py-2 rounded-md text-sm bg-[#2a9781] "
+              className="px-5 py-2 rounded-md text-sm bg-[#2a9781] text-white"
             >
               Guardar
             </button>
           </div>
-        </form>
-      </div>
-    </div>,
-    document.body
+      </form>
+    </Modal>
   );
 };
 

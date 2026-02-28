@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSalesForm } from "../hooks/useSalesForm";
 import Colors from "@/shared/theme/colors";
 import { Loader } from "@/shared/components/loader";
-import { IProduct, IService } from "../types/sales.type";
+import { ICustomer, IProduct, IService } from "../types/sales.type";
 import { motion, AnimatePresence } from "framer-motion";
 import { createPortal } from "react-dom";
 
@@ -15,6 +15,30 @@ import CreateServiceModal from "./CreateServiceModal";
 interface CreateSaleFormProps {
     onClose: () => void;
     onSaved: () => void;
+}
+
+function normalizeText(value: string) {
+    return String(value ?? "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .trim();
+}
+
+function initials(name: string) {
+    const parts = String(name || "")
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean);
+    const a = parts[0]?.[0] ?? "";
+    const b = parts.length > 1 ? parts[parts.length - 1]?.[0] ?? "" : "";
+    return (a + b).toUpperCase() || "C";
+}
+
+function getCustomerLabel(customer: ICustomer) {
+    return customer.users
+        ? `${customer.users.name} ${customer.users.lastname}`.trim()
+        : `Cliente #${customer.customerid}`;
 }
 
 // â”€â”€ Portal Modal Helper â”€â”€
@@ -105,6 +129,84 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
     // â”€â”€ Service Selection State â”€â”€
     const [serviceSearch, setServiceSearch] = useState("");
     const [servicePrice, setServicePrice] = useState<number | "">("");
+    const [clientQuery, setClientQuery] = useState("");
+    const [clientOpen, setClientOpen] = useState(false);
+    const [clientActiveIndex, setClientActiveIndex] = useState(0);
+    const clientBoxRef = useRef<HTMLDivElement>(null);
+    const clientInputRef = useRef<HTMLInputElement>(null);
+
+    const selectedCustomer = useMemo(
+        () =>
+            customers.find((c) => Number(c.customerid) === Number(selectedCustomerId)) ?? null,
+        [customers, selectedCustomerId]
+    );
+
+    const clientOptions = useMemo(() => {
+        const q = normalizeText(clientQuery);
+        if (!q) return customers.slice(0, 10);
+
+        const scored = customers
+            .map((customer) => {
+                const label = normalizeText(getCustomerLabel(customer));
+                const email = normalizeText(customer.users?.email ?? "");
+                const document = normalizeText(customer.users?.documentnumber ?? "");
+                const idText = String(customer.customerid);
+                let score = 0;
+
+                if (idText.startsWith(q)) score += 4;
+                if (document.startsWith(q)) score += 4;
+                if (label.includes(q)) score += 2;
+                if (label.startsWith(q)) score += 1;
+                if (email.includes(q)) score += 1;
+
+                return { customer, score };
+            })
+            .filter((item) => item.score > 0)
+            .sort(
+                (a, b) =>
+                    b.score - a.score ||
+                    a.customer.customerid - b.customer.customerid
+            );
+
+        return scored.slice(0, 10).map((item) => item.customer);
+    }, [customers, clientQuery]);
+
+    const pickClient = (customerId: number) => {
+        if (!Number.isFinite(customerId) || customerId <= 0) return;
+        setSelectedCustomerId(customerId);
+        setClientQuery("");
+        setClientOpen(false);
+    };
+
+    const clearClient = () => {
+        setSelectedCustomerId("");
+        setClientQuery("");
+        setClientOpen(false);
+        clientInputRef.current?.focus();
+    };
+
+    useEffect(() => {
+        setClientActiveIndex(0);
+    }, [clientQuery, clientOpen]);
+
+    useEffect(() => {
+        if (!clientOpen) return;
+        const onMouseDown = (event: MouseEvent) => {
+            const target = event.target as Node;
+            if (!clientBoxRef.current?.contains(target)) {
+                setClientOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", onMouseDown);
+        return () => document.removeEventListener("mousedown", onMouseDown);
+    }, [clientOpen]);
+
+    useEffect(() => {
+        if (selectedCustomerId === "") return;
+        if (!customers.some((c) => Number(c.customerid) === Number(selectedCustomerId))) {
+            setSelectedCustomerId("");
+        }
+    }, [customers, selectedCustomerId, setSelectedCustomerId]);
 
     // â”€â”€ Filter Products â”€â”€
     const filteredProducts = useMemo(() => {
@@ -188,21 +290,126 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
                                 <label className="block text-sm font-medium mb-1 text-gray-700">
                                     Cliente
                                 </label>
-                                <select
-                                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                                    style={{ borderColor: Colors.table.lines }}
-                                    value={selectedCustomerId}
-                                    onChange={(e) => setSelectedCustomerId(Number(e.target.value))}
-                                >
-                                    <option value="">-- Seleccionar Cliente --</option>
-                                    {customers.map((c) => (
-                                        <option key={c.customerid} value={c.customerid}>
-                                            {c.users
-                                                ? `${c.users.name} ${c.users.lastname}`
-                                                : `Cliente #${c.customerid}`}
-                                        </option>
-                                    ))}
-                                </select>
+                                {selectedCustomer ? (
+                                    <div className="mb-2 flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+                                        <div className="flex min-w-0 items-center gap-3">
+                                            <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-xs font-semibold text-gray-700">
+                                                {initials(getCustomerLabel(selectedCustomer))}
+                                            </span>
+                                            <div className="min-w-0">
+                                                <p className="truncate text-sm font-medium text-gray-900">
+                                                    {getCustomerLabel(selectedCustomer)}
+                                                </p>
+                                                <p className="truncate text-[11px] text-gray-500">
+                                                    Cliente #{selectedCustomer.customerid}
+                                                    {selectedCustomer.users?.documentnumber
+                                                        ? ` - Doc ${selectedCustomer.users.documentnumber}`
+                                                        : selectedCustomer.users?.email
+                                                            ? ` - ${selectedCustomer.users.email}`
+                                                        : ""}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={clearClient}
+                                            className="rounded-md border border-gray-300 bg-white px-2 py-1 text-[11px] text-gray-700 hover:bg-gray-50"
+                                        >
+                                            Quitar
+                                        </button>
+                                    </div>
+                                ) : null}
+
+                                <div className="relative" ref={clientBoxRef}>
+                                    <input
+                                        ref={clientInputRef}
+                                        value={clientQuery}
+                                        onChange={(e) => {
+                                            setClientQuery(e.target.value);
+                                            setClientOpen(true);
+                                        }}
+                                        onFocus={() => setClientOpen(true)}
+                                        onKeyDown={(e) => {
+                                            if (!clientOpen) return;
+                                            if (e.key === "ArrowDown") {
+                                                e.preventDefault();
+                                                setClientActiveIndex((i) =>
+                                                    Math.min(i + 1, Math.max(0, clientOptions.length - 1))
+                                                );
+                                            } else if (e.key === "ArrowUp") {
+                                                e.preventDefault();
+                                                setClientActiveIndex((i) => Math.max(i - 1, 0));
+                                            } else if (e.key === "Enter") {
+                                                if (clientOptions[clientActiveIndex]) {
+                                                    e.preventDefault();
+                                                    pickClient(clientOptions[clientActiveIndex].customerid);
+                                                }
+                                            } else if (e.key === "Escape") {
+                                                setClientOpen(false);
+                                            }
+                                        }}
+                                        placeholder={
+                                            loadingData
+                                                ? "Cargando clientes..."
+                                                : customers.length
+                                                    ? "Buscar por nombre, documento o id"
+                                                    : "No hay clientes"
+                                        }
+                                        disabled={loadingData || customers.length === 0}
+                                        className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none disabled:opacity-60"
+                                        style={{ borderColor: Colors.table.lines }}
+                                        aria-expanded={clientOpen}
+                                        aria-controls="sale-client-suggest"
+                                        aria-autocomplete="list"
+                                    />
+
+                                    {clientOpen && !loadingData && (
+                                        <div
+                                            id="sale-client-suggest"
+                                            className="absolute z-20 mt-2 w-full overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm"
+                                        >
+                                            {clientOptions.length === 0 ? (
+                                                <div className="px-3 py-2 text-xs text-gray-500">
+                                                    No hay coincidencias.
+                                                </div>
+                                            ) : (
+                                                <ul className="max-h-56 overflow-auto">
+                                                    {clientOptions.map((customer, idx) => (
+                                                        <li key={customer.customerid}>
+                                                            <button
+                                                                type="button"
+                                                                onMouseDown={(ev) => ev.preventDefault()}
+                                                                onClick={() => pickClient(customer.customerid)}
+                                                                onMouseEnter={() => setClientActiveIndex(idx)}
+                                                                className={[
+                                                                    "flex w-full items-center gap-3 px-3 py-2 text-left text-sm",
+                                                                    idx === clientActiveIndex ? "bg-gray-100" : "bg-white",
+                                                                ].join(" ")}
+                                                            >
+                                                                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border bg-gray-50 text-[11px] font-semibold text-gray-700">
+                                                                    {initials(getCustomerLabel(customer))}
+                                                                </span>
+                                                                <span className="min-w-0 flex-1">
+                                                                    <span className="block truncate font-medium text-gray-900">
+                                                                        {getCustomerLabel(customer)}
+                                                                    </span>
+                                                                    <span className="block truncate text-[11px] text-gray-500">
+                                                                        Cliente #{customer.customerid}
+                                                                        {customer.users?.documentnumber
+                                                                            ? ` - Doc ${customer.users.documentnumber}`
+                                                                            : customer.users?.email
+                                                                                ? ` - ${customer.users.email}`
+                                                                            : ""}
+                                                                    </span>
+                                                                </span>
+                                                            </button>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
 
                             {/* Fecha (Readonly) */}

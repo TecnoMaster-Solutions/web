@@ -3,12 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import {
   getClients,
-  createClient,
-  updateClient,
   deleteClient,
-  CreateClientPayload,
-  UpdateClientPayload,
 } from "../api/clients.api";
+import { createUser, updateUser } from "@/features/dashboard/Users/connection/userApi";
+import { api } from "@/shared/utils/apiClient";
 
 import {
   Client,
@@ -28,11 +26,46 @@ const stateMap: Record<string, number> = {
   Inactivo: 2,
 };
 
+let cachedClientRoleId: number | null = null;
+
+const normalizeText = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+
+const getClientRoleId = async (): Promise<number> => {
+  if (cachedClientRoleId) return cachedClientRoleId;
+
+  const { data } = await api.get("/roles/list");
+  const roles = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.data)
+      ? data.data
+      : Array.isArray(data?.roles)
+        ? data.roles
+        : [];
+
+  const clientRole = roles.find(
+    (role: any) => normalizeText(String(role?.name ?? "")) === "cliente"
+  );
+  const roleId = Number(clientRole?.roleid ?? clientRole?.id);
+
+  if (!Number.isFinite(roleId) || roleId <= 0) {
+    throw new Error("No se encontró el rol de cliente.");
+  }
+
+  cachedClientRoleId = roleId;
+  return roleId;
+};
+
 // ── Validaciones exhaustivas ─────────────────────────────────────────────────
 
 const ONLY_LETTERS = /^[A-Za-záéíóúÁÉÍÓÚñÑ\s'-]+$/;
 const ONLY_NUMBERS = /^\d+$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const USER_SPECIAL_CHARS = /[@,.;:_\{\[\}^\]`+*~Â¡Â¿?\\'=)(/&%$#"|<>]/;
 
 export function validateClientData(
   data: CreateClientData | EditClientData
@@ -92,6 +125,171 @@ export function validateClientData(
   return errors;
 }
 
+function validateCreateClientField(
+  field: keyof CreateClientData,
+  value: string | number,
+  formData: CreateClientData,
+  clients: Client[]
+): string {
+  const rawValue = String(value ?? "");
+  const trimmedValue = rawValue.trim();
+  const normalizedValue = trimmedValue.toLowerCase();
+
+  switch (field) {
+    case "tipo":
+      return Number(value) > 0 ? "" : "El tipo de documento es obligatorio";
+
+    case "documento":
+      if (!trimmedValue) return "El número de documento es obligatorio";
+      if (!ONLY_NUMBERS.test(trimmedValue)) {
+        return "El documento solo puede contener números";
+      }
+      if (trimmedValue.length > 10) {
+        return "El número de documento no puede tener más de 10 caracteres";
+      }
+      if (
+        clients.some(
+          (client) =>
+            String(client.documento ?? "").trim().toLowerCase() === normalizedValue
+        )
+      ) {
+        return "Ya existe un usuario con este número de documento";
+      }
+      return "";
+
+    case "nombre":
+      if (!trimmedValue) return "El nombre es obligatorio";
+      if (/[0-9]/.test(trimmedValue)) return "El nombre no puede contener números";
+      if (USER_SPECIAL_CHARS.test(trimmedValue)) {
+        return "El nombre no puede contener caracteres especiales";
+      }
+      return "";
+
+    case "apellido":
+      if (!trimmedValue) return "El apellido es obligatorio";
+      if (/[0-9]/.test(trimmedValue)) return "El apellido no puede contener números";
+      if (USER_SPECIAL_CHARS.test(trimmedValue)) {
+        return "El apellido no puede contener caracteres especiales";
+      }
+      return "";
+
+    case "telefono":
+      if (!trimmedValue) return "El teléfono es obligatorio";
+      if (!ONLY_NUMBERS.test(trimmedValue)) {
+        return "El teléfono solo puede contener números";
+      }
+      if (trimmedValue.length !== 10) {
+        return "El teléfono debe tener exactamente 10 dígitos";
+      }
+      if (clients.some((client) => String(client.telefono ?? "").trim() === trimmedValue)) {
+        return "Ya existe un usuario con este número de teléfono";
+      }
+      return "";
+
+    case "correoElectronico":
+      if (!trimmedValue) return "El correo electrónico es obligatorio";
+      if (!EMAIL_RE.test(trimmedValue)) return "El formato del correo no es válido";
+      if (
+        clients.some(
+          (client) =>
+            String(client.correoElectronico ?? "").trim().toLowerCase() === normalizedValue
+        )
+      ) {
+        return "Ya existe un usuario con este correo electrónico";
+      }
+      return "";
+
+    case "ciudad":
+      return trimmedValue ? "" : "La ciudad es obligatoria para clientes";
+
+    case "codigoPostal":
+      if (!trimmedValue) return "El código postal es obligatorio para clientes";
+      if (!ONLY_NUMBERS.test(trimmedValue)) {
+        return "El código postal debe contener solo números";
+      }
+      return "";
+
+    case "estado":
+      return "";
+
+    default:
+      return "";
+  }
+}
+
+function validateCreateClientForm(
+  formData: CreateClientData,
+  clients: Client[]
+): ClientFormErrors {
+  return {
+    tipo: validateCreateClientField("tipo", formData.tipo, formData, clients),
+    documento: validateCreateClientField("documento", formData.documento, formData, clients),
+    nombre: validateCreateClientField("nombre", formData.nombre, formData, clients),
+    apellido: validateCreateClientField("apellido", formData.apellido, formData, clients),
+    telefono: validateCreateClientField("telefono", formData.telefono, formData, clients),
+    correoElectronico: validateCreateClientField(
+      "correoElectronico",
+      formData.correoElectronico,
+      formData,
+      clients
+    ),
+    ciudad: validateCreateClientField("ciudad", formData.ciudad, formData, clients),
+    codigoPostal: validateCreateClientField(
+      "codigoPostal",
+      formData.codigoPostal,
+      formData,
+      clients
+    ),
+  };
+}
+
+function validateEditClientField(
+  field: keyof CreateClientData,
+  value: string | number,
+  formData: EditClientData,
+  clients: Client[]
+): string {
+  const baseError = validateCreateClientField(
+    field,
+    value,
+    formData,
+    clients.filter((client) => client.id !== formData.id)
+  );
+
+  if (field === "estado") {
+    return String(value ?? "").trim() ? "" : "Seleccione un estado";
+  }
+
+  return baseError;
+}
+
+function validateEditClientForm(
+  formData: EditClientData,
+  clients: Client[]
+): ClientFormErrors {
+  return {
+    tipo: validateEditClientField("tipo", formData.tipo, formData, clients),
+    documento: validateEditClientField("documento", formData.documento, formData, clients),
+    nombre: validateEditClientField("nombre", formData.nombre, formData, clients),
+    apellido: validateEditClientField("apellido", formData.apellido, formData, clients),
+    telefono: validateEditClientField("telefono", formData.telefono, formData, clients),
+    correoElectronico: validateEditClientField(
+      "correoElectronico",
+      formData.correoElectronico,
+      formData,
+      clients
+    ),
+    estado: validateEditClientField("estado", formData.estado, formData, clients),
+    ciudad: validateEditClientField("ciudad", formData.ciudad, formData, clients),
+    codigoPostal: validateEditClientField(
+      "codigoPostal",
+      formData.codigoPostal,
+      formData,
+      clients
+    ),
+  };
+}
+
 // =====================================================
 // MAIN HOOK
 // =====================================================
@@ -99,6 +297,9 @@ export function validateClientData(
 export function useClients() {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [viewingClient, setViewingClient] = useState<Client | null>(null);
 
   const busyRef = useRef(false);
   const startRef = useRef(0);
@@ -154,47 +355,91 @@ export function useClients() {
   }, []);
 
   // ── CREATE CLIENT ──────────────────────────────────────────────────────────
-  const handleCreateClient = async (form: CreateClientData) => {
-    const payload: CreateClientPayload = {
+  const handleCreateClient = async (form: CreateClientData): Promise<boolean> => {
+    const clientRoleId = await getClientRoleId();
+    const payload = {
       name: form.nombre.trim(),
       lastname: form.apellido.trim(),
       email: form.correoElectronico.trim(),
       documentnumber: form.documento.trim(),
       phone: form.telefono.replace(/\D/g, ""), // ← solo dígitos para evitar 400 por regex
       typeid: Number(form.tipo),
+      roleid: clientRoleId,
       customercity: form.ciudad.trim(),
       customerzipcode: form.codigoPostal.trim(),
       image: "", // imagen vacía por defecto (campo requerido por backend)
     };
 
-    await withLoading(async () => {
-      await createClient(payload);
-      showSuccess("Cliente creado exitosamente.");
-    });
+    try {
+      await withLoading(async () => {
+        await createUser(payload);
+        showSuccess("Cliente creado exitosamente.");
+      });
 
-    await loadClients();
+      await loadClients();
+      return true;
+    } catch {
+      return false;
+    }
   };
 
   // ── EDIT CLIENT ────────────────────────────────────────────────────────────
-  const handleEditClient = async (form: EditClientData) => {
-    const payload: UpdateClientPayload = {
+  const handleEditClient = async (form: EditClientData): Promise<void> => {
+    const currentClient = clients.find((client) => client.id === form.id);
+    if (!currentClient?.userid) {
+      showError("No se encontró el usuario asociado al cliente.");
+      return;
+    }
+
+    const userPayload = {
       name: form.nombre.trim(),
       lastname: form.apellido.trim(),
       email: form.correoElectronico.trim(),
       documentnumber: form.documento.trim(),
-      phone: form.telefono.trim(),
+      phone: form.telefono.replace(/\D/g, ""),
       typeid: Number(form.tipo),
       stateid: stateMap[form.estado] ?? 1,
       customercity: form.ciudad.trim(),
       customerzipcode: form.codigoPostal.trim(),
     };
 
-    await withLoading(async () => {
-      await updateClient(form.id, payload);
-      showSuccess("Cliente actualizado correctamente.");
-    });
+    try {
+      await withLoading(async () => {
+        await updateUser(currentClient.userid, userPayload);
+        showSuccess("Cliente actualizado correctamente.");
+      });
 
-    await loadClients();
+      setClients((prev) =>
+        prev.map((client) =>
+          client.id === form.id
+            ? {
+                ...client,
+                nombre: form.nombre.trim(),
+                apellido: form.apellido.trim(),
+                tipoId: Number(form.tipo),
+                tipo:
+                  {
+                    1: "CC",
+                    2: "TI",
+                    3: "CE",
+                    4: "PPN",
+                  }[Number(form.tipo)] ?? client.tipo,
+                documento: form.documento.trim(),
+                telefono: form.telefono.replace(/\D/g, ""),
+                correoElectronico: form.correoElectronico.trim(),
+                estado: form.estado,
+                ciudad: form.ciudad.trim(),
+                codigoPostal: form.codigoPostal.trim(),
+              }
+            : client
+        )
+      );
+      void loadClients();
+    } catch {
+      return;
+    } finally {
+      setEditingClient(null);
+    }
   };
 
   // ── DELETE CLIENT ──────────────────────────────────────────────────────────
@@ -235,12 +480,33 @@ export function useClients() {
     }
   };
 
+  const handleView = (client: Client) => {
+    setViewingClient(client);
+  };
+
+  const handleEdit = (client: Client) => {
+    setEditingClient(client);
+  };
+
+  const closeModals = () => {
+    setIsCreateModalOpen(false);
+    setEditingClient(null);
+    setViewingClient(null);
+  };
+
   return {
     clients,
     loading,
+    isCreateModalOpen,
+    setIsCreateModalOpen,
+    editingClient,
+    viewingClient,
     handleCreateClient,
     handleEditClient,
     handleDeleteClient,
+    handleView,
+    handleEdit,
+    closeModals,
   };
 }
 
@@ -251,13 +517,15 @@ export function useClients() {
 interface UseCreateClientFormProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: CreateClientData) => Promise<void>;
+  onSave: (data: CreateClientData) => Promise<boolean>;
+  clients: Client[];
 }
 
 export function useCreateClientForm({
   isOpen,
   onClose,
   onSave,
+  clients,
 }: UseCreateClientFormProps) {
   const initialState: CreateClientData = {
     tipo: 0,
@@ -287,9 +555,21 @@ export function useCreateClientForm({
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
+    const nextFormData = {
+      ...formData,
       [name]: name === "tipo" ? Number(value) : value,
+    };
+
+    setFormData(nextFormData);
+    setTouched((prev) => ({ ...prev, [name]: true }));
+    setErrors((prev) => ({
+      ...prev,
+      [name]: validateCreateClientField(
+        name as keyof CreateClientData,
+        name === "tipo" ? Number(value) : value,
+        nextFormData,
+        clients
+      ),
     }));
   };
 
@@ -298,14 +578,20 @@ export function useCreateClientForm({
   ) => {
     const { name } = e.target;
     setTouched((prev) => ({ ...prev, [name]: true }));
-    // Validar solo ese campo al terminar de llenar
-    const allErrors = validateClientData(formData);
-    setErrors((prev) => ({ ...prev, [name]: allErrors[name as keyof ClientFormErrors] ?? "" }));
+    setErrors((prev) => ({
+      ...prev,
+      [name]: validateCreateClientField(
+        name as keyof CreateClientData,
+        formData[name as keyof CreateClientData] ?? "",
+        formData,
+        clients
+      ),
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const validationErrors = validateClientData(formData);
+    const validationErrors = validateCreateClientForm(formData, clients);
     setErrors(validationErrors);
 
     // Marcar todos como tocados para mostrar errores
@@ -315,10 +601,13 @@ export function useCreateClientForm({
     );
     setTouched(allTouched);
 
-    if (Object.keys(validationErrors).length > 0) return;
+    if (Object.values(validationErrors).some(Boolean)) {
+      showError("Por favor complete los campos correctamente");
+      return;
+    }
 
-    await onSave(formData);
     onClose();
+    await onSave(formData);
   };
 
   return {
@@ -340,7 +629,8 @@ interface UseEditClientFormProps {
   isOpen: boolean;
   client: Client | null;
   onClose: () => void;
-  onSave: (data: EditClientData) => Promise<void>;
+  onSave: (data: EditClientData) => Promise<void> | void;
+  clients: Client[];
 }
 
 export function useEditClientForm({
@@ -348,6 +638,7 @@ export function useEditClientForm({
   client,
   onClose,
   onSave,
+  clients,
 }: UseEditClientFormProps) {
   const [formData, setFormData] = useState<EditClientData | null>(null);
   const [errors, setErrors] = useState<ClientFormErrors>({});
@@ -379,10 +670,21 @@ export function useEditClientForm({
   ) => {
     if (!formData) return;
     const { name, value } = e.target;
-    setFormData({
+    const nextFormData = {
       ...formData,
       [name]: name === "tipo" ? Number(value) : value,
-    });
+    };
+    setFormData(nextFormData);
+    setTouched((prev) => ({ ...prev, [name]: true }));
+    setErrors((prev) => ({
+      ...prev,
+      [name]: validateEditClientField(
+        name as keyof CreateClientData,
+        name === "tipo" ? Number(value) : value,
+        nextFormData,
+        clients
+      ),
+    }));
   };
 
   const handleBlur = (
@@ -391,8 +693,15 @@ export function useEditClientForm({
     const { name } = e.target;
     setTouched((prev) => ({ ...prev, [name]: true }));
     if (formData) {
-      const allErrors = validateClientData(formData);
-      setErrors((prev) => ({ ...prev, [name]: allErrors[name as keyof ClientFormErrors] ?? "" }));
+      setErrors((prev) => ({
+        ...prev,
+        [name]: validateEditClientField(
+          name as keyof CreateClientData,
+          formData[name as keyof EditClientData] ?? "",
+          formData,
+          clients
+        ),
+      }));
     }
   };
 
@@ -400,7 +709,7 @@ export function useEditClientForm({
     e.preventDefault();
     if (!formData) return;
 
-    const validationErrors = validateClientData(formData);
+    const validationErrors = validateEditClientForm(formData, clients);
     setErrors(validationErrors);
 
     const allTouched: ClientFormTouched = {};
@@ -409,10 +718,17 @@ export function useEditClientForm({
     );
     setTouched(allTouched);
 
-    if (Object.keys(validationErrors).length > 0) return;
+    if (Object.values(validationErrors).some(Boolean)) {
+      showError("Por favor complete los campos correctamente");
+      return;
+    }
 
-    await onSave(formData);
-    onClose();
+    try {
+      onClose();
+      await onSave(formData);
+    } catch (error) {
+      console.error("Error al actualizar cliente:", error);
+    }
   };
 
   return {
