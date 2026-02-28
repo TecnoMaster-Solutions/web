@@ -1,20 +1,28 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import * as XLSX from "xlsx";
 import { DataTable } from "@/features/dashboard/components/datatable/DataTable";
 import { Column } from "@/features/dashboard/components/datatable/types/column.types";
 import Modal from "@/features/dashboard/components/Modal";
-import { useLoader } from "@/shared/components/loader";
 import { showSuccess, showError } from "@/shared/utils/notifications";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Colors from "@/shared/theme/colors";
 import { ISale } from "./types/sales.type";
-import { getSales, annulSale, updateEstadoPago } from "./services/sales.service";
+import { getSales, annulSale } from "./services/sales.service";
 import CreateSaleForm from "./components/CreateSaleForm";
-import SaleDetailModal from "./components/SaleDetailModal";
+import SalePaymentsModal from "./components/SalePaymentsModal";
 import { useAuth } from "@/features/auth/authcontext";
+
+function Loader() {
+  return (
+    <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
+      <div className="w-16 h-16 border-4 border-green-600 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+}
 
 function normalizeRoleName(role: any) {
   return String(role ?? "")
@@ -72,30 +80,45 @@ function decodeJwtPayload(token: string): any | null {
   }
 }
 
-// â”€â”€ Tipo de fila de tabla â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 type SaleRow = {
   id: number;
   codigo: string;
   cliente: string;
-  fecha: string;     // Formato visual: DD/MM/YYYY
-  fechaISO: string;  // Formato ISO para ordenamiento: YYYY-MM-DD o timestamp
+  fecha: string;
+  fechaISO: string;
   total: number;
   estado: string;
-  estadoPago: "Abonada" | "Pagada" | null;
+  estadoPago: string;
+  paidAmount: number;
+  paymentMethod: string;
 };
 
-//  Componente principal
+function getPaymentStatusLabel(status: ISale["paymentstatus"]) {
+  if (status === "Pagada") return "Pagada";
+  if (status === "Abonada") return "Abonada";
+  return "Pendiente";
+}
+
+function isGatewayPaymentMethod(method?: string | null) {
+  const normalized = String(method ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+
+  return normalized === "pasarela de pago";
+}
+
 export default function SalesIndex() {
+  const router = useRouter();
   const { user, profile } = useAuth();
   const [permissionsLoaded, setPermissionsLoaded] = useState(false);
   const [tokenPermissions, setTokenPermissions] = useState<string[]>([]);
   const [sales, setSales] = useState<SaleRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreateModalOpen, setCreateModalOpen] = useState(false);
-  const [viewSaleId, setViewSaleId] = useState<number | null>(null);
-  const { showLoader, hideLoader } = useLoader();
+  const [paymentSaleId, setPaymentSaleId] = useState<number | null>(null);
 
-  //  Estado de Anulación 
   const [isAnnulModalOpen, setAnnulModalOpen] = useState(false);
   const [saleToAnnul, setSaleToAnnul] = useState<SaleRow | null>(null);
   const [annulReason, setAnnulReason] = useState("");
@@ -113,8 +136,7 @@ export default function SalesIndex() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const rawToken =
-      localStorage.getItem("accessToken") ?? localStorage.getItem("token");
+    const rawToken = localStorage.getItem("accessToken") ?? localStorage.getItem("token");
 
     if (!rawToken) {
       setTokenPermissions([]);
@@ -137,43 +159,52 @@ export default function SalesIndex() {
   const hasSalesDelete = tokenPermissions.includes("sales.delete");
   const hasSalesCancel =
     tokenPermissions.includes("sales.cancel") || hasSalesDelete || hasSalesUpdate;
+  const canOpenPaymentFlow = hasSalesUpdate || isClientUser;
 
-  // â”€â”€ Cargar ventas desde la API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const loadSales = useCallback(async () => {
     try {
-      const data: ISale[] = await getSales();
+      const data = await getSales();
       const visibleSales =
         isClientUser && authClientId
-          ? data.filter((s) => Number(s.customerid) === authClientId)
+          ? data.filter((sale) => Number(sale.customerid) === authClientId)
           : data;
 
-      const mapped: SaleRow[] = visibleSales.map((s) => ({
-        id: s.saleid,
-        codigo: s.salecode,
-        cliente: s.customer?.users
-          ? `${s.customer.users.name} ${s.customer.users.lastname}`
-          : `Cliente #${s.customerid}`,
-        fechaISO: s.saledate,  // ISO original para ordenamiento
-        fecha: new Date(s.saledate).toLocaleDateString("es-CO"),
-        total: s.totalamount,
+      const mapped: SaleRow[] = visibleSales.map((sale) => ({
+        id: sale.saleid,
+        codigo: sale.salecode,
+        cliente: sale.customer?.users
+          ? `${sale.customer.users.name} ${sale.customer.users.lastname}`
+          : `Cliente #${sale.customerid}`,
+        fechaISO: sale.saledate,
+        fecha: new Date(sale.saledate).toLocaleDateString("es-CO"),
+        total: sale.totalamount,
         estado:
-          s.salestatus === "Completed"
+          sale.paymentstatus === "Pagada" || sale.salestatus === "Completed"
             ? "Finalizada"
-            : s.salestatus === "Cancelled"
+            : sale.salestatus === "Cancelled"
               ? "Anulada"
-              : s.salestatus === "Pending"
+              : sale.salestatus === "Pending"
                 ? "Pendiente"
-                : s.salestatus,
-        estadoPago: (s.estadoPago as "Abonada" | "Pagada" | null) ?? null,
+                : sale.salestatus,
+        estadoPago: isGatewayPaymentMethod(sale.paymentmethod)
+          ? "Pagada"
+          : getPaymentStatusLabel(sale.paymentstatus),
+        paidAmount: Number(sale.paidamount ?? 0),
+        paymentMethod: sale.paymentmethod ?? "",
       }));
+
       setSales(mapped);
-    } catch (err) {
-      console.error(err);
+    } catch (error) {
+      console.error(error);
       showError("Error al cargar las ventas.");
     } finally {
       setLoading(false);
     }
   }, [authClientId, isClientUser]);
+
+  const closePaymentModal = useCallback(() => {
+    setPaymentSaleId(null);
+  }, []);
 
   useEffect(() => {
     if (!permissionsLoaded) return;
@@ -184,72 +215,15 @@ export default function SalesIndex() {
     loadSales();
   }, [hasSalesRead, loadSales, permissionsLoaded]);
 
-  // â”€â”€ Cambiar estado de pago (interactivo) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  const handleEstadoPagoChange = async (
-    row: SaleRow,
-    nuevoEstado: "Abonada" | "Pagada"
-  ) => {
-    if (!hasSalesUpdate) {
-      showError("No tienes permisos para actualizar el estado de pago.");
-      return;
-    }
-
-    showLoader();
-    try {
-      await updateEstadoPago(row.id, nuevoEstado);
-      showSuccess(
-        nuevoEstado === "Pagada"
-          ? "Venta marcada como Pagada — ahora está Finalizada."
-          : "Venta marcada como Abonada."
-      );
-      await loadSales();
-    } catch {
-      showError("Error al actualizar el estado de pago.");
-    } finally {
-      hideLoader();
-    }
-  };
-
-  // Ordenamiento 
-  type SortField = "fecha" | "total";
-  const [sortField, setSortField] = useState<SortField | null>(null);
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
-
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setSortField(field);
-      setSortDir("asc");
-    }
-  };
-
-  const sortedSales = useMemo(() => {
-    if (!sortField) return sales;
-    return [...sales].sort((a, b) => {
-      let aVal: number, bVal: number;
-      if (sortField === "fecha") {
-        // Usar fechaISO (string ISO o timestamp) para comparar correctamente
-        aVal = new Date(a.fechaISO).getTime();
-        bVal = new Date(b.fechaISO).getTime();
-      } else {
-        aVal = a.total;
-        bVal = b.total;
-      }
-      return sortDir === "asc" ? aVal - bVal : bVal - aVal;
-    });
-  }, [sales, sortField, sortDir]);
-
-  // â”€â”€ Exportar a Excel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const exportToExcel = () => {
-    const rows = sales.map((s) => ({
-      "#": s.id,
-      "Código": s.codigo,
-      "Cliente": s.cliente,
-      "Fecha": s.fecha,
-      "Total": s.total,
-      "Estado": s.estado,
-      "Estado Pago": s.estadoPago ?? "—",
+    const rows = sales.map((sale) => ({
+      "#": sale.id,
+      "Código": sale.codigo,
+      Cliente: sale.cliente,
+      Fecha: sale.fecha,
+      Total: sale.total,
+      Estado: sale.estado,
+      "Estado Pago": sale.estadoPago,
     }));
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
@@ -257,29 +231,22 @@ export default function SalesIndex() {
     XLSX.writeFile(wb, `ventas_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
-
-  //  Abrir modal de anulación (con validación de estadoPago) 
   const handleOpenAnnul = (row: SaleRow) => {
     if (!hasSalesCancel) {
       showError("No tienes permisos para anular ventas.");
       return;
     }
 
-    // Bloquear si tiene pago o abono registrado
-    if (row.estadoPago === "Pagada") {
-      showError("No se puede anular una venta que ya fue pagada.");
+    if (row.paidAmount > 0) {
+      showError("No se puede anular una venta con pagos registrados.");
       return;
     }
-    if (row.estadoPago === "Abonada") {
-      showError("No se puede anular una venta con abono registrado. Revise el pago antes de anular.");
-      return;
-    }
+
     setSaleToAnnul(row);
     setAnnulReason("");
     setAnnulModalOpen(true);
   };
 
-  //  Confirmar anulación  
   const handleConfirmAnnul = async () => {
     if (!saleToAnnul) return;
     if (!annulReason.trim()) {
@@ -293,14 +260,14 @@ export default function SalesIndex() {
       showSuccess(`Venta ${saleToAnnul.codigo} anulada correctamente.`);
       setAnnulModalOpen(false);
       loadSales();
-    } catch {
+    } catch (error) {
+      console.error(error);
       showError("Error al anular la venta.");
     } finally {
       setAnnulling(false);
     }
   };
 
-  // â”€â”€ Columnas de la tabla â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const columns: Column<SaleRow>[] = [
     {
       key: "id",
@@ -347,63 +314,26 @@ export default function SalesIndex() {
       key: "estadoPago",
       header: "Estado Pago",
       render: (row) => {
-        // Si la venta está anulada o finalizada, mostrar solo el valor sin botones
-        if (
-          row.estado === "Anulada" ||
-          row.estado === "Finalizada" ||
-          !hasSalesUpdate
-        ) {
-          return (
-            <span className="text-xs text-gray-400 italic">
-              {row.estadoPago ?? "—"}
-            </span>
-          );
-        }
+        const classes =
+          row.estadoPago === "Pagada"
+            ? "bg-green-100 text-green-700"
+            : row.estadoPago === "Abonada"
+              ? "bg-blue-100 text-blue-700"
+              : "bg-gray-100 text-gray-600";
 
-        const opciones: Array<"Abonada" | "Pagada"> = ["Abonada", "Pagada"];
-
-        return (
-          <div className="flex gap-1">
-            {opciones.map((op) => {
-              const isActive = row.estadoPago === op;
-              return (
-                <button
-                  key={op}
-                  onClick={() => handleEstadoPagoChange(row, op)}
-                  className={`text-xs px-2 py-0.5 rounded-full border transition-colors ${isActive
-                    ? op === "Pagada"
-                      ? "bg-green-100 text-green-700 border-green-300 font-semibold"
-                      : "bg-blue-100 text-blue-700 border-blue-300 font-semibold"
-                    : "bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100"
-                    }`}
-                  title={isActive ? `Ya marcada como ${op}` : `Marcar como ${op}`}
-                >
-                  {op}
-                </button>
-              );
-            })}
-          </div>
-        );
+        return <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${classes}`}>{row.estadoPago}</span>;
       },
     },
   ];
 
-  //  Loading state 
   if (!permissionsLoaded || (loading && hasSalesRead)) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="w-12 h-12 border-4 border-green-600 border-t-transparent rounded-full animate-spin" />
-        <span className="ml-3 text-gray-500">Cargando ventas...</span>
-      </div>
-    );
+    return <Loader />;
   }
 
   if (!hasSalesRead) {
     return (
       <div className="flex items-center justify-center py-20">
-        <span className="text-gray-500">
-          No tienes permisos para visualizar ventas.
-        </span>
+        <span className="text-gray-500">No tienes permisos para visualizar ventas.</span>
       </div>
     );
   }
@@ -412,9 +342,8 @@ export default function SalesIndex() {
     <div className="flex flex-col gap-4">
       <ToastContainer position="bottom-right" />
 
-      {/* Crear venta — formulario de página completa */}
       {isCreateModalOpen ? (
-        <div className="w-full">
+        <div className="w-full max-h-[calc(100vh-120px)] overflow-y-auto pr-2">
           <CreateSaleForm
             onClose={() => setCreateModalOpen(false)}
             onSaved={() => {
@@ -424,46 +353,46 @@ export default function SalesIndex() {
         </div>
       ) : (
         <DataTable<SaleRow>
-          data={sortedSales}
+          data={sales}
           columns={columns}
           searchableKeys={["codigo", "cliente", "estado", "estadoPago"]}
           pageSize={10}
-          onView={(row) => setViewSaleId(row.id)}
+          onView={(row) => router.push(`/dashboard/sales/${row.id}`)}
           renderExtraActions={(row) =>
-            hasSalesCancel && row.estado === "Pendiente" ? (
-              <button
-                onClick={() => handleOpenAnnul(row)}
-                className="p-1 rounded-full cursor-pointer transition-all duration-300 hover:scale-110 hover:bg-green-300/60 text-green-500"
-                title="Anular Venta"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10" />
-                  <line x1="15" y1="9" x2="9" y2="15" />
-                  <line x1="9" y1="9" x2="15" y2="15" />
-                </svg>
-              </button>
-            ) : null
+            <>
+              {canOpenPaymentFlow &&
+              row.estado !== "Anulada" &&
+              !isGatewayPaymentMethod(row.paymentMethod) ? (
+                <button
+                  onClick={() => setPaymentSaleId(row.id)}
+                  className="p-1 rounded-full cursor-pointer transition-all duration-300 hover:scale-110 hover:bg-blue-300/50 text-blue-600"
+                  title={isClientUser ? "Ver solicitud de pago" : "Gestionar pagos"}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M2 9h20"></path>
+                    <path d="M6 15h2"></path>
+                    <path d="M10 15h5"></path>
+                    <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+                  </svg>
+                </button>
+              ) : null}
+              {hasSalesCancel && row.estado === "Pendiente" ? (
+                <button
+                  onClick={() => handleOpenAnnul(row)}
+                  className="p-1 rounded-full cursor-pointer transition-all duration-300 hover:scale-110 hover:bg-red-300/60 text-red-500"
+                  title="Anular Venta"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="15" y1="9" x2="9" y2="15" />
+                    <line x1="9" y1="9" x2="15" y2="15" />
+                  </svg>
+                </button>
+              ) : null}
+            </>
           }
           rightActions={
             <div className="flex items-center gap-2">
-              {/* Botones de orden */}
-              {(["fecha", "total"] as const).map((field) => (
-                <button
-                  key={field}
-                  onClick={() => handleSort(field)}
-                  className={`flex items-center gap-1 px-3 py-1.5 text-sm font-medium border rounded-lg transition-colors ${sortField === field
-                    ? "bg-green-600 text-white border-green-600"
-                    : "text-gray-600 bg-white hover:bg-gray-50 border-gray-300"
-                    }`}
-                  title={`Ordenar por ${field === "fecha" ? "Fecha" : "Total"}`}
-                >
-                  {field === "fecha" ? "Fecha" : "Total"}
-                  <span className="text-xs">
-                    {sortField === field ? (sortDir === "asc" ? " ↑" : " ↓") : " ↕"}
-                  </span>
-                </button>
-              ))}
-              {/* Excel */}
               <button
                 onClick={exportToExcel}
                 className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-green-700 bg-green-50 hover:bg-green-100 border border-green-300 rounded-lg transition-colors"
@@ -482,10 +411,12 @@ export default function SalesIndex() {
         />
       )}
 
-      {/* Modal Detalle */}
-      <SaleDetailModal saleId={viewSaleId} onClose={() => setViewSaleId(null)} />
+      <SalePaymentsModal
+        saleId={paymentSaleId}
+        onClose={closePaymentModal}
+        onSaved={loadSales}
+      />
 
-      {/* Modal Anular Venta */}
       <Modal
         title="Anular Venta"
         isOpen={isAnnulModalOpen}
@@ -559,4 +490,3 @@ export default function SalesIndex() {
     </div>
   );
 }
-

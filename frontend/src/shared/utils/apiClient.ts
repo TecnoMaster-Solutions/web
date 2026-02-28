@@ -1,8 +1,9 @@
 import { type AxiosRequestConfig } from "axios";
 import { api } from "@/lib/api";
-export { api } from "@/lib/api";
 
 type RequestOptions = AxiosRequestConfig;
+
+export { api };
 
 export const apiClient = {
   async get<T>(path: string, config?: RequestOptions): Promise<T> {

@@ -1,9 +1,3 @@
-// ─────────────────────────────────────────────────────
-// Tipos / Interfaces de Ventas
-// Alineados con las entidades y DTOs del backend
-// ─────────────────────────────────────────────────────
-
-// ── Producto (para el buscador de productos) ──
 export interface IProduct {
     productid: number;
     productname: string;
@@ -21,7 +15,6 @@ export interface IProduct {
     };
 }
 
-// ── Servicio ──
 export interface IService {
     serviceid: number;
     name: string;
@@ -33,7 +26,6 @@ export interface IService {
     statename?: string;
 }
 
-// ── Cliente (para el selector de cliente) ──
 export interface ICustomer {
     customerid: number;
     userid: number;
@@ -50,11 +42,11 @@ export interface ICustomer {
     };
 }
 
-// ── Detalle de venta (línea individual) ──
 export interface ISaleDetail {
     saledetailid: number;
     saleid: number;
-    productid: number;
+    productid: number | null;
+    serviceid?: number | null;
     quantity: number;
     unitprice: number;
     linetotal: number;
@@ -62,9 +54,59 @@ export interface ISaleDetail {
     discountamount: number;
     notes: string | null;
     products?: IProduct;
+    service?: IService;
 }
 
-// ── Venta completa (respuesta del backend) ──
+export interface ISalesPayment {
+    paymentid: number;
+    saleid: number;
+    amount: number;
+    paymentmethod: string | null;
+    reference: string | null;
+    invoiceurl: string | null;
+    createdat: string;
+}
+
+export type SalePaymentRequestType = "HALF" | "FULL" | "REMAINING";
+export type SalePaymentRequestStatus =
+    | "PendingReceipt"
+    | "ReceiptUploaded"
+    | "Approved"
+    | "Rejected"
+    | "Cancelled";
+
+export interface IUserActorSummary {
+    userid: number;
+    name: string;
+    lastname?: string | null;
+    email?: string | null;
+}
+
+export interface ISalePaymentRequest {
+    paymentRequestId: number;
+    saleid: number;
+    requestType: SalePaymentRequestType;
+    expectedAmount: number;
+    status: SalePaymentRequestStatus;
+    receiptUrl: string | null;
+    receiptReference: string | null;
+    receiptNotes: string | null;
+    adminNotes: string | null;
+    reviewNotes: string | null;
+    requestedByUserId: number | null;
+    receiptUploadedByUserId: number | null;
+    reviewedByUserId: number | null;
+    approvedPaymentId: number | null;
+    receiptUploadedAt: string | null;
+    reviewedAt: string | null;
+    createdAt: string;
+    updatedAt: string;
+    approvedPayment?: ISalesPayment | null;
+    requestedByUser?: IUserActorSummary | null;
+    receiptUploadedByUser?: IUserActorSummary | null;
+    reviewedByUser?: IUserActorSummary | null;
+}
+
 export interface ISale {
     saleid: number;
     salecode: string;
@@ -76,24 +118,29 @@ export interface ISale {
     totalamount: number;
     paymentmethod: string;
     salestatus: string;
-    estadoPago: string | null;
+    paymentstatus: "Pending" | "Abonada" | "Pagada";
+    paidamount: number;
+    pendingamount?: number;
     createdby: string | null;
     createddate: string | null;
+    updateddate?: string | null;
     notes: string | null;
+    paymentInvoiceUrl?: string | null;
     customer?: ICustomer;
     salesdetail?: ISaleDetail[];
+    payments?: ISalesPayment[];
+    paymentRequests?: ISalePaymentRequest[];
 }
 
-// ── DTO para crear detalle (envío al backend) ──
 export interface ICreateSaleDetailDto {
-    productid: number;
+    productid?: number;
+    serviceid?: number;
     quantity: number;
     unitprice: number;
     discountpercent?: number;
     notes?: string;
 }
 
-// ── DTO para crear venta (envío al backend) ──
 export interface ICreateSaleDto {
     salecode: string;
     saledate: string;
@@ -107,12 +154,37 @@ export interface ICreateSaleDto {
     salestatus?: string;
     createdby?: string;
     notes?: string;
+    paymentInvoiceUrl?: string;
     details: ICreateSaleDetailDto[];
 }
 
-// ── Ítem del carrito (uso interno del frontend) ──
+export interface ICreateSalePaymentDto {
+    amount: number;
+    paymentmethod?: string;
+    reference?: string;
+    file?: File | null;
+}
+
+export interface ICreateSalePaymentRequestDto {
+    requestType: SalePaymentRequestType;
+    expectedAmount: number;
+    adminNotes?: string;
+}
+
+export interface IReviewSalePaymentRequestDto {
+    reviewNotes?: string;
+    paymentmethod?: string;
+    reference?: string;
+}
+
+export interface IUploadSalePaymentReceiptDto {
+    receiptReference?: string;
+    receiptNotes?: string;
+    file: File | null;
+}
+
 export interface ICartItem {
-    id: string; // unique key para React
+    id: string;
     type: "Producto" | "Servicio";
     productid?: number;
     serviceid?: number;
@@ -121,12 +193,11 @@ export interface ICartItem {
     image: string | null;
     quantity: number;
     unitprice: number;
-    stock: number; // 0 para servicios
+    stock: number;
     linetotal: number;
     discountpercent: number;
 }
 
-// ── Anulación ──
 export interface IAnnulSaleData {
     saleid: number;
     salecode: string;

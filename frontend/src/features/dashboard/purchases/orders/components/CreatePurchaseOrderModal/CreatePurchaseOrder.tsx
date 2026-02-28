@@ -79,7 +79,7 @@ export const CreatePurchaseOrderModal: React.FC<createPurchaseOrderModalProps> =
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows]); // setItems es estable (useCallback), pero lo excluimos para evitar loops
 
-  // â”€â”€ Seleccionar proveedor â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  //  Seleccionar proveedor 
   const handleSupplierChange = useCallback(
     async (e: React.ChangeEvent<HTMLSelectElement>) => {
       const supplierId = Number(e.target.value);
@@ -96,7 +96,7 @@ export const CreatePurchaseOrderModal: React.FC<createPurchaseOrderModalProps> =
       setSelectedSupplier(found || null);
 
       if (found) {
-        // âœ… Guardar el NOMBRE y el ID del proveedor en el hook
+        //  Guardar el NOMBRE y el ID del proveedor en el hook
         handleSupplierChangeHook(found.name, found.supplierid);
 
         setLoadingProducts(true);
@@ -113,7 +113,7 @@ export const CreatePurchaseOrderModal: React.FC<createPurchaseOrderModalProps> =
     [suppliers, handleInputChange]
   );
 
-  // â”€â”€ Manejo de filas de productos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  //  Manejo de filas de productos 
   const handleProductSelect = (index: number, productName: string) => {
     const prod = supplierProducts.find((p) => p.productname === productName);
     setRows((prev) =>
@@ -147,7 +147,7 @@ export const CreatePurchaseOrderModal: React.FC<createPurchaseOrderModalProps> =
     setRows((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // â”€â”€ Enviar + guardar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  //  Enviar + guardar 
   const handleSendAndSave = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -313,7 +313,7 @@ export const CreatePurchaseOrderModal: React.FC<createPurchaseOrderModalProps> =
             {loadingProducts && (
               <div className="text-xs text-blue-600 mb-2 flex items-center gap-2">
                 <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                Cargando productos del proveedorâ€¦
+                Cargando productos del proveedor
               </div>
             )}
 
@@ -467,7 +467,7 @@ export const CreatePurchaseOrderModal: React.FC<createPurchaseOrderModalProps> =
               {(isSending || isSubmitting) && (
                 <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
               )}
-              {isSending ? "Enviandoâ€¦" : isSubmitting ? "Guardandoâ€¦" : "Enviar al Proveedor y Guardar"}
+              {isSending ? "Enviando…" : isSubmitting ? "Guardando…" : "Enviar al Proveedor y Guardar"}
             </button>
           </div>
         </form>
