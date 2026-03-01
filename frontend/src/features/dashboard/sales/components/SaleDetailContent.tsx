@@ -11,6 +11,14 @@ interface SaleDetailContentProps {
     onBack?: () => void;
 }
 
+function Loader() {
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="h-16 w-16 animate-spin rounded-full border-4 border-green-600 border-t-transparent" />
+        </div>
+    );
+}
+
 function formatDate(dateString: string) {
     if (!dateString) return "";
     return new Date(dateString).toLocaleDateString("es-CO", {
@@ -92,7 +100,7 @@ export default function SaleDetailContent({ saleId, onBack }: SaleDetailContentP
     }, [saleId]);
 
     if (loading) {
-        return <div className="p-6 text-center text-gray-500">Cargando venta...</div>;
+        return <Loader />;
     }
 
     if (error) {
@@ -160,15 +168,17 @@ export default function SaleDetailContent({ saleId, onBack }: SaleDetailContentP
                 </div>
             </div>
 
-            <div className="rounded-lg bg-gray-50 p-4">
-                <h4 className="font-bold text-gray-700 mb-3">Resumen de pago</h4>
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-4 text-sm">
-                    <div><div className="text-gray-500">Total</div><div className="font-semibold">{formatCurrency(sale.totalamount)}</div></div>
-                    <div><div className="text-gray-500">Pagado</div><div className="font-semibold">{formatCurrency(sale.paidamount)}</div></div>
-                    <div><div className="text-gray-500">Pendiente</div><div className="font-semibold">{formatCurrency(sale.pendingamount ?? sale.totalamount - sale.paidamount)}</div></div>
-                    <div><div className="text-gray-500">Pagos reales</div><div className="font-semibold">{sale.payments?.length ?? 0} / 2</div></div>
+            {shouldShowManualPaymentSections ? (
+                <div className="rounded-lg bg-gray-50 p-4">
+                    <h4 className="font-bold text-gray-700 mb-3">Resumen de pago</h4>
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-4 text-sm">
+                        <div><div className="text-gray-500">Total</div><div className="font-semibold">{formatCurrency(sale.totalamount)}</div></div>
+                        <div><div className="text-gray-500">Pagado</div><div className="font-semibold">{formatCurrency(sale.paidamount)}</div></div>
+                        <div><div className="text-gray-500">Pendiente</div><div className="font-semibold">{formatCurrency(sale.pendingamount ?? sale.totalamount - sale.paidamount)}</div></div>
+                        <div><div className="text-gray-500">Pagos reales</div><div className="font-semibold">{sale.payments?.length ?? 0} / 2</div></div>
+                    </div>
                 </div>
-            </div>
+            ) : null}
 
             <div className="rounded-lg bg-gray-50 p-4">
                 <h4 className="font-bold text-gray-700 mb-3">Resumen general</h4>

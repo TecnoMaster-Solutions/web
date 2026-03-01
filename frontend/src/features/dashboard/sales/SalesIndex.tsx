@@ -365,7 +365,7 @@ export default function SalesIndex() {
               !isGatewayPaymentMethod(row.paymentMethod) ? (
                 <button
                   onClick={() => setPaymentSaleId(row.id)}
-                  className="p-1 rounded-full cursor-pointer transition-all duration-300 hover:scale-110 hover:bg-blue-300/50 text-blue-600"
+                  className="p-1 rounded-full cursor-pointer text-black transition-all duration-300 hover:scale-110 hover:bg-[#06a646]/30"
                   title={isClientUser ? "Ver solicitud de pago" : "Gestionar pagos"}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -379,7 +379,7 @@ export default function SalesIndex() {
               {hasSalesCancel && row.estado === "Pendiente" ? (
                 <button
                   onClick={() => handleOpenAnnul(row)}
-                  className="p-1 rounded-full cursor-pointer transition-all duration-300 hover:scale-110 hover:bg-red-300/60 text-red-500"
+                  className="p-1 rounded-full cursor-pointer text-black transition-all duration-300 hover:scale-110 hover:bg-[#06a646]/30"
                   title="Anular Venta"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

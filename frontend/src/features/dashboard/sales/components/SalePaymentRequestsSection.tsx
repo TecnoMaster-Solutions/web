@@ -278,7 +278,6 @@ export default function SalePaymentRequestsSection({
                     <h3 className="text-lg font-bold text-gray-900">Flujo de pagos con aprobación</h3>
                     
                 </div>
-                {loading ? <span className="text-sm text-gray-500">Actualizando...</span> : null}
             </div>
 
             <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-4">
@@ -370,7 +369,7 @@ export default function SalePaymentRequestsSection({
                                     type="button"
                                     onClick={createRequest}
                                     disabled={creating || expectedAmount <= 0}
-                                    className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
+                                    className="cursor-pointer rounded-lg bg-[#2a9781] px-4 py-2 text-sm font-medium text-white transition duration-300 hover:scale-105 hover:bg-[#227a69] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     {creating ? "Creando..." : "Crear solicitud"}
                                 </button>

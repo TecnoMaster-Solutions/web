@@ -80,7 +80,7 @@ const DataTableComponent = <T extends { [key: string]: any }>(
     onCheck,
     onApprove,
     onCreate,
-    searchPlaceholder = "Buscarar compra",
+    searchPlaceholder = "Buscar ventas",
     createButtonText = "Crear",
     rightActions,
     renderActions,

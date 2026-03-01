@@ -14,6 +14,8 @@ const VERIFY_PATH = "/payments/mercado-pago/verify";
 const PREFERENCES_PATH = "/payments/mercado-pago/preferences";
 const LAST_SALE_ID_KEY = "mp_last_sale_id";
 const CART_STORAGE_KEY = "vertecx_cart";
+const CART_CLEAR_SIGNAL_KEY = "vertecx_cart_clear_signal";
+const CART_CLEAR_EVENT = "vertecx-cart-clear";
 
 type CheckoutWindowOptions = {
   popupWindow?: Window | null;
@@ -64,6 +66,18 @@ export function clearMercadoPagoCheckoutLocalState() {
   if (typeof window === "undefined") return;
   localStorage.removeItem(LAST_SALE_ID_KEY);
   localStorage.removeItem(CART_STORAGE_KEY);
+  localStorage.setItem(CART_CLEAR_SIGNAL_KEY, String(Date.now()));
+  window.dispatchEvent(new Event(CART_CLEAR_EVENT));
+
+  try {
+    const opener = window.opener as Window | null;
+    if (opener && !opener.closed) {
+      opener.localStorage.setItem(CART_CLEAR_SIGNAL_KEY, String(Date.now()));
+      opener.dispatchEvent(new Event(CART_CLEAR_EVENT));
+    }
+  } catch {
+    // ignore cross-window cleanup failures
+  }
 }
 
 export async function createSaleCheckoutAndRedirect(
@@ -146,55 +160,22 @@ export function openMercadoPagoCheckoutPlaceholderWindow() {
         align-items: center;
         justify-content: center;
       }
-      .wrap {
-        position: relative;
-        width: 96px;
-        height: 96px;
-        display: grid;
-        place-items: center;
-      }
       .spinner {
         width: 64px;
         height: 64px;
-        border: 4px solid #dc2626;
+        border: 4px solid #16a34a;
         border-top-color: transparent;
         border-radius: 9999px;
         animation: spin 1s linear infinite;
-        z-index: 2;
-      }
-      .pulse {
-        position: absolute;
-        width: 80px;
-        height: 80px;
-        border: 4px solid #f87171;
-        border-radius: 9999px;
-        animation: pulse 1.5s ease-in-out infinite;
-        z-index: 1;
-      }
-      .label {
-        position: absolute;
-        top: calc(50% + 70px);
-        left: 50%;
-        transform: translateX(-50%);
-        color: #fff;
-        font-size: 14px;
-        white-space: nowrap;
       }
       @keyframes spin {
         to { transform: rotate(360deg); }
       }
-      @keyframes pulse {
-        0% { transform: scale(1); opacity: 1; }
-        70% { transform: scale(1.4); opacity: 0; }
-        100% { transform: scale(1.4); opacity: 0; }
-      }
     </style>
   </head>
   <body>
-    <div class="wrap" aria-live="polite" aria-label="Abriendo Mercado Pago">
-      <div class="pulse"></div>
+    <div aria-live="polite" aria-label="Abriendo Mercado Pago">
       <div class="spinner"></div>
-      <div class="label">Abriendo Mercado Pago...</div>
     </div>
   </body>
 </html>`

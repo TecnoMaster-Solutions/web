@@ -5,13 +5,16 @@ import { upcomingFormatter } from "../types/calendar.constants";
 
 export type AppointmentUpcomingListProps = {
   events: AppointmentEvent[];
-  selectedEventId: number | null;
+  selectedEventKey: string | null;
   onSelect: (event: AppointmentEvent) => void;
 };
 
+const getAppointmentEventKey = (event: AppointmentEvent) =>
+  `${event.source}-${event.id}`;
+
 const AppointmentUpcomingList = ({
   events,
-  selectedEventId,
+  selectedEventKey,
   onSelect,
 }: AppointmentUpcomingListProps) => (
   <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -30,11 +33,11 @@ const AppointmentUpcomingList = ({
       ) : (
         events.map((event) => (
           <button
-            key={event.id}
+            key={getAppointmentEventKey(event)}
             type="button"
             onClick={() => onSelect(event)}
             className={`w-full px-5 py-3 text-left transition hover:bg-slate-50 ${
-              selectedEventId === event.id ? "bg-slate-50" : ""
+              selectedEventKey === getAppointmentEventKey(event) ? "bg-slate-50" : ""
             }`}
           >
             <p className="text-sm font-semibold text-slate-900">{event.title}</p>
