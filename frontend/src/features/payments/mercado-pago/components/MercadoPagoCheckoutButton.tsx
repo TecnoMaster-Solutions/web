@@ -55,7 +55,7 @@ export default function MercadoPagoCheckoutButton({
           "inline-flex items-center justify-center rounded-md bg-sky-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-60"
         }
       >
-        {isLoading ? "Redirigiendo..." : label}
+        {label}
       </button>
 
       {errorMessage ? (

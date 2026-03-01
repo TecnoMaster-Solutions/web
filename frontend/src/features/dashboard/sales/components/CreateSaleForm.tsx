@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
 import { useSalesForm } from "../hooks/useSalesForm";
 import Colors from "@/shared/theme/colors";
 import { Loader } from "@/shared/components/loader";
@@ -581,7 +580,7 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
                                                         <td className="p-3 text-center">
                                                             <button
                                                                 onClick={() => removeFromCart(item.id)}
-                                                                className="text-green-500 hover:text-green-700 transition"
+                                                                className="rounded-full p-1 text-black transition-all duration-300 hover:scale-110 hover:bg-[#06a646]/30"
                                                                 title="Eliminar"
                                                             >
                                                                 <svg
@@ -661,7 +660,7 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
                                                         <td className="p-3 text-center">
                                                             <button
                                                                 onClick={() => removeFromCart(item.id)}
-                                                                className="text-green-500 hover:text-green-700 transition"
+                                                                className="rounded-full p-1 text-black transition-all duration-300 hover:scale-110 hover:bg-[#06a646]/30"
                                                                 title="Eliminar"
                                                             >
                                                                 <svg
@@ -751,7 +750,7 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
                                                 <td className="p-3 text-center">
                                                     <button
                                                         onClick={() => removeFromCart(item.id)}
-                                                        className="text-green-500 hover:text-green-700 transition"
+                                                        className="rounded-full p-1 text-black transition-all duration-300 hover:scale-110 hover:bg-[#06a646]/30"
                                                         title="Eliminar"
                                                     >
                                                         <svg
@@ -858,15 +857,14 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
                             <button
                                 onClick={onClose}
                                 disabled={submitting}
-                                className="px-6 py-2 rounded-lg font-medium text-gray-600 bg-gray-200 hover:bg-gray-300 transition"
+                                className="cursor-pointer rounded-lg bg-gray-300 px-4 py-2 font-medium text-black transition duration-300 hover:scale-105 hover:bg-gray-200 hover:text-black disabled:cursor-not-allowed disabled:opacity-60"
                             >
                                 Cancelar
                             </button>
                             <button
                                 onClick={handleSave}
                                 disabled={submitting}
-                                className="px-6 py-2 rounded-lg font-medium text-white transition flex items-center justify-center"
-                                style={{ backgroundColor: "black" }}
+                                className="flex items-center justify-center rounded-lg bg-[#2a9781] px-4 py-2 font-medium text-white transition duration-300 hover:scale-105 hover:bg-[#227a69] hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
                             >
                                 {submitting ? <Loader size="sm" /> : "Guardar"}
                             </button>
