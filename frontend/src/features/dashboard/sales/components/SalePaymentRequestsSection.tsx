@@ -90,7 +90,7 @@ export default function SalePaymentRequestsSection({
     const onSaleUpdatedRef = useRef(onSaleUpdated);
     const { user } = useAuth();
     const permissions = Array.isArray((user as any)?.permissions) ? (user as any).permissions : [];
-    const canManagePayments = permissions.includes("sales.update");
+    const canManagePayments = permissions.includes("sales.manage_payment");
 
     const [requests, setRequests] = useState<ISalePaymentRequest[]>(sale.paymentRequests ?? []);
     const [loading, setLoading] = useState(false);

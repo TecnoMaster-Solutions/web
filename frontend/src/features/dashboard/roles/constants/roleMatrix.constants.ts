@@ -34,7 +34,7 @@ export const ALL_MODULE_PERMISSIONS: Record<RoleUiModule, string[]> = {
   "Cotización de Servicio": ["Crear", "Ver", "Cancelar", "Aprobar","Completar", "Descargar reporte"],
 
   Citas: ["Ver", "Editar", "Cancelar", "Finalizar"],
-  Ventas: ["Crear", "Ver", "Anular"],
+  Ventas: ["Crear", "Ver", "Anular","Gestionar Pagos", "Descargar reporte"],
   "Órdenes de Compra": ["Ver", "Crear"],
 
   "Orden de Servicio": [
@@ -82,6 +82,7 @@ export const PRIVILEGE_NAME_TO_ID: Record<string, number> = {
   download_report: 8,
   complete: 9,
   approve: 10,
+  manage_payment: 11,
 };
 
 export const MODULE_BACK_TO_UI: Record<string, RoleUiModule> = {
@@ -161,6 +162,8 @@ export const uiActionToPrivilegeName = (
 
   if (module === "Ventas") {
     if (a === "anular") return "deactivate";
+    if (a === "gestionar pagos") return "manage_payment";
+    if (a === "descargar reporte") return "download_report";
   }
 
   if (module === "Compras") {
@@ -204,11 +207,15 @@ export const privilegeNameToUiActions = (
 
   if (p === "add_history") return ["Agregar historial"];
   if (p === "report_warranty") return ["Reportar garantía"];
+  if (p === "manage_payment") return ["Gestionar Pagos"];
 
   if (p === "download_report") {
     if (module === "Productos" || module === "Servicios") return ["Descargar excel"];
     return ["Descargar reporte"];
   }
+
+  if (p === "download_report" && module === "Ventas") return ["Descargar reporte"];
+
   
   if (p === "complete") return ["Completar"];
 
