@@ -6,7 +6,7 @@ import Swal from "sweetalert2";
 import RequireAuth from "@/features/auth/requireauth";
 import Modal from "@/features/dashboard/components/Modal";
 import Colors from "@/shared/theme/colors";
-import { showError, showSuccess } from "@/shared/utils/notifications";
+import { showError, showSuccess, showWarning } from "@/shared/utils/notifications";
 import { useAuth } from "@/features/auth/authcontext";
 
 import { DataTable } from "@/features/dashboard/components/datatable/DataTable";
@@ -656,13 +656,7 @@ export default function OrdersServicesIndexPage() {
       return;
     }
 
-    // warning
-    Swal.fire({
-      icon: "warning",
-      title: "Atención",
-      text: toast.message,
-      confirmButtonColor: "#04652c",
-    });
+    showWarning(toast.message);
   }, [filterOrdersForAuth]);
 
   useEffect(() => {
@@ -707,11 +701,7 @@ export default function OrdersServicesIndexPage() {
       setRows(sortRowsByIdDesc(mapped));
     } catch {
       setRows([]);
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: "No se pudieron cargar las órdenes desde el backend.",
-      });
+      showError("No se pudieron cargar las órdenes desde el backend.");
     } finally {
       setLoading(false);
     }
@@ -730,11 +720,7 @@ export default function OrdersServicesIndexPage() {
       } catch {
         if (!mounted) return;
         setRows([]);
-        Swal.fire({
-          icon: "error",
-          title: "Error",
-          text: "No se pudieron cargar las órdenes desde el backend.",
-        });
+        showError("No se pudieron cargar las órdenes desde el backend.");
       } finally {
         if (!mounted) return;
         setLoading(false);
@@ -799,21 +785,11 @@ export default function OrdersServicesIndexPage() {
       try {
         await cancelOrderService(row.id);
 
-        await Swal.fire({
-          icon: "success",
-          title: "Orden cancelada",
-          text: `La orden #${row.id} fue cancelada correctamente.`,
-          confirmButtonColor: "#04652c",
-        });
+        showSuccess(`La orden #${row.id} fue cancelada correctamente.`);
 
         await reloadOrders();
       } catch (e: any) {
-        Swal.fire({
-          icon: "error",
-          title: "Error",
-          text: e?.response?.data?.message?.[0] || e?.response?.data?.message || "No se pudo cancelar la orden.",
-          confirmButtonColor: "#04652c",
-        });
+        showError(e?.response?.data?.message?.[0] || e?.response?.data?.message || "No se pudo cancelar la orden.");
       } finally {
         setBusy(false);
       }
@@ -865,24 +841,15 @@ export default function OrdersServicesIndexPage() {
 
         setReportOpen(false);
 
-        await Swal.fire({
-          icon: "success",
-          title: "Reporte guardado",
-          text: `Se registró el reporte de garantía para la orden #${reportRowId}.`,
-          confirmButtonColor: "#04652c",
-        });
+        showSuccess(`Se registró el reporte de garantía para la orden #${reportRowId}.`);
 
         await reloadOrders();
       } catch (e: any) {
-        Swal.fire({
-          icon: "error",
-          title: "Error",
-          text:
-            e?.response?.data?.message?.[0] ||
+        showError(
+          e?.response?.data?.message?.[0] ||
             e?.response?.data?.message ||
-            "No se pudo guardar el reporte de garantía.",
-          confirmButtonColor: "#04652c",
-        });
+            "No se pudo guardar el reporte de garantía."
+        );
       } finally {
         setBusy(false);
       }
@@ -1436,4 +1403,3 @@ const extraActions = useCallback(
     </RequireAuth>
   );
 }
-

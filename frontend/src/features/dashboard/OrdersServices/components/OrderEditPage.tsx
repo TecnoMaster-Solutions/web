@@ -459,7 +459,7 @@ const {
       .map((s: any) => {
         const stateid = Number(s?.stateid ?? s?.id);
         const name = String(s?.name ?? s?.state ?? s?.label ?? s?.statename ?? "").trim();
-        return { stateid, name, label: titleCase(name) || `Estado #${stateid}` } as OrderStateOption;
+        return { stateid, name, label: name || `Estado #${stateid}` } as OrderStateOption;
       })
       .filter((x) => Number.isFinite(x.stateid) && x.stateid > 0)
       .filter((x) => isOrderServiceStateLike(x.name));
@@ -1382,8 +1382,6 @@ const {
 
   function handleTimeStartChange(next: string) {
     if (!isAllowedTime(next)) {
-      showWarning("Horario permitido: 07:00 17:00.");
-      setErrors((p) => ({ ...p, schedule: "Horario permitido: 07:00 17:00." }));
       showWarning("Horario permitido: 07:00–17:00.");
       setErrors((p) => ({ ...p, schedule: "Horario permitido: 07:00–17:00." }));
       return;
@@ -1403,8 +1401,6 @@ const {
 
   function handleTimeEndChange(next: string) {
     if (!isAllowedTime(next)) {
-      showWarning("Horario permitido: 07:00 17:00.");
-      setErrors((p) => ({ ...p, schedule: "Horario permitido: 07:00 17:00." }));
       showWarning("Horario permitido: 07:00–17:00.");
       setErrors((p) => ({ ...p, schedule: "Horario permitido: 07:00–17:00." }));
       return;
@@ -2443,9 +2439,6 @@ const {
     </RequireAuth>
   );
 }
-
-
-
 
 
 

@@ -321,6 +321,7 @@ export function normalizeQuote(q: QuoteLike): QuoteNormalized {
     : Array.isArray(root?.quoteDetails)
       ? root.quoteDetails
       : [];
+  const rawSalesDetails = Array.isArray(root?.salesdetail) ? root.salesdetail : [];
 
   const rawProducts =
     root?.products ??
@@ -362,19 +363,86 @@ export function normalizeQuote(q: QuoteLike): QuoteNormalized {
 
   const mergedProducts = [...productsArr, ...rawDetails];
 
-  const services = servicesArr
+  const servicesFromRoot = servicesArr
     .map((s: any) => {
       const serviceid = pickNumber(s?.serviceid, s?.id, s?.service?.serviceid, s?.service?.id);
       const cantidad = pickNumber(s?.cantidad, s?.quantity, s?.qty) ?? 1;
-      const unitprice = pickNumber(s?.unitprice, s?.price, s?.unitPrice, s?.valor) ?? 0;
+      const qty = Math.max(1, Math.round(cantidad));
+      const rawUnit = pickNumber(s?.unitprice, s?.unitPrice, s?.price, s?.precio, s?.valor);
+      const rawSubtotal = pickNumber(s?.subtotal);
+      const unitprice = rawUnit ?? (rawSubtotal != null ? Number(rawSubtotal) / qty : 0);
       if (!serviceid) return null;
       return {
         serviceid,
-        cantidad: Math.max(1, Math.round(cantidad)),
+        cantidad: qty,
         unitprice: Math.max(0, Math.round(unitprice)),
       };
     })
     .filter(Boolean) as Array<{ serviceid: number; cantidad: number; unitprice: number }>;
+
+  const detailServiceRows = rawDetails
+    .map((d: any) => {
+      const productid = pickNumber(
+        d?.productid,
+        d?.product?.productid,
+        d?.product?.id,
+        d?.products?.productid,
+        d?.products?.id
+      );
+      if (productid) return null;
+
+      const detailServiceId = pickNumber(d?.serviceid, d?.serviceId, d?.service?.serviceid, d?.service?.id);
+      const descripcion = normalizeText(String(d?.description ?? d?.name ?? d?.servicename ?? ""));
+      const looksLikeService =
+        detailServiceId != null ||
+        descripcion.includes("servicio") ||
+        descripcion.includes("instalacion") ||
+        descripcion.includes("mantenimiento");
+      if (!looksLikeService) return null;
+
+      const resolvedServiceId = detailServiceId ?? serviceid ?? serviceIdFromDetail;
+      if (!resolvedServiceId) return null;
+
+      const cantidad = pickNumber(d?.cantidad, d?.quantity, d?.qty) ?? 1;
+      const qty = Math.max(1, Math.round(cantidad));
+      const rawUnit = pickNumber(d?.unitprice, d?.unitPrice, d?.price, d?.precio, d?.valor);
+      const rawSubtotal = pickNumber(d?.subtotal);
+      const unitprice = rawUnit ?? (rawSubtotal != null ? Number(rawSubtotal) / qty : 0);
+
+      return {
+        serviceid: resolvedServiceId,
+        cantidad: qty,
+        unitprice: Math.max(0, Math.round(unitprice)),
+      };
+    })
+    .filter(Boolean) as Array<{ serviceid: number; cantidad: number; unitprice: number }>;
+
+  const salesDetailServiceRows = rawSalesDetails
+    .map((d: any) => {
+      const pid = pickNumber(d?.productid, d?.product?.productid, d?.products?.productid);
+      if (pid) return null;
+
+      const sid = pickNumber(d?.serviceid, d?.serviceId, d?.service?.serviceid, d?.service?.id);
+      if (!sid) return null;
+
+      const cantidad = pickNumber(d?.cantidad, d?.quantity, d?.qty) ?? 1;
+      const qty = Math.max(1, Math.round(cantidad));
+      const rawUnit = pickNumber(d?.unitprice, d?.unitPrice, d?.price, d?.precio, d?.valor);
+      const rawSubtotal = pickNumber(d?.linetotal, d?.subtotal);
+      const unitprice = rawUnit ?? (rawSubtotal != null ? Number(rawSubtotal) / qty : 0);
+
+      return {
+        serviceid: sid,
+        cantidad: qty,
+        unitprice: Math.max(0, Math.round(unitprice)),
+      };
+    })
+    .filter(Boolean) as Array<{ serviceid: number; cantidad: number; unitprice: number }>;
+
+  const services = dedupeById(
+    [...servicesFromRoot, ...detailServiceRows, ...salesDetailServiceRows],
+    (s) => `${s.serviceid}:${s.unitprice}`
+  );
 
   const products = mergedProducts
     .map((p: any) => {
