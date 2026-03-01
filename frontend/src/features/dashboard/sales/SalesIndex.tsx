@@ -155,11 +155,15 @@ export default function SalesIndex() {
 
   const hasSalesRead = tokenPermissions.includes("sales.read");
   const hasSalesCreate = tokenPermissions.includes("sales.create");
-  const hasSalesUpdate = tokenPermissions.includes("sales.update");
+  const hasSalesManagePayment = tokenPermissions.includes("sales.manage_payment");
   const hasSalesDelete = tokenPermissions.includes("sales.delete");
+  const hasSalesDeactivate = tokenPermissions.includes("sales.deactivate");
+  const hasSalesExport =
+    tokenPermissions.includes("sales.export") ||
+    tokenPermissions.includes("sales.download_report");
   const hasSalesCancel =
-    tokenPermissions.includes("sales.cancel") || hasSalesDelete || hasSalesUpdate;
-  const canOpenPaymentFlow = hasSalesUpdate || isClientUser;
+    tokenPermissions.includes("sales.cancel") || hasSalesDeactivate || hasSalesDelete;
+  const canOpenPaymentFlow = hasSalesManagePayment || isClientUser;
 
   const loadSales = useCallback(async () => {
     try {
@@ -393,16 +397,18 @@ export default function SalesIndex() {
           }
           rightActions={
             <div className="flex items-center gap-2">
-              <button
-                onClick={exportToExcel}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-green-700 bg-green-50 hover:bg-green-100 border border-green-300 rounded-lg transition-colors"
-                title="Exportar a Excel"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-                Excel
-              </button>
+              {hasSalesExport ? (
+                <button
+                  onClick={exportToExcel}
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-green-700 bg-green-50 hover:bg-green-100 border border-green-300 rounded-lg transition-colors"
+                  title="Exportar a Excel"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  Excel
+                </button>
+              ) : null}
             </div>
           }
           onCreate={hasSalesCreate ? () => setCreateModalOpen(true) : undefined}
