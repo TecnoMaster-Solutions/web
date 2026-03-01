@@ -73,6 +73,9 @@ function validateScheduleOnly(ctx: Pick<ValidationContext, "dateStart" | "timeSt
   s.setHours(Math.floor(sMin / 60), sMin % 60, 0, 0);
   e.setHours(Math.floor(eMin / 60), eMin % 60, 0, 0);
 
+  const now = new Date();
+  if (s.getTime() <= now.getTime()) return "La fecha/hora de inicio no puede estar en el pasado.";
+
   if (!(e.getTime() > s.getTime())) return "La fecha/hora fin debe ser mayor que la de inicio.";
   if (timeStart === "17:00") return "La hora de inicio no puede ser 17:00.";
 

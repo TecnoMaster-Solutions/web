@@ -9,6 +9,7 @@ import { completeQuote, getQuoteById } from "./api/quotes.api";
 import { updateOrderService } from "@/features/dashboard/OrdersServices/api/ordersServices.api";
 import { updateServiceRequest } from "@/features/dashboard/requests/services/servicerequests.service";
 import { usePermissions } from "@/features/auth/hooks/usePermissions";
+import { showError, showSuccess, showWarning } from "@/shared/utils/notifications";
 
 type Props = {
   quoteId: number;
@@ -90,13 +91,13 @@ export default function QuoteDetailPage({ quoteId }: Props) {
   const handleCompleteQuote = useCallback(async () => {
     if (!quote) return;
     if (!canCompleteQuotes) {
-      await Swal.fire("Sin permisos", "No tienes permisos para completar cotizaciones.", "warning");
+      showWarning("No tienes permisos para completar cotizaciones.");
       return;
     }
 
     const id = Number(quote.quotesid ?? quote.id ?? quoteId);
     if (!id) {
-      await Swal.fire("Error", "ID de cotización inválido.", "error");
+      showError("ID de cotización inválido.");
       return;
     }
 
@@ -115,17 +116,9 @@ export default function QuoteDetailPage({ quoteId }: Props) {
       setCompletingQuote(true);
       await completeQuote(id);
       await fetchQuote();
-      await Swal.fire(
-        "Cotización completada",
-        "Se creó la venta asociada y la cotización se actualizó.",
-        "success",
-      );
+      showSuccess("Se creó la venta asociada y la cotización se actualizó.");
     } catch (error: any) {
-      await Swal.fire(
-        "Error",
-        error?.response?.data?.message ?? error?.message ?? "No se pudo completar la cotización.",
-        "error",
-      );
+      showError(error?.response?.data?.message ?? error?.message ?? "No se pudo completar la cotización.");
     } finally {
       setCompletingQuote(false);
     }
@@ -134,7 +127,7 @@ export default function QuoteDetailPage({ quoteId }: Props) {
   const handleFinalizeQuote = useCallback(async () => {
     if (!quote) return;
     if (!canUpdateQuotes) {
-      await Swal.fire("Sin permisos", "No tienes permisos para finalizar cotizaciones.", "warning");
+      showWarning("No tienes permisos para finalizar cotizaciones.");
       return;
     }
 
@@ -142,7 +135,7 @@ export default function QuoteDetailPage({ quoteId }: Props) {
     const orderServiceId = getQuoteOrderServiceId(quote);
 
     if (!serviceRequestId && !orderServiceId) {
-      await Swal.fire("Sin registros relacionados", "La cotización no tiene orden ni solicitud asociada.", "warning");
+      showWarning("La cotización no tiene orden ni solicitud asociada.");
       return;
     }
 
@@ -171,13 +164,9 @@ export default function QuoteDetailPage({ quoteId }: Props) {
       if (orderServiceId) requests.push(updateOrderService(orderServiceId, { stateid: 6 }));
       if (requests.length) await Promise.all(requests);
       await fetchQuote();
-      await Swal.fire("Finalizado", `Se ${verb} ${targetText} como ${suffix} (estado 6).`, "success");
+      showSuccess(`Se ${verb} ${targetText} como ${suffix} (estado 6).`);
     } catch (error: any) {
-      await Swal.fire(
-        "Error",
-        error?.response?.data?.message ?? error?.message ?? "No se pudieron actualizar los registros.",
-        "error",
-      );
+      showError(error?.response?.data?.message ?? error?.message ?? "No se pudieron actualizar los registros.");
     } finally {
       setFinalizingQuote(false);
     }

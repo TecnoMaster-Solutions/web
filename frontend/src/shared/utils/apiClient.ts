@@ -34,4 +34,3 @@ export const apiClient = {
     return res.data;
   },
 };
-

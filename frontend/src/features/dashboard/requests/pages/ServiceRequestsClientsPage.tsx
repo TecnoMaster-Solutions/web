@@ -228,7 +228,7 @@ export default function ServiceRequestsClientsPage() {
       setRows(mapped);
     } catch {
       setRows([]);
-      Swal.fire({ icon: "error", title: "Error", text: "No se pudieron cargar las solicitudes." });
+      showError("No se pudieron cargar las solicitudes.");
     } finally {
       setLoading(false);
     }
@@ -609,4 +609,3 @@ export default function ServiceRequestsClientsPage() {
     </RequireAuth>
   );
 }
-

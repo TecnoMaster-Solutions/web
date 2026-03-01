@@ -15,9 +15,6 @@ import {
   fetchLandingServiceTypes,
 } from "./api/servicesLanding.api";
 import { useAuth } from "@/features/auth/authcontext";
-import { APP_TOAST_ID } from "@/shared/utils/notifications";
-import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
 
 interface ServicesProps {
   className?: string;
@@ -103,19 +100,6 @@ export default function ServicesLanding({ className = "" }: ServicesProps) {
 
   return (
     <div className={className}>
-      <ToastContainer
-        containerId={APP_TOAST_ID}
-        position="top-right"
-        autoClose={3500}
-        hideProgressBar={false}
-        newestOnTop
-        closeOnClick
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="light"
-      />
-
       <Nav />
       <Banner />
 

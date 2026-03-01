@@ -81,6 +81,16 @@ type ServiceOption = {
   typeofservicename?: string | null;
   stateid?: number | null;
   statename?: string | null;
+  servicepriceofsale?: number | null;
+  servicePriceOfSale?: number | null;
+  serviceprice?: number | null;
+  servicePrice?: number | null;
+  price?: number | null;
+  precio?: number | null;
+  saleprice?: number | null;
+  salePrice?: number | null;
+  unitprice?: number | null;
+  unitPrice?: number | null;
 };
 
 const IVA_PCT = 19;
@@ -324,8 +334,41 @@ const {
             : s?.state?.name != null
               ? String(s.state.name)
               : null;
+        const servicepriceofsale = pickNumber(
+          s?.servicepriceofsale,
+          s?.servicePriceOfSale,
+          s?.service?.servicepriceofsale,
+          s?.service?.servicePriceOfSale
+        );
+        const serviceprice = pickNumber(
+          s?.serviceprice,
+          s?.servicePrice,
+          s?.service?.serviceprice,
+          s?.service?.servicePrice
+        );
+        const price = pickNumber(s?.price, s?.service?.price);
+        const precio = pickNumber(s?.precio, s?.service?.precio);
+        const saleprice = pickNumber(s?.saleprice, s?.salePrice, s?.service?.saleprice, s?.service?.salePrice);
+        const unitprice = pickNumber(s?.unitprice, s?.unitPrice, s?.service?.unitprice, s?.service?.unitPrice);
 
-        return { serviceid, name, typeofserviceid, typeofservicename, stateid, statename } as ServiceOption;
+        return {
+          serviceid,
+          name,
+          typeofserviceid,
+          typeofservicename,
+          stateid,
+          statename,
+          servicepriceofsale,
+          servicePriceOfSale: servicepriceofsale ?? null,
+          serviceprice,
+          servicePrice: serviceprice ?? null,
+          price,
+          precio,
+          saleprice: saleprice ?? null,
+          salePrice: saleprice ?? null,
+          unitprice: unitprice ?? null,
+          unitPrice: unitprice ?? null,
+        } as ServiceOption;
       })
       .filter(
         (x) =>
@@ -343,6 +386,22 @@ const {
       (s) => (s.stateid == null ? true : s.stateid === 1) || String(s.statename || "").toLowerCase() === "activo"
     );
     return active.length ? active : list;
+  }
+
+  function servicePriceFromOption(service?: Partial<ServiceOption> | null): number {
+    const price = pickNumber(
+      service?.servicepriceofsale,
+      service?.servicePriceOfSale,
+      service?.serviceprice,
+      service?.servicePrice,
+      service?.price,
+      service?.precio,
+      service?.saleprice,
+      service?.salePrice,
+      service?.unitprice,
+      service?.unitPrice
+    );
+    return Math.max(0, Math.round(Number(price ?? 0)));
   }
 
   const [quotesRaw, setQuotesRaw] = useState<any[]>([]);
@@ -384,6 +443,9 @@ const {
 
   const eligibleSales = useMemo(() => {
     return (quotesRaw || []).filter((q) => {
+      const quoteId = getQuoteIdFromSaleLike(q);
+      if (!quoteId) return false;
+
       const paymentRaw =
         q?.estadoPago ??
         q?.estadopago ??
@@ -402,7 +464,7 @@ const {
         (typeof q?.state === "string" ? q.state : "");
       const normalized = normalizeText(statusRaw || "");
       if (normalized.includes("cancel") || normalized.includes("anulad")) return false;
-      return paymentNormalized === "abonada";
+      return paymentNormalized === "abonada" || paymentNormalized === "pagada" || paymentNormalized === "paid";
     });
   }, [quotesRaw]);
 
@@ -744,7 +806,16 @@ const {
       showWarning("Ya agregaste todos los servicios disponibles para este tipo.");
       return;
     }
-    setServicios((prev) => [...prev, { id: uid(), nombre: first.name, precio: 0, tipoId }]);
+    setServicios((prev) => [
+      ...prev,
+      {
+        id: uid(),
+        serviceid: first.serviceid,
+        nombre: first.name,
+        precio: servicePriceFromOption(first),
+        tipoId,
+      },
+    ]);
     setErrors((prev) => ({ ...prev, servicios: undefined }));
   }
 
@@ -1339,7 +1410,20 @@ const {
           if (typeof srvTypeId === "number") setTipoId(srvTypeId);
 
           const name = String(srv?.name ?? srv?.servicename ?? srvCatalog?.name ?? "").trim();
-          const price = pickNumber(srv?.servicepriceofsale, srv?.serviceprice, srv?.price, srv?.precio) ?? 0;
+          const price =
+            pickNumber(
+              srv?.servicepriceofsale,
+              srv?.servicePriceOfSale,
+              srv?.serviceprice,
+              srv?.servicePrice,
+              srv?.price,
+              srv?.precio,
+              sr?.unitprice,
+              sr?.unitPrice,
+              sr?.price,
+              sr?.precio,
+              sr?.subtotal
+            ) ?? 0;
 
           if (srvId && name) {
             setServicios((prev) => {
@@ -1408,7 +1492,7 @@ const {
             id: `sid-${rec.serviceid}-${uid()}`,
             serviceid: rec.serviceid,
             nombre: rec.name,
-            precio: 0,
+            precio: servicePriceFromOption(rec),
             tipoId: tid,
           });
         }
@@ -1418,7 +1502,20 @@ const {
       for (const s of nq.services) {
         const rec = servicesCatalog.find((x) => x.serviceid === s.serviceid) || null;
         const nombre = rec?.name || `Servicio #${s.serviceid}`;
-        const precio = Math.max(0, Math.round(Number(s.unitprice || 0)));
+        const precio = Math.max(
+          0,
+          Math.round(
+            Number(
+              pickNumber(
+                (s as any)?.unitprice,
+                (s as any)?.unitPrice,
+                (s as any)?.price,
+                (s as any)?.precio,
+                (s as any)?.subtotal
+              ) || 0
+            )
+          )
+        );
         const tid = rec?.typeofserviceid ?? typeId ?? 0;
         if (!tid) continue;
         svcItems.push({ id: `q-${s.serviceid}-${uid()}`, serviceid: s.serviceid, nombre, precio, tipoId: tid });
@@ -1620,6 +1717,27 @@ const {
 
             const inferred = serviceLikeDetails
               .map((d: any) => {
+                const serviceId = pickNumber(d?.serviceid, d?.serviceId, d?.service?.serviceid, d?.service?.id);
+                const rawQty = pickNumber(d?.quantity, d?.cantidad, d?.qty) ?? 1;
+                const cantidad = Math.max(1, Math.round(Number(rawQty)));
+                const unitpriceRaw = pickNumber(
+                  d?.unitprice,
+                  d?.unitPrice,
+                  d?.price,
+                  d?.precio,
+                  d?.valor
+                );
+                const subtotalRaw = pickNumber(d?.subtotal);
+                const unitpriceFromSubtotal =
+                  unitpriceRaw == null && subtotalRaw != null && cantidad > 0
+                    ? Number(subtotalRaw) / cantidad
+                    : null;
+                const unitprice = Math.max(0, Math.round(Number(unitpriceRaw ?? unitpriceFromSubtotal ?? 0)));
+
+                if (serviceId) {
+                  return { serviceid: serviceId, cantidad, unitprice };
+                }
+
                 const rawDesc = String(d?.description ?? d?.name ?? "").trim();
                 const cleanDesc = normalizeText(rawDesc.replace(/^servicio\s*:\s*/i, "").trim());
                 const rec =
@@ -1634,8 +1752,6 @@ const {
                   null;
 
                 if (!rec) return null;
-                const cantidad = Math.max(1, Math.round(Number(d?.quantity ?? d?.cantidad ?? 1)));
-                const unitprice = Math.max(0, Math.round(Number(d?.unitprice ?? d?.price ?? 0)));
                 return { serviceid: rec.serviceid, cantidad, unitprice };
               })
               .filter(Boolean) as Array<{ serviceid: number; cantidad: number; unitprice: number }>;
@@ -1667,7 +1783,8 @@ const {
                 .map((line: any) => {
                   const sid = pickNumber(line?.serviceid, line?.service?.serviceid, line?.service?.id);
                   const cantidad = pickNumber(line?.cantidad, line?.quantity, line?.qty) ?? 1;
-                  const unitprice = pickNumber(line?.unitprice, line?.precio, line?.subtotal, line?.price) ?? 0;
+                  const unitprice =
+                    pickNumber(line?.unitprice, line?.unitPrice, line?.precio, line?.subtotal, line?.price) ?? 0;
                   if (!sid) return null;
                   return {
                     serviceid: sid,
@@ -2856,7 +2973,18 @@ setNavigating(true);
                                       value={it.nombre}
                                       onChange={(e) => {
                                         const n = e.target.value;
-                                        patchItem<ServiceLineItem>(it.id, { nombre: n }, setServicios);
+                                        const selected = getServicesForTipo(it.tipoId).find((s) => s.name === n) ?? null;
+                                        const selectedPrice = selected ? servicePriceFromOption(selected) : null;
+                                        patchItem<ServiceLineItem>(
+                                          it.id,
+                                          {
+                                            nombre: n,
+                                            serviceid: selected?.serviceid,
+                                            // Mantiene precio previo si el catalogo no trae precio para el servicio.
+                                            precio: selectedPrice != null && selectedPrice > 0 ? selectedPrice : it.precio,
+                                          },
+                                          setServicios
+                                        );
                                         if (errors.servicios) setErrors((prev) => ({ ...prev, servicios: undefined }));
                                       }}
                                       onBlur={() => runBlurValidation("servicios")}

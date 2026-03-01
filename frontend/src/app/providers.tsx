@@ -9,7 +9,6 @@ import { LoaderProvider } from "@/shared/components/loader";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import PendingToastListener from "@/shared/components/PendingToastListener";
-import { APP_TOAST_ID } from "@/shared/utils/notifications";
 
 export default function AppProviders({ children }: { children: ReactNode }) {
   const qc = getQueryClient();
@@ -17,7 +16,6 @@ export default function AppProviders({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={qc}>
       <ToastContainer
-        containerId={APP_TOAST_ID}
         position="bottom-right"
         autoClose={3000}
         hideProgressBar={false}

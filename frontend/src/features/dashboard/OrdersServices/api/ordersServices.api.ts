@@ -36,6 +36,7 @@ function isFinalOrderState(order: OrderServiceDTO): boolean {
 
   const stateName = String(order.state?.name ?? "").toLowerCase();
   return (
+    stateName.includes("garan") ||
     stateName.includes("cancel") ||
     stateName.includes("anul") ||
     stateName.includes("final") ||
@@ -104,11 +105,22 @@ export async function addOrderServiceWorklog(
   id: number,
   dto: AddWorklogDto
 ): Promise<OrdersServiceHistoryItem> {
-  const { data } = await api.post<OrdersServiceHistoryItem>(
-    `${BASE}/${id}/history`,
-    dto
-  );
-  return data;
+  try {
+    const { data } = await api.post<OrdersServiceHistoryItem>(`${BASE}/${id}/history`, dto);
+    return data;
+  } catch (error: any) {
+    const status = Number(error?.response?.status ?? 0);
+    const hasOptionalFields =
+      dto.title != null || dto.progresspercent != null || (Array.isArray(dto.attachments) && dto.attachments.length > 0);
+    if (status !== 400 || !hasOptionalFields) throw error;
+
+    const minimalDto: AddWorklogDto = {
+      technicianid: dto.technicianid,
+      note: dto.note,
+    };
+    const { data } = await api.post<OrdersServiceHistoryItem>(`${BASE}/${id}/history`, minimalDto);
+    return data;
+  }
 }
 
 export type OrderServicePatch = Partial<OrderServiceDTO> & { stateid?: number };
