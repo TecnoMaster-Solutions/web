@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 
 export type CartItem = {
   id: string;
@@ -18,9 +18,12 @@ type CartContextType = {
   removeFromCart: (id: string) => void;
   updateQuantity: (id: string, delta: number) => void;
   toggleService: (id: string) => void;
+  clearCart: () => void;
 };
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
+const CART_CLEAR_SIGNAL_KEY = "vertecx_cart_clear_signal";
+const CART_CLEAR_EVENT = "vertecx-cart-clear";
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -91,9 +94,28 @@ export function CartProvider({ children }: { children: ReactNode }) {
       )
     );
 
+  const clearCart = () => setCart([]);
+
+  useEffect(() => {
+    const handleClearCart = () => setCart([]);
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === CART_CLEAR_SIGNAL_KEY) {
+        setCart([]);
+      }
+    };
+
+    window.addEventListener(CART_CLEAR_EVENT, handleClearCart);
+    window.addEventListener("storage", handleStorage);
+
+    return () => {
+      window.removeEventListener(CART_CLEAR_EVENT, handleClearCart);
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, []);
+
   return (
     <CartContext.Provider
-      value={{ cart, addToCart, removeFromCart, updateQuantity, toggleService }}
+      value={{ cart, addToCart, removeFromCart, updateQuantity, toggleService, clearCart }}
     >
       {children}
     </CartContext.Provider>

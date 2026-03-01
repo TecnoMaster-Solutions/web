@@ -44,7 +44,7 @@ export default function SalePaymentsModal({
                 onClose();
             })
             .finally(() => setLoading(false));
-    }, [saleId]);
+    }, [saleId, onClose]);
 
     return (
         <Modal
@@ -53,11 +53,7 @@ export default function SalePaymentsModal({
             onClose={onClose}
             widthClass="max-w-4xl"
         >
-            {loading ? (
-                <div className="py-8 text-center text-sm text-gray-500">
-                    Cargando información de la venta...
-                </div>
-            ) : sale ? (
+            {sale ? (
                 <div className="space-y-4">
                     <div className="rounded-lg bg-gray-50 p-4 text-sm text-gray-700">
                         <div className="font-medium text-gray-900">{sale.salecode}</div>
