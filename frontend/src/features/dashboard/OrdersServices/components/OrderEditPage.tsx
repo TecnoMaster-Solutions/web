@@ -459,7 +459,7 @@ const {
       .map((s: any) => {
         const stateid = Number(s?.stateid ?? s?.id);
         const name = String(s?.name ?? s?.state ?? s?.label ?? s?.statename ?? "").trim();
-        return { stateid, name, label: titleCase(name) || `Estado #${stateid}` } as OrderStateOption;
+        return { stateid, name, label: name || `Estado #${stateid}` } as OrderStateOption;
       })
       .filter((x) => Number.isFinite(x.stateid) && x.stateid > 0)
       .filter((x) => isOrderServiceStateLike(x.name));
@@ -2439,8 +2439,6 @@ const {
     </RequireAuth>
   );
 }
-
-
 
 
 

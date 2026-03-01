@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 
 import RequireAuth from "../../auth/requireauth";
 import { DataTable } from "../components/datatable/DataTable";
-import { ToastContainer } from "react-toastify";
 import { Column } from "../components/datatable/types/column.types";
 import { usePurchases } from "./hooks/usePurchases";
 import { useLoader } from "@/shared/components/loader";
@@ -279,8 +278,6 @@ export default function PurchasesIndex() {
   return (
     <RequireAuth>
       <div className="p-6">
-        <ToastContainer position="bottom-right" />
-
         {(!loading || purchases.length > 0) && memoizedDataTable}
 
         {loading && purchases.length === 0 && (

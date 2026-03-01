@@ -10,7 +10,19 @@ function includesAny(text: string, needles: string[]) {
   return needles.some((needle) => text.includes(needle));
 }
 
-const REQUEST_STATE_TOKENS = ["pend", "agend", "aprob", "anul", "cancel", "final", "complet", "proceso"];
+const REQUEST_STATE_TOKENS = [
+  "pend",
+  "agend",
+  "aprob",
+  "anul",
+  "cancel",
+  "final",
+  "complet",
+  "proceso",
+  "in process",
+  "in-process",
+  "inprocess",
+];
 const ORDER_STATE_TOKENS = [...REQUEST_STATE_TOKENS, "garan", "warranty"];
 
 export function isServiceRequestStateLike(stateName: unknown) {
