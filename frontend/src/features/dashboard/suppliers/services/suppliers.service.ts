@@ -22,6 +22,10 @@ export type CreateSupplierInput = {
   contactname: string;
   image: string;
   rating: number;
+  productos?: Array<{
+    productoId: number;
+    precioUnitario: number;
+  }>;
 };
 
 export type UpdateSupplierInput = Partial<CreateSupplierInput>;
@@ -56,6 +60,19 @@ export async function updateSupplier(
 
 export async function deleteSupplier(id: number): Promise<void> {
   await apiClient.delete<unknown>(`/suppliers/${id}`);
+}
+
+/**
+ * Obtiene los productos asociados a un proveedor
+ */
+export async function getSupplierProducts(supplierId: number) {
+  const response = await apiClient.get<ApiEnvelope<Array<{
+    id: number;
+    productName: string;
+    precioUnitario: number;
+    image: string;
+  }>>>(`/suppliers/${supplierId}/products`);
+  return unwrapData(response);
 }
 
 export const getSuppliers = listSuppliers;

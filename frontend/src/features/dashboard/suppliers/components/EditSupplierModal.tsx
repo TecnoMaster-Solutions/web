@@ -6,6 +6,9 @@ import Modal from "@/features/dashboard/components/Modal";
 import type { SupplierSubmitPayload } from "@/features/dashboard/suppliers/components/CreateSuppliersModal";
 import { showError, showWarning } from "@/shared/utils/notifications";
 import { uploadImageToCloudinary } from "@/shared/utils/cloudinary";
+import { getProducts } from "@/features/dashboard/products/api/products.api";
+import type { Product } from "@/features/dashboard/products/types/typesProducts";
+import { getSupplierProducts } from "@/features/dashboard/suppliers/services/suppliers.service";
 
 type SupplierForm = {
   name: string;
@@ -247,6 +250,19 @@ export default function EditSupplierModal({ isOpen, onClose, onSave, supplier, t
   const [errors, setErrors] = useState<ErrorMap>({});
   const [loadedFromProp, setLoadedFromProp] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  
+  // Estado para productos asociados
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [productSearch, setProductSearch] = useState("");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [supplierProducts, setSupplierProducts] = useState<Array<{
+    productoId: number;
+    productName: string;
+    precioUnitario: number;
+    image?: string;
+  }>>([]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -267,6 +283,28 @@ export default function EditSupplierModal({ isOpen, onClose, onSave, supplier, t
       };
       setForm(next);
       setErrors(validateAllFields(next));
+      
+      // Siempre cargar productos desde la API para obtener información completa (incluyendo imagen)
+      const supplierId = (supplier as any).supplierid || (supplier as any).id;
+      if (supplierId) {
+        getSupplierProducts(supplierId)
+          .then((products: any) => {
+            if (products && products.length > 0) {
+              setSupplierProducts(
+                products.map((p: { id: number; productName: string; precioUnitario: number; image?: string }) => ({
+                  productoId: p.id,
+                  productName: p.productName ?? "",
+                  precioUnitario: p.precioUnitario ?? 0,
+                  image: p.image,
+                }))
+              );
+            }
+          })
+          .catch(() => {
+            // Silently fail - products will just be empty
+          });
+      }
+      
       setLoadedFromProp(true);
     }
   }, [isOpen, supplier, saving, loadedFromProp]);
@@ -276,9 +314,62 @@ export default function EditSupplierModal({ isOpen, onClose, onSave, supplier, t
       setForm(initialForm);
       setErrors({});
       setLoadedFromProp(false);
+      setSupplierProducts([]);
+      setProductSearch("");
       if (fileRef.current) fileRef.current.value = "";
+    } else {
+      // Cargar productos del sistema
+      setLoadingProducts(true);
+      getProducts("active")
+        .then((data) => setAllProducts(data))
+        .catch(() => showError("Error al cargar productos."))
+        .finally(() => setLoadingProducts(false));
     }
   }, [isOpen]);
+
+  // Cerrar dropdown al hacer click fuera
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Función para filtrar productos
+  const filteredProducts = allProducts.filter((p) =>
+    !supplierProducts.some((sp) => sp.productoId === p.id) &&
+    p.name.toLowerCase().includes(productSearch.toLowerCase())
+  );
+
+  // Función para agregar producto
+  const handleAddProduct = (product: Product) => {
+    setSupplierProducts((prev) => [
+      ...prev,
+      {
+        productoId: product.id,
+        productName: product.name,
+        precioUnitario: product.supplierPrice ?? 0,
+        image: product.image,
+      },
+    ]);
+    setProductSearch("");
+    setDropdownOpen(false);
+  };
+
+  // Función para eliminar producto
+  const handleRemoveProduct = (productoId: number) => {
+    setSupplierProducts((prev) => prev.filter((p) => p.productoId !== productoId));
+  };
+
+  // Función para actualizar precio
+  const handleUpdateProductPrice = (productoId: number, precioUnitario: number) => {
+    setSupplierProducts((prev) =>
+      prev.map((p) => (p.productoId === productoId ? { ...p, precioUnitario } : p))
+    );
+  };
 
   const validateAndSet = <K extends keyof SupplierForm | "image">(
     key: K,
@@ -359,6 +450,10 @@ export default function EditSupplierModal({ isOpen, onClose, onSave, supplier, t
         rating: sanitizeRating(form.rating),
         imageFile: null,
         imageUrl: finalImageUrl,
+        productos: supplierProducts.map((p) => ({
+          productoId: p.productoId,
+          precioUnitario: p.precioUnitario,
+        })),
       };
 
       await onSave(payload);
@@ -534,6 +629,132 @@ export default function EditSupplierModal({ isOpen, onClose, onSave, supplier, t
             disabled={saving}
             step={0.1}
           />
+        </div>
+
+        {/* PRODUCTOS ASOCIADOS */}
+        <div className="col-span-2 mt-4">
+          <label className="block text-sm font-medium mb-2">
+            Productos Asociados
+          </label>
+          
+          {/* Buscador de productos */}
+          <div className="relative" ref={dropdownRef}>
+            <input
+              type="text"
+              placeholder="Buscar producto para asociar..."
+              value={productSearch}
+              onChange={(e) => {
+                setProductSearch(e.target.value);
+                setDropdownOpen(true);
+              }}
+              onFocus={() => {
+                setDropdownOpen(true);
+                // Si no hay productos cargados, recargar
+                if (allProducts.length === 0 && !loadingProducts) {
+                  setLoadingProducts(true);
+                  getProducts("active")
+                    .then((data) => setAllProducts(data))
+                    .catch(() => showError("Error al cargar productos."))
+                    .finally(() => setLoadingProducts(false));
+                }
+              }}
+              disabled={loadingProducts}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+            />
+            
+            {dropdownOpen && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto z-50">
+                {loadingProducts ? (
+                  <p className="p-2 text-xs text-gray-500">Cargando productos...</p>
+                ) : filteredProducts.length === 0 ? (
+                  <p className="p-2 text-xs text-gray-500">No se encontraron productos</p>
+                ) : (
+                  filteredProducts.slice(0, 10).map((product) => (
+                    <div
+                      key={product.id}
+                      onClick={() => handleAddProduct(product)}
+                      className="px-3 py-2 cursor-pointer hover:bg-green-50 text-sm border-b last:border-b-0"
+                    >
+                      <div className="font-medium">{product.name}</div>
+                      {product.supplierPrice && (
+                        <div className="text-xs text-gray-500">
+                          ${product.supplierPrice.toLocaleString("es-CO")}
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Lista de productos asociados */}
+          {supplierProducts.length > 0 && (
+            <div className="mt-3 space-y-3">
+              {supplierProducts.map((product) => (
+                <div
+                  key={product.productoId}
+                  className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg border"
+                >
+                  {/* Imagen del producto */}
+                  <div className="shrink-0">
+                    {product.image ? (
+                      <img
+                        src={product.image}
+                        alt={product.productName}
+                        className="w-12 h-12 object-cover rounded"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center">
+                        <span className="text-gray-400 text-xs">N/A</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Nombre y precio */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-800 truncate">
+                      {product.productName}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      ${product.precioUnitario?.toLocaleString("es-CO") ?? "0"}
+                    </p>
+                  </div>
+                  
+                  {/* Input de precio */}
+                  <div className="shrink-0">
+                    <label className="text-xs text-gray-600 block mb-1">Precio:</label>
+                    <input
+                      type="number"
+                      value={product.precioUnitario}
+                      onChange={(e) => handleUpdateProductPrice(product.productoId, Number(e.target.value))}
+                      className="w-24 px-2 py-1.5 text-sm border border-gray-300 rounded"
+                      min={0}
+                      step={0.01}
+                    />
+                  </div>
+                  
+                  {/* Botón eliminar */}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveProduct(product.productoId)}
+                    className="p-2 hover:bg-red-100 rounded shrink-0"
+                    title="Eliminar"
+                  >
+                    <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {supplierProducts.length === 0 && (
+            <p className="text-xs text-gray-500 mt-2">
+              No hay productos asociados. Puede agregar productos para filtrarlos en órdenes de compra.
+            </p>
+          )}
         </div>
       </form>
     </Modal>
