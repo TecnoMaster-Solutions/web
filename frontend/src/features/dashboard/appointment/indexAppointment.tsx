@@ -519,7 +519,10 @@ export default function IndexAppointment() {
         const successText = technicianWillConfirmOrder
           ? "Se registro la confirmacion del tecnico. Falta la confirmacion del cliente para finalizar la orden."
           : `Se ${verb} ${targets.join(" y ")} como ${suffix}.`;
-        showSuccess(successText);
+        setModalEvent(null);
+        requestAnimationFrame(() => {
+          showSuccess(successText);
+        });
       } catch (err: any) {
         console.error("Error al finalizar cita:", err);
         Swal.fire(
