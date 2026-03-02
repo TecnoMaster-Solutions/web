@@ -43,6 +43,11 @@ type Row = {
   email: string;
   address: string;
   imageUrl?: string | null;
+  productos?: Array<{
+    productoId: number;
+    productName?: string;
+    precioUnitario: number;
+  }>;
 };
 
 function Loader() {
@@ -91,6 +96,7 @@ export default function SuppliersPage() {
       email: s.email,
       address: s.address ?? "",
       imageUrl: s.image || null,
+      productos: s.productos,
     }));
   }, [data]);
 
@@ -195,6 +201,7 @@ export default function SuppliersPage() {
         contactname: form.contactName?.trim() || "",
         image: form.imageUrl?.trim() || "",
         rating: Number(form.rating) || 0,
+        productos: form.productos,
       };
 
       await createMut.mutateAsync(dto);
@@ -232,6 +239,7 @@ export default function SuppliersPage() {
         contactname: form.contactName?.trim() || "",
         image: form.imageUrl?.trim() || selected.imageUrl || "",
         rating: Number(form.rating) || 0,
+        productos: form.productos,
       };
 
       await updateMut.mutateAsync(dto);
@@ -260,6 +268,8 @@ export default function SuppliersPage() {
       rating: Number(row.rating) || 0,
       imageFile: null,
       imageUrl: row.imageUrl ?? null,
+      supplierid: row.id, // Incluir el ID del proveedor para cargar productos
+      productos: row.productos,
     } as unknown as SupplierSubmitPayload & { statusid: 1 | 2 });
 
   const mapRowToDetails = (row: Row) => ({
@@ -274,6 +284,7 @@ export default function SuppliersPage() {
     imageUrl: row.imageUrl ?? null,
     address: row.address ?? "",
     stateid: row.status === "Activo" ? 1 : 2,
+    productos: row.productos,
   });
 
   return (
@@ -338,4 +349,3 @@ export default function SuppliersPage() {
     </RequireAuth>
   );
 }
-

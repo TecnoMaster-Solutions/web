@@ -5,6 +5,8 @@ import { Star, Upload } from "lucide-react";
 import Modal from "@/features/dashboard/components/Modal";
 import { showError, showWarning } from "@/shared/utils/notifications";
 import { uploadImageToCloudinary } from "@/shared/utils/cloudinary";
+import { getProducts } from "@/features/dashboard/products/api/products.api";
+import type { Product } from "@/features/dashboard/products/types/typesProducts";
 
 export type SupplierSubmitPayload = {
   name: string;
@@ -17,6 +19,13 @@ export type SupplierSubmitPayload = {
   rating: number;
   imageFile: File | null;
   imageUrl: string | null;
+  supplierid?: number; // ID del proveedor para cargar productos desde API
+  productos?: Array<{
+    productoId: number;
+    productName?: string;
+    precioUnitario: number;
+    image?: string;
+  }>;
 };
 
 type SupplierForm = {
@@ -247,12 +256,76 @@ export default function CreateSuppliersModal({ isOpen, onClose, onSave, title = 
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<ErrorMap>({});
   const fileRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  
+  // Estado para productos asociados
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [productSearch, setProductSearch] = useState("");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [supplierProducts, setSupplierProducts] = useState<Array<{
+    productoId: number;
+    productName: string;
+    precioUnitario: number;
+  }>>([]);
+
+  // Función para filtrar productos
+  const filteredProducts = allProducts.filter((p) =>
+    !supplierProducts.some((sp) => sp.productoId === p.id) &&
+    p.name.toLowerCase().includes(productSearch.toLowerCase())
+  );
+
+  // Función para agregar producto
+  const handleAddProduct = (product: Product) => {
+    setSupplierProducts((prev) => [
+      ...prev,
+      {
+        productoId: product.id,
+        productName: product.name,
+        precioUnitario: product.supplierPrice ?? 0,
+      },
+    ]);
+    setProductSearch("");
+    setDropdownOpen(false);
+  };
+
+  // Función para eliminar producto
+  const handleRemoveProduct = (productoId: number) => {
+    setSupplierProducts((prev) => prev.filter((p) => p.productoId !== productoId));
+  };
+
+  // Función para actualizar precio
+  const handleUpdateProductPrice = (productoId: number, precioUnitario: number) => {
+    setSupplierProducts((prev) =>
+      prev.map((p) => (p.productoId === productoId ? { ...p, precioUnitario } : p))
+    );
+  };
+
+  // Cerrar dropdown al hacer click fuera
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     if (!isOpen) {
       setForm(initialForm);
       setErrors({});
+      setSupplierProducts([]);
+      setProductSearch("");
       if (fileRef.current) fileRef.current.value = "";
+    } else {
+      // Cargar productos del sistema
+      setLoadingProducts(true);
+      getProducts("active")
+        .then((data) => setAllProducts(data))
+        .catch(() => showError("Error al cargar productos."))
+        .finally(() => setLoadingProducts(false));
     }
   }, [isOpen]);
 
@@ -345,6 +418,10 @@ export default function CreateSuppliersModal({ isOpen, onClose, onSave, title = 
         rating: sanitizeRating(form.rating),
         imageFile: null,
         imageUrl: finalImageUrl ?? null,
+        productos: supplierProducts.map((p) => ({
+          productoId: p.productoId,
+          precioUnitario: p.precioUnitario,
+        })),
       };
 
       await onSave(payload);
@@ -512,6 +589,108 @@ export default function CreateSuppliersModal({ isOpen, onClose, onSave, title = 
             disabled={saving}
             step={0.1}
           />
+        </div>
+
+        {/* PRODUCTOS ASOCIADOS */}
+        <div className="col-span-2 mt-4">
+          <label className="block text-sm font-medium mb-2">
+            Productos Asociados
+          </label>
+          
+          {/* Buscador de productos */}
+          <div className="relative" ref={dropdownRef}>
+            <input
+              type="text"
+              placeholder="Buscar producto para asociar..."
+              value={productSearch}
+              onChange={(e) => {
+                setProductSearch(e.target.value);
+                setDropdownOpen(true);
+              }}
+              onFocus={() => {
+                setDropdownOpen(true);
+                // Si no hay productos cargados, recargar
+                if (allProducts.length === 0 && !loadingProducts) {
+                  setLoadingProducts(true);
+                  getProducts("active")
+                    .then((data) => setAllProducts(data))
+                    .catch(() => showError("Error al cargar productos."))
+                    .finally(() => setLoadingProducts(false));
+                }
+              }}
+              disabled={loadingProducts}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+            />
+            
+            {/* Mostrar dropdown cuando está abierto */}
+            {dropdownOpen && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto z-50">
+                {loadingProducts ? (
+                  <p className="p-2 text-xs text-gray-500">Cargando productos...</p>
+                ) : filteredProducts.length === 0 ? (
+                  <p className="p-2 text-xs text-gray-500">No se encontraron productos</p>
+                ) : (
+                  filteredProducts.slice(0, 10).map((product) => (
+                    <div
+                      key={product.id}
+                      onClick={() => handleAddProduct(product)}
+                      className="px-3 py-2 cursor-pointer hover:bg-green-50 text-sm border-b last:border-b-0"
+                    >
+                      <div className="font-medium">{product.name}</div>
+                      {product.supplierPrice && (
+                        <div className="text-xs text-gray-500">
+                          ${product.supplierPrice.toLocaleString("es-CO")}
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Lista de productos asociados */}
+          {supplierProducts.length > 0 && (
+            <div className="mt-3 space-y-2">
+              {supplierProducts.map((product) => (
+                <div
+                  key={product.productoId}
+                  className="flex items-center gap-2 p-2 bg-gray-50 rounded-md border"
+                >
+                  <div className="flex-1">
+                    <span className="text-sm font-medium">{product.productName}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs text-gray-600">Precio:</label>
+                    <input
+                      type="number"
+                      value={product.precioUnitario}
+                      onChange={(e) => handleUpdateProductPrice(product.productoId, Number(e.target.value))}
+                      className="w-24 px-2 py-1 text-sm border border-gray-300 rounded"
+                      min={0}
+                      step={0.01}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveProduct(product.productoId)}
+                    className="p-1 hover:bg-red-100 rounded"
+                    title="Eliminar"
+                  >
+                    <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {supplierProducts.length === 0 && (
+            <p className="text-xs text-gray-500 mt-2">
+              No hay productos asociados. Puede agregar productos para filtrarlos en órdenes de compra.
+            </p>
+          )}
         </div>
       </form>
     </Modal>

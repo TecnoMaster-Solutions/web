@@ -15,6 +15,7 @@ import {
 import {
   getPurchaseOrdersFromAPI,
   createPurchaseOrderInDB,
+  PurchaseOrderAPIResponse,
   generateOrderNumber,
 } from "../services/suppliersOrderService";
 
@@ -52,32 +53,55 @@ export const usePurchaseOrders = () => {
   // ── Crear orden en el backend ──────────────────────────────────────────────
   const handleCreatePurchaseOrder = async (
     purchaseOrderData: createPurchaseOrderData & { proveedorId?: number }
-  ) => {
-    const subtotal = purchaseOrderData.items.reduce(
-      (acc, item) => acc + item.cantidad * item.precioUnitario,
-      0
+  ): Promise<PurchaseOrderAPIResponse | null> => {
+    if (!purchaseOrderData.proveedorId) {
+      showError("Proveedor inválido.");
+      return null;
+    }
+
+    if (purchaseOrderData.items.length === 0) {
+      showError("Debe agregar al menos un producto.");
+      return null;
+    }
+
+    // Filtrar items válidos (con cantidad > 0)
+    // Ahora permitimos productos sin productId (entrada manual)
+    const validItems = purchaseOrderData.items.filter(
+      (item) => item.cantidad > 0 && item.producto.trim()
     );
-    const iva = subtotal * 0.19;
-    const total = subtotal + iva;
+
+    if (validItems.length === 0) {
+      showError("Debe agregar productos válidos con cantidad mayor a 0.");
+      return null;
+    }
+
+    // Verificar si hay productos sin ID (entrada manual)
+    const itemsWithoutId = validItems.filter((item) => !item.productoId);
+    if (itemsWithoutId.length > 0) {
+      showWarning(`${itemsWithoutId.length} producto(s) se guardarán como entrada manual sin vinculación a la base de datos.`);
+    }
 
     try {
-      await createPurchaseOrderInDB({
-        numeroOrden: generateOrderNumber(),
-        proveedorId: purchaseOrderData.proveedorId ?? 0,
-        fecha: purchaseOrderData.fecha,
-        items: purchaseOrderData.items,
-        total,
-        subtotal,
-        iva,
-        descripcion: purchaseOrderData.descripcion,
+      const result = await createPurchaseOrderInDB({
+        proveedorId: purchaseOrderData.proveedorId,
+        fechaEntregaEstimada: purchaseOrderData.fecha,
+        observaciones: purchaseOrderData.descripcion,
+        detalles: validItems.map((item) => ({
+          productoId: item.productoId ?? null, // Enviar null si es entrada manual
+          cantidad: item.cantidad,
+          precioUnitario: item.precioUnitario,
+          // Incluir nombre del producto para entradas manuales
+          productoNombre: item.producto,
+        })),
       });
-
       showSuccess("Orden de compra guardada exitosamente.");
       setIsCreateModalOpen(false);
-      // Recargar lista
       await loadPurchaseOrders();
-    } catch {
+      return result;
+    } catch (error) {
+      console.error("Create order error:", error);
       showError("Error al guardar la orden de compra.");
+      return null;
     }
   };
 
@@ -232,6 +256,12 @@ export const useCreatePurchaseOrderForm = ({
         return false;
       }
 
+      // Validar que tenga productoId (seleccionado de la lista) O que sea entrada manual
+      // Si es entrada manual sin productId, permitirlo pero con advertencia
+      if (!item.productoId) {
+        console.warn("Producto sin ID de base de datos - se guardará como entrada manual");
+      }
+
       if (item.cantidad <= 0) {
         showWarning("La cantidad debe ser mayor a 0.");
         return false;
@@ -264,22 +294,25 @@ export const useCreatePurchaseOrderForm = ({
   };
 
   /* ============================= */
-  /* SUBMIT */
+  /* SUBMIT - Now returns Promise for async handling */
   /* ============================= */
 
-  const handleSubmit = (e?: React.FormEvent) => {
+  const handleSubmit = async (e?: React.FormEvent): Promise<PurchaseOrderAPIResponse | null> => {
     e?.preventDefault();
 
-    if (!validateFormWithNotifications()) return;
+    if (!validateFormWithNotifications()) return null;
 
     setIsSubmitting(true);
 
     try {
-      onSave(formData);
+      await onSave(formData);
       onClose();
+      // Return null since onSave doesn't return anything, but we need the promise
+      return null;
     } catch (error) {
       console.error("Error al guardar orden:", error);
       showWarning("Error al guardar la orden de compra.");
+      return null;
     } finally {
       setIsSubmitting(false);
     }

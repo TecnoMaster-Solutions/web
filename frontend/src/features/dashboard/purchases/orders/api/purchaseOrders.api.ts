@@ -10,8 +10,11 @@ export interface PurchaseOrderFromApi {
   id: number;
   numeroOrden: string;
   proveedor: string;
+
   precioUnitario: number | string;
-  fecha: string;
+
+  fechaCreacion: string;
+  fechaEntregaEstimada: string;
 
   estado: string;
   descripcion?: string | null;
@@ -20,10 +23,6 @@ export interface PurchaseOrderFromApi {
   subtotal: number | string;
   iva: number | string;
   total: number | string;
-
-  motivoAnulacion?: string | null;
-  fechaAnulacion?: string | null;
-  usuarioAnulacion?: string | null;
 
   productos?: {
     producto: string;
@@ -38,7 +37,10 @@ export interface PurchaseOrder {
   supplier: string;
 
   unitPrice: number;
-  date: string;
+
+  fechaCreacion: string; // Tabla principal
+  fechaEntregaEstimada: string; // Modal detalle
+
   state: string;
 
   description: string | null;
@@ -47,10 +49,6 @@ export interface PurchaseOrder {
   subtotal: number;
   iva: number;
   total: number;
-
-  cancelReason?: string | null;
-  cancelDate?: string | null;
-  cancelUser?: string | null;
 
   products: {
     producto: string;
@@ -118,7 +116,10 @@ const toUi = (p: PurchaseOrderFromApi): PurchaseOrder => {
     supplier: p.proveedor,
 
     unitPrice,
-    date: p.fecha,
+
+    fechaCreacion: p.fechaCreacion,
+    fechaEntregaEstimada: p.fechaEntregaEstimada,
+
     state: p.estado,
 
     description: p.descripcion ?? null,
@@ -127,10 +128,6 @@ const toUi = (p: PurchaseOrderFromApi): PurchaseOrder => {
     subtotal,
     iva,
     total,
-
-    cancelReason: p.motivoAnulacion ?? null,
-    cancelDate: p.fechaAnulacion ?? null,
-    cancelUser: p.usuarioAnulacion ?? null,
 
     products,
   };
@@ -161,40 +158,9 @@ export const createPurchaseOrder = async (
   return toUi(data);
 };
 
-export const updatePurchaseOrder = async (
-  id: number,
-  payload: any
-): Promise<PurchaseOrder> => {
-  const { data } = await api.patch<PurchaseOrderFromApi>(
-    `${BASE}/${id}`,
-    payload
-  );
-  return toUi(data);
-};
-
 export const deletePurchaseOrder = async (
   id: number
 ): Promise<boolean> => {
   await api.delete(`${BASE}/${id}`);
   return true;
-};
-
-export const cancelPurchaseOrder = async (
-  id: number,
-  reason: string,
-  user: string
-): Promise<PurchaseOrder> => {
-  const body = {
-    estado: "Anulada",
-    motivoAnulacion: reason,
-    fechaAnulacion: new Date().toISOString(),
-    usuarioAnulacion: user,
-  };
-
-  const { data } = await api.patch<PurchaseOrderFromApi>(
-    `${BASE}/${id}/cancel`,
-    body
-  );
-
-  return toUi(data);
 };

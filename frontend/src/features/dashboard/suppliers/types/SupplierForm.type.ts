@@ -9,4 +9,8 @@ export type SupplierSubmitPayload = {
   rating: number;
   imageFile: File | null;
   imageUrl: string | null;
+  productos?: Array<{
+    productoId: number;
+    precioUnitario: number;
+  }>;
 };
