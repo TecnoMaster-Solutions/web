@@ -2138,6 +2138,9 @@ setNavigating(true);
       router.push(returnTo);
       return;
     } catch (e: any) {
+      console.log("ERROR COMPLETO", e);
+      console.log("response.data", e?.response?.data);
+      console.log("response.status", e?.response?.status);
       showError(e?.response?.data?.message || e?.message || "Error inesperado.");
       setNavigating(false);
       setSaving(false);
@@ -3439,5 +3442,4 @@ setNavigating(true);
     </RequireAuth>
   );
 }
-
 
