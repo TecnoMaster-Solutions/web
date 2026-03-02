@@ -170,7 +170,7 @@ const CreateCategoryModal: React.FC<CreateCategoryModalProps> = ({
             }}
           />
           {errors.name && touched.name && (
-            <span className="text-green-500 text-xs mt-1">{errors.name}</span>
+            <span className="text-red-500 text-xs mt-1">{errors.name}</span>
           )}
         </div>
 
@@ -202,7 +202,7 @@ const CreateCategoryModal: React.FC<CreateCategoryModalProps> = ({
             {formData.description.length}/255
           </div>
           {errors.description && touched.description && (
-            <span className="text-green-500 text-xs mt-1">
+            <span className="text-red-500 text-xs mt-1">
               {errors.description}
             </span>
           )}
