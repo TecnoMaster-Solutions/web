@@ -15,6 +15,7 @@ export const PurchaseOrdersTable: React.FC<PurchaseOrdersTableProps> = ({
   rightActions,
 }) => {
 
+  console.log(purchaseOrders);
   // Convertir órdenes de compra para la tabla asegurando que tengan ID
   // searchQuery: campo auxiliar de texto plano para que el DataTable busque correctamente
   // (el campo numeroOrden tiene timestamps que el DataTable trata como números)
@@ -26,21 +27,25 @@ export const PurchaseOrdersTable: React.FC<PurchaseOrdersTableProps> = ({
       searchQuery: `${order.numeroOrden ?? ""} ${order.proveedor ?? ""} ${order.estado ?? ""} ${order.fecha ?? ""}`.toLowerCase(),
     }));
 
-  const columns: Column<purchaseOrderForTable>[] = [
+const columns: Column<purchaseOrderForTable>[] = [
     { key: "id", header: "#" },
     { key: "numeroOrden", header: "N° Orden" },
     { key: "proveedor", header: "Proveedor" },
-    { key: "fecha", header: "Fecha" },
+    { 
+      key: "fecha", 
+      header: "Fecha",
+      render: (order) => order.fecha ? new Date(order.fecha).toLocaleDateString('es-CO') : '-'
+    },
+    { 
+      key: "fechaEntrega", 
+      header: "Fecha Entrega",
+      render: (order) => order.fechaEntrega ? new Date(order.fechaEntrega).toLocaleDateString('es-CO') : 'No especificada'
+    },
     {
       key: "total",
       header: "Total",
       render: (order) =>
         `$${order.total.toLocaleString("es-CO")}`
-    },
-    {
-      key: "items",
-      header: "Productos",
-      render: (order) => order.items.length
     },
     {
       key: "estado",
@@ -50,7 +55,7 @@ export const PurchaseOrdersTable: React.FC<PurchaseOrdersTableProps> = ({
           className="rounded-full px-2 py-0.5 text-xs font-medium"
           style={{ color: Colors.states.warning }}
         >
-          {order.estado}
+          {order.state?.statename || order.estado || "Pendiente"}
         </span>
       )
     }

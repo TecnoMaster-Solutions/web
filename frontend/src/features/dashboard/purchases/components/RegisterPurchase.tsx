@@ -7,7 +7,8 @@ import { showSuccess, showWarning, showError } from "@/shared/utils/notification
 import {
   validatePurchaseForm,
   validatePurchaseField,
-  PurchaseErrors,
+  type PurchaseErrors,
+  type PurchaseFormField,
 } from "../validations/purchasesValidations";
 import { useLoader } from "@/shared/components/loader";
 import { PurchaseFormState } from "../hooks/usePurchases";
@@ -49,7 +50,7 @@ type CartItem = {
 
 interface Props {
   onSave: () => Promise<any>;
-  onClose: () => void;
+  onClose: (created?: boolean) => void;
   purchases: IPurchase[];
   fetchPurchases: () => Promise<void>;
   form: PurchaseFormState;
@@ -121,13 +122,11 @@ export default function RegisterPurchaseForm({
   const { showLoader, hideLoader } = useLoader();
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // === SOLO AJUSTES DE TAMAÑO (fuentes/campos) ===
   const inputBase = "w-full rounded-lg border px-3 py-2 text-base shadow-sm";
   const inputBaseNoShadow = "w-full rounded-lg border px-3 py-2 text-base";
   const selectBase = "w-full rounded-lg border px-3 py-2 text-base";
   const labelBase = "block text-sm font-medium mb-1";
   const labelMuted = "block text-sm font-medium text-gray-600 mb-1";
-  // ==============================================
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -142,13 +141,29 @@ export default function RegisterPurchaseForm({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleFieldValidation = (
-    field: keyof Omit<IPurchase, "id">,
-    value: any
-  ) => {
-    const error = validatePurchaseField(field, value, purchases);
-    setErrors((prev) => ({ ...prev, [field]: error }));
+  const validateField = (field: PurchaseFormField, value: unknown) => {
+    const error = validatePurchaseField(field, value, purchases ?? []);
+    setErrors((prev) => {
+      const next = { ...prev };
+      if (error) (next as any)[field] = error;
+      else delete (next as any)[field];
+      return next;
+    });
   };
+
+  // Validar orderNumber aunque sea readOnly
+  useEffect(() => {
+    if (form.orderNumber !== undefined) {
+      validateField("orderNumber" as any, form.orderNumber);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.orderNumber]);
+
+  // Validar carrito automáticamente (requerido)
+  useEffect(() => {
+    validateField("products" as any, cart.length);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cart.length]);
 
   const cartProductIds = useMemo(
     () => new Set(cart.map((c) => c.productid)),
@@ -166,51 +181,65 @@ export default function RegisterPurchaseForm({
     );
   }, [searchProduct, products, cartProductIds]);
 
-  const handleFormSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
 
-    if (cart.length === 0) {
-      showWarning("Agrega al menos un producto al carrito.");
+const handleFormSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  const validationErrors = validatePurchaseForm(
+    {
+      orderNumber: form.orderNumber,
+      invoiceNumber: form.invoiceNumber,
+      supplier: form.supplier,
+      registerDate: form.registerDate,
+      description: form.description,
+      amount: total,
+      productsCount: cart.length,
+      purchaseOrderId: form.purchaseOrderId,
+    } as any,
+    purchases ?? []
+  );
+
+  setErrors(validationErrors);
+
+  if (Object.keys(validationErrors).length > 0) {
+    showWarning("Por favor completa los campos requeridos", { autoClose: 5000 });
+    return;
+  }
+
+  for (const item of cart) {
+    if (!item.productid) {
+      showWarning("Hay un producto inválido en el carrito.", { autoClose: 5000 });
       return;
     }
-
-    const validationErrors = validatePurchaseForm(
-      {
-        orderNumber: form.orderNumber,
-        invoiceNumber: form.invoiceNumber,
-        supplier: form.supplier,
-        registerDate: form.registerDate,
-        amount: total,
-        status: "Aprobado",
-        description: form.description,
-      } as any,
-      purchases ?? []
-    );
-
-    setErrors(validationErrors);
-
-    if (Object.keys(validationErrors).length > 0) {
-      showError("Corrige los errores antes de guardar.");
+    if (!Number.isFinite(item.quantity) || item.quantity <= 0) {
+      showWarning("Hay cantidades inválidas en el carrito.", { autoClose: 5000 });
       return;
     }
-
-    try {
-      showLoader();
-      setSaving(true);
-
-      await onSave();
-      await fetchPurchases();
-
-      showSuccess("Compra registrada con éxito.");
-      onClose();
-    } catch (error) {
-      console.error(error);
-      showError("Error al registrar la compra.");
-    } finally {
-      hideLoader();
-      setSaving(false);
+    if (!Number.isFinite(item.unitprice) || item.unitprice <= 0) {
+      showWarning("Hay precios de compra inválidos en el carrito.", { autoClose: 5000 });
+      return;
     }
-  };
+    if (item.saleprice !== undefined && item.saleprice < item.unitprice) {
+      showWarning(
+        `El precio de venta no puede ser menor al de compra (ID ${item.productid}).`,
+        { autoClose: 5000 }
+      );
+      return;
+    }
+  }
+
+  try {
+    setSaving(true);      
+    await onSave();        
+    await fetchPurchases(); 
+    onClose(true);         
+  } catch (error) {
+    console.error(error);
+    showError("Error al registrar la compra.");
+  } finally {
+    setSaving(false);
+  }
+};
 
   const selectedSupplier = suppliers.find(
     (s) => String(s.supplierid) === String(form.supplier)
@@ -218,6 +247,7 @@ export default function RegisterPurchaseForm({
 
   return (
     <form
+      noValidate
       onSubmit={handleFormSubmit}
       className="space-y-6 p-6 md:p-8 w-full max-w-screen-2xl mx-auto rounded-lg"
     >
@@ -225,7 +255,6 @@ export default function RegisterPurchaseForm({
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-base md:text-lg font-semibold">Resumen</h2>
 
-          {/* Total con el MISMO estilo del "Monto" en ver detalle */}
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-500">Total</span>
             <span className="text-lg md:text-l font-bold text-green-700 bg-green-50 px-3 py-1 rounded-lg border border-green-200 shadow-sm">
@@ -246,12 +275,11 @@ export default function RegisterPurchaseForm({
               value={form.registerDate}
               onChange={(e) => {
                 handleChange(e);
-                handleFieldValidation("registerDate", e.target.value);
+                validateField("registerDate", e.target.value);
               }}
-              required
-              className={`${inputBaseNoShadow} ${
-                (errors as any).createdAt ? "border-red-500" : "border-gray-300"
-              }`}
+              onBlur={() => validateField("registerDate", form.registerDate)}
+              className={`${inputBaseNoShadow} ${errors.registerDate ? "border-red-500" : "border-gray-300"
+                }`}
             />
 
             {errors.registerDate && (
@@ -268,9 +296,8 @@ export default function RegisterPurchaseForm({
               name="orderNumber"
               value={form.orderNumber}
               readOnly
-              className={`${inputBaseNoShadow} bg-gray-100 ${
-                errors.orderNumber ? "border-red-500" : "border-gray-300"
-              }`}
+              className={`${inputBaseNoShadow} bg-gray-100 ${errors.orderNumber ? "border-red-500" : "border-gray-300"
+                }`}
             />
             {errors.orderNumber && (
               <p className="text-xs text-red-500">{errors.orderNumber}</p>
@@ -288,11 +315,11 @@ export default function RegisterPurchaseForm({
               value={form.invoiceNumber}
               onChange={(e) => {
                 handleChange(e);
-                handleFieldValidation("invoiceNumber", e.target.value);
+                validateField("invoiceNumber", e.target.value);
               }}
-              className={`${inputBaseNoShadow} ${
-                errors.invoiceNumber ? "border-red-500" : "border-gray-300"
-              }`}
+              onBlur={() => validateField("invoiceNumber", form.invoiceNumber)}
+              className={`${inputBaseNoShadow} ${errors.invoiceNumber ? "border-red-500" : "border-gray-300"
+                }`}
             />
             {errors.invoiceNumber && (
               <p className="text-xs text-red-500">{errors.invoiceNumber}</p>
@@ -315,11 +342,11 @@ export default function RegisterPurchaseForm({
               value={form.supplier}
               onChange={(e) => {
                 handleChange(e);
-                handleFieldValidation("supplier", e.target.value);
+                validateField("supplier", e.target.value);
               }}
-              className={`${selectBase} ${
-                errors.supplier ? "border-red-500" : "border-gray-300"
-              }`}
+              onBlur={() => validateField("supplier", form.supplier)}
+              className={`${selectBase} ${errors.supplier ? "border-red-500" : "border-gray-300"
+                }`}
             >
               <option value="">Selecciona el proveedor</option>
               {suppliers.map((s) => (
@@ -341,18 +368,17 @@ export default function RegisterPurchaseForm({
                 value={form.purchaseOrderId}
                 onChange={handleChange}
                 disabled={!form.supplier || poLoading}
-                className={`${selectBase} ${
-                  !form.supplier || poLoading ? "bg-gray-100" : "bg-white"
-                }`}
+                className={`${selectBase} ${!form.supplier || poLoading ? "bg-gray-100" : "bg-white"
+                  }`}
               >
                 <option value="">
                   {!form.supplier
                     ? "Selecciona primero un proveedor"
                     : poLoading
-                    ? "Cargando órdenes..."
-                    : purchaseOrders.length === 0
-                    ? "No hay órdenes pendientes para este proveedor"
-                    : "Selecciona la orden"}
+                      ? "Cargando órdenes..."
+                      : purchaseOrders.length === 0
+                        ? "No hay órdenes pendientes para este proveedor"
+                        : "Selecciona la orden"}
                 </option>
 
                 {purchaseOrders.map((po: any) => (
@@ -370,7 +396,6 @@ export default function RegisterPurchaseForm({
             </div>
           </div>
 
-          {/* Tarjeta proveedor */}
           <div className="lg:col-span-1">
             <div className="border rounded-lg bg-gray-50 p-3 h-full min-h-[108px] flex items-center">
               {form.supplier ? (
@@ -418,6 +443,10 @@ export default function RegisterPurchaseForm({
           </div>
         </div>
 
+        {errors.products && (
+          <p className="text-xs text-red-500 mt-1">{errors.products}</p>
+        )}
+
         <div className="grid grid-cols-1 xl:grid-cols-5 gap-5 xl:min-h-[460px]">
           <div className="xl:col-span-2">
             <label className="block text-base font-medium mb-2">Producto</label>
@@ -434,7 +463,7 @@ export default function RegisterPurchaseForm({
                 value={
                   selectedProduct
                     ? products.find((p) => p.productid === Number(selectedProduct))
-                        ?.productname
+                      ?.productname
                     : searchProduct
                 }
                 onChange={(e) => {
@@ -536,9 +565,31 @@ export default function RegisterPurchaseForm({
               type="button"
               onClick={() => {
                 if (!form.supplier) {
-                  showWarning("Selecciona primero un proveedor.");
+                  validateField("supplier" as any, form.supplier);
+                  showWarning("Selecciona primero un proveedor.", { autoClose: 5000 });
                   return;
                 }
+
+                if (!selectedProduct) {
+                  setErrors((prev) => ({
+                    ...prev,
+                    products: "Selecciona un producto para agregar",
+                  }));
+                  showWarning("Selecciona un producto para agregar.", { autoClose: 5000 });
+                  return;
+                }
+
+                const price = parseCOP(purchasePrice);
+                if (!price || price <= 0) {
+                  showWarning("Ingresa un precio de compra válido.", { autoClose: 5000 });
+                  return;
+                }
+
+                if (!Number.isFinite(quantity) || quantity <= 0) {
+                  showWarning("La cantidad debe ser mayor que 0.", { autoClose: 5000 });
+                  return;
+                }
+
                 addToCart();
               }}
               style={{ backgroundColor: Colors.buttons.primary }}
@@ -638,9 +689,7 @@ export default function RegisterPurchaseForm({
                           type="text"
                           inputMode="numeric"
                           value={
-                            item.saleprice === undefined
-                              ? ""
-                              : formatCOP(item.saleprice)
+                            item.saleprice === undefined ? "" : formatCOP(item.saleprice)
                           }
                           onChange={(e) =>
                             updateCartItem(index, {
@@ -674,7 +723,6 @@ export default function RegisterPurchaseForm({
           value={form.description}
           onChange={(e) => {
             handleChange(e);
-            handleFieldValidation("description" as any, e.target.value);
           }}
           className="w-full rounded-lg border px-3 py-2 text-base resize-none"
           rows={3}

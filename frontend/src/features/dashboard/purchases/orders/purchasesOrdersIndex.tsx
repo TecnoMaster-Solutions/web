@@ -5,10 +5,12 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 import { usePurchaseOrders } from "./hooks/usePurchaseOrders";
-import CreatePurchaseOrderModal from "./components/CreatePurchaseOrderModal/CreatePurchaseOrder";
+import CreatePurchaseOrderPage from "./components/CreatePurchaseOrderPage/CreatePurchaseOrderPage";
 import PurchaseOrdersTable from "./components/PurchaseOrdersTable/PurchaseOrdersTable";
-import ViewPurchaseOrderModal from "./components/ViewPurchaseOrderModal/viewPurchaseOrder";
+import ViewPurchaseOrderPage from "./components/ViewPurchaseOrderPage/ViewPurchaseOrderPage";
 import { purchaseOrder } from "./types/typesPurchaseOrder";
+
+type ViewState = "list" | "create" | "view";
 
 export default function PurchaseOrdersIndex() {
   const {
@@ -22,9 +24,11 @@ export default function PurchaseOrdersIndex() {
     closeModals,
   } = usePurchaseOrders();
 
-  const isViewModalOpen = !!viewingPurchaseOrder;
+  // Manage view state
+  const [currentView, setCurrentView] = useState<ViewState>("list");
+  const [selectedOrder, setSelectedOrder] = useState<purchaseOrder | null>(null);
 
-  // Ordenamiento 
+  // Sorting
   type SortField = "fecha" | "total";
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
@@ -53,17 +57,17 @@ export default function PurchaseOrdersIndex() {
     });
   }, [purchaseOrders, sortField, sortDir]);
 
-  // Botones de sort para pasar via prop al DataTable 
   const sortButtons = (
     <div className="flex items-center gap-2">
       {(["fecha", "total"] as const).map((field) => (
         <button
           key={field}
           onClick={() => handleSort(field)}
-          className={`flex items-center gap-1 px-3 py-1.5 text-sm font-medium border rounded-lg transition-colors ${sortField === field
-            ? "bg-green-600 text-white border-green-600"
-            : "text-gray-600 bg-white hover:bg-gray-50 border-gray-300"
-            }`}
+          className={`flex items-center gap-1 px-3 py-1.5 text-sm font-medium border rounded-lg transition-colors ${
+            sortField === field
+              ? "bg-green-600 text-white border-green-600"
+              : "text-gray-600 bg-white hover:bg-gray-50 border-gray-300"
+          }`}
           title={`Ordenar por ${field === "fecha" ? "Fecha" : "Total"}`}
         >
           {field === "fecha" ? "Fecha" : "Total"}
@@ -75,9 +79,29 @@ export default function PurchaseOrdersIndex() {
     </div>
   );
 
+  // Handlers for navigation
+  const handleCreateClick = () => {
+    setCurrentView("create");
+  };
+
+  const handleViewClick = (order: purchaseOrder) => {
+    setSelectedOrder(order);
+    setCurrentView("view");
+  };
+
+  const handleBackToList = () => {
+    setCurrentView("list");
+    setSelectedOrder(null);
+    closeModals();
+  };
+
+  const handleOrderSaved = () => {
+    setCurrentView("list");
+    setSelectedOrder(null);
+  };
+
   return (
     <div className="min-h-screen flex">
-      {/* Notificaciones */}
       <ToastContainer
         position="bottom-right"
         autoClose={3000}
@@ -87,35 +111,69 @@ export default function PurchaseOrdersIndex() {
       <div className="flex-1 flex flex-col">
         <main className="flex-1 flex flex-col">
           <div className="px-6 pt-6 space-y-6">
-
-            {/* Modal Crear */}
-            <CreatePurchaseOrderModal
-              isOpen={isCreateModalOpen}
-              onClose={() => setIsCreateModalOpen(false)}
-              onSave={handleCreatePurchaseOrder}
-            />
-
-            {/* Modal Ver */}
-            <ViewPurchaseOrderModal
-              isOpen={isViewModalOpen}
-              onClose={closeModals}
-              purchaseOrder={viewingPurchaseOrder}
-            />
-
-            {/* Tabla con estado de carga */}
-            {loading && purchaseOrders.length === 0 ? (
-              <div className="bg-white rounded-xl shadow-lg p-4">
-                <div className="animate-pulse space-y-4">
-                  <div className="h-10 bg-gray-200 rounded"></div>
-                  <div className="h-64 bg-gray-100 rounded w-full"></div>
+            
+            {/* Header - Only show when not in list view */}
+            {currentView !== "list" && (
+              <div className="flex items-center gap-4 mb-4">
+                <button
+                  onClick={handleBackToList}
+                  aria-label="Volver"
+                  title="Volver"
+                  className="p-2 rounded-md hover:bg-gray-100 transition"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-700">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                  </svg>
+                </button>
+                <div>
+                  <h1 className="text-3xl font-extrabold text-gray-900">
+                    {currentView === "create" ? "Crear Orden de Compra" : "Ver Orden de Compra"}
+                  </h1>
+                  <p className="text-sm text-gray-500">
+                    {currentView === "create" 
+                      ? "Registre una nueva orden de compra — complete los datos y guarde"
+                      : "Detalles de la orden de compra"
+                    }
+                  </p>
                 </div>
               </div>
-            ) : (
-              <PurchaseOrdersTable
-                purchaseOrders={sortedOrders}
-                onView={handleView}
-                onCreate={() => setIsCreateModalOpen(true)}
-                rightActions={sortButtons}
+            )}
+
+            {/* List View */}
+            {currentView === "list" && (
+              <>
+                {loading && purchaseOrders.length === 0 ? (
+                  <div className="bg-white rounded-xl shadow-lg p-8">
+                    <div className="flex flex-col items-center justify-center py-12">
+                      <div className="w-12 h-12 border-4 border-[#2a9781] border-t-transparent rounded-full animate-spin mb-4" />
+                      <p className="text-gray-500">Cargando órdenes de compra...</p>
+                    </div>
+                  </div>
+                ) : (
+                  <PurchaseOrdersTable
+                    purchaseOrders={sortedOrders}
+                    onView={handleViewClick}
+                    onCreate={handleCreateClick}
+                    rightActions={sortButtons}
+                  />
+                )}
+              </>
+            )}
+
+{/* Create View */}
+            {currentView === "create" && (
+              <CreatePurchaseOrderPage
+                onClose={handleBackToList}
+                onSaved={handleOrderSaved}
+                onSave={handleCreatePurchaseOrder}
+              />
+            )}
+
+            {/* View Order */}
+            {currentView === "view" && selectedOrder && (
+              <ViewPurchaseOrderPage
+                purchaseOrder={selectedOrder}
+                onClose={handleBackToList}
               />
             )}
 
@@ -125,3 +183,4 @@ export default function PurchaseOrdersIndex() {
     </div>
   );
 }
+
