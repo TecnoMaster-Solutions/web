@@ -7,7 +7,8 @@ import { showSuccess, showWarning, showError } from "@/shared/utils/notification
 import {
   validatePurchaseForm,
   validatePurchaseField,
-  PurchaseErrors,
+  type PurchaseErrors,
+  type PurchaseFormField,
 } from "../validations/purchasesValidations";
 import { useLoader } from "@/shared/components/loader";
 import { PurchaseFormState } from "../hooks/usePurchases";
@@ -28,9 +29,16 @@ const parseCOP = (input: string): number => {
   return digits ? Number(digits) : 0;
 };
 
-// ✅ NUEVO (único cambio adicional para permitir opcional real)
 const onlyDigits = (s: string) => (s ?? "").replace(/[^\d]/g, "");
 const hasDigits = (s: string) => onlyDigits(s).length > 0;
+
+const autoSalePrice = (purchaseUnitPrice: number): number => {
+  const p = Number(purchaseUnitPrice) || 0;
+  if (p <= 0) return 0;
+
+  const sale = p < 10000 ? p * 2 : p * 1.5;
+  return Math.round(sale);
+};
 
 type CartItem = {
   productid: number;
@@ -42,7 +50,7 @@ type CartItem = {
 
 interface Props {
   onSave: () => Promise<any>;
-  onClose: () => void;
+  onClose: (created?: boolean) => void;
   purchases: IPurchase[];
   fetchPurchases: () => Promise<void>;
   form: PurchaseFormState;
@@ -66,7 +74,9 @@ interface Props {
   updateCartItem: (index: number, patch: Partial<CartItem>) => void;
 
   handleChange: (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >
   ) => void;
 
   addToCart: () => void;
@@ -110,12 +120,20 @@ export default function RegisterPurchaseForm({
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const { showLoader, hideLoader } = useLoader();
-
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const inputBase = "w-full rounded-lg border px-3 py-2 text-base shadow-sm";
+  const inputBaseNoShadow = "w-full rounded-lg border px-3 py-2 text-base";
+  const selectBase = "w-full rounded-lg border px-3 py-2 text-base";
+  const labelBase = "block text-sm font-medium mb-1";
+  const labelMuted = "block text-sm font-medium text-gray-600 mb-1";
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target as Node)
+      ) {
         setDropdownOpen(false);
       }
     };
@@ -123,13 +141,29 @@ export default function RegisterPurchaseForm({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleFieldValidation = (
-    field: keyof Omit<IPurchase, "id">,
-    value: any
-  ) => {
-    const error = validatePurchaseField(field, value, purchases);
-    setErrors((prev) => ({ ...prev, [field]: error }));
+  const validateField = (field: PurchaseFormField, value: unknown) => {
+    const error = validatePurchaseField(field, value, purchases ?? []);
+    setErrors((prev) => {
+      const next = { ...prev };
+      if (error) (next as any)[field] = error;
+      else delete (next as any)[field];
+      return next;
+    });
   };
+
+  // Validar orderNumber aunque sea readOnly
+  useEffect(() => {
+    if (form.orderNumber !== undefined) {
+      validateField("orderNumber" as any, form.orderNumber);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.orderNumber]);
+
+  // Validar carrito automáticamente (requerido)
+  useEffect(() => {
+    validateField("products" as any, cart.length);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cart.length]);
 
   const cartProductIds = useMemo(
     () => new Set(cart.map((c) => c.productid)),
@@ -147,51 +181,65 @@ export default function RegisterPurchaseForm({
     );
   }, [searchProduct, products, cartProductIds]);
 
-  const handleFormSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
 
-    if (cart.length === 0) {
-      showWarning("Agrega al menos un producto al carrito.");
+const handleFormSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  const validationErrors = validatePurchaseForm(
+    {
+      orderNumber: form.orderNumber,
+      invoiceNumber: form.invoiceNumber,
+      supplier: form.supplier,
+      registerDate: form.registerDate,
+      description: form.description,
+      amount: total,
+      productsCount: cart.length,
+      purchaseOrderId: form.purchaseOrderId,
+    } as any,
+    purchases ?? []
+  );
+
+  setErrors(validationErrors);
+
+  if (Object.keys(validationErrors).length > 0) {
+    showWarning("Por favor completa los campos requeridos", { autoClose: 5000 });
+    return;
+  }
+
+  for (const item of cart) {
+    if (!item.productid) {
+      showWarning("Hay un producto inválido en el carrito.", { autoClose: 5000 });
       return;
     }
-
-    const validationErrors = validatePurchaseForm(
-      {
-        orderNumber: form.orderNumber,
-        invoiceNumber: form.invoiceNumber,
-        supplier: form.supplier,
-        registerDate: form.registerDate,
-        amount: total,
-        status: "Aprobado",
-        description: form.description,
-      } as any,
-      purchases ?? []
-    );
-
-    setErrors(validationErrors);
-
-    if (Object.keys(validationErrors).length > 0) {
-      showError("Corrige los errores antes de guardar.");
+    if (!Number.isFinite(item.quantity) || item.quantity <= 0) {
+      showWarning("Hay cantidades inválidas en el carrito.", { autoClose: 5000 });
       return;
     }
-
-    try {
-      showLoader();
-      setSaving(true);
-
-      await onSave();
-      await fetchPurchases();
-
-      showSuccess("Compra registrada con éxito.");
-      onClose();
-    } catch (error) {
-      console.error(error);
-      showError("Error al registrar la compra.");
-    } finally {
-      hideLoader();
-      setSaving(false);
+    if (!Number.isFinite(item.unitprice) || item.unitprice <= 0) {
+      showWarning("Hay precios de compra inválidos en el carrito.", { autoClose: 5000 });
+      return;
     }
-  };
+    if (item.saleprice !== undefined && item.saleprice < item.unitprice) {
+      showWarning(
+        `El precio de venta no puede ser menor al de compra (ID ${item.productid}).`,
+        { autoClose: 5000 }
+      );
+      return;
+    }
+  }
+
+  try {
+    setSaving(true);      
+    await onSave();        
+    await fetchPurchases(); 
+    onClose(true);         
+  } catch (error) {
+    console.error(error);
+    showError("Error al registrar la compra.");
+  } finally {
+    setSaving(false);
+  }
+};
 
   const selectedSupplier = suppliers.find(
     (s) => String(s.supplierid) === String(form.supplier)
@@ -199,189 +247,219 @@ export default function RegisterPurchaseForm({
 
   return (
     <form
+      noValidate
       onSubmit={handleFormSubmit}
-      className="space-y-6 p-6 md:p-8 w-full mx-auto rounded-lg"
+      className="space-y-6 p-6 md:p-8 w-full max-w-screen-2xl mx-auto rounded-lg"
     >
-      {/* Fecha */}
-      <div>
-        <label className="block text-sm font-medium mb-1">
-          Fecha de Registro <span className="text-red-500">*</span>
-        </label>
+      <div className="bg-white border rounded-lg px-5 py-4 md:px-6 md:py-5">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-base md:text-lg font-semibold">Resumen</h2>
 
-        <input
-          type="date"
-          name="registerDate"
-          value={form.registerDate}
-          onChange={(e) => {
-            handleChange(e);
-            handleFieldValidation("registerDate", e.target.value);
-          }}
-          required
-          className={`w-full rounded-md border px-2 py-2 text-sm ${errors.createdAt ? "border-red-500" : "border-gray-300"
-            }`}
-        />
-
-        {errors.registerDate && (
-          <p className="text-xs text-red-500 mt-1">{errors.registerDate}</p>
-        )}
-      </div>
-
-      {/* N° Orden y Proveedor */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm mb-1 font-medium">
-            N° de Orden <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            name="orderNumber"
-            value={form.orderNumber}
-            readOnly
-            className={`w-full rounded-md border px-2 py-2 text-sm bg-gray-100 ${errors.orderNumber ? "border-red-500" : "border-gray-300"
-              }`}
-          />
-          {errors.orderNumber && (
-            <p className="text-xs text-red-500">{errors.orderNumber}</p>
-          )}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-500">Total</span>
+            <span className="text-lg md:text-l font-bold text-green-700 bg-green-50 px-3 py-1 rounded-lg border border-green-200 shadow-sm">
+              {formatCOP(total)}
+            </span>
+          </div>
         </div>
 
-        <div>
-          {form.supplier && (
-            <div className="flex items-center gap-2 mt-2 p-2 border rounded-md bg-gray-50">
-              <img
-                src={selectedSupplier?.image || DEFAULT_SUPPLIER_IMAGE}
-                alt="Proveedor"
-                className="w-10 h-10 rounded object-cover"
-                onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).src = DEFAULT_SUPPLIER_IMAGE;
-                }}
-              />
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="md:col-span-1">
+            <label className={labelBase}>
+              Fecha de Registro <span className="text-red-500">*</span>
+            </label>
 
-              <span className="text-sm font-medium text-gray-700">
-                {selectedSupplier?.name}
-              </span>
+            <input
+              type="date"
+              name="registerDate"
+              value={form.registerDate}
+              onChange={(e) => {
+                handleChange(e);
+                validateField("registerDate", e.target.value);
+              }}
+              onBlur={() => validateField("registerDate", form.registerDate)}
+              className={`${inputBaseNoShadow} ${errors.registerDate ? "border-red-500" : "border-gray-300"
+                }`}
+            />
+
+            {errors.registerDate && (
+              <p className="text-xs text-red-500 mt-1">{errors.registerDate}</p>
+            )}
+          </div>
+
+          <div className="md:col-span-1">
+            <label className={labelBase}>
+              N° de Orden <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              name="orderNumber"
+              value={form.orderNumber}
+              readOnly
+              className={`${inputBaseNoShadow} bg-gray-100 ${errors.orderNumber ? "border-red-500" : "border-gray-300"
+                }`}
+            />
+            {errors.orderNumber && (
+              <p className="text-xs text-red-500">{errors.orderNumber}</p>
+            )}
+          </div>
+
+          <div className="md:col-span-2">
+            <label className={labelBase}>
+              Número de Factura <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              placeholder="FAC-2025-1001"
+              name="invoiceNumber"
+              value={form.invoiceNumber}
+              onChange={(e) => {
+                handleChange(e);
+                validateField("invoiceNumber", e.target.value);
+              }}
+              onBlur={() => validateField("invoiceNumber", form.invoiceNumber)}
+              className={`${inputBaseNoShadow} ${errors.invoiceNumber ? "border-red-500" : "border-gray-300"
+                }`}
+            />
+            {errors.invoiceNumber && (
+              <p className="text-xs text-red-500">{errors.invoiceNumber}</p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white border rounded-lg px-5 py-4 md:px-6 md:py-5">
+        <h2 className="text-base md:text-lg font-semibold mb-3">Proveedor</h2>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-stretch">
+          <div className="lg:col-span-2">
+            <label className={labelBase}>
+              Proveedor <span className="text-red-500">*</span>
+            </label>
+
+            <select
+              name="supplier"
+              value={form.supplier}
+              onChange={(e) => {
+                handleChange(e);
+                validateField("supplier", e.target.value);
+              }}
+              onBlur={() => validateField("supplier", form.supplier)}
+              className={`${selectBase} ${errors.supplier ? "border-red-500" : "border-gray-300"
+                }`}
+            >
+              <option value="">Selecciona el proveedor</option>
+              {suppliers.map((s) => (
+                <option key={s.supplierid} value={s.supplierid}>
+                  {s.name} - {s.nit}
+                </option>
+              ))}
+            </select>
+
+            {errors.supplier && (
+              <p className="text-xs text-red-500 mt-1">{errors.supplier}</p>
+            )}
+
+            <div className="mt-4">
+              <label className={labelBase}>Orden de compra (Pendiente)</label>
+
+              <select
+                name="purchaseOrderId"
+                value={form.purchaseOrderId}
+                onChange={handleChange}
+                disabled={!form.supplier || poLoading}
+                className={`${selectBase} ${!form.supplier || poLoading ? "bg-gray-100" : "bg-white"
+                  }`}
+              >
+                <option value="">
+                  {!form.supplier
+                    ? "Selecciona primero un proveedor"
+                    : poLoading
+                      ? "Cargando órdenes..."
+                      : purchaseOrders.length === 0
+                        ? "No hay órdenes pendientes para este proveedor"
+                        : "Selecciona la orden"}
+                </option>
+
+                {purchaseOrders.map((po: any) => (
+                  <option key={po.id} value={po.id}>
+                    {po.numeroOrden} — {new Date(po.fecha).toLocaleDateString()}
+                  </option>
+                ))}
+              </select>
+
+              {!form.purchaseOrderId && form.supplier && !poLoading && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Solo aparecen OCs del proveedor en estado Pendiente.
+                </p>
+              )}
             </div>
-          )}
+          </div>
 
-          <label className="block text-sm mb-1 font-medium">
-            Proveedor <span className="text-red-500">*</span>
-          </label>
-          <select
-            name="supplier"
-            value={form.supplier}
-            onChange={(e) => {
-              handleChange(e);
-              handleFieldValidation("supplier", e.target.value);
-            }}
-            className={`w-full rounded-md border px-2 py-2 text-sm ${errors.supplier ? "border-red-500" : "border-gray-300"
-              }`}
-          >
-            <option value="">Selecciona el proveedor</option>
-            {suppliers.map((s) => (
-              <option key={s.supplierid} value={s.supplierid}>
-                {s.name} - {s.nit}
-              </option>
-            ))}
-          </select>
+          <div className="lg:col-span-1">
+            <div className="border rounded-lg bg-gray-50 p-3 h-full min-h-[108px] flex items-center">
+              {form.supplier ? (
+                <div className="flex items-center gap-3 w-full min-w-0">
+                  <div className="w-14 h-14 rounded-md bg-white border overflow-hidden flex items-center justify-center shrink-0">
+                    <img
+                      src={selectedSupplier?.image || DEFAULT_SUPPLIER_IMAGE}
+                      alt="Proveedor"
+                      className="w-full h-full object-contain"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).src =
+                          DEFAULT_SUPPLIER_IMAGE;
+                      }}
+                    />
+                  </div>
 
-          {errors.supplier && (
-            <p className="text-xs text-red-500">{errors.supplier}</p>
-          )}
+                  <div className="min-w-0">
+                    <p className="text-base font-semibold text-gray-800 truncate">
+                      {selectedSupplier?.name}
+                    </p>
+                    <p className="text-sm text-gray-600 truncate">
+                      {selectedSupplier?.nit}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-base text-gray-500">
+                  Selecciona un proveedor para ver información rápida.
+                </p>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* NUEVO: Orden de compra (habilitado solo si hay proveedor) */}
-      <div>
-        <label className="block text-sm mb-1 font-medium">
-          Orden de compra (Pendiente) <span className="text-red-500">*</span>
-        </label>
+      {/* ====== SECCIÓN 3: Productos (UNA sola card) ====== */}
+      <div className="bg-white border rounded-lg px-5 py-4 md:px-6 md:py-5">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-base md:text-lg font-semibold">
+            Productos <span className="text-red-500">*</span>
+          </h2>
 
-        <select
-          name="purchaseOrderId"
-          value={form.purchaseOrderId}
-          onChange={handleChange}
-          disabled={!form.supplier || poLoading}
-          className={`w-full rounded-md border px-2 py-2 text-sm ${!form.supplier || poLoading ? "bg-gray-100" : "bg-white"
-            }`}
-        >
-          <option value="">
-            {!form.supplier
-              ? "Selecciona primero un proveedor"
-              : poLoading
-                ? "Cargando órdenes..."
-                : purchaseOrders.length === 0
-                  ? "No hay órdenes pendientes para este proveedor"
-                  : "Selecciona la orden"}
-          </option>
+          <div className="text-sm text-gray-600">
+            {cart.length} item(s) en carrito
+          </div>
+        </div>
 
-          {purchaseOrders.map((po: any) => (
-            <option key={po.id} value={po.id}>
-              {po.numeroOrden} — {new Date(po.fecha).toLocaleDateString()}
-            </option>
-          ))}
-        </select>
-
-        {!form.purchaseOrderId && form.supplier && !poLoading && (
-          <p className="text-xs text-gray-500 mt-1">
-            Solo aparecen OCs del proveedor en estado Pendiente.
-          </p>
+        {errors.products && (
+          <p className="text-xs text-red-500 mt-1">{errors.products}</p>
         )}
-      </div>
 
-      <div>
-        <label className="block text-sm mb-1 font-medium">
-          Número de Factura <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="text"
-          placeholder="FAC-2025-1001"
-          name="invoiceNumber"
-          value={form.invoiceNumber}
-          onChange={(e) => {
-            handleChange(e);
-            handleFieldValidation("invoiceNumber", e.target.value);
-          }}
-          className={`w-full rounded-md border px-2 py-2 text-sm ${errors.invoiceNumber ? "border-red-500" : "border-gray-300"
-            }`}
-        />
-        {errors.invoiceNumber && (
-          <p className="text-xs text-red-500">{errors.invoiceNumber}</p>
-        )}
-      </div>
+        <div className="grid grid-cols-1 xl:grid-cols-5 gap-5 xl:min-h-[460px]">
+          <div className="xl:col-span-2">
+            <label className="block text-base font-medium mb-2">Producto</label>
 
-      <div>
-        <label className="block text-sm mb-1 font-medium">
-          Total <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="text"
-          value={formatCOP(total)}
-          readOnly
-          className={`w-full rounded-md border px-2 py-2 text-sm bg-gray-100 ${errors.amount ? "border-red-500" : "border-gray-300"
-            }`}
-        />
-        {errors.amount && <p className="text-xs text-red-500">{errors.amount}</p>}
-      </div>
-
-      {/* Productos */}
-      <div className="p-4 border rounded-lg bg-gray-50 shadow-sm">
-        <label className="block text-center text-xl font-semibold mb-3">
-          Productos <span className="text-red-500">*</span>
-        </label>
-
-        <label className="block text-sm font-medium mb-2">Producto</label>
-
-        <div className="flex flex-col sm:flex-row sm:items-end gap-3">
-          <div className="flex-1">
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              Buscar o seleccionar
+            <label className={labelMuted}>
+              Buscar o seleccionar <span className="text-red-500">*</span>
             </label>
 
             <div className="relative" ref={dropdownRef}>
               <input
                 type="text"
                 placeholder="Escribe el nombre del producto"
-                className="w-100 border rounded-md px-3 py-2 text-sm shadow-sm"
+                className={inputBase}
                 value={
                   selectedProduct
                     ? products.find((p) => p.productid === Number(selectedProduct))
@@ -397,9 +475,9 @@ export default function RegisterPurchaseForm({
               />
 
               {dropdownOpen && (
-                <div className="absolute top-full mt-1 w-full bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto z-50">
+                <div className="absolute top-full mt-1 w-full bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto z-50">
                   {filteredProducts.length === 0 ? (
-                    <p className="p-3 text-sm text-gray-500">
+                    <p className="p-3 text-base text-gray-500">
                       No hay productos disponibles (o ya están agregados)
                     </p>
                   ) : (
@@ -417,9 +495,9 @@ export default function RegisterPurchaseForm({
                           setSearchProduct("");
                           setDropdownOpen(false);
                         }}
-                        className="p-2 cursor-pointer hover:bg-gray-100 text-sm flex justify-between"
+                        className="p-2 cursor-pointer hover:bg-gray-100 text-base flex justify-between"
                       >
-                        <span>{p.productname}</span>
+                        <span className="truncate pr-2">{p.productname}</span>
                         <span className="text-gray-600 font-semibold">
                           {formatCOP(p.productpriceofsupplier || 0)}
                         </span>
@@ -429,178 +507,224 @@ export default function RegisterPurchaseForm({
                 </div>
               )}
             </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+              <div>
+                <label className={labelMuted}>
+                  Precio compra (unidad) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="$ 15.000"
+                  value={
+                    hasDigits(purchasePrice)
+                      ? formatCOP(parseCOP(purchasePrice))
+                      : ""
+                  }
+                  onChange={(e) => setPurchasePrice(e.target.value)}
+                  className={inputBase}
+                />
+              </div>
+
+              <div>
+                <label className={labelMuted}>Precio venta (unidad)</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="$ 25.000"
+                  value={hasDigits(salePrice) ? formatCOP(parseCOP(salePrice)) : ""}
+                  onChange={(e) => setSalePrice(e.target.value)}
+                  onBlur={() => {
+                    if (!hasDigits(salePrice) && hasDigits(purchasePrice)) {
+                      const price = parseCOP(purchasePrice);
+                      const auto = autoSalePrice(price);
+                      if (auto > 0) setSalePrice(String(auto));
+                    }
+                  }}
+                  className={inputBase}
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className={labelMuted}>
+                  Cantidad <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  value={quantity}
+                  min={1}
+                  placeholder="0"
+                  onChange={(e) => setQuantity(Number(e.target.value))}
+                  className={inputBase}
+                />
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (!form.supplier) {
+                  validateField("supplier" as any, form.supplier);
+                  showWarning("Selecciona primero un proveedor.", { autoClose: 5000 });
+                  return;
+                }
+
+                if (!selectedProduct) {
+                  setErrors((prev) => ({
+                    ...prev,
+                    products: "Selecciona un producto para agregar",
+                  }));
+                  showWarning("Selecciona un producto para agregar.", { autoClose: 5000 });
+                  return;
+                }
+
+                const price = parseCOP(purchasePrice);
+                if (!price || price <= 0) {
+                  showWarning("Ingresa un precio de compra válido.", { autoClose: 5000 });
+                  return;
+                }
+
+                if (!Number.isFinite(quantity) || quantity <= 0) {
+                  showWarning("La cantidad debe ser mayor que 0.", { autoClose: 5000 });
+                  return;
+                }
+
+                addToCart();
+              }}
+              style={{ backgroundColor: Colors.buttons.primary }}
+              className="cursor-pointer mt-4 w-full px-4 py-2.5 rounded-lg text-white text-base font-medium shadow hover:scale-[1.02] transition"
+            >
+              Añadir producto +
+            </button>
           </div>
 
-          <div className="flex-1 sm:w-32">
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              Precio compra (unidad)
-            </label>
+          {/* Área carrito (misma card) */}
+          <div className="xl:col-span-3">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-base font-semibold text-gray-800">Carrito</p>
 
-            <input
-              type="text"
-              inputMode="numeric"
-              placeholder="$ 15.000"
-              // ✅ CAMBIO: solo formatea si hay dígitos
-              value={hasDigits(purchasePrice) ? formatCOP(parseCOP(purchasePrice)) : ""}
-              onChange={(e) => setPurchasePrice(e.target.value)}
-              className="w-full rounded-md border px-2 py-2 text-sm shadow-sm"
-            />
-          </div>
+              {/* Subtotal compra con el MISMO estilo del Subt. en ver detalle */}
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold text-green-700 bg-green-50 border border-green-200">
+                Subt. {formatCOP(total)}
+              </span>
+            </div>
 
-          <div className="flex-1 sm:w-32">
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              Precio venta (unidad) — opcional
-            </label>
+            {cart.length === 0 ? (
+              <div className="border rounded-lg bg-gray-50 p-4 text-base text-gray-600">
+                Agrega productos desde el panel izquierdo.
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
+                {cart.map((item, index) => (
+                  <div
+                    key={`${item.productid}-${index}`}
+                    className="bg-white p-3 rounded-lg shadow border hover:shadow-md transition"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-base text-gray-800 truncate">
+                            {item.productname}
+                          </span>
 
-            <input
-              type="text"
-              inputMode="numeric"
-              placeholder="$ 25.000"
-              value={hasDigits(salePrice) ? formatCOP(parseCOP(salePrice)) : ""}
-              onChange={(e) => setSalePrice(e.target.value)}
-              className="w-full rounded-md border px-2 py-2 text-sm shadow-sm"
-            />
-          </div>
+                          {/* Tag ID en gris claro */}
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-sm font-semibold text-gray-700 bg-gray-100 border border-gray-200 shrink-0">
+                            ID {item.productid}
+                          </span>
+                        </div>
 
-          <div className="flex-1 sm:w-20">
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              Cantidad
-            </label>
+                        <p className="text-sm text-gray-600 mt-1">
+                          Subtotal: {formatCOP(item.unitprice * item.quantity)}
+                        </p>
+                      </div>
 
-            <input
-              type="number"
-              value={quantity}
-              min={1}
-              placeholder="0"
-              onChange={(e) => setQuantity(Number(e.target.value))}
-              className="w-12 rounded-md border px-2 py-2 text-center text-sm shadow-sm"
-            />
-          </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => {
-            if (!form.supplier) {
-              showWarning("Selecciona primero un proveedor.");
-              return;
-            }
-            addToCart();
-          }}
-          style={{ backgroundColor: Colors.buttons.primary }}
-          className="cursor-pointer mt-4 w-full px-4 py-2 rounded-md text-white text-sm font-medium shadow hover:scale-[1.02] transition"
-        >
-          Añadir producto +
-        </button>
-
-        {cart.length > 0 && (
-          <div className="mt-5 space-y-3">
-            {cart.map((item, index) => (
-              <div
-                key={`${item.productid}-${index}`}
-                className="bg-white p-3 rounded-md shadow border hover:shadow-md transition"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-sm text-gray-800">
-                        {item.productname}
-                      </span>
-
-                      <span className="bg-red-600 text-white text-xs font-bold rounded-full px-2 py-0.5">
-                        ID {item.productid}
-                      </span>
+                      <button
+                        type="button"
+                        onClick={() => removeFromCart(index)}
+                        className="p-2 rounded hover:bg-red-100 transition shrink-0"
+                        title="Eliminar"
+                      >
+                        <img
+                          src="/icons/delete.svg"
+                          alt="Eliminar"
+                          className="w-5 h-5 opacity-80 hover:opacity-100"
+                        />
+                      </button>
                     </div>
 
-                    <p className="text-xs text-gray-600 mt-1">
-                      Subtotal: {formatCOP(item.unitprice * item.quantity)}
-                    </p>
-                  </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+                      <div>
+                        <label className={labelMuted}>Cantidad</label>
+                        <input
+                          type="number"
+                          min={1}
+                          value={item.quantity}
+                          onChange={(e) =>
+                            updateCartItem(index, {
+                              quantity: Number(e.target.value),
+                            })
+                          }
+                          className={inputBaseNoShadow}
+                        />
+                      </div>
 
-                  <button
-                    type="button"
-                    onClick={() => removeFromCart(index)}
-                    className="p-2 rounded hover:bg-red-100 transition shrink-0"
-                    title="Eliminar"
-                  >
-                    <img
-                      src="/icons/delete.svg"
-                      alt="Eliminar"
-                      className="w-5 h-5 opacity-80 hover:opacity-100"
-                    />
-                  </button>
-                </div>
+                      <div>
+                        <label className={labelMuted}>Precio compra (unidad)</label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={formatCOP(item.unitprice)}
+                          onChange={(e) => {
+                            const v = parseCOP(e.target.value);
+                            updateCartItem(index, { unitprice: v });
+                          }}
+                          className={inputBaseNoShadow}
+                        />
+                      </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      Cantidad
-                    </label>
-                    <input
-                      type="number"
-                      min={1}
-                      value={item.quantity}
-                      onChange={(e) =>
-                        updateCartItem(index, { quantity: Number(e.target.value) })
-                      }
-                      className="w-full rounded-md border px-2 py-2 text-sm"
-                    />
+                      <div>
+                        <label className={labelMuted}>Precio venta (unidad)</label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={
+                            item.saleprice === undefined ? "" : formatCOP(item.saleprice)
+                          }
+                          onChange={(e) =>
+                            updateCartItem(index, {
+                              saleprice: hasDigits(e.target.value)
+                                ? parseCOP(e.target.value)
+                                : undefined,
+                            })
+                          }
+                          className={inputBaseNoShadow}
+                        />
+                        {item.saleprice !== undefined &&
+                          item.saleprice < item.unitprice && (
+                            <p className="text-xs text-red-500 mt-1">
+                              El precio de venta no puede ser menor que el de compra.
+                            </p>
+                          )}
+                      </div>
+                    </div>
                   </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      Precio compra (unidad)
-                    </label>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={formatCOP(item.unitprice)}
-                      onChange={(e) => {
-                        const v = parseCOP(e.target.value);
-                        updateCartItem(index, { unitprice: v });
-                      }}
-                      className="w-full rounded-md border px-2 py-2 text-sm"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      Precio venta (unidad) — opcional
-                    </label>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={item.saleprice === undefined ? "" : formatCOP(item.saleprice)}
-                      onChange={(e) =>
-                        updateCartItem(index, {
-                          saleprice: hasDigits(e.target.value) ? parseCOP(e.target.value) : undefined,
-                        })
-                      }
-                      className="w-full rounded-md border px-2 py-2 text-sm"
-                    />
-                    {item.saleprice !== undefined && item.saleprice < item.unitprice && (
-                      <p className="text-xs text-red-500 mt-1">
-                        El precio de venta no puede ser menor que el de compra.
-                      </p>
-                    )}
-                  </div>
-                </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
-        )}
+        </div>
       </div>
 
-      <div>
-        <label className="block text-sm mb-1 font-medium">Observaciones</label>
+      <div className="bg-white border rounded-lg px-5 py-4 md:px-6 md:py-5">
+        <label className={labelBase}>Observaciones</label>
         <textarea
           name="description"
           value={form.description}
           onChange={(e) => {
             handleChange(e);
-            handleFieldValidation("description" as any, e.target.value);
           }}
-          className="w-full rounded-md border px-2 py-2 text-sm resize-none"
+          className="w-full rounded-lg border px-3 py-2 text-base resize-none"
           rows={3}
           placeholder="Notas adicionales de la compra"
         />
@@ -610,14 +734,14 @@ export default function RegisterPurchaseForm({
         <button
           type="button"
           onClick={onClose}
-          className="cursor-pointer transition duration-300 hover:bg-gray-200 hover:text-black hover:scale-105 px-4 py-2 rounded-lg bg-gray-300 text-black w-full sm:w-auto"
+          className="cursor-pointer transition duration-300 hover:bg-gray-200 hover:text-black hover:scale-105 px-4 py-2.5 rounded-lg bg-gray-300 text-black text-base w-full sm:w-auto"
         >
           Cancelar
         </button>
         <button
           type="submit"
           disabled={saving}
-          className="cursor-pointer transition duration-300 hover:bg-black hover:text-white hover:scale-105 px-4 py-2 rounded-lg bg-black text-white w-full sm:w-auto"
+          className="cursor-pointer transition duration-300 hover:bg-black hover:text-white hover:scale-105 px-4 py-2.5 rounded-lg bg-black text-white text-base w-full sm:w-auto"
         >
           {saving ? "Guardando..." : "Guardar"}
         </button>

@@ -1,6 +1,6 @@
 import React from "react";
-import { createPortal } from "react-dom";
 import Colors from "@/shared/theme/colors";
+import Modal from "@/features/dashboard/components/Modal";
 import { useEditClientForm } from "../../hooks/useClients";
 import { EditClientModalProps } from "../../types/typeClients";
 
@@ -9,6 +9,7 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
   client,
   onClose,
   onSave,
+  clients,
 }) => {
   const {
     formData,
@@ -17,31 +18,22 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
     handleInputChange,
     handleBlur,
     handleSubmit,
-  } = useEditClientForm({ isOpen, client, onClose, onSave });
+  } = useEditClientForm({ isOpen, client, onClose, onSave, clients });
 
   // "formData es posiblemente null"
   if (!isOpen || !client || !formData) return null;
 
-  return createPortal(
-    <div className="fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl relative">
-
-        {/* Header */}
-        <div className="px-6 pt-6 pb-3 relative">
-          <h2 className="text-2xl font-semibold text-gray-800">
-            Editar Cliente
-          </h2>
-          <button onClick={onClose} className="absolute top-6 right-6">
-            <img src="/icons/X.svg" alt="Cerrar" className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="border-t border-gray-300 mx-6" />
-
-        <form
-          onSubmit={handleSubmit}
-          className="px-6 py-6 grid grid-cols-1 sm:grid-cols-2 gap-5"
-        >
+  return (
+    <Modal
+      title="Editar Cliente"
+      isOpen={isOpen}
+      onClose={onClose}
+      widthClass="md:max-w-2xl"
+    >
+      <form
+        onSubmit={handleSubmit}
+        className="grid grid-cols-1 gap-5 sm:grid-cols-2"
+      >
           {/* Tipo Documento */}
           <div>
             <label className="block text-sm text-gray-700 mb-1">
@@ -67,7 +59,7 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
               <option value={4}>PPN</option>
             </select>
             {errors.tipo && touched.tipo && (
-              <span className="text-green-500 text-xs">{errors.tipo}</span>
+              <span className="text-red-500 text-xs">{errors.tipo}</span>
             )}
           </div>
 
@@ -79,11 +71,21 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
             <input
               type="text"
               name="documento"
+              placeholder="Número de documento"
               value={formData.documento}
               onChange={handleInputChange}
               onBlur={handleBlur}
               className="w-full px-3 py-2 border rounded-lg text-sm"
+              style={{
+                borderColor:
+                  errors.documento && touched.documento
+                    ? "red"
+                    : Colors.table.lines,
+              }}
             />
+            {errors.documento && touched.documento && (
+              <span className="text-red-500 text-xs">{errors.documento}</span>
+            )}
           </div>
 
           {/* Nombre */}
@@ -94,11 +96,21 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
             <input
               type="text"
               name="nombre"
+              placeholder="Ingrese su nombre"
               value={formData.nombre}
               onChange={handleInputChange}
               onBlur={handleBlur}
               className="w-full px-3 py-2 border rounded-lg text-sm"
+              style={{
+                borderColor:
+                  errors.nombre && touched.nombre
+                    ? "red"
+                    : Colors.table.lines,
+              }}
             />
+            {errors.nombre && touched.nombre && (
+              <span className="text-red-500 text-xs">{errors.nombre}</span>
+            )}
           </div>
 
           {/* Apellido */}
@@ -109,11 +121,21 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
             <input
               type="text"
               name="apellido"
+              placeholder="Ingrese su apellido"
               value={formData.apellido}
               onChange={handleInputChange}
               onBlur={handleBlur}
               className="w-full px-3 py-2 border rounded-lg text-sm"
+              style={{
+                borderColor:
+                  errors.apellido && touched.apellido
+                    ? "red"
+                    : Colors.table.lines,
+              }}
             />
+            {errors.apellido && touched.apellido && (
+              <span className="text-red-500 text-xs">{errors.apellido}</span>
+            )}
           </div>
 
           {/* Teléfono */}
@@ -124,11 +146,21 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
             <input
               type="tel"
               name="telefono"
+              placeholder="Ingrese su Teléfono"
               value={formData.telefono}
               onChange={handleInputChange}
               onBlur={handleBlur}
               className="w-full px-3 py-2 border rounded-lg text-sm"
+              style={{
+                borderColor:
+                  errors.telefono && touched.telefono
+                    ? "red"
+                    : Colors.table.lines,
+              }}
             />
+            {errors.telefono && touched.telefono && (
+              <span className="text-red-500 text-xs">{errors.telefono}</span>
+            )}
           </div>
 
           {/* Correo */}
@@ -139,11 +171,23 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
             <input
               type="email"
               name="correoElectronico"
+              placeholder="Ingrese su correo"
               value={formData.correoElectronico}
               onChange={handleInputChange}
               onBlur={handleBlur}
               className="w-full px-3 py-2 border rounded-lg text-sm"
+              style={{
+                borderColor:
+                  errors.correoElectronico && touched.correoElectronico
+                    ? "red"
+                    : Colors.table.lines,
+              }}
             />
+            {errors.correoElectronico && touched.correoElectronico && (
+              <span className="text-red-500 text-xs">
+                {errors.correoElectronico}
+              </span>
+            )}
           </div>
 
           {/* Estado */}
@@ -157,11 +201,20 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
               onChange={handleInputChange}
               onBlur={handleBlur}
               className="w-full px-3 py-2 border rounded-lg text-sm"
+              style={{
+                borderColor:
+                  errors.estado && touched.estado
+                    ? "red"
+                    : Colors.table.lines,
+              }}
             >
               <option value="">Seleccione</option>
               <option value="Activo">Activo</option>
               <option value="Inactivo">Inactivo</option>
             </select>
+            {errors.estado && touched.estado && (
+              <span className="text-red-500 text-xs">{errors.estado}</span>
+            )}
           </div>
 
           {/* Ciudad */}
@@ -172,11 +225,21 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
             <input
               type="text"
               name="ciudad"
+              placeholder="Ciudad"
               value={formData.ciudad}
               onChange={handleInputChange}
               onBlur={handleBlur}
               className="w-full px-3 py-2 border rounded-lg text-sm"
+              style={{
+                borderColor:
+                  errors.ciudad && touched.ciudad
+                    ? "red"
+                    : Colors.table.lines,
+              }}
             />
+            {errors.ciudad && touched.ciudad && (
+              <span className="text-red-500 text-xs">{errors.ciudad}</span>
+            )}
           </div>
 
           {/* Código Postal */}
@@ -187,15 +250,25 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
             <input
               type="text"
               name="codigoPostal"
+              placeholder="Código postal"
               value={formData.codigoPostal}
               onChange={handleInputChange}
               onBlur={handleBlur}
               className="w-full px-3 py-2 border rounded-lg text-sm"
+              style={{
+                borderColor:
+                  errors.codigoPostal && touched.codigoPostal
+                    ? "red"
+                    : Colors.table.lines,
+              }}
             />
+            {errors.codigoPostal && touched.codigoPostal && (
+              <span className="text-red-500 text-xs">{errors.codigoPostal}</span>
+            )}
           </div>
 
           {/* Botones */}
-          <div className="col-span-1 sm:col-span-2 flex justify-end gap-3 pt-6 border-t border-gray-300">
+          <div className="col-span-1 flex justify-end gap-3 border-t border-gray-300 pt-6 sm:col-span-2">
             <button
               type="button"
               onClick={onClose}
@@ -211,12 +284,8 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
               Guardar
             </button>
           </div>
-        </form>
-
-        <div className="border-t border-gray-300 mx-6 mb-4" />
-      </div>
-    </div>,
-    document.body
+      </form>
+    </Modal>
   );
 };
 

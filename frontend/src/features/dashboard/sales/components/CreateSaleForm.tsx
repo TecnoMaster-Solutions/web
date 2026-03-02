@@ -1,23 +1,59 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSalesForm } from "../hooks/useSalesForm";
 import Colors from "@/shared/theme/colors";
 import { Loader } from "@/shared/components/loader";
-import { IProduct, IService } from "../types/sales.type";
+import { showError } from "@/shared/utils/notifications";
+import { ICustomer, IProduct, IService } from "../types/sales.type";
 import { motion, AnimatePresence } from "framer-motion";
 import { createPortal } from "react-dom";
 
 // Import new modals
 import CreateProductModal from "./CreateProductModal";
-import CreateServiceModal from "./CreateServiceModal";
 
 interface CreateSaleFormProps {
     onClose: () => void;
     onSaved: () => void;
 }
 
-// â”€â”€ Portal Modal Helper â”€â”€
+type FormErrors = {
+    customer?: string;
+    paymentMethod?: string;
+    cart?: string;
+};
+
+function normalizeText(value: string) {
+    return String(value ?? "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .trim();
+}
+
+function initials(name: string) {
+    const parts = String(name || "")
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean);
+    const a = parts[0]?.[0] ?? "";
+    const b = parts.length > 1 ? parts[parts.length - 1]?.[0] ?? "" : "";
+    return (a + b).toUpperCase() || "C";
+}
+
+function getCustomerLabel(customer: ICustomer) {
+    return customer.users
+        ? `${customer.users.name} ${customer.users.lastname}`.trim()
+        : `Cliente #${customer.customerid}`;
+}
+
+function formatCurrencyInput(value: string) {
+    const digits = value.replace(/\D/g, "");
+    if (!digits) return "";
+    return Number(digits).toLocaleString("es-CO");
+}
+
+//  Portal Modal Helper 
 const PortalModal = ({
     isOpen,
     onClose,
@@ -65,6 +101,8 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
         cart,
         addProductToCart,
         addServiceToCart,
+        updateCartQuantity,
+        updateCartUnitPrice,
         removeFromCart,
         subtotal,
         taxAmount,
@@ -79,34 +117,111 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
         handleSubmit,
         submitting,
         TAX_PERCENT,
-        reloadData // Reload data after creation
-        ,
-        saleStatus,
-        setSaleStatus,
-        paymentStatus,
-        setPaymentStatus,
-    } = useSalesForm(() => {
-         onSaved();
-         onClose();
-     });
+        reloadData,
+    } = useSalesForm();
     
-    // â”€â”€ Selection Modals State â”€â”€
+    //  Selection Modals State 
     const [isProductModalOpen, setIsProductModalOpen] = useState(false);
     const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
 
-    // â”€â”€ Creation Modals State â”€â”€
+    //  Creation Modals State 
     const [isNewProductModalOpen, setIsNewProductModalOpen] = useState(false);
-    const [isNewServiceModalOpen, setIsNewServiceModalOpen] = useState(false);
 
-    // â”€â”€ Product Selection State â”€â”€
+    //  Product Selection State 
     const [productSearch, setProductSearch] = useState("");
     const [qty, setQty] = useState(1);
 
-    // â”€â”€ Service Selection State â”€â”€
+    //  Service Selection State 
     const [serviceSearch, setServiceSearch] = useState("");
-    const [servicePrice, setServicePrice] = useState<number | "">("");
+    const [servicePrices, setServicePrices] = useState<Record<number, string>>({});
+    const [clientQuery, setClientQuery] = useState("");
+    const [clientOpen, setClientOpen] = useState(false);
+    const [clientActiveIndex, setClientActiveIndex] = useState(0);
+    const [formErrors, setFormErrors] = useState<FormErrors>({});
+    const clientBoxRef = useRef<HTMLDivElement>(null);
+    const clientInputRef = useRef<HTMLInputElement>(null);
 
-    // â”€â”€ Filter Products â”€â”€
+    const selectedCustomer = useMemo(
+        () =>
+            customers.find((c) => Number(c.customerid) === Number(selectedCustomerId)) ?? null,
+        [customers, selectedCustomerId]
+    );
+
+    const clientOptions = useMemo(() => {
+        const q = normalizeText(clientQuery);
+        if (!q) return customers.slice(0, 10);
+
+        const scored = customers
+            .map((customer) => {
+                const label = normalizeText(getCustomerLabel(customer));
+                const email = normalizeText(customer.users?.email ?? "");
+                const document = normalizeText(customer.users?.documentnumber ?? "");
+                const idText = String(customer.customerid);
+                let score = 0;
+
+                if (idText.startsWith(q)) score += 4;
+                if (document.startsWith(q)) score += 4;
+                if (label.includes(q)) score += 2;
+                if (label.startsWith(q)) score += 1;
+                if (email.includes(q)) score += 1;
+
+                return { customer, score };
+            })
+            .filter((item) => item.score > 0)
+            .sort(
+                (a, b) =>
+                    b.score - a.score ||
+                    a.customer.customerid - b.customer.customerid
+            );
+
+        return scored.slice(0, 10).map((item) => item.customer);
+    }, [customers, clientQuery]);
+
+    const pickClient = (customerId: number) => {
+        if (!Number.isFinite(customerId) || customerId <= 0) return;
+        setSelectedCustomerId(customerId);
+        setFormErrors((prev) => ({ ...prev, customer: undefined }));
+        setClientQuery("");
+        setClientOpen(false);
+    };
+
+    const clearClient = () => {
+        setSelectedCustomerId("");
+        setClientQuery("");
+        setClientOpen(false);
+        clientInputRef.current?.focus();
+    };
+
+    useEffect(() => {
+        setClientActiveIndex(0);
+    }, [clientQuery, clientOpen]);
+
+    useEffect(() => {
+        if (!clientOpen) return;
+        const onMouseDown = (event: MouseEvent) => {
+            const target = event.target as Node;
+            if (!clientBoxRef.current?.contains(target)) {
+                setClientOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", onMouseDown);
+        return () => document.removeEventListener("mousedown", onMouseDown);
+    }, [clientOpen]);
+
+    useEffect(() => {
+        if (selectedCustomerId === "") return;
+        if (!customers.some((c) => Number(c.customerid) === Number(selectedCustomerId))) {
+            setSelectedCustomerId("");
+        }
+    }, [customers, selectedCustomerId, setSelectedCustomerId]);
+
+    useEffect(() => {
+        if (cart.length > 0) {
+            setFormErrors((prev) => ({ ...prev, cart: undefined }));
+        }
+    }, [cart.length]);
+
+    //  Filter Products 
     const filteredProducts = useMemo(() => {
         const term = productSearch.toLowerCase();
         return products.filter(
@@ -117,7 +232,7 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
         );
     }, [products, productSearch]);
 
-    // â”€â”€ Filter Services â”€â”€
+    //  Filter Services 
     const filteredServices = useMemo(() => {
         const term = serviceSearch.toLowerCase();
         return services.filter(
@@ -127,7 +242,17 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
         );
     }, [services, serviceSearch]);
 
-    // â”€â”€ Handlers â”€â”€
+    const productItems = useMemo(
+        () => cart.filter((item) => item.type === "Producto"),
+        [cart]
+    );
+
+    const serviceItems = useMemo(
+        () => cart.filter((item) => item.type === "Servicio"),
+        [cart]
+    );
+
+    //  Handlers 
     const handleAddProduct = (p: IProduct) => {
         addProductToCart(p, qty);
         setQty(1);
@@ -140,15 +265,50 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
             return;
         }
         addServiceToCart(s, price);
-        setServicePrice("");
+        setServicePrices((prev) => ({
+            ...prev,
+            [s.serviceid]: "",
+        }));
         setIsServiceModalOpen(false);
+    };
+
+    const validateForm = () => {
+        const nextErrors: FormErrors = {};
+
+        if (!selectedCustomerId) {
+            nextErrors.customer = "Debe seleccionar un cliente.";
+        }
+
+        if (!String(paymentMethod ?? "").trim()) {
+            nextErrors.paymentMethod = "Debe seleccionar un metodo de pago.";
+        }
+
+        if (cart.length === 0) {
+            nextErrors.cart = "Debe agregar al menos un producto o servicio.";
+        }
+
+        setFormErrors(nextErrors);
+        return Object.keys(nextErrors).length === 0;
+    };
+
+    const handleSave = async () => {
+        if (!validateForm()) {
+            showError("Por favor llene los campos.");
+            return;
+        }
+
+        const sale = await handleSubmit();
+        if (sale) {
+            onSaved();
+            onClose();
+        }
     };
 
     // Nota: ya no mostramos loader global; renderizamos la vista aunque loadingData sea true
 
     return (
         <>
-            {/* Barra superior: flecha + tí­tulo grande + botón Volver */}
+            {/* Barra superior: flecha + título grande + botón Volver */}
             <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-4">
                     <button
@@ -166,15 +326,15 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
                         <h1 className="text-3xl font-extrabold" style={{ color: Colors.texts.primary }}>
                             Crear Venta
                         </h1>
-                        <p className="text-sm text-gray-500">Registre una nueva venta — complete los datos y guarde</p>
+                        <p className="text-sm text-gray-500">Registre una nueva venta complete los datos y guarde</p>
                     </div>
                 </div>
 
                 {/* botón derecho 'Volver' removido */}
             </div>
 
-            <div className="flex flex-col gap-6 md:flex-row h-full max-h-[calc(100vh-160px)] overflow-y-auto p-2">
-                {/* â”€â”€ Left Column: Form & Details (65%) â”€â”€ */}
+            <div className="flex flex-col items-start gap-6 md:flex-row p-2">
+                {/*  Left Column: Form & Details (65%)  */}
                 <div className="md:w-[65%] flex flex-col gap-6">
 
                     {/* Card: Datos de Venta */}
@@ -188,21 +348,129 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
                                 <label className="block text-sm font-medium mb-1 text-gray-700">
                                     Cliente
                                 </label>
-                                <select
-                                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                                    style={{ borderColor: Colors.table.lines }}
-                                    value={selectedCustomerId}
-                                    onChange={(e) => setSelectedCustomerId(Number(e.target.value))}
-                                >
-                                    <option value="">-- Seleccionar Cliente --</option>
-                                    {customers.map((c) => (
-                                        <option key={c.customerid} value={c.customerid}>
-                                            {c.users
-                                                ? `${c.users.name} ${c.users.lastname}`
-                                                : `Cliente #${c.customerid}`}
-                                        </option>
-                                    ))}
-                                </select>
+                                {selectedCustomer ? (
+                                    <div className="mb-2 flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+                                        <div className="flex min-w-0 items-center gap-3">
+                                            <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-xs font-semibold text-gray-700">
+                                                {initials(getCustomerLabel(selectedCustomer))}
+                                            </span>
+                                            <div className="min-w-0">
+                                                <p className="truncate text-sm font-medium text-gray-900">
+                                                    {getCustomerLabel(selectedCustomer)}
+                                                </p>
+                                                <p className="truncate text-[11px] text-gray-500">
+                                                    Cliente #{selectedCustomer.customerid}
+                                                    {selectedCustomer.users?.documentnumber
+                                                        ? ` - Doc ${selectedCustomer.users.documentnumber}`
+                                                        : selectedCustomer.users?.email
+                                                            ? ` - ${selectedCustomer.users.email}`
+                                                        : ""}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={clearClient}
+                                            className="rounded-md border border-gray-300 bg-white px-2 py-1 text-[11px] text-gray-700 hover:bg-gray-50"
+                                        >
+                                            Quitar
+                                        </button>
+                                    </div>
+                                ) : null}
+
+                                <div className="relative" ref={clientBoxRef}>
+                                    <input
+                                        ref={clientInputRef}
+                                        value={clientQuery}
+                                        onChange={(e) => {
+                                            setClientQuery(e.target.value);
+                                            setClientOpen(true);
+                                        }}
+                                        onFocus={() => setClientOpen(true)}
+                                        onKeyDown={(e) => {
+                                            if (!clientOpen) return;
+                                            if (e.key === "ArrowDown") {
+                                                e.preventDefault();
+                                                setClientActiveIndex((i) =>
+                                                    Math.min(i + 1, Math.max(0, clientOptions.length - 1))
+                                                );
+                                            } else if (e.key === "ArrowUp") {
+                                                e.preventDefault();
+                                                setClientActiveIndex((i) => Math.max(i - 1, 0));
+                                            } else if (e.key === "Enter") {
+                                                if (clientOptions[clientActiveIndex]) {
+                                                    e.preventDefault();
+                                                    pickClient(clientOptions[clientActiveIndex].customerid);
+                                                }
+                                            } else if (e.key === "Escape") {
+                                                setClientOpen(false);
+                                            }
+                                        }}
+                                        placeholder={
+                                            loadingData
+                                                ? "Cargando clientes..."
+                                                : customers.length
+                                                    ? "Buscar por nombre, documento o id"
+                                                    : "No hay clientes"
+                                        }
+                                        disabled={loadingData || customers.length === 0}
+                                        className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none disabled:opacity-60"
+                                        style={{ borderColor: Colors.table.lines }}
+                                        aria-expanded={clientOpen}
+                                        aria-controls="sale-client-suggest"
+                                        aria-autocomplete="list"
+                                    />
+
+                                    {clientOpen && !loadingData && (
+                                        <div
+                                            id="sale-client-suggest"
+                                            className="absolute z-20 mt-2 w-full overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm"
+                                        >
+                                            {clientOptions.length === 0 ? (
+                                                <div className="px-3 py-2 text-xs text-gray-500">
+                                                    No hay coincidencias.
+                                                </div>
+                                            ) : (
+                                                <ul className="max-h-56 overflow-auto">
+                                                    {clientOptions.map((customer, idx) => (
+                                                        <li key={customer.customerid}>
+                                                            <button
+                                                                type="button"
+                                                                onMouseDown={(ev) => ev.preventDefault()}
+                                                                onClick={() => pickClient(customer.customerid)}
+                                                                onMouseEnter={() => setClientActiveIndex(idx)}
+                                                                className={[
+                                                                    "flex w-full items-center gap-3 px-3 py-2 text-left text-sm",
+                                                                    idx === clientActiveIndex ? "bg-gray-100" : "bg-white",
+                                                                ].join(" ")}
+                                                            >
+                                                                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border bg-gray-50 text-[11px] font-semibold text-gray-700">
+                                                                    {initials(getCustomerLabel(customer))}
+                                                                </span>
+                                                                <span className="min-w-0 flex-1">
+                                                                    <span className="block truncate font-medium text-gray-900">
+                                                                        {getCustomerLabel(customer)}
+                                                                    </span>
+                                                                    <span className="block truncate text-[11px] text-gray-500">
+                                                                        Cliente #{customer.customerid}
+                                                                        {customer.users?.documentnumber
+                                                                            ? ` - Doc ${customer.users.documentnumber}`
+                                                                            : customer.users?.email
+                                                                                ? ` - ${customer.users.email}`
+                                                                            : ""}
+                                                                    </span>
+                                                                </span>
+                                                            </button>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                                {formErrors.customer ? (
+                                    <p className="mt-2 text-sm text-red-600">{formErrors.customer}</p>
+                                ) : null}
                             </div>
 
                             {/* Fecha (Readonly) */}
@@ -218,22 +486,27 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
                                 />
                             </div>
 
-                            {/* Estado Venta (editable) */}
                             <div>
                                 <label className="block text-sm font-medium mb-1 text-gray-700">
-                                    Estado Venta
+                                    Método de pago
                                 </label>
                                 <select
+                                    value={paymentMethod}
+                                    onChange={(e) => {
+                                        setPaymentMethod(e.target.value);
+                                        setFormErrors((prev) => ({ ...prev, paymentMethod: undefined }));
+                                    }}
                                     className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                                    value={saleStatus}
-                                    onChange={(e) => setSaleStatus(e.target.value as any)}
+                                    style={{ borderColor: Colors.table.lines }}
                                 >
-                                    <option value="Pending">Pendiente</option>
-                                
+                                    <option value="Efectivo">Efectivo</option>
+                                    <option value="Transferencia">Transferencia</option>
                                 </select>
+                                {formErrors.paymentMethod ? (
+                                    <p className="mt-2 text-sm text-red-600">{formErrors.paymentMethod}</p>
+                                ) : null}
                             </div>
 
-                            
                         </div>
                     </div>
 
@@ -243,8 +516,180 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
                             Detalles de Productos y Servicios
                         </h3>
 
+                        <div className="mb-4 space-y-4">
+                            <div>
+                                <h4 className="mb-2 text-sm font-semibold text-gray-700">
+                                    Productos
+                                </h4>
+                                <div className="overflow-auto border rounded-lg">
+                                    <table className="w-full text-sm text-left">
+                                        <thead className="bg-gray-100 text-gray-600 font-semibold">
+                                            <tr>
+                                                <th className="p-3">Nombre del producto</th>
+                                                <th className="p-3">Categoría</th>
+                                                <th className="p-3 text-center">Imagen</th>
+                                                <th className="p-3 text-center">Cant.</th>
+                                                <th className="p-3 text-right">Precio por unidad</th>
+                                                <th className="p-3 text-right">Total</th>
+                                                <th className="p-3 text-center"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                            {productItems.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={7} className="p-6 text-center text-gray-400">
+                                                        No hay productos agregados
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                productItems.map((item) => (
+                                                    <tr key={item.id} className="hover:bg-gray-50">
+                                                        <td className="p-3 font-medium text-gray-800">{item.name}</td>
+                                                        <td className="p-3 text-gray-500">{item.category}</td>
+                                                        <td className="p-3 text-center">
+                                                            {item.image ? (
+                                                                <img
+                                                                    src={item.image}
+                                                                    alt=""
+                                                                    className="w-8 h-8 rounded object-cover mx-auto border"
+                                                                />
+                                                            ) : (
+                                                                <div className="w-8 h-8 rounded bg-gray-200 mx-auto flex items-center justify-center text-xs text-gray-500">
+                                                                    N/A
+                                                                </div>
+                                                            )}
+                                                        </td>
+                                                        <td className="p-3 text-center">
+                                                            <input
+                                                                type="number"
+                                                                min="1"
+                                                                max={item.stock}
+                                                                value={item.quantity}
+                                                                onChange={(e) =>
+                                                                    updateCartQuantity(item.id, Number(e.target.value))
+                                                                }
+                                                                className="mx-auto w-20 rounded-md border border-gray-300 px-2 py-1 text-center outline-none focus:ring-2 focus:ring-blue-500"
+                                                            />
+                                                        </td>
+                                                        <td className="p-3 text-right">
+                                                            ${item.unitprice.toLocaleString("es-CO")}
+                                                        </td>
+                                                        <td className="p-3 text-right font-semibold">
+                                                            ${item.linetotal.toLocaleString("es-CO")}
+                                                        </td>
+                                                        <td className="p-3 text-center">
+                                                            <button
+                                                                onClick={() => removeFromCart(item.id)}
+                                                                className="rounded-full p-1 text-black transition-all duration-300 hover:scale-110 hover:bg-[#06a646]/30"
+                                                                title="Eliminar"
+                                                            >
+                                                                <svg
+                                                                    xmlns="http://www.w3.org/2000/svg"
+                                                                    width="18"
+                                                                    height="18"
+                                                                    viewBox="0 0 24 24"
+                                                                    fill="none"
+                                                                    stroke="currentColor"
+                                                                    strokeWidth="2"
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                >
+                                                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                                                </svg>
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div>
+                                <h4 className="mb-2 text-sm font-semibold text-gray-700">
+                                    Servicios
+                                </h4>
+                                <div className="overflow-auto border rounded-lg">
+                                    <table className="w-full text-sm text-left">
+                                        <thead className="bg-gray-100 text-gray-600 font-semibold">
+                                            <tr>
+                                                <th className="p-3">Nombre del servicio</th>
+                                                <th className="p-3 text-center">Imagen</th>
+                                                <th className="p-3 text-right">Precio del servicio</th>
+                                                <th className="p-3 text-center"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                            {serviceItems.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={4} className="p-6 text-center text-gray-400">
+                                                        No hay servicios agregados
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                serviceItems.map((item) => (
+                                                    <tr key={item.id} className="hover:bg-gray-50">
+                                                        <td className="p-3 font-medium text-gray-800">{item.name}</td>
+                                                        <td className="p-3 text-center">
+                                                            {item.image ? (
+                                                                <img
+                                                                    src={item.image}
+                                                                    alt=""
+                                                                    className="w-8 h-8 rounded object-cover mx-auto border"
+                                                                />
+                                                            ) : (
+                                                                <div className="w-8 h-8 rounded bg-gray-200 mx-auto flex items-center justify-center text-xs text-gray-500">
+                                                                    N/A
+                                                                </div>
+                                                            )}
+                                                        </td>
+                                                        <td className="p-3 text-right">
+                                                            <input
+                                                                type="text"
+                                                                inputMode="numeric"
+                                                                value={item.unitprice ? formatCurrencyInput(String(item.unitprice)) : ""}
+                                                                onChange={(e) => {
+                                                                    const rawValue = e.target.value.replace(/\D/g, "");
+                                                                    updateCartUnitPrice(item.id, Number(rawValue || 0));
+                                                                }}
+                                                                className="ml-auto w-28 rounded-md border border-gray-300 px-2 py-1 text-right outline-none focus:ring-2 focus:ring-blue-500"
+                                                            />
+                                                        </td>
+                                                        <td className="p-3 text-center">
+                                                            <button
+                                                                onClick={() => removeFromCart(item.id)}
+                                                                className="rounded-full p-1 text-black transition-all duration-300 hover:scale-110 hover:bg-[#06a646]/30"
+                                                                title="Eliminar"
+                                                            >
+                                                                <svg
+                                                                    xmlns="http://www.w3.org/2000/svg"
+                                                                    width="18"
+                                                                    height="18"
+                                                                    viewBox="0 0 24 24"
+                                                                    fill="none"
+                                                                    stroke="currentColor"
+                                                                    strokeWidth="2"
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                >
+                                                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                                                </svg>
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
                         {/* Table */}
-                        <div className="flex-1 overflow-auto border rounded-lg mb-4">
+                        <div className="hidden flex-1 overflow-auto border rounded-lg mb-4">
                             <table className="w-full text-sm text-left">
                                 <thead className="bg-gray-100 text-gray-600 font-semibold sticky top-0">
                                     <tr>
@@ -268,7 +713,9 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
                                         cart.map((item) => (
                                             <tr key={item.id} className="hover:bg-gray-50">
                                                 <td className="p-3 font-medium text-gray-800">{item.name}</td>
-                                                <td className="p-3 text-gray-500">{item.category}</td>
+                                                <td className="p-3 text-gray-500">
+                                                    {item.type === "Producto" ? item.category : ""}
+                                                </td>
                                                 <td className="p-3 text-center">
                                                     {item.image ? (
                                                         <img
@@ -282,7 +729,18 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
                                                         </div>
                                                     )}
                                                 </td>
-                                                <td className="p-3 text-center">{item.quantity}</td>
+                                                <td className="p-3 text-center">
+                                                    <input
+                                                        type="number"
+                                                        min="1"
+                                                        max={item.type === "Producto" ? item.stock : undefined}
+                                                        value={item.quantity}
+                                                        onChange={(e) =>
+                                                            updateCartQuantity(item.id, Number(e.target.value))
+                                                        }
+                                                        className="mx-auto w-20 rounded-md border border-gray-300 px-2 py-1 text-center outline-none focus:ring-2 focus:ring-blue-500"
+                                                    />
+                                                </td>
                                                 <td className="p-3 text-right">
                                                     ${item.unitprice.toLocaleString("es-CO")}
                                                 </td>
@@ -292,7 +750,7 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
                                                 <td className="p-3 text-center">
                                                     <button
                                                         onClick={() => removeFromCart(item.id)}
-                                                        className="text-green-500 hover:text-green-700 transition"
+                                                        className="rounded-full p-1 text-black transition-all duration-300 hover:scale-110 hover:bg-[#06a646]/30"
                                                         title="Eliminar"
                                                     >
                                                         <svg
@@ -319,6 +777,9 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
                         </div>
 
                         {/* Action Buttons */}
+                        {formErrors.cart ? (
+                            <p className="mb-3 text-sm text-red-600">{formErrors.cart}</p>
+                        ) : null}
                         <div className="flex gap-3">
                             <button
                                 onClick={() => setIsProductModalOpen(true)}
@@ -350,11 +811,12 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
                             value={notes}
                             onChange={(e) => setNotes(e.target.value)}
                         />
+
                     </div>
                 </div>
 
-                {/* â”€â”€ Right Column: Totals & Actions (35%) â”€â”€ */}
-                <div className="md:w-[35%] flex flex-col gap-6">
+                {/*  Right Column: Totals & Actions (35%)  */}
+                <div className="w-full md:w-[35%] flex flex-col gap-6">
                     {/* Totals Card */}
                     <div className="p-6 bg-white rounded-lg border border-gray-200 shadow-sm sticky top-4">
                         <h3 className="text-2xl font-bold mb-6" style={{ color: Colors.texts.primary }}>
@@ -395,15 +857,14 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
                             <button
                                 onClick={onClose}
                                 disabled={submitting}
-                                className="px-6 py-2 rounded-lg font-medium text-gray-600 bg-gray-200 hover:bg-gray-300 transition"
+                                className="cursor-pointer rounded-lg bg-gray-300 px-4 py-2 font-medium text-black transition duration-300 hover:scale-105 hover:bg-gray-200 hover:text-black disabled:cursor-not-allowed disabled:opacity-60"
                             >
                                 Cancelar
                             </button>
                             <button
-                                onClick={handleSubmit}
+                                onClick={handleSave}
                                 disabled={submitting}
-                                className="px-6 py-2 rounded-lg font-medium text-white transition flex items-center justify-center"
-                                style={{ backgroundColor: "black" }}
+                                className="flex items-center justify-center rounded-lg bg-[#2a9781] px-4 py-2 font-medium text-white transition duration-300 hover:scale-105 hover:bg-[#227a69] hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
                             >
                                 {submitting ? <Loader size="sm" /> : "Guardar"}
                             </button>
@@ -411,7 +872,7 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
                     </div>
                 </div>
 
-                {/* â”€â”€ Product Selection Modal â”€â”€ */}
+                {/*  Product Selection Modal  */}
                 <PortalModal
                     isOpen={isProductModalOpen}
                     onClose={() => setIsProductModalOpen(false)}
@@ -487,7 +948,7 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
                     </div>
                 </PortalModal>
 
-                {/* â”€â”€ CREATE Product Modal (New) â”€â”€ */}
+                {/*  CREATE Product Modal (New)  */}
                 <PortalModal
                     isOpen={isNewProductModalOpen}
                     onClose={() => setIsNewProductModalOpen(false)}
@@ -504,7 +965,7 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
                 </PortalModal>
 
 
-                {/* â”€â”€ Service Selection Modal â”€â”€ */}
+                {/*  Service Selection Modal  */}
                 <PortalModal
                     isOpen={isServiceModalOpen}
                     onClose={() => setIsServiceModalOpen(false)}
@@ -520,16 +981,6 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
                                 onChange={(e) => setServiceSearch(e.target.value)}
                                 autoFocus
                             />
-                            <button
-                                onClick={() => {
-                                    setIsServiceModalOpen(false);
-                                    setIsNewServiceModalOpen(true);
-                                }}
-                                className="px-3 py-2 bg-green-600 text-white rounded-lg whitespace-nowrap hover:bg-green-700 text-sm font-medium"
-                                title="Crear nuevo servicio"
-                            >
-                                + Crear Nuevo
-                            </button>
                         </div>
 
                         <div className="max-h-60 overflow-y-auto border rounded-lg">
@@ -556,24 +1007,29 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
                                                     Precio:
                                                 </div>
                                                 <input
-                                                    type="number"
+                                                    type="text"
                                                     placeholder="0"
                                                     className="w-20 p-1 border rounded text-sm"
                                                     onClick={(e) => e.stopPropagation()}
+                                                    value={servicePrices[s.serviceid] ?? ""}
                                                     onChange={(e) => {
-                                                        setServicePrice(Number(e.target.value));
+                                                        setServicePrices((prev) => ({
+                                                            ...prev,
+                                                            [s.serviceid]: formatCurrencyInput(e.target.value),
+                                                        }));
                                                     }}
                                                 />
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        let price = servicePrice;
-                                                        if (!price) {
-                                                            const p = prompt("Precio del servicio:");
-                                                            if (p) price = Number(p);
-                                                        }
+                                                        const rawPrice = (servicePrices[s.serviceid] ?? "").replace(/\D/g, "");
+                                                        const price = Number(rawPrice);
                                                         if (price) {
                                                             handleAddService(s, Number(price));
+                                                            setServicePrices((prev) => ({
+                                                                ...prev,
+                                                                [s.serviceid]: "",
+                                                            }));
                                                         }
                                                     }}
                                                     className="px-3 py-1 bg-black text-white rounded text-xs hover:opacity-80"
@@ -589,22 +1045,7 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
                     </div>
                 </PortalModal>
 
-                {/* â”€â”€ CREATE Service Modal (New) â”€â”€ */}
-                <PortalModal
-                    isOpen={isNewServiceModalOpen}
-                    onClose={() => setIsNewServiceModalOpen(false)}
-                    title="Crear Servicio"
-                >
-                    <CreateServiceModal
-                        onClose={() => setIsNewServiceModalOpen(false)}
-                        onSaved={() => {
-                            reloadData();
-                            setIsNewServiceModalOpen(false);
-                            setIsServiceModalOpen(true);
-                        }}
-                    />
-                </PortalModal>
-
+                {/*  CREATE Service Modal (New)  */}
             </div>
         </>
     );

@@ -254,7 +254,7 @@ const HistoryDetailsModal: React.FC<{
             <p className="mt-1 truncate text-lg font-semibold text-slate-900">{title}</p>
             <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-600">
               <span>{formatDateTime(created)}</span>
-              <span className="text-slate-300">â€¢</span>
+              <span className="text-slate-300">•</span>
               <span className="font-medium text-slate-700">Por: {actor}</span>
             </div>
           </div>
@@ -699,4 +699,3 @@ const OrderServiceDetail: React.FC<OrderServiceDetailProps> = ({ orderId, embedd
 };
 
 export default OrderServiceDetail;
-

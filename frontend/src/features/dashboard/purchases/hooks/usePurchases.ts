@@ -1,4 +1,3 @@
-// usePurchases.ts
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -52,9 +51,19 @@ const parseCOP = (input: string): number => {
   return digits ? Number(digits) : 0;
 };
 
-// ✅ NUEVO (único cambio adicional para permitir opcional real)
 const onlyDigits = (s: string) => (s ?? "").replace(/[^\d]/g, "");
 const hasDigits = (s: string) => onlyDigits(s).length > 0;
+
+const autoSalePrice = (purchaseUnitPrice: number): number => {
+  const p = Number(purchaseUnitPrice) || 0;
+  if (p <= 0) return 0;
+
+  if (p <= 500000) {
+    return p * 2;
+  }
+
+  return p + 100000;
+};
 
 let CACHE: IPurchase[] | null = null;
 
@@ -121,6 +130,9 @@ export function usePurchases() {
     const controller = new AbortController();
     abortRef.current = controller;
 
+    // ✅ CAMBIO MÍNIMO: cada refresh debe mostrar loader
+    setLoading(true);
+
     try {
       const data = await getPurchases(controller.signal);
       CACHE = data;
@@ -185,7 +197,6 @@ export function usePurchases() {
 
         setPurchaseOrders(data);
 
-        // Si ya había una OC seleccionada, la mantenemos solo si aún existe
         setForm((prev) => {
           const stillExists = data.some(
             (po: any) => String(po.id) === prev.purchaseOrderId
@@ -211,7 +222,6 @@ export function usePurchases() {
   ) => {
     const { name, value } = e.target;
 
-    // Si cambia proveedor, limpiamos carrito y selector de OC
     if (name === "supplier") {
       setCart([]);
       setSelectedProduct("");
@@ -239,8 +249,7 @@ export function usePurchases() {
     }
 
     const price = parseCOP(purchasePrice);
-    // ✅ CAMBIO: salePrice es opcional real (solo si hay dígitos)
-    const sPrice = hasDigits(salePrice) ? parseCOP(salePrice) : undefined;
+    const sPrice = hasDigits(salePrice) ? parseCOP(salePrice) : autoSalePrice(price);
 
     if (price <= 0) {
       setError("Ingresa un precio de compra válido.");
@@ -279,13 +288,6 @@ export function usePurchases() {
     setQuantity(1);
   };
 
-  /**
-   * ✅ FIX: permitir borrar saleprice y volver a escribir
-   * No bloqueamos el update por "saleprice < unitprice" aquí,
-   * porque eso hace imposible editar cuando el usuario borra o escribe parcial.
-   * La validación final debe quedar en el submit (RegisterPurchaseForm / validatePurchaseForm)
-   * o al momento de guardar.
-   */
   const updateCartItem = (index: number, patch: Partial<CartItem>) => {
     setCart((prev) => {
       const next = [...prev];
@@ -294,12 +296,9 @@ export function usePurchases() {
 
       const merged = { ...current, ...patch };
 
-      // Mantén validaciones mínimas para no romper el carrito
-      // (si quieres permitir limpiar cantidad/precio mientras escribe, eso ya sería otra lógica con inputs string)
       if (!Number.isFinite(merged.quantity) || merged.quantity <= 0) return prev;
       if (!Number.isFinite(merged.unitprice) || merged.unitprice < 0) return prev;
 
-      // ✅ saleprice puede ser undefined y NO bloquea el update
       next[index] = merged;
       return next;
     });
@@ -330,7 +329,9 @@ export function usePurchases() {
 
     setSaving(true);
 
-    const created = form.registerDate;
+    const created = form.registerDate
+      ? new Date(`${form.registerDate}T12:00:00`).toISOString()
+      : new Date().toISOString();
 
     const productsPayload = cart.map((item) => ({
       productid: item.productid,
@@ -365,6 +366,8 @@ export function usePurchases() {
   const handleCancelPurchase = async (id: number, observation?: string) => {
     try {
       setCancelLoading(true);
+      setSaving(true);
+
       CACHE = null;
       await cancelPurchase(id, observation);
       await fetchPurchases();
@@ -373,6 +376,7 @@ export function usePurchases() {
       throw error;
     } finally {
       setCancelLoading(false);
+      setSaving(false);
     }
   };
 

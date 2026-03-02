@@ -459,7 +459,7 @@ const {
       .map((s: any) => {
         const stateid = Number(s?.stateid ?? s?.id);
         const name = String(s?.name ?? s?.state ?? s?.label ?? s?.statename ?? "").trim();
-        return { stateid, name, label: titleCase(name) || `Estado #${stateid}` } as OrderStateOption;
+        return { stateid, name, label: name || `Estado #${stateid}` } as OrderStateOption;
       })
       .filter((x) => Number.isFinite(x.stateid) && x.stateid > 0)
       .filter((x) => isOrderServiceStateLike(x.name));
@@ -648,8 +648,8 @@ const {
     "w-full h-10 rounded-md border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-200";
   const selectBase = `${inputBase} appearance-none pr-8`;
   const chevron = "pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400";
-  const errorText = "mt-1 text-xs text-green-600";
-  const errorRing = "border-green-500 ring-1 ring-green-500";
+  const errorText = "mt-1 text-xs text-red-600";
+  const errorRing = "border-red-500 ring-1 ring-red-500";
 
   const hasErrors = useMemo(
     () => Object.values(errors).some((v) => typeof v === "string" && v.trim().length > 0),
@@ -1259,8 +1259,9 @@ const {
     // Importante: NO se arma descripción estructurada. Se envía SOLO lo que escribió el usuario.
     const finalDescription = String(descripcion || "").trim();
     const hasSchedule = !!(dateStart && dateEnd && timeStart && timeEnd);
+    const hasFullAssignment = hasSchedule && selectedTechnicians.length > 0;
     const shouldUseScheduled =
-      hasSchedule &&
+      hasFullAssignment &&
       scheduledStateId != null &&
       (orderNormalized?.stateid == null ||
         (pendingStateId != null && orderNormalized?.stateid === pendingStateId));
@@ -1381,8 +1382,8 @@ const {
 
   function handleTimeStartChange(next: string) {
     if (!isAllowedTime(next)) {
-      showWarning("Horario permitido: 07:00â€“17:00.");
-      setErrors((p) => ({ ...p, schedule: "Horario permitido: 07:00â€“17:00." }));
+      showWarning("Horario permitido: 07:00–17:00.");
+      setErrors((p) => ({ ...p, schedule: "Horario permitido: 07:00–17:00." }));
       return;
     }
     const sMin = timeToMinutes(next);
@@ -1400,8 +1401,8 @@ const {
 
   function handleTimeEndChange(next: string) {
     if (!isAllowedTime(next)) {
-      showWarning("Horario permitido: 07:00â€“17:00.");
-      setErrors((p) => ({ ...p, schedule: "Horario permitido: 07:00â€“17:00." }));
+      showWarning("Horario permitido: 07:00–17:00.");
+      setErrors((p) => ({ ...p, schedule: "Horario permitido: 07:00–17:00." }));
       return;
     }
     setTimeEnd(next);
@@ -2438,9 +2439,6 @@ const {
     </RequireAuth>
   );
 }
-
-
-
 
 
 

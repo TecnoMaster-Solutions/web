@@ -59,6 +59,8 @@ const PRIVILEGE_ALIASES: Record<string, string> = {
 
   deactivate: "deactivate",
   desactivar: "deactivate",
+  approve: "approve",
+  aprobar: "approve",
 
   complete: "complete",
   completar: "complete",
@@ -75,6 +77,11 @@ const PRIVILEGE_ALIASES: Record<string, string> = {
   reportwarranty: "report_warranty",
   warrantyreport: "report_warranty",
   reportargarantia: "report_warranty",
+
+  manage_payment: "manage_payment",
+  managepayment: "manage_payment",
+  gestionarpagos: "manage_payment",
+  gestionarpago: "manage_payment",
 };
 
 function normalizeModule(name: string) {

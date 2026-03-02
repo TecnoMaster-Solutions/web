@@ -1372,7 +1372,6 @@ export default function RegisterQuoteForm({ onSave }: Props) {
             type="submit"
             style={{ backgroundColor: Colors.buttons.primary }}
             className="h-10 w-full cursor-pointer rounded-md px-4 text-sm font-medium text-white hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-            disabled={!canSubmit}
             title={
               !canSubmit
                 ? "Completa tipo de servicio, agrega productos o servicios y, si eliges crear cliente, sus datos obligatorios"
@@ -1386,7 +1385,6 @@ export default function RegisterQuoteForm({ onSave }: Props) {
     </form>
   );
 }
-
 
 
 

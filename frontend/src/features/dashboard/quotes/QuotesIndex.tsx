@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import Swal from "sweetalert2";
 import RequireAuth from "../../auth/requireauth";
 import { DataTable } from "../components/datatable/DataTable";
@@ -9,6 +9,7 @@ import { Column } from "../components/datatable/types/column.types";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { usePermissions } from "@/features/auth/hooks/usePermissions";
+import { useAuth } from "@/features/auth/authcontext";
 
 import {
   getQuotes,
@@ -22,6 +23,7 @@ import { api } from "@/shared/utils/apiClient";
 
 import { QuoteTableRow } from "./types/Quote.type";
 import Colors from "@/shared/theme/colors";
+import { showError, showInfo, showSuccess, showWarning } from "@/shared/utils/notifications";
 
 type QuoteStatusConfig = {
   label: string;
@@ -36,6 +38,7 @@ type QuoteDetailLike = {
 
 type QuoteListItem = {
   quotesid: number;
+  technicianid?: number | null;
   customerid?: number | null;
   serviceRequestId?: number | null;
   servicetype?: string | null;
@@ -43,14 +46,33 @@ type QuoteListItem = {
   createdat?: string;
   details?: QuoteDetailLike[];
   state?: { name?: string };
-  customer?: { users?: { name?: string; lastname?: string } };
-  technician?: { users?: { name?: string; lastname?: string } };
+  customer?: {
+    customerid?: number | null;
+    userid?: number | null;
+    users?: { name?: string; lastname?: string };
+  };
+  technician?: {
+    technicianid?: number | null;
+    userid?: number | null;
+    users?: { name?: string; lastname?: string };
+  };
   serviceRequest?: {
     serviceRequestId?: number;
     id?: number;
-    customer?: { users?: { name?: string; lastname?: string } };
+    customerid?: number | null;
+    clientId?: number | null;
+    customer?: {
+      customerid?: number | null;
+      userid?: number | null;
+      users?: { name?: string; lastname?: string };
+    };
     techniciansMap?: Array<{
-      technician?: { users?: { name?: string; lastname?: string } };
+      technicianid?: number | null;
+      technician?: {
+        technicianid?: number | null;
+        userid?: number | null;
+        users?: { name?: string; lastname?: string };
+      };
     }>;
   };
 };
@@ -149,21 +171,149 @@ const normalizeText = (value: string) =>
     .toLowerCase()
     .trim();
 
+const toPositiveInteger = (value: unknown): number | null => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return null;
+  const integer = Math.trunc(numeric);
+  return integer > 0 ? integer : null;
+};
+
+const firstPositiveInteger = (...values: unknown[]): number | null => {
+  for (const value of values) {
+    const id = toPositiveInteger(value);
+    if (id) return id;
+  }
+  return null;
+};
+
+const extractRoleName = (user: unknown, profile: unknown): string => {
+  const userObj = (user ?? {}) as Record<string, unknown>;
+  const profileObj = (profile ?? {}) as Record<string, unknown>;
+  const userRole = userObj.role as Record<string, unknown> | undefined;
+  const profileRole = profileObj.role as Record<string, unknown> | undefined;
+  const profileRoles = profileObj.roles as Record<string, unknown> | undefined;
+
+  return (
+    [
+      userObj.rolename,
+      userObj.role,
+      userRole?.name,
+      profileObj.rolename,
+      profileObj.role,
+      profileRole?.name,
+      profileRoles?.name,
+    ]
+      .map((item) => normalizeText(String(item ?? "")))
+      .find(Boolean) ?? ""
+  );
+};
+
+const quoteBelongsToCustomer = (
+  quote: QuoteListItem,
+  customerId: number | null,
+  userId: number | null,
+): boolean => {
+  if (!customerId && !userId) return false;
+
+  const quoteCustomerId = firstPositiveInteger(
+    quote.customerid,
+    quote.customer?.customerid,
+    quote.serviceRequest?.customerid,
+    quote.serviceRequest?.clientId,
+  );
+  if (customerId && quoteCustomerId && quoteCustomerId === customerId) return true;
+
+  const quoteCustomerUserId = firstPositiveInteger(
+    quote.customer?.userid,
+    quote.serviceRequest?.customer?.userid,
+  );
+  if (userId && quoteCustomerUserId && quoteCustomerUserId === userId) return true;
+
+  return false;
+};
+
+const quoteBelongsToTechnician = (
+  quote: QuoteListItem,
+  technicianId: number | null,
+  userId: number | null,
+): boolean => {
+  if (!technicianId && !userId) return false;
+
+  const quoteTechnicianIds = [
+    firstPositiveInteger(quote.technicianid, quote.technician?.technicianid),
+    ...(quote.serviceRequest?.techniciansMap ?? []).map((mapItem) =>
+      firstPositiveInteger(mapItem?.technicianid, mapItem?.technician?.technicianid),
+    ),
+  ].filter((id): id is number => Boolean(id));
+
+  if (technicianId && quoteTechnicianIds.includes(technicianId)) return true;
+
+  const quoteTechnicianUserIds = [
+    firstPositiveInteger(quote.technician?.userid),
+    ...(quote.serviceRequest?.techniciansMap ?? []).map((mapItem) =>
+      firstPositiveInteger(mapItem?.technician?.userid),
+    ),
+  ].filter((id): id is number => Boolean(id));
+
+  if (userId && quoteTechnicianUserIds.includes(userId)) return true;
+
+  return false;
+};
+
 export default function QuotesIndex() {
   const router = useRouter();
+  const { user, profile } = useAuth();
   const { canView, canCreate, canUpdate, canDelete, has } = usePermissions();
   const canViewQuotes = canView("quotes");
   const canCreateQuotes = canCreate("quotes");
   const canUpdateQuotes = canUpdate("quotes");
   const canDeleteQuotes = canDelete("quotes");
+  const canApproveQuotes = has("quotes", "approve");
   const canCompleteQuotes = has("quotes", "complete");
   const canDeactivateQuotes = has("quotes", "deactivate");
   const canCancelQuotes = canUpdateQuotes || canDeactivateQuotes;
-  const canExportQuotes =
-    canViewQuotes || has("quotes", "export") || has("quotes", "download_report");
-
+  const canExportQuotes = has("quotes", "download_report") || has("quotes", "export");
   const [quotesData, setQuotesData] = useState<QuoteTableRow[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const roleName = useMemo(() => extractRoleName(user, profile), [user, profile]);
+  const isClientRole = useMemo(
+    () => roleName === "cliente" || roleName === "client" || roleName === "customer",
+    [roleName],
+  );
+  const isTechnicianRole = useMemo(
+    () => roleName === "tecnico" || roleName === "tecnico(a)" || roleName === "technician",
+    [roleName],
+  );
+
+  const currentUserId = useMemo(
+    () => firstPositiveInteger(user?.userid, profile?.userid, profile?.users?.userid),
+    [user, profile],
+  );
+  const currentCustomerId = useMemo(
+    () =>
+      firstPositiveInteger(
+        user?.customerid,
+        user?.customer?.customerid,
+        user?.customers?.[0]?.customerid,
+        profile?.customerid,
+        profile?.customer?.customerid,
+        profile?.customers?.[0]?.customerid,
+      ),
+    [user, profile],
+  );
+  const currentTechnicianId = useMemo(
+    () =>
+      firstPositiveInteger(
+        user?.technicianid,
+        user?.technician?.technicianid,
+        user?.technicians?.[0]?.technicianid,
+        profile?.technicianid,
+        profile?.technician?.technicianid,
+        profile?.technicians?.[0]?.technicianid,
+      ),
+    [user, profile],
+  );
 
   const createCustomerAndAssignToQuote = useCallback(
     async (quoteId: number, form: NewClientForm) => {
@@ -294,18 +444,10 @@ export default function QuotesIndex() {
 
       try {
         await createCustomerAndAssignToQuote(row.id, formValues as NewClientForm);
-        await Swal.fire(
-          "Cliente creado",
-          "Se creó y asoció el cliente a la cotización.",
-          "success",
-        );
+        showSuccess("Se creó y asoció el cliente a la cotización.");
         return true;
       } catch (error: unknown) {
-        await Swal.fire(
-          "Error",
-          getErrorMessage(error, "No se pudo crear/asociar el cliente."),
-          "error",
-        );
+        showError(getErrorMessage(error, "No se pudo crear/asociar el cliente."));
         return false;
       }
     },
@@ -322,8 +464,18 @@ export default function QuotesIndex() {
     setLoading(true);
     try {
       const data = await getQuotes();
+      const allQuotes: QuoteListItem[] = Array.isArray(data) ? data : [];
+      const filteredQuotes = allQuotes.filter((quote) => {
+        if (isClientRole) {
+          return quoteBelongsToCustomer(quote, currentCustomerId, currentUserId);
+        }
+        if (isTechnicianRole) {
+          return quoteBelongsToTechnician(quote, currentTechnicianId, currentUserId);
+        }
+        return true;
+      });
 
-      const mapped: QuoteTableRow[] = (data ?? []).map((q: QuoteListItem) => {
+      const mapped: QuoteTableRow[] = filteredQuotes.map((q: QuoteListItem) => {
         const rawStatus = q.state?.name ?? "";
         const clientName = resolveClientName(q);
         const requestId = resolveRequestId(q);
@@ -344,7 +496,14 @@ export default function QuotesIndex() {
     } finally {
       setLoading(false);
     }
-  }, [canViewQuotes]);
+  }, [
+    canViewQuotes,
+    currentCustomerId,
+    currentTechnicianId,
+    currentUserId,
+    isClientRole,
+    isTechnicianRole,
+  ]);
 
   useEffect(() => {
     fetchQuotes();
@@ -387,8 +546,8 @@ export default function QuotesIndex() {
   ];
 
   const handleApproveQuote = useCallback(async (row: QuoteTableRow) => {
-    if (!canUpdateQuotes) {
-      await Swal.fire("Sin permisos", "No tienes permisos para aprobar cotizaciones.", "warning");
+    if (!canApproveQuotes) {
+      showWarning("No tienes permisos para aprobar cotizaciones.");
       return;
     }
 
@@ -414,22 +573,14 @@ export default function QuotesIndex() {
     try {
       await approveQuote(row.id);
     } catch (error: unknown) {
-      await Swal.fire(
-        "Error",
-        getErrorMessage(error, "No se pudo aprobar la cotización."),
-        "error"
-      );
+      showError(getErrorMessage(error, "No se pudo aprobar la cotización."));
       return;
     }
 
     await fetchQuotes();
 
     if (!canCompleteQuotes) {
-      await Swal.fire(
-        "Cotización aprobada",
-        "La cotización quedó aprobada.",
-        "success",
-      );
+      showSuccess("La cotización quedó aprobada.");
       return;
     }
 
@@ -438,28 +589,22 @@ export default function QuotesIndex() {
       completionResult = await completeQuote(row.id);
     } catch {
       await fetchQuotes();
-      await Swal.fire(
-        "Cotización aprobada",
-        "La cotización quedó en estado aprobada, pero no se pudo generar la venta.",
-        "warning"
-      );
+      showWarning("La cotización quedó en estado aprobada, pero no se pudo generar la venta.");
       return;
     }
 
     await fetchQuotes();
 
-    await Swal.fire(
-      "Cotización completada",
+    showSuccess(
       completionResult?.sale
         ? `Venta generada: ${completionResult.sale.salecode ?? completionResult.sale.saleid}`
-        : "La cotización se completó y se creó la venta asociada.",
-      "success"
+        : "La cotización se completó y se creó la venta asociada."
     );
-  }, [canCompleteQuotes, canUpdateQuotes, ensureQuoteHasCustomer, fetchQuotes]);
+  }, [canApproveQuotes, canCompleteQuotes, ensureQuoteHasCustomer, fetchQuotes]);
 
   const handleCancelQuote = async (row: QuoteTableRow) => {
     if (!canCancelQuotes) {
-      await Swal.fire("Sin permisos", "No tienes permisos para cancelar cotizaciones.", "warning");
+      showWarning("No tienes permisos para cancelar cotizaciones.");
       return;
     }
 
@@ -478,32 +623,22 @@ export default function QuotesIndex() {
     try {
       await cancelQuote(row.id);
       await fetchQuotes();
-      await Swal.fire("Cancelada", "Cotización cancelada", "success");
+      showSuccess("Cotización cancelada");
     } catch (error: unknown) {
-      await Swal.fire(
-        "Error",
-        getErrorMessage(error, "No se pudo cancelar la cotización."),
-        "error"
-      );
+      showError(getErrorMessage(error, "No se pudo cancelar la cotización."));
     }
   };
 
   const handleRevokeQuote = async (row: QuoteTableRow) => {
     if (!canDeleteQuotes) {
-      await Swal.fire("Sin permisos", "No tienes permisos para anular cotizaciones.", "warning");
+      showWarning("No tienes permisos para anular cotizaciones.");
       return;
     }
 
     const status = row.statusSearch;
 
     if (status !== "aprobada") {
-      await Swal.fire({
-        icon: "warning",
-        title: "Acción no permitida",
-        text: "Solo se pueden anular cotizaciones que estén aprobadas.",
-        confirmButtonText: "Entendido",
-        confirmButtonColor: "#b20000",
-      });
+      showWarning("Solo se pueden anular cotizaciones que estén aprobadas.");
       return;
     }
 
@@ -524,17 +659,9 @@ export default function QuotesIndex() {
     try {
       await revokeQuote(row.id, r.value);
       await fetchQuotes();
-      await Swal.fire({
-        icon: "success",
-        title: "Cotización anulada",
-        text: "La cotización fue anulada correctamente.",
-      });
+      showSuccess("La cotización fue anulada correctamente.");
     } catch (error: unknown) {
-      await Swal.fire(
-        "Error",
-        getErrorMessage(error, "No se pudo anular la cotización."),
-        "error"
-      );
+      showError(getErrorMessage(error, "No se pudo anular la cotización."));
     }
   };
 
@@ -570,18 +697,22 @@ export default function QuotesIndex() {
           onView={(row) => router.push(`/dashboard/quotes/${row.id}`)}
           onCreate={canCreateQuotes ? () => router.push("/dashboard/quotes/register") : undefined}
           createButtonText="Crear Cotización"
-          onCheck={canUpdateQuotes ? handleApproveQuote : undefined}
+          onCheck={canApproveQuotes ? handleApproveQuote : undefined}
           onCancel={canCancelQuotes ? handleCancelQuote : undefined}
           onDelete={canDeleteQuotes ? handleRevokeQuote : undefined}
           rightActions={
             canExportQuotes ? (
             <button
               type="button"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-[#b20000] text-white text-sm font-semibold hover:bg-[#910000]"
-              onClick={() => Swal.fire("Pendiente", "Conecta aquí la descarga del reporte.", "info")}
+              className="relative cursor-pointer inline-flex h-9 items-center gap-2 overflow-hidden rounded-md px-4 text-sm font-semibold text-white transition-transform duration-200 hover:scale-105 group"
+              style={{ background: Colors.buttons.primary }}
+              onClick={() => showInfo("Conecta aquí la descarga del reporte.")}
             >
-              <Image src="/icons/download.svg" alt="Descargar" width={16} height={16} />
-              Descargar Reporte
+              <span className="absolute inset-0 bg-[#227a69] scale-x-0 origin-left transition-transform duration-300 ease-out group-hover:scale-x-100"></span>
+              <span className="relative z-10 flex items-center gap-2 group-hover:text-white transition-colors duration-300">
+                <Image src="/icons/download.svg" alt="Descargar" width={16} height={16} />
+                Descargar Reporte
+              </span>
             </button>
             ) : null
           }
@@ -591,4 +722,3 @@ export default function QuotesIndex() {
     </RequireAuth>
   );
 }
-

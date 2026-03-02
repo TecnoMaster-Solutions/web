@@ -126,13 +126,16 @@ const Nav = () => {
                   aria-haspopup="menu"
                   aria-expanded={profileMenuOpen}
                   className={[
-                    "flex items-center gap-3 rounded-full px-3 py-1 border transition shadow-sm",
+                    "flex items-center gap-3 rounded-full px-3 py-1 outline-none transition-all duration-300 ease-in-out shadow-sm",
+                    "focus-visible:ring-2 focus-visible:ring-[#2596be] focus-visible:ring-offset-2 focus-visible:ring-offset-[#cfd8d3]",
                     profileMenuOpen
-                      ? "bg-red-700 border-red-700 text-white"
-                      : "bg-gray-100 border-gray-200 hover:bg-gray-200 text-gray-800",
+                      ? "bg-[#dbe7e1] border border-[#b8c7c0]"
+                      : "bg-[#e6eeea] border border-[#b8c7c0] hover:bg-[#dbe7e1]",
                   ].join(" ")}
                 >
-                  <span className="max-w-[160px] truncate">{display.name}</span>
+                  <span className="max-w-[160px] truncate text-[#2596be]">
+                    {display.name}
+                  </span>
                   {display.image ? (
                     <img
                       src={display.image}
@@ -140,15 +143,15 @@ const Nav = () => {
                       className={[
                         "w-9 h-9 rounded-full object-cover transition",
                         profileMenuOpen
-                          ? "ring-2 ring-white/70"
-                          : "ring-2 ring-gray-300",
+                          ? "ring-2 ring-[#2596be]/50"
+                          : "ring-2 ring-[#b8c7c0]",
                       ].join(" ")}
                     />
                   ) : (
                     <UserCircle
                       className={[
                         "w-9 h-9 transition-colors",
-                        profileMenuOpen ? "text-white" : "text-gray-700",
+                        "text-[#2596be]",
                       ].join(" ")}
                     />
                   )}
@@ -158,14 +161,14 @@ const Nav = () => {
                   <div
                     ref={menuRef}
                     role="menu"
-                    className="absolute right-0 mt-2 w-56 rounded-xl border bg-white shadow-xl z-50 overflow-hidden"
+                    className="absolute right-0 mt-2 w-56 rounded-xl border border-[#c3e6d2] bg-[#d0f0dc] shadow-xl z-50 overflow-hidden"
                   >
-                    <div className="px-4 py-3 border-b">
-                      <p className="text-sm font-medium truncate">
+                    <div className="px-4 py-3 border-b border-[#c3e6d2]">
+                      <p className="text-sm font-medium text-[#012e14] truncate">
                         {display.name}
                       </p>
                       {!!display.email && (
-                        <p className="text-xs text-gray-500 truncate">
+                        <p className="text-xs text-[#1c4d34] truncate">
                           {display.email}
                         </p>
                       )}
@@ -174,7 +177,7 @@ const Nav = () => {
                     <button
                       onClick={handleOpenProfile}
                       role="menuitem"
-                      className="w-full text-left px-4 py-3 flex items-center gap-2 hover:bg-gray-50"
+                      className="w-full text-left px-4 py-3 flex items-center gap-2 text-[#012e14] hover:bg-[#e6f6ec] transition-all duration-300 ease-in-out"
                     >
                       <Pencil size={16} />
                       Editar perfil
@@ -184,7 +187,7 @@ const Nav = () => {
                       href={routes.dashboard.main}
                       onClick={() => setProfileMenuOpen(false)}
                       role="menuitem"
-                      className="w-full text-left px-4 py-3 flex items-center gap-2 hover:bg-gray-50"
+                      className="w-full text-left px-4 py-3 flex items-center gap-2 text-[#012e14] hover:bg-[#e6f6ec] transition-all duration-300 ease-in-out"
                     >
                       <UserCircle size={16} />
                       Ir al dashboard
@@ -194,7 +197,7 @@ const Nav = () => {
                       onClick={handleLogout}
                       disabled={loggingOut}
                       role="menuitem"
-                      className="w-full text-left px-4 py-3 flex items-center gap-2 text-red-700 hover:bg-red-50 disabled:opacity-60"
+                      className="w-full text-left px-4 py-3 flex items-center gap-2 text-[#012e14] hover:bg-[#e6f6ec] transition-all duration-300 ease-in-out disabled:opacity-60"
                     >
                       <LogOut size={16} />
                       {loggingOut ? "Saliendo..." : "Cerrar sesion"}

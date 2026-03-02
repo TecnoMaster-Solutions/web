@@ -153,7 +153,7 @@ export default function OrderServiceHistoryCreateModal({
 
   return (
     <Modal
-      title={orderId ? `Agregar historial Â· Orden #${orderId}` : "Agregar historial"}
+      title={orderId ? `Agregar historial · Orden #${orderId}` : "Agregar historial"}
       isOpen={isOpen}
       onClose={onClose}
       widthClass={widthClass}
@@ -190,7 +190,7 @@ export default function OrderServiceHistoryCreateModal({
                   setErrTech("");
                 }}
                 className={`w-full border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 ${
-                  errTech ? "border-green-500 focus:ring-green-200" : "focus:ring-[#04652c]/30"
+                  errTech ? "border-red-500 focus:ring-red-200" : "focus:ring-[#04652c]/30"
                 }`}
               >
                 {technicians.map((t) => (
@@ -210,11 +210,11 @@ export default function OrderServiceHistoryCreateModal({
                 }}
                 placeholder="ID del técnico"
                 className={`w-full border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 ${
-                  errTech ? "border-green-500 focus:ring-green-200" : "focus:ring-[#04652c]/30"
+                  errTech ? "border-red-500 focus:ring-red-200" : "focus:ring-[#04652c]/30"
                 }`}
               />
             )}
-            {errTech ? <p className="text-xs text-green-600 mt-1">{errTech}</p> : null}
+            {errTech ? <p className="text-xs text-red-600 mt-1">{errTech}</p> : null}
           </div>
 
           <div>
@@ -242,11 +242,11 @@ export default function OrderServiceHistoryCreateModal({
             maxLength={2000}
             placeholder="Describe lo realizado, hallazgos, recomendaciones, etc."
             className={`w-full border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 ${
-              errNote ? "border-green-500 focus:ring-green-200" : "focus:ring-[#04652c]/30"
+              errNote ? "border-red-500 focus:ring-red-200" : "focus:ring-[#04652c]/30"
             }`}
           />
           <div className="flex items-center justify-between mt-1">
-            {errNote ? <p className="text-xs text-green-600">{errNote}</p> : <span />}
+            {errNote ? <p className="text-xs text-red-600">{errNote}</p> : <span />}
             <span className="text-[11px] text-gray-500">{note.length}/2000</span>
           </div>
         </div>

@@ -858,11 +858,7 @@ export default function CartModal({
                 disabled={isRedirectingToCheckout || cart.length === 0}
                 className="cursor-pointer bg-[#2a9781] hover:bg-[#227a69] text-white px-8 py-3 rounded-lg text-lg font-semibold shadow-md transition"
               >
-                {isRedirectingToCheckout
-                  ? "Redirigiendo a Mercado Pago..."
-                  : hasService
-                    ? "Pagar con Mercado Pago"
-                    : "Pagar ahora"}
+                {hasService ? "Pagar con Mercado Pago" : "Pagar ahora"}
               </button>
             </div>
           </div>

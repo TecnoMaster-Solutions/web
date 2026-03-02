@@ -21,6 +21,9 @@ export interface IPurchase {
   updatedat: string;
   amount: number | string;
 
+  observation?: string;
+
+
   purchaseOrderId?: number | null;
   purchaseOrder?: IPurchaseOrder | null;
 

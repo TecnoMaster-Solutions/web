@@ -6,7 +6,7 @@ import Swal from "sweetalert2";
 import RequireAuth from "@/features/auth/requireauth";
 import Modal from "@/features/dashboard/components/Modal";
 import Colors from "@/shared/theme/colors";
-import { showError, showSuccess } from "@/shared/utils/notifications";
+import { showError, showSuccess, showWarning } from "@/shared/utils/notifications";
 import { useAuth } from "@/features/auth/authcontext";
 
 import { DataTable } from "@/features/dashboard/components/datatable/DataTable";
@@ -126,6 +126,7 @@ function EstadoText({ v, colorKey }: { v: Estado; colorKey?: string }) {
   const STYLE: Record<string, string> = {
     Aprobada: "text-green-700",
     Pendiente: "text-yellow-700",
+    EnProceso: "text-indigo-700",
     Agendada: "text-sky-700",
     Anulada: "text-green-700",
     Garantia: "text-blue-700",
@@ -187,9 +188,8 @@ function formatTimeES(input?: string | null) {
 
 function mapEstadoFromBackend(name?: string | null): Estado {
   const label = String(name ?? "").trim();
-  if (label) return label;
-
   const n = label.toLowerCase();
+  if (n.includes("in process") || n.includes("inprogress") || n.includes("proceso")) return "En Proceso";
   if (n.includes("final") || n.includes("complet") || n.includes("finish")) return "Finalizado";
   if (n.includes("anul") || n.includes("revoke") || n.includes("cancel")) return "Anulada";
   if (n.includes("aprob") || n.includes("approved")) return "Aprobada";
@@ -197,11 +197,13 @@ function mapEstadoFromBackend(name?: string | null): Estado {
   if (n.includes("pend")) return "Pendiente";
   if (n.includes("garan") && (n.includes("report") || n.includes("rep"))) return "GarantiaReportada";
   if (n.includes("garan")) return "Garantia";
+  if (label) return label;
   return "Pendiente";
 }
 
 function mapEstadoKey(name?: string | null): Estado {
   const n = String(name ?? "").trim().toLowerCase();
+  if (n.includes("in process") || n.includes("inprogress") || n.includes("proceso")) return "EnProceso";
   if (n.includes("final") || n.includes("complet") || n.includes("finish")) return "Finalizado";
   if (n.includes("anul") || n.includes("revoke") || n.includes("cancel")) return "Anulada";
   if (n.includes("aprob") || n.includes("approved")) return "Aprobada";
@@ -334,6 +336,29 @@ function resolveWarrantyFromBackend(o: any): WarrantyInfo | undefined {
     o?.warrantyInfo;
 
   if (!w) return undefined;
+
+  const hasWarrantyData =
+    w?.label != null ||
+    w?.reason != null ||
+    w?.motivo != null ||
+    w?.details != null ||
+    w?.description != null ||
+    w?.detalle != null ||
+    w?.message != null ||
+    w?.reportedAtISO != null ||
+    w?.reportedAt != null ||
+    w?.reportedat != null ||
+    w?.createdat != null ||
+    w?.createdAt != null ||
+    w?.reportedBy != null ||
+    w?.reportedby != null ||
+    w?.reportedByName != null ||
+    w?.reportedbyname != null ||
+    typeof w?.notifiedClient === "boolean" ||
+    typeof w?.notifiedclient === "boolean" ||
+    typeof w?.notifyClient === "boolean";
+
+  if (!hasWarrantyData) return undefined;
 
   const label = String(w.label ?? w.reason ?? w.motivo ?? "Garantí­a");
   const details = w.details ?? w.description ?? w.detalle ?? w.message ?? undefined;
@@ -494,8 +519,9 @@ function toRow(o: OrderServiceDTO): Row {
   const rawEstadoName = anyO?.state?.name;
   let estado = mapEstadoFromBackend(rawEstadoName);
   let estadoKey = mapEstadoKey(rawEstadoName);
+  const hasExplicitBackendState = String(rawEstadoName ?? "").trim().length > 0;
 
-  if (garantia && estadoKey !== "GarantiaReportada" && estadoKey !== "Garantia") {
+  if (!hasExplicitBackendState && garantia && estadoKey !== "GarantiaReportada" && estadoKey !== "Garantia") {
     estadoKey = garantia.details ? "GarantiaReportada" : "Garantia";
     if (!estado) estado = estadoKey;
   }
@@ -613,7 +639,7 @@ export default function OrdersServicesIndexPage() {
     [clientIdFromAuth, isClientRole, isTechnicianRole, technicianIdFromAuth]
   );
 
-  // âœ… Disparar notificación al aterrizar desde /new (flash toast)
+  // Disparar notificación al aterrizar desde /new (flash toast)
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -630,13 +656,7 @@ export default function OrdersServicesIndexPage() {
       return;
     }
 
-    // warning
-    Swal.fire({
-      icon: "warning",
-      title: "Atención",
-      text: toast.message,
-      confirmButtonColor: "#04652c",
-    });
+    showWarning(toast.message);
   }, [filterOrdersForAuth]);
 
   useEffect(() => {
@@ -681,11 +701,7 @@ export default function OrdersServicesIndexPage() {
       setRows(sortRowsByIdDesc(mapped));
     } catch {
       setRows([]);
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: "No se pudieron cargar las órdenes desde el backend.",
-      });
+      showError("No se pudieron cargar las órdenes desde el backend.");
     } finally {
       setLoading(false);
     }
@@ -704,11 +720,7 @@ export default function OrdersServicesIndexPage() {
       } catch {
         if (!mounted) return;
         setRows([]);
-        Swal.fire({
-          icon: "error",
-          title: "Error",
-          text: "No se pudieron cargar las órdenes desde el backend.",
-        });
+        showError("No se pudieron cargar las órdenes desde el backend.");
       } finally {
         if (!mounted) return;
         setLoading(false);
@@ -773,21 +785,11 @@ export default function OrdersServicesIndexPage() {
       try {
         await cancelOrderService(row.id);
 
-        await Swal.fire({
-          icon: "success",
-          title: "Orden cancelada",
-          text: `La orden #${row.id} fue cancelada correctamente.`,
-          confirmButtonColor: "#04652c",
-        });
+        showSuccess(`La orden #${row.id} fue cancelada correctamente.`);
 
         await reloadOrders();
       } catch (e: any) {
-        Swal.fire({
-          icon: "error",
-          title: "Error",
-          text: e?.response?.data?.message?.[0] || e?.response?.data?.message || "No se pudo cancelar la orden.",
-          confirmButtonColor: "#04652c",
-        });
+        showError(e?.response?.data?.message?.[0] || e?.response?.data?.message || "No se pudo cancelar la orden.");
       } finally {
         setBusy(false);
       }
@@ -839,24 +841,15 @@ export default function OrdersServicesIndexPage() {
 
         setReportOpen(false);
 
-        await Swal.fire({
-          icon: "success",
-          title: "Reporte guardado",
-          text: `Se registró el reporte de garantía para la orden #${reportRowId}.`,
-          confirmButtonColor: "#04652c",
-        });
+        showSuccess(`Se registró el reporte de garantía para la orden #${reportRowId}.`);
 
         await reloadOrders();
       } catch (e: any) {
-        Swal.fire({
-          icon: "error",
-          title: "Error",
-          text:
-            e?.response?.data?.message?.[0] ||
+        showError(
+          e?.response?.data?.message?.[0] ||
             e?.response?.data?.message ||
-            "No se pudo guardar el reporte de garantía.",
-          confirmButtonColor: "#04652c",
-        });
+            "No se pudo guardar el reporte de garantía."
+        );
       } finally {
         setBusy(false);
       }
@@ -1391,10 +1384,10 @@ const extraActions = useCallback(
               rows={4}
               placeholder="Describe brevemente el caso de garantía"
               className={`w-full border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 ${
-                errorDetalle ? "border-green-500 focus:ring-green-200" : "focus:ring-[#04652c]/30"
+                errorDetalle ? "border-red-500 focus:ring-red-200" : "focus:ring-[#04652c]/30"
               }`}
             />
-            {errorDetalle ? <p className="text-xs text-green-600 mt-1">{errorDetalle}</p> : null}
+            {errorDetalle ? <p className="text-xs text-red-600 mt-1">{errorDetalle}</p> : null}
           </div>
 
           <label className="inline-flex items-center gap-2">
@@ -1410,4 +1403,3 @@ const extraActions = useCallback(
     </RequireAuth>
   );
 }
-

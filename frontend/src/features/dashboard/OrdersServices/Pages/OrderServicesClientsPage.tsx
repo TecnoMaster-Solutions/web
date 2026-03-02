@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
@@ -8,7 +8,8 @@ import RequireAuth from "@/features/auth/requireauth";
 import { useAuth } from "@/features/auth/authcontext";
 import { usePermissions } from "@/features/auth/hooks/usePermissions";
 import Modal from "@/features/dashboard/components/Modal";
-import { showInfo } from "@/shared/utils/notifications";
+import DownloadXLSXButton from "@/features/dashboard/components/DownloadXLSXButton";
+import { showError, showInfo, showSuccess } from "@/shared/utils/notifications";
 import {
   cancelOrderService,
   fetchOrderServiceHistory,
@@ -28,6 +29,8 @@ const ICONS = {
 };
 const MODULE_KEY = "orderservices";
 const TECH_COMPLETE_CONFIRM_TAG = "[TECH_COMPLETE_CONFIRM]";
+const WARRANTY_DEFAULT_LABEL = "Dano dentro de garantia";
+const WARRANTY_MIN_DETAIL_LEN = 10;
 
 type Row = {
   id: number;
@@ -425,10 +428,11 @@ export default function OrderServicesClientsPage() {
   const [page, setPage] = useState(1);
   const [reportOpen, setReportOpen] = useState(false);
   const [reportRowId, setReportRowId] = useState<number | null>(null);
-  const [motivo, setMotivo] = useState("Daño dentro de garantía");
+  const [motivo, setMotivo] = useState(WARRANTY_DEFAULT_LABEL);
   const [detalle, setDetalle] = useState("");
   const [notifyClient, setNotifyClient] = useState(false);
   const [errorDetalle, setErrorDetalle] = useState("");
+  const [editingWarranty, setEditingWarranty] = useState(false);
   const pageSize = 6;
 
   const clientIdFromAuth = useMemo(
@@ -460,11 +464,7 @@ export default function OrderServicesClientsPage() {
       } catch {
         if (!mounted) return;
         setRows([]);
-        Swal.fire({
-          icon: "error",
-          title: "Error",
-          text: "No se pudieron cargar las ordenes.",
-        });
+        showError("No se pudieron cargar las ordenes.");
       } finally {
         if (!mounted) return;
         setLoading(false);
@@ -504,7 +504,22 @@ export default function OrderServicesClientsPage() {
   const canViewOrder = canView(MODULE_KEY);
   const canUpdateOrder = canUpdate(MODULE_KEY);
   const canDeleteOrder = canDelete(MODULE_KEY);
-  const canReportWarranty = canUpdateOrder || has(MODULE_KEY, "report_warranty");
+  const canExportOrder = has(MODULE_KEY, "export") || has(MODULE_KEY, "download_report");
+  const canReportWarranty = true;
+
+  const xlsxRows = useMemo(() => {
+    return [...rows]
+      .sort((a, b) => b.id - a.id)
+      .map((r) => ({
+        Id: r.id,
+        Cliente: r.cliente,
+        Tipo: r.tipo,
+        "Fecha programada": r.fechaProgramada,
+        Estado: r.estadoKey === "GarantiaReportada" ? "Garantia (reportada)" : r.estado,
+        "Viaticos (COP)": r.viaticos ?? 0,
+        "Monto (COP)": r.monto ?? 0,
+      }));
+  }, [rows]);
 
   function openCreate() {
     router.push(`/dashboard/orders-services/new?returnTo=${encodeURIComponent(pathname)}`);
@@ -765,17 +780,24 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
 
   function openReport(row: Row) {
     if (row.estadoKey === "Anulada") return;
+    const currentWarranty = row.garantia;
+    const shouldEdit =
+      row.estadoKey === "Garantia" ||
+      row.estadoKey === "GarantiaReportada" ||
+      !!currentWarranty;
     setReportRowId(row.id);
-    setMotivo("Daño dentro de garantía");
-    setDetalle("");
-    setNotifyClient(false);
+    setMotivo((currentWarranty?.label || WARRANTY_DEFAULT_LABEL).trim() || WARRANTY_DEFAULT_LABEL);
+    setDetalle(String(currentWarranty?.details ?? ""));
+    setNotifyClient(!!currentWarranty?.notifiedClient);
     setErrorDetalle("");
+    setEditingWarranty(shouldEdit);
     setReportOpen(true);
   }
 
   async function submitReport() {
-    if (!detalle.trim()) {
-      setErrorDetalle("Describe qué pasó");
+    const cleanDetail = detalle.trim();
+    if (cleanDetail.length < WARRANTY_MIN_DETAIL_LEN) {
+      setErrorDetalle(`Describe el caso en al menos ${WARRANTY_MIN_DETAIL_LEN} caracteres`);
       return;
     }
     if (reportRowId == null) return;
@@ -783,7 +805,7 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
     try {
       const updated = await reportOrderServiceWarranty(reportRowId, {
         label: motivo,
-        details: detalle.trim(),
+        details: cleanDetail,
         notifiedClient: notifyClient,
       });
       const updatedRow = toRow(updated);
@@ -792,19 +814,14 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
       );
       setReportOpen(false);
       setReportRowId(null);
-      await Swal.fire({
-        icon: "success",
-        title: "Reporte guardado",
-        text: `Se registró el reporte de garantía para la orden #${reportRowId}.`,
-        timer: 1400,
-        showConfirmButton: false,
-      });
+      setEditingWarranty(false);
+      showSuccess(
+        editingWarranty
+          ? `Se actualizo el reporte de garantia para la orden #${reportRowId}.`
+          : `Se registro el reporte de garantia para la orden #${reportRowId}.`
+      );
     } catch {
-      await Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: "No se pudo guardar el reporte de garantía.",
-      });
+      showError("No se pudo guardar el reporte de garantia.");
     }
   }
 
@@ -818,16 +835,12 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
         ? history.some((item: any) => String(item?.message ?? "").includes(TECH_COMPLETE_CONFIRM_TAG))
         : false;
     } catch {
-      await Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: "No se pudo validar la confirmacion del tecnico.",
-      });
+      showError("No se pudo validar la confirmacion del tecnico.");
       return;
     }
 
     if (!hasTechnicianConfirmation) {
-      showInfo("El técnico debe finalizar primero la cita para que puedas completar la orden.");
+      showInfo("El tecnico debe finalizar primero la cita para que puedas completar la orden.");
       return;
     }
     const res = await Swal.fire({
@@ -853,19 +866,9 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
       setRows((prev) =>
         prev.map((r) => (r.id === row.id ? { ...r, ...updatedRow } : r))
       );
-      await Swal.fire({
-        icon: "success",
-        title: "Orden completada",
-        text: "La orden de servicio fue finalizada.",
-        timer: 1400,
-        showConfirmButton: false,
-      });
+      showSuccess("La orden de servicio fue finalizada.");
     } catch {
-      await Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: "No se pudo completar la orden.",
-      });
+      showError("No se pudo completar la orden.");
     }
   }
 
@@ -889,18 +892,9 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
       setRows((prev) =>
         prev.map((r) => (r.id === row.id ? { ...r, ...updatedRow } : r))
       );
-      await Swal.fire({
-        icon: "success",
-        title: "Cancelada",
-        timer: 1300,
-        showConfirmButton: false,
-      });
+      showSuccess("Orden cancelada.");
     } catch {
-      await Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: "No se pudo cancelar la orden.",
-      });
+      showError("No se pudo cancelar la orden.");
     }
   }
 
@@ -917,14 +911,35 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
                   placeholder="Buscar (id, tecnico, cliente, tipo, estado, fecha)"
                   className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-gray-200 md:flex-1"
                 />
-                {canCreateOrder && (
-                  <button
-                    onClick={openCreate}
-                    className="inline-flex h-10 items-center rounded-md bg-[#04652c] px-3 text-sm font-semibold text-white shadow-sm hover:opacity-90 whitespace-nowrap"
-                  >
-                    Crear Orden
-                  </button>
-                )}
+                <div className="flex items-center gap-2">
+                  {canExportOrder && (
+                    <div className="hidden md:block">
+                      <DownloadXLSXButton
+                        id="download-excel-btn-orders-clients"
+                        data={xlsxRows as unknown as Record<string, unknown>[]}
+                        fileName="reporte_ordenes.xlsx"
+                        headers={[
+                          "Id",
+                          "Cliente",
+                          "Tipo",
+                          "Fecha programada",
+                          "Estado",
+                          "Viaticos (COP)",
+                          "Monto (COP)",
+                        ]}
+                        excludeKeys={[]}
+                      />
+                    </div>
+                  )}
+                  {canCreateOrder && (
+                    <button
+                      onClick={openCreate}
+                      className="inline-flex h-10 items-center rounded-md bg-[#04652c] px-3 text-sm font-semibold text-white shadow-sm hover:opacity-90 whitespace-nowrap"
+                    >
+                      Crear Orden
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -951,7 +966,7 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <div className="flex items-center gap-2 mb-2">
+                        <div className="mb-2 flex flex-wrap items-center gap-2">
                           <span className="inline-flex h-7 items-center rounded-md bg-gray-100 px-2.5 text-xs font-bold text-gray-800 ring-1 ring-inset ring-gray-200">
                             Orden #{row.id}
                           </span>
@@ -971,7 +986,7 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
                         </div>
                       </div>
                       <span
-                        className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap ${estadoBadgeClass(
+                        className={`inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap ${estadoBadgeClass(
                           row.estadoKey
                         )}`}
                       >
@@ -1043,17 +1058,23 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
                         </motion.button>
                       </div>
                       <div className="mt-2 flex w-full items-center justify-end gap-2">
-                        {canReportWarranty && (
+                        {canReportWarranty && row.estadoKey === "Garantia" && (
                           <motion.button
                             whileHover={{ scale: 1.03 }}
                             whileTap={{ scale: 0.97 }}
                             onClick={() => openReport(row)}
                             disabled={row.estadoKey === "Anulada"}
-                            title="Reportar garant?a"
+                            title={
+                              row.estadoKey === "Garantia" || row.estadoKey === "GarantiaReportada"
+                                ? "Editar reporte de garantia"
+                                : "Reportar garantia"
+                            }
                             className="inline-flex h-8 items-center justify-center gap-2 rounded-full border border-[#04652c] bg-[#04652c] px-3 text-xs font-semibold text-white shadow-sm hover:opacity-95 disabled:opacity-50"
                           >
                             <img src={ICONS.report} className="h-4 w-4 brightness-0 invert" alt="" />
-                            Reportar garantía
+                            {row.estadoKey === "Garantia" || row.estadoKey === "GarantiaReportada"
+                              ? "Editar garantia"
+                              : "Reportar garantia"}
                           </motion.button>
                         )}
                         <motion.button
@@ -1125,18 +1146,59 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
             </div>
           </div>
         </div>
+
+        {canExportOrder && (
+          <button
+            onClick={() =>
+              document
+                .querySelector<HTMLButtonElement>("#download-excel-btn-orders-clients")
+                ?.click()
+            }
+            className="fixed bottom-20 right-6 z-50 flex md:hidden items-center justify-center w-12 h-12 rounded-full shadow-lg text-white transition-transform hover:scale-105"
+            style={{ background: "#04652c" }}
+            type="button"
+            title="Descargar reporte"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5 text-white"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4"
+              />
+            </svg>
+          </button>
+        )}
       </main>
 
       <Modal
-        title={reportRowId ? `Reportar garantía #${reportRowId}` : "Reportar garantía"}
+        title={
+          reportRowId
+            ? `${editingWarranty ? "Editar garantia" : "Reportar garantia"} #${reportRowId}`
+            : "Reportar garantia"
+        }
         isOpen={reportOpen}
-        onClose={() => setReportOpen(false)}
+        onClose={() => {
+          setReportOpen(false);
+          setReportRowId(null);
+          setEditingWarranty(false);
+        }}
         widthClass="max-w-lg"
         footer={
           <>
             <button
               type="button"
-              onClick={() => setReportOpen(false)}
+              onClick={() => {
+                setReportOpen(false);
+                setReportRowId(null);
+                setEditingWarranty(false);
+              }}
               className="cursor-pointer inline-flex h-9 items-center rounded-md border px-4 text-sm font-medium hover:bg-gray-50"
             >
               Cancelar
@@ -1146,7 +1208,7 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
               onClick={submitReport}
               className="cursor-pointer inline-flex h-9 items-center rounded-md bg-[#04652c] px-4 text-sm font-semibold text-white hover:opacity-90"
             >
-              Guardar reporte
+              {editingWarranty ? "Guardar cambios" : "Guardar reporte"}
             </button>
           </>
         }
@@ -1159,46 +1221,47 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
               onChange={(e) => setMotivo(e.target.value)}
               className="w-full border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#04652c]/30"
             >
-              <option>Daño dentro de garantía</option>
+              <option>{WARRANTY_DEFAULT_LABEL}</option>
               <option>Producto defectuoso</option>
-              <option>Instalación con falla</option>
+              <option>Instalacion con falla</option>
               <option>Otro</option>
             </select>
           </div>
 
           <div>
-            <label className="block text-xs uppercase tracking-wide text-gray-600 mb-1">¿Qué pasó?</label>
+            <label className="block text-xs uppercase tracking-wide text-gray-600 mb-1">
+              Que paso?
+            </label>
             <textarea
               value={detalle}
               onChange={(e) => {
                 setDetalle(e.target.value);
-                if (e.target.value.trim()) setErrorDetalle("");
+                if (e.target.value.trim().length >= WARRANTY_MIN_DETAIL_LEN) {
+                  setErrorDetalle("");
+                }
               }}
               rows={4}
-              placeholder="Describe brevemente el caso de garantía"
+              placeholder="Describe brevemente el caso de garantia"
               className={`w-full border rounded-md px-3 py-2 text-sm outline-none focus:ring-2 ${
-                errorDetalle ? "border-green-500 focus:ring-green-200" : "focus:ring-[#04652c]/30"
+                errorDetalle ? "border-red-500 focus:ring-red-200" : "focus:ring-[#04652c]/30"
               }`}
             />
-            {errorDetalle ? <p className="text-xs text-green-600 mt-1">{errorDetalle}</p> : null}
+            {errorDetalle ? <p className="text-xs text-red-600 mt-1">{errorDetalle}</p> : null}
           </div>
 
-          <label className="inline-flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={notifyClient}
-              onChange={(e) => setNotifyClient(e.target.checked)}
-            />
-            <span className="text-sm">Notificar al cliente</span>
-          </label>
-
           <div className="rounded-md bg-blue-50 border border-blue-200 p-3 text-xs text-blue-800">
-            Al guardar, la orden pasará a <b>Garantía (reportada)</b>.
+            Al guardar, la orden pasara a <b>garantia (reportada)</b>.
           </div>
         </div>
       </Modal>
     </RequireAuth>
   );
 }
+
+
+
+
+
+
 
 

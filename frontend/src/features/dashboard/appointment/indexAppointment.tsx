@@ -666,6 +666,9 @@ export default function IndexAppointment() {
               <Calendar
                 localizer={localizer}
                 events={filteredEvents}
+                eventIdAccessor={(event) =>
+                  `${(event as AppointmentEvent).source}-${(event as AppointmentEvent).id}`
+                }
                 startAccessor="start"
                 endAccessor="end"
                 messages={CALENDAR_MESSAGES}
@@ -694,7 +697,9 @@ export default function IndexAppointment() {
 
         <AppointmentUpcomingList
           events={upcomingEvents}
-          selectedEventId={selectedEvent?.id ?? null}
+          selectedEventKey={
+            selectedEvent ? `${selectedEvent.source}-${selectedEvent.id}` : null
+          }
           onSelect={(event) => {
             setSelectedEvent(event);
             setModalEvent(event);
@@ -724,5 +729,3 @@ export default function IndexAppointment() {
     </>
   );
 }
-
-

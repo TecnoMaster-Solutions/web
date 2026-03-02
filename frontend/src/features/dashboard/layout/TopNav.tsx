@@ -123,6 +123,7 @@ export default function TopNav({
 
     try {
       if (typeof window !== "undefined") {
+        sessionStorage.removeItem("__pending_toast__");
         sessionStorage.removeItem("__toast_login_success__");
       }
       await logout();

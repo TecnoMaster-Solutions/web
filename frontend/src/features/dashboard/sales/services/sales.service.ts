@@ -1,70 +1,205 @@
 import { apiClient } from "@/shared/utils/apiClient";
 import {
     ISale,
+    ISalesPayment,
     ICreateSaleDto,
+    ICreateSalePaymentDto,
+    ICreateSalePaymentRequestDto,
     IProduct,
     ICustomer,
     IService,
+    ISalePaymentRequest,
+    IReviewSalePaymentRequestDto,
+    IUploadSalePaymentReceiptDto,
 } from "../types/sales.type";
 
-// ─────────────────────────────────────────────────────
-// Servicio de Ventas — conecta con el backend NestJS
-// ─────────────────────────────────────────────────────
+type CustomerApi = {
+    customerid?: number;
+    id?: number;
+    userid?: number;
+    customercity?: string | null;
+    customerzipcode?: string | null;
+    users?: {
+        userid?: number;
+        name?: string | null;
+        lastname?: string | null;
+        documentnumber?: string | null;
+        phone?: string | null;
+        email?: string | null;
+        image?: string | null;
+    } | null;
+};
 
-/** Obtener todas las ventas */
+function unwrapList<T>(payload: any): T[] {
+    const data =
+        payload && typeof payload === "object" && "data" in payload
+            ? (payload as any).data
+            : payload;
+    return Array.isArray(data) ? (data as T[]) : [];
+}
+
+function normalizeCustomer(customer: CustomerApi): ICustomer | null {
+    const customerid = Number(customer.customerid ?? customer.id);
+    if (!Number.isFinite(customerid) || customerid <= 0) return null;
+
+    const user = customer.users ?? null;
+
+    return {
+        customerid,
+        userid: Number(customer.userid ?? user?.userid ?? 0) || 0,
+        customercity: customer.customercity ?? null,
+        customerzipcode: customer.customerzipcode ?? null,
+        users: user
+            ? {
+                userid: Number(user.userid ?? 0) || 0,
+                name: String(user.name ?? "").trim(),
+                lastname: String(user.lastname ?? "").trim(),
+                documentnumber: user.documentnumber != null ? String(user.documentnumber).trim() : null,
+                phone: user.phone != null ? String(user.phone).trim() : null,
+                email: String(user.email ?? "").trim(),
+                image: user.image != null ? String(user.image).trim() : null,
+            }
+            : undefined,
+    };
+}
+
 export async function getSales(): Promise<ISale[]> {
     return apiClient.get<ISale[]>("/sales");
 }
 
-/** Obtener una venta por ID */
 export async function getSaleById(id: number): Promise<ISale> {
     return apiClient.get<ISale>(`/sales/${id}`);
 }
 
-/** Crear una nueva venta */
 export async function createSale(data: ICreateSaleDto): Promise<ISale> {
     return apiClient.post<ISale>("/sales", data);
 }
 
-/** Anular una venta (cambiar estado a Cancelled con motivo) */
+export async function updateSale(
+    id: number,
+    data: Partial<ICreateSaleDto>
+): Promise<ISale> {
+    return apiClient.patch<ISale>(`/sales/${id}`, data);
+}
+
 export async function annulSale(
     id: number,
     reason: string,
     cancelledBy: string
 ): Promise<ISale> {
-    return apiClient.patch<ISale>(`/sales/${id}`, {
-        salestatus: "Cancelled",
-        notes: reason,
-        createdby: cancelledBy,
+    return apiClient.patch<ISale>(`/sales/${id}/cancel`, {
+        observation: reason,
+        cancelledBy,
     });
 }
 
-/** Eliminar una venta por ID */
 export async function deleteSale(id: number): Promise<void> {
     return apiClient.delete<void>(`/sales/${id}`);
 }
 
-// ── Servicios auxiliares para el formulario ──
-
-/** Obtener todos los productos (para el buscador) */
 export async function getProducts(): Promise<IProduct[]> {
     return apiClient.get<IProduct[]>("/products");
 }
 
-/** Obtener todos los clientes (para el selector) */
 export async function getCustomers(): Promise<ICustomer[]> {
-    return apiClient.get<ICustomer[]>("/customers");
+    const response = await apiClient.get<any>("/customers", {
+        params: { includeRelations: true },
+    });
+
+    return unwrapList<CustomerApi>(response)
+        .map(normalizeCustomer)
+        .filter(Boolean) as ICustomer[];
 }
 
-/** Obtener todos los servicios */
 export async function getServices(): Promise<{ data: IService[] }> {
     return apiClient.get<{ data: IService[] }>("/services");
 }
 
-/** Actualizar estado de pago de una venta */
-export async function updateEstadoPago(
-    id: number,
-    estadoPago: 'Abonada' | 'Pagada'
-): Promise<ISale> {
-    return apiClient.patch<ISale>(`/sales/${id}/estado-pago`, { estadoPago });
+export async function getSalePayments(saleId: number): Promise<ISalesPayment[]> {
+    return apiClient.get<ISalesPayment[]>(`/sales/${saleId}/payments`);
 }
+
+export async function createSalePayment(
+    saleId: number,
+    data: ICreateSalePaymentDto
+): Promise<{ sale: ISale; payment: ISalesPayment }> {
+    const formData = new FormData();
+    formData.append("amount", String(data.amount));
+
+    if (data.paymentmethod) formData.append("paymentmethod", data.paymentmethod);
+    if (data.reference) formData.append("reference", data.reference);
+    if (data.file) formData.append("file", data.file);
+
+    return apiClient.post<{ sale: ISale; payment: ISalesPayment }>(
+        `/sales/${saleId}/payments`,
+        formData,
+        {
+            headers: {
+                "Content-Type": "multipart/form-data",
+            },
+        }
+    );
+}
+
+export async function getSalePaymentRequests(
+    saleId?: number
+): Promise<ISalePaymentRequest[]> {
+    return apiClient.get<ISalePaymentRequest[]>("/sales-payment-requests", {
+        params: saleId ? { saleId } : undefined,
+    });
+}
+
+export async function getClientSalePaymentRequests(
+    saleId: number
+): Promise<ISalePaymentRequest[]> {
+    return apiClient.get<ISalePaymentRequest[]>(`/sales/${saleId}/my-payment-requests`);
+}
+
+export async function createSalePaymentRequest(
+    saleId: number,
+    data: ICreateSalePaymentRequestDto
+): Promise<ISalePaymentRequest> {
+    return apiClient.post<ISalePaymentRequest>(`/sales/${saleId}/payment-requests`, data);
+}
+
+export async function approveSalePaymentRequest(
+    paymentRequestId: number,
+    data: IReviewSalePaymentRequestDto
+): Promise<ISalePaymentRequest> {
+    return apiClient.patch<ISalePaymentRequest>(
+        `/sales-payment-requests/${paymentRequestId}/approve`,
+        data
+    );
+}
+
+export async function rejectSalePaymentRequest(
+    paymentRequestId: number,
+    data: IReviewSalePaymentRequestDto
+): Promise<ISalePaymentRequest> {
+    return apiClient.patch<ISalePaymentRequest>(
+        `/sales-payment-requests/${paymentRequestId}/reject`,
+        data
+    );
+}
+
+export async function uploadSalePaymentReceipt(
+    paymentRequestId: number,
+    data: IUploadSalePaymentReceiptDto
+): Promise<ISalePaymentRequest> {
+    const formData = new FormData();
+
+    if (data.receiptReference) formData.append("receiptReference", data.receiptReference);
+    if (data.receiptNotes) formData.append("receiptNotes", data.receiptNotes);
+    if (data.file) formData.append("file", data.file);
+
+    return apiClient.post<ISalePaymentRequest>(
+        `/sales/my-payment-requests/${paymentRequestId}/receipt`,
+        formData,
+        {
+            headers: {
+                "Content-Type": "multipart/form-data",
+            },
+        }
+    );
+}
+

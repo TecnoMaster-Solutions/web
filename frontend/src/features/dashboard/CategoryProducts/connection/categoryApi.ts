@@ -27,6 +27,10 @@ export const getCategories = async (signal?: AbortSignal): Promise<Category[]> =
     } catch (error: any) {
       if (error?.name === "CanceledError" || error?.code === "ERR_CANCELED") return [];
 
+      if (typeof error?.message === "string" && !error?.response && !error?.code) {
+        throw error;
+      }
+
       if (error?.code === "ECONNABORTED") {
         attempt++;
         if (attempt > RETRY_LIMIT) throw new Error("La petición expiró. Intente nuevamente.");

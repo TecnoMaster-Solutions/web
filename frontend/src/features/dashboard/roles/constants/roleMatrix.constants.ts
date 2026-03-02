@@ -20,20 +20,23 @@ export const ALL_MODULE_PERMISSIONS: Record<RoleUiModule, string[]> = {
   Roles: ["Crear", "Ver", "Editar", "Eliminar"],
   Usuarios: ["Crear", "Ver", "Editar", "Eliminar"],
   "Categoría de Productos": ["Crear", "Ver", "Editar", "Eliminar"],
-  Productos: ["Crear", "Ver", "Editar", "Eliminar"],
-  Proveedores: ["Crear", "Ver", "Editar", "Eliminar"],
 
+  Productos: ["Crear", "Ver", "Editar", "Eliminar", "Descargar excel"],
+
+  Proveedores: ["Crear", "Ver", "Editar", "Eliminar"],
   Compras: ["Crear", "Ver", "Anular"],
 
-  Servicios: ["Crear", "Ver", "Editar", "Eliminar"],
+  Servicios: ["Crear", "Ver", "Editar", "Eliminar", "Descargar excel"],
+
   Técnicos: ["Crear", "Ver", "Editar", "Eliminar"],
   Clientes: ["Crear", "Ver", "Editar", "Eliminar"],
 
-  "Cotización de Servicio": ["Crear", "Ver", "Cancelar", "Completar"],
+  "Cotización de Servicio": ["Crear", "Ver", "Cancelar", "Aprobar","Completar", "Descargar reporte"],
 
-  Citas: ["Ver", "Editar", "Cancelar", "Finalizar"], 
-  Ventas: ["Crear", "Ver", "Anular"],
-  "Órdenes de Compra": ["Ver", "Enviar"],
+  Citas: ["Ver", "Editar", "Cancelar", "Finalizar"],
+  Ventas: ["Crear", "Ver", "Anular","Gestionar Pagos", "Descargar reporte"],
+  "Órdenes de Compra": ["Ver", "Crear"],
+
   "Orden de Servicio": [
     "Crear",
     "Ver",
@@ -43,7 +46,9 @@ export const ALL_MODULE_PERMISSIONS: Record<RoleUiModule, string[]> = {
     "Reportar garantía",
     "Descargar reporte",
   ],
-  "Solicitud de Servicio": ["Crear", "Ver", "Editar", "Cancelar"],
+
+  "Solicitud de Servicio": ["Crear", "Ver", "Editar", "Cancelar", "Descargar reporte"],
+
   Dashboard: ["Ver"],
 };
 
@@ -75,9 +80,9 @@ export const PRIVILEGE_NAME_TO_ID: Record<string, number> = {
   add_history: 6,
   report_warranty: 7,
   download_report: 8,
-
-  // ✅ Nuevo (según tu tabla privileges)
   complete: 9,
+  approve: 10,
+  manage_payment: 11,
 };
 
 export const MODULE_BACK_TO_UI: Record<string, RoleUiModule> = {
@@ -99,7 +104,6 @@ export const MODULE_BACK_TO_UI: Record<string, RoleUiModule> = {
   purchases: "Compras",
   Purchases: "Compras",
 
-  // ✅ Nuevo alias (según tu backend)
   purchasesmanagement: "Compras",
   PurchasesManagement: "Compras",
 
@@ -147,8 +151,7 @@ export const uiActionToPrivilegeName = (
 
   if (module === "Orden de Servicio") {
     if (a === "agregar historial") return "add_history";
-    if (a === "reportar garantía" || a === "reportar garantia")
-      return "report_warranty";
+    if (a === "reportar garantía" || a === "reportar garantia") return "report_warranty";
     if (a === "descargar reporte") return "download_report";
     if (a === "cancelar") return "deactivate";
   }
@@ -159,25 +162,28 @@ export const uiActionToPrivilegeName = (
 
   if (module === "Ventas") {
     if (a === "anular") return "deactivate";
+    if (a === "gestionar pagos") return "manage_payment";
+    if (a === "descargar reporte") return "download_report";
   }
 
-  // ✅ Compras: "Anular" usa deactivate
   if (module === "Compras") {
     if (a === "anular") return "deactivate";
   }
 
-  // ✅ Cotización: "Cancelar" usa deactivate, "Completar" usa complete
   if (module === "Cotización de Servicio") {
     if (a === "cancelar") return "deactivate";
+    if (a === "aprobar") return "approve";
     if (a === "completar") return "complete";
-  }
-
-  if (module === "Órdenes de Compra") {
-    if (a === "enviar") return "deactivate";
+    if (a === "descargar reporte") return "download_report";
   }
 
   if (module === "Solicitud de Servicio") {
     if (a === "cancelar") return "deactivate";
+    if (a === "descargar reporte") return "download_report";
+  }
+
+  if (module === "Productos" || module === "Servicios") {
+    if (a === "descargar excel") return "download_report";
   }
 
   if (a === "crear") return "create";
@@ -201,16 +207,24 @@ export const privilegeNameToUiActions = (
 
   if (p === "add_history") return ["Agregar historial"];
   if (p === "report_warranty") return ["Reportar garantía"];
-  if (p === "download_report") return ["Descargar reporte"];
+  if (p === "manage_payment") return ["Gestionar Pagos"];
 
-  // ✅ Nuevo
+  if (p === "download_report") {
+    if (module === "Productos" || module === "Servicios") return ["Descargar excel"];
+    return ["Descargar reporte"];
+  }
+
+  if (p === "download_report" && module === "Ventas") return ["Descargar reporte"];
+
+  
   if (p === "complete") return ["Completar"];
+
+  if (p === "approve") return ["Aprobar"];
 
   if (p === "deactivate") {
     if (module === "Ventas") return ["Anular"];
     if (module === "Compras") return ["Anular"];
     if (module === "Cotización de Servicio") return ["Cancelar"];
-    if (module === "Órdenes de Compra") return ["Enviar"];
     if (module === "Citas") return ["Cancelar", "Finalizar"];
     if (module === "Solicitud de Servicio") return ["Cancelar"];
     if (module === "Orden de Servicio") return ["Cancelar"];

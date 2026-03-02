@@ -9,6 +9,7 @@ import { completeQuote, getQuoteById } from "./api/quotes.api";
 import { updateOrderService } from "@/features/dashboard/OrdersServices/api/ordersServices.api";
 import { updateServiceRequest } from "@/features/dashboard/requests/services/servicerequests.service";
 import { usePermissions } from "@/features/auth/hooks/usePermissions";
+import { showError, showSuccess, showWarning } from "@/shared/utils/notifications";
 
 type Props = {
   quoteId: number;
@@ -90,19 +91,19 @@ export default function QuoteDetailPage({ quoteId }: Props) {
   const handleCompleteQuote = useCallback(async () => {
     if (!quote) return;
     if (!canCompleteQuotes) {
-      await Swal.fire("Sin permisos", "No tienes permisos para completar cotizaciones.", "warning");
+      showWarning("No tienes permisos para completar cotizaciones.");
       return;
     }
 
     const id = Number(quote.quotesid ?? quote.id ?? quoteId);
     if (!id) {
-      await Swal.fire("Error", "ID de cotizaci�n inv�lido.", "error");
+      showError("ID de cotización inválido.");
       return;
     }
 
     const confirm = await Swal.fire({
-      title: "�Completar cotizaci�n?",
-      text: "Se generar� la venta correspondiente y la cotizaci�n pasar� a estado completado.",
+      title: "¿Completar cotización?",
+      text: "Se generará la venta correspondiente y la cotización pasará a estado completado.",
       icon: "question",
       showCancelButton: true,
       confirmButtonText: "Completar",
@@ -115,17 +116,9 @@ export default function QuoteDetailPage({ quoteId }: Props) {
       setCompletingQuote(true);
       await completeQuote(id);
       await fetchQuote();
-      await Swal.fire(
-        "Cotizaci�n completada",
-        "Se cre� la venta asociada y la cotizaci�n se actualiz�.",
-        "success",
-      );
+      showSuccess("Se creó la venta asociada y la cotización se actualizó.");
     } catch (error: any) {
-      await Swal.fire(
-        "Error",
-        error?.response?.data?.message ?? error?.message ?? "No se pudo completar la cotizaci�n.",
-        "error",
-      );
+      showError(error?.response?.data?.message ?? error?.message ?? "No se pudo completar la cotización.");
     } finally {
       setCompletingQuote(false);
     }
@@ -134,7 +127,7 @@ export default function QuoteDetailPage({ quoteId }: Props) {
   const handleFinalizeQuote = useCallback(async () => {
     if (!quote) return;
     if (!canUpdateQuotes) {
-      await Swal.fire("Sin permisos", "No tienes permisos para finalizar cotizaciones.", "warning");
+      showWarning("No tienes permisos para finalizar cotizaciones.");
       return;
     }
 
@@ -142,7 +135,7 @@ export default function QuoteDetailPage({ quoteId }: Props) {
     const orderServiceId = getQuoteOrderServiceId(quote);
 
     if (!serviceRequestId && !orderServiceId) {
-      await Swal.fire("Sin registros relacionados", "La cotizaci�n no tiene orden ni solicitud asociada.", "warning");
+      showWarning("La cotización no tiene orden ni solicitud asociada.");
       return;
     }
 
@@ -151,11 +144,11 @@ export default function QuoteDetailPage({ quoteId }: Props) {
       orderServiceId ? "orden de servicio" : null,
     ].filter(Boolean) as string[];
     const targetText = targets.join(" y ");
-    const verb = targets.length > 1 ? "marcar�n" : "marcar�";
+    const verb = targets.length > 1 ? "marcarán" : "marcará";
     const suffix = targets.length > 1 ? "finalizados" : "finalizado";
 
     const confirm = await Swal.fire({
-      title: "�Finalizar cotizaci�n?",
+      title: "¿Finalizar cotización?",
       text: `Se ${verb} ${targetText} como ${suffix} (estado 6).`,
       icon: "question",
       showCancelButton: true,
@@ -171,13 +164,9 @@ export default function QuoteDetailPage({ quoteId }: Props) {
       if (orderServiceId) requests.push(updateOrderService(orderServiceId, { stateid: 6 }));
       if (requests.length) await Promise.all(requests);
       await fetchQuote();
-      await Swal.fire("Finalizado", `Se ${verb} ${targetText} como ${suffix} (estado 6).`, "success");
+      showSuccess(`Se ${verb} ${targetText} como ${suffix} (estado 6).`);
     } catch (error: any) {
-      await Swal.fire(
-        "Error",
-        error?.response?.data?.message ?? error?.message ?? "No se pudieron actualizar los registros.",
-        "error",
-      );
+      showError(error?.response?.data?.message ?? error?.message ?? "No se pudieron actualizar los registros.");
     } finally {
       setFinalizingQuote(false);
     }
@@ -196,24 +185,29 @@ export default function QuoteDetailPage({ quoteId }: Props) {
 
   return (
     <RequireAuth>
-      <div className="p-6">
-        <div className="flex items-center justify-between gap-3 mb-4">
-          <h1 className="text-xl font-semibold">Detalle de Cotizaci�n #{quoteId}</h1>
+      <div className="mx-auto w-full max-w-6xl p-4 md:p-6">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs uppercase tracking-wide text-slate-500">Cotizaciones</p>
+            <h1 className="text-xl font-semibold text-slate-900">Detalle #{quoteId}</h1>
+          </div>
           <button
             type="button"
             onClick={() => router.push("/dashboard/quotes")}
-            className="cursor-pointer px-4 py-2 rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50"
+            className="cursor-pointer rounded-md border border-slate-300 px-4 py-2 text-slate-700 hover:bg-slate-50"
           >
             Volver
           </button>
         </div>
 
         {!canViewQuotes ? (
-          <div className="flex items-center justify-center py-20">
+          <div className="flex items-center justify-center rounded-xl border border-slate-200 bg-white py-20">
             <span className="text-gray-500">No tienes permisos para visualizar cotizaciones.</span>
           </div>
         ) : loading ? (
-          <div className="text-sm text-gray-500">Cargando cotizaci�n...</div>
+          <div className="rounded-xl border border-slate-200 bg-white px-4 py-8 text-sm text-gray-500">
+            Cargando cotización...
+          </div>
         ) : quote ? (
           <ViewQuote
             quote={quote}
@@ -225,7 +219,9 @@ export default function QuoteDetailPage({ quoteId }: Props) {
             onFinalize={handleFinalizeQuote}
           />
         ) : (
-          <div className="text-sm text-red-600">No se pudo cargar la cotizaci�n.</div>
+          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-8 text-sm text-red-600">
+            No se pudo cargar la cotización.
+          </div>
         )}
       </div>
     </RequireAuth>

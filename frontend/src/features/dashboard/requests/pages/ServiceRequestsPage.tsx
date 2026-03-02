@@ -571,8 +571,14 @@ export default function ServiceRequestsPage() {
     setActionLoading(true);
     try {
       const v: any = values as any;
+      const technicians = Array.isArray(v?.technicians) ? v.technicians : [];
+      const hasFullAssignment = Boolean(v?.scheduledAt && v?.scheduledEndAt && technicians.length > 0);
       const stateIdToSend =
-        (scheduledStateId && Number.isFinite(scheduledStateId) && scheduledStateId > 0 && scheduledStateId) ||
+        (hasFullAssignment &&
+          scheduledStateId &&
+          Number.isFinite(scheduledStateId) &&
+          scheduledStateId > 0 &&
+          scheduledStateId) ||
         (pendingStateId && Number.isFinite(pendingStateId) && pendingStateId > 0 && pendingStateId) ||
         5;
 
@@ -586,7 +592,7 @@ export default function ServiceRequestsPage() {
         stateId: stateIdToSend,
         serviceId: Number(v?.serviceId ?? parseMaybeId(String(v?.servicio ?? ""))),
         clientId: Number(v?.clientId ?? parseMaybeId(String(v?.cliente ?? ""))),
-        technicians: Array.isArray(v?.technicians) ? v.technicians : [],
+        technicians,
       };
 
       await createMut.mutateAsync(dto as any);
@@ -666,15 +672,27 @@ export default function ServiceRequestsPage() {
           ? parseMaybeId(String(v.estado))
           : 0;
 
-      if (!stateIdNum && scheduledAt) {
+      const hasFullAssignment = Boolean(scheduledAt && scheduledEndAt && technicians.length > 0);
+      if (hasFullAssignment) {
         const fallbackState =
           (scheduledStateId && Number.isFinite(scheduledStateId) && scheduledStateId > 0 && scheduledStateId) ||
           (pendingStateId && Number.isFinite(pendingStateId) && pendingStateId > 0 && pendingStateId) ||
           0;
-        stateIdNum = fallbackState;
+        if (fallbackState > 0) stateIdNum = fallbackState;
       }
 
       if (stateIdNum > 0) payload.stateId = stateIdNum;
+      const forcedScheduled =
+        hasFullAssignment &&
+        scheduledStateId &&
+        Number.isFinite(scheduledStateId) &&
+        scheduledStateId > 0 &&
+        Number(stateIdNum) === Number(scheduledStateId);
+      const resolvedEstadoLabel = forcedScheduled
+        ? "Agendada"
+        : stateIdNum
+        ? String(v?.estadoLabel ?? v?.estadoName ?? v?.estadoText ?? selected.estado)
+        : selected.estado;
 
       optimisticPatch(id, {
         programada: scheduledAt ? toLocalDateTimeValue(new Date(scheduledAt)) : null,
@@ -688,9 +706,7 @@ export default function ServiceRequestsPage() {
         serviceId,
         cliente: selected.cliente,
         clienteId: selected.clienteId,
-        estado: stateIdNum
-          ? String(v?.estadoLabel ?? v?.estadoName ?? v?.estadoText ?? selected.estado)
-          : selected.estado,
+        estado: resolvedEstadoLabel,
         stateId: stateIdNum || selected.stateId,
         tipo: String(serviceType || "").toLowerCase().includes("instal")
           ? "Instalacion"
@@ -1030,4 +1046,3 @@ export default function ServiceRequestsPage() {
     </RequireAuth>
   );
 }
-

@@ -16,27 +16,21 @@ import {
 } from "../types/sales.type";
 import { showSuccess, showError, showWarning } from "@/shared/utils/notifications";
 
-export const useSalesForm = (onSuccess?: () => void) => {
-
-    // ── Data States ──
+export const useSalesForm = () => {
     const [products, setProducts] = useState<IProduct[]>([]);
     const [services, setServices] = useState<IService[]>([]);
     const [customers, setCustomers] = useState<ICustomer[]>([]);
     const [loadingData, setLoadingData] = useState(true);
     const [submitting, setSubmitting] = useState(false);
 
-    // ── Form States ──
     const [selectedCustomerId, setSelectedCustomerId] = useState<number | "">("");
     const [paymentMethod, setPaymentMethod] = useState("Cash");
-
-    // ✅ Estado por defecto SIEMPRE Pending
     const [saleStatus, setSaleStatus] = useState<"Pending" | "Completed" | "Cancelled">("Pending");
 
     const TAX_PERCENT = 19;
     const [notes, setNotes] = useState("");
     const [cart, setCart] = useState<ICartItem[]>([]);
 
-    // ── Load Initial Data ──
     const reloadData = useCallback(async () => {
         setLoadingData(true);
         try {
@@ -60,7 +54,6 @@ export const useSalesForm = (onSuccess?: () => void) => {
         reloadData();
     }, [reloadData]);
 
-    // ── Totales ──
     const subtotal = useMemo(
         () => cart.reduce((sum, item) => sum + item.linetotal, 0),
         [cart]
@@ -79,8 +72,6 @@ export const useSalesForm = (onSuccess?: () => void) => {
     );
 
     const totalAmount = subtotal - discountTotal + taxAmount;
-
-    // ── Cart Handlers ──
 
     const addProductToCart = useCallback((product: IProduct, qty: number) => {
         if (qty <= 0) return;
@@ -163,18 +154,57 @@ export const useSalesForm = (onSuccess?: () => void) => {
         setCart((prev) => prev.filter((i) => i.id !== itemId));
     }, []);
 
-    // ── Submit ──
+    const updateCartQuantity = useCallback((itemId: string, quantity: number) => {
+        const nextQuantity = Math.max(1, Math.floor(quantity || 1));
+
+        setCart((prev) => {
+            const currentItem = prev.find((item) => item.id === itemId);
+            if (!currentItem) return prev;
+
+            if (currentItem.type === "Producto" && nextQuantity > currentItem.stock) {
+                showWarning(`Stock insuficiente. Disponible: ${currentItem.stock}`);
+                return prev;
+            }
+
+            return prev.map((item) =>
+                item.id === itemId
+                    ? {
+                        ...item,
+                        quantity: nextQuantity,
+                        linetotal: nextQuantity * item.unitprice,
+                    }
+                    : item
+            );
+        });
+    }, []);
+
+    const updateCartUnitPrice = useCallback((itemId: string, unitprice: number) => {
+        const nextUnitPrice = Math.max(0, Number(unitprice || 0));
+
+        setCart((prev) =>
+            prev.map((item) =>
+                item.id === itemId
+                    ? {
+                        ...item,
+                        unitprice: nextUnitPrice,
+                        linetotal: item.quantity * nextUnitPrice,
+                    }
+                    : item
+            )
+        );
+    }, []);
+
     const generateSaleCode = () => `VEN-${Date.now()}`;
 
     const handleSubmit = useCallback(async () => {
         if (!selectedCustomerId) {
             showWarning("Seleccione un cliente.");
-            return;
+            return null;
         }
 
         if (cart.length === 0) {
             showWarning("El carrito está vacío.");
-            return;
+            return null;
         }
 
         setSubmitting(true);
@@ -189,28 +219,24 @@ export const useSalesForm = (onSuccess?: () => void) => {
                 discountamount: discountTotal,
                 totalamount: totalAmount,
                 paymentmethod: paymentMethod,
-
-                // ✅ Siempre Pending por defecto
                 salestatus: saleStatus || "Pending",
-
                 notes,
                 details: cart.map((item) => ({
-                    productid: item.productid || 0,
+                    productid: item.productid,
+                    serviceid: item.serviceid,
                     quantity: item.quantity,
                     unitprice: item.unitprice,
                     discountpercent: item.discountpercent,
                 })),
             };
 
-            await createSale(saleDto);
-
+            const created = await createSale(saleDto);
             showSuccess("Venta registrada exitosamente");
-
-            if (onSuccess) onSuccess();
-
-        } catch (err: any) {
+            return created;
+        } catch (err) {
             console.error(err);
             showError("Error al guardar la venta");
+            return null;
         } finally {
             setSubmitting(false);
         }
@@ -224,7 +250,6 @@ export const useSalesForm = (onSuccess?: () => void) => {
         paymentMethod,
         notes,
         saleStatus,
-        onSuccess,
     ]);
 
     return {
@@ -232,29 +257,24 @@ export const useSalesForm = (onSuccess?: () => void) => {
         services,
         customers,
         loadingData,
-
         selectedCustomerId,
         setSelectedCustomerId,
-
         saleStatus,
         setSaleStatus,
-
         paymentMethod,
         setPaymentMethod,
-
         notes,
         setNotes,
-
         cart,
         addProductToCart,
         addServiceToCart,
+        updateCartQuantity,
+        updateCartUnitPrice,
         removeFromCart,
-
         subtotal,
         discountTotal,
         taxAmount,
         totalAmount,
-
         TAX_PERCENT,
         handleSubmit,
         submitting,

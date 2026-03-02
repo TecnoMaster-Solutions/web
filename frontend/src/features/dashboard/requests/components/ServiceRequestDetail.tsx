@@ -59,7 +59,7 @@ const ServiceRequestDetailContent = ({ data }: { data: ServiceRequestDTO }) => {
       data.customer.customercity ?? "",
     ].filter(Boolean);
     return parts.length
-      ? parts.join(" Â· ")
+      ? parts.join(" · ")
       : `Cliente ${data.customer.customerid ?? data.clientId ?? ""}`;
   }, [data]);
 
@@ -138,7 +138,7 @@ const ServiceRequestDetailContent = ({ data }: { data: ServiceRequestDTO }) => {
             <p className="text-xs uppercase tracking-wide text-slate-500">Cliente</p>
             <p className="mt-2 text-sm font-medium text-slate-800">{clientLabel}</p>
             <p className="text-xs text-slate-500">
-              Ciudad: {customerCity} Â· Codigo postal: {customerZip}
+              Ciudad: {customerCity} · Codigo postal: {customerZip}
             </p>
           </div>
           <div className="rounded-xl border border-slate-100 bg-slate-50 p-4">
@@ -263,4 +263,3 @@ const ServiceRequestDetail: React.FC<Props> = ({ requestId }) => {
 };
 
 export default ServiceRequestDetail;
-

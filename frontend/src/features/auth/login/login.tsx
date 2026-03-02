@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from "react";
 import Image from "next/image";
@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/features/auth/authcontext";
 import Nav from "@/features/landing/layout/Nav";
-import { showError } from "@/shared/utils/notifications";
+import { showError, showSuccess } from "@/shared/utils/notifications";
 import { routes } from "@/shared/routes";
 
 type FormState = {
@@ -107,6 +107,7 @@ export default function LoginPage() {
       return;
     }
 
+    showSuccess("Inicio de sesión exitoso.");
     router.replace(result.redirectTo);
   };
 
@@ -119,11 +120,11 @@ export default function LoginPage() {
 
       <div className="flex flex-col lg:flex-row flex-1 px-6 lg:px-20 items-center justify-center gap-20">
         <div className="w-full lg:w-[45%] max-w-lg flex flex-col justify-center">
-          <h2 className="text-3xl font-black mb-2 text-center lg:text-left">
-            Bienvenido a Sistemas PC
+          <h2 className="text-[1.85rem] font-extrabold tracking-tight mb-1 text-center lg:text-left bg-gradient-to-r from-[#04652c] via-[#06a646] to-[#2a9781] bg-clip-text text-transparent">
+            Bienvenido a TecnoMaster
           </h2>
 
-          <p className="text-gray-600 mb-6 text-center lg:text-left">
+          <p className="text-sm font-medium text-[#3b5f73] mb-6 text-center lg:text-left">
             Ingresa tus datos para continuar.
           </p>
 
@@ -136,7 +137,7 @@ export default function LoginPage() {
                 className={`w-full h-11 mt-1 px-4 rounded-lg border bg-white outline-none ${
                   emailHasError
                     ? "border-red-500 focus:ring-2 focus:ring-red-400"
-                    : "focus:ring-2 focus:ring-red-400"
+                    : "focus:ring-2 focus:ring-[#06a646]"
                 }`}
                 value={form.email}
                 onChange={(e) => setField("email", e.target.value)}
@@ -196,8 +197,8 @@ export default function LoginPage() {
               disabled={loading}
               className={`w-full h-11 rounded-lg text-white font-semibold ${
                 loading
-                  ? "bg-red-400 cursor-not-allowed"
-                  : "bg-red-700 hover:bg-red-800"
+                  ? "bg-[#6ecf94] cursor-not-allowed"
+                  : "bg-[#06a646] hover:bg-[#058a3c]"
               }`}
             >
               {loading ? "Ingresando..." : "Iniciar sesión"}
@@ -208,7 +209,7 @@ export default function LoginPage() {
             <p className="mt-4 text-center text-sm">
               <Link
                 href={routes.auth.forgotPassword}
-                className="text-gray-500 hover:text-red-700 hover:underline underline-offset-4 transition-colors duration-200"
+                className="text-gray-500 hover:text-[#04652c] hover:underline underline-offset-4 transition-colors duration-200"
               >
                 ¿Olvidaste tu contraseña?
               </Link>
@@ -216,19 +217,19 @@ export default function LoginPage() {
 
             <p className="mt-2 text-sm">
               ¿No tienes cuenta?{" "}
-              <Link href="/auth/register" className="text-red-700 font-semibold">
+              <Link href="/auth/register" className="text-[#06a646] hover:text-[#04652c] font-semibold transition-colors duration-200">
                 Crear cuenta
               </Link>
             </p>
           </div>
         </div>
 
-        <div className="hidden lg:flex w-[40%] justify-center p-6">
+        <div className="hidden lg:flex w-[48%] justify-center p-2">
           <Image
-            src="/assets/imgs/previewSinFondo.png"
+            src="/assets/imgs/ImageLogin.png"
             alt="Imagen de apoyo"
-            width={520}
-            height={520}
+            width={860}
+            height={860}
             className="rounded-xl object-contain"
           />
         </div>
@@ -236,3 +237,5 @@ export default function LoginPage() {
     </div>
   );
 }
+
+
