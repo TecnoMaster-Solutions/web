@@ -7,6 +7,7 @@ import "react-toastify/dist/ReactToastify.css";
 import RequireAuth from "@/features/auth/requireauth";
 import RegisterPurchaseForm from "../components/RegisterPurchase";
 import { usePurchases } from "../hooks/usePurchases";
+import FullScreenLoader from "@/shared/components/FullScreenLoader";
 
 export default function PurchasesCreatePage() {
   const router = useRouter();
@@ -44,14 +45,14 @@ export default function PurchasesCreatePage() {
 
     purchaseOrders,
     poLoading,
+
+    saving, // ✅ USAR ESTE PARA EL OVERLAY NUEVO
   } = purchasesHook;
 
   const handleBack = () => {
     try {
       router.back();
-      setTimeout(() => {
-        router.push("/dashboard/purchases");
-      }, 250);
+      setTimeout(() => router.push("/dashboard/purchases"), 250);
     } catch {
       router.push("/dashboard/purchases");
     }
@@ -60,6 +61,9 @@ export default function PurchasesCreatePage() {
   return (
     <RequireAuth>
       <ToastContainer position="bottom-right" />
+
+      {/* ✅ loader NUEVO, único */}
+      <FullScreenLoader show={saving} />
 
       <div className="p-6">
         <div className="mb-1 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -101,7 +105,11 @@ export default function PurchasesCreatePage() {
 
         <RegisterPurchaseForm
           onSave={handleAddPurchase}
-          onClose={() => router.push("/dashboard/purchases")}
+          onClose={(created?: boolean) => {
+            router.push(
+              created ? "/dashboard/purchases?created=1" : "/dashboard/purchases"
+            );
+          }}
           purchases={purchases}
           fetchPurchases={fetchPurchases}
           form={form}
