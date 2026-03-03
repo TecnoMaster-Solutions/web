@@ -148,7 +148,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
                 }}
               />
               {errors.documentnumber && touched.documentnumber && (
-                <span className="text-green-500 text-xs mt-1">
+                <span className="text-red-500 text-xs mt-1">
                   {errors.documentnumber}
                 </span>
               )}
@@ -182,7 +182,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
               }}
             />
             {errors.name && touched.name && (
-              <span className="text-green-500 text-xs mt-1">{errors.name}</span>
+              <span className="text-red-500 text-xs mt-1">{errors.name}</span>
             )}
           </div>
 
@@ -206,7 +206,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
                 }}
               />
               {errors.lastname && touched.lastname && (
-                <span className="text-green-500 text-xs mt-1">
+                <span className="text-red-500 text-xs mt-1">
                   {errors.lastname}
                 </span>
               )}
@@ -235,7 +235,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
               }}
             />
             {errors.phone && touched.phone && (
-              <span className="text-green-500 text-xs mt-1">{errors.phone}</span>
+              <span className="text-red-500 text-xs mt-1">{errors.phone}</span>
             )}
           </div>
 
@@ -258,7 +258,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
               }}
             />
             {errors.email && touched.email && (
-              <span className="text-green-500 text-xs mt-1">{errors.email}</span>
+              <span className="text-red-500 text-xs mt-1">{errors.email}</span>
             )}
           </div>
         </div>
@@ -297,7 +297,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
             )}
           </select>
           {errors.roleid && touched.roleid && (
-            <span className="text-green-500 text-xs mt-1">
+            <span className="text-red-500 text-xs mt-1">
               {errors.roleid}
             </span>
           )}
@@ -388,7 +388,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
                 )}
               </div>
               {errors.CV && touched.CV && (
-                <span className="text-green-500 text-xs mt-1">{errors.CV}</span>
+                <span className="text-red-500 text-xs mt-1">{errors.CV}</span>
               )}
             </div>
 
@@ -435,7 +435,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
                     })}
                   </div>
                   {errors.techniciantypeids && touched.techniciantypeids && (
-                    <span className="text-green-500 text-xs mt-1 block">
+                    <span className="text-red-500 text-xs mt-1 block">
                       {errors.techniciantypeids}
                     </span>
                   )}

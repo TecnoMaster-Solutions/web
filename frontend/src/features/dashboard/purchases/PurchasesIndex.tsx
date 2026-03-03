@@ -13,6 +13,24 @@ import FullScreenLoader from "@/shared/components/FullScreenLoader";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
+const normalizePurchaseState = (value?: string | null) => {
+  const normalized = String(value ?? "").trim().toLowerCase();
+
+  if (
+    normalized.includes("revoke") ||
+    normalized.includes("anul") ||
+    normalized.includes("cancel")
+  ) {
+    return "revoke";
+  }
+
+  if (normalized.includes("approved") || normalized.includes("aprob")) {
+    return "approved";
+  }
+
+  return normalized;
+};
+
 export default function PurchasesIndex() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -37,7 +55,7 @@ export default function PurchasesIndex() {
     if (created === "1" && !createdToastShown.current) {
       createdToastShown.current = true;
 
-      showSuccess("Compra registrada con éxito.", { autoClose: 5000 });
+      showSuccess("Compra registrada con exito.", { autoClose: 5000 });
 
       const params = new URLSearchParams(window.location.search);
       params.delete("created");
@@ -81,8 +99,8 @@ export default function PurchasesIndex() {
 
   const columns: Column<IPurchase>[] = useMemo(
     () => [
-      { key: "numberoforder", header: "N° Orden" },
-      { key: "reference", header: "N° Factura" },
+      { key: "numberoforder", header: "N. Orden" },
+      { key: "reference", header: "N. Factura" },
       {
         key: "supplier",
         header: "Proveedor",
@@ -106,10 +124,10 @@ export default function PurchasesIndex() {
         key: "state",
         header: "Estado",
         render: (row) => {
-          const s = row.state?.name?.toLowerCase();
+          const s = normalizePurchaseState(row.state?.name);
 
           const isApproved = s === "approved";
-          const isRevoked = s === "revoke"; // anulado/inactivo
+          const isRevoked = s === "revoke";
 
           const label = isApproved
             ? "Aprobado"
@@ -117,7 +135,6 @@ export default function PurchasesIndex() {
             ? "Anulado"
             : row.state?.name ?? "Desconocido";
 
-          // ✅ Aprobado en verde, Anulado en rojo
           const cls = isApproved
             ? "text-green-600 font-medium"
             : isRevoked
@@ -168,12 +185,24 @@ export default function PurchasesIndex() {
 
   const confirmCancelPurchase = useCallback(
     async (purchase: IPurchase) => {
-      // ✅ Si ya está anulado, no permitir y mostrar info
-      if (purchase.state?.name?.toLowerCase() === "revoke") {
+      const normalizedState = normalizePurchaseState(purchase.state?.name);
+
+      if (normalizedState === "revoke") {
         Swal.fire({
           icon: "info",
           title: "Compra ya anulada",
-          text: `La compra #${purchase.numberoforder} ya está anulada.`,
+          text: `La compra #${purchase.numberoforder} ya esta anulada.`,
+          confirmButtonText: "Aceptar",
+          confirmButtonColor: "#3085d6",
+        });
+        return;
+      }
+
+      if (normalizedState !== "approved") {
+        Swal.fire({
+          icon: "info",
+          title: "Compra no anulable",
+          text: `La compra #${purchase.numberoforder} solo se puede anular cuando esta aprobada.`,
           confirmButtonText: "Aceptar",
           confirmButtonColor: "#3085d6",
         });
@@ -193,18 +222,18 @@ export default function PurchasesIndex() {
               </svg>
             </div>
 
-            <h2 class="text-xl font-semibold mb-2">¿Está seguro?</h2>
+            <h2 class="text-xl font-semibold mb-2">Esta seguro?</h2>
 
             <p class="text-gray-700 mb-1">
-              ¿Desea anular la compra #${purchase.numberoforder}?
+              Desea anular la compra #${purchase.numberoforder}?
             </p>
 
             <p class="text-gray-500 text-sm mb-3">
-              Puedes agregar una observación (opcional)
+              Puedes agregar una observacion (opcional)
             </p>
 
             <textarea id="obs" class="w-full p-2 border rounded resize-none" 
-              rows="3" placeholder="Escribe una observación (opcional)..."></textarea>
+              rows="3" placeholder="Escribe una observacion (opcional)..."></textarea>
           </div>
         `,
         showCancelButton: true,
@@ -245,20 +274,29 @@ export default function PurchasesIndex() {
         );
       } catch (error) {
         setIsCancelling(null);
-
-        Swal.fire({
-          icon: "error",
-          title: "Error",
-          text: "No se pudo anular la compra. Intenta nuevamente.",
-        });
       }
     },
     [handleCancelPurchase, router]
   );
 
-  // ✅ Deshabilitar botón "Anular" si ya está anulado
-  const isCancelDisabled = useCallback((row: IPurchase) => {
-    return row.state?.name?.toLowerCase() === "revoke";
+  const purchaseActionGuard = useCallback((row: IPurchase) => {
+    const normalizedState = normalizePurchaseState(row.state?.name);
+
+    if (normalizedState === "approved") {
+      return {};
+    }
+
+    if (normalizedState === "revoke") {
+      return {
+        disableCancel: true,
+        cancelTitle: "Compra ya anulada",
+      };
+    }
+
+    return {
+      disableCancel: true,
+      cancelTitle: "Solo puedes anular compras aprobadas",
+    };
   }, []);
 
   const memoizedDataTable = useMemo(() => {
@@ -273,8 +311,7 @@ export default function PurchasesIndex() {
         onCreate={handleCreate}
         onView={handleView}
         createButtonText="Registrar compra"
-        isCancelDisabled={isCancelDisabled}
-        disabled={isCancelling !== null}
+        actionGuard={purchaseActionGuard}
         freeze={false}
       />
     );
@@ -285,8 +322,7 @@ export default function PurchasesIndex() {
     confirmCancelPurchase,
     handleCreate,
     handleView,
-    isCancelDisabled,
-    isCancelling,
+    purchaseActionGuard,
   ]);
 
   return (
