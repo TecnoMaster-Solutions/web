@@ -19,7 +19,7 @@ export const getPurchases = async (
 
       if (!Array.isArray(data)) {
         throw new Error(
-          `Respuesta inválida del servidor. Se esperaba un arreglo, se recibió: ${typeof data}`
+          `Respuesta invalida del servidor. Se esperaba un arreglo, se recibio: ${typeof data}`
         );
       }
 
@@ -35,7 +35,7 @@ export const getPurchases = async (
       if (error?.code === "ECONNABORTED") {
         attempt++;
         if (attempt > RETRY_LIMIT) {
-          throw new Error("La petición expiró. Intente nuevamente.");
+          throw new Error("La peticion expiro. Intente nuevamente.");
         }
         continue;
       }
@@ -44,7 +44,7 @@ export const getPurchases = async (
         attempt++;
         if (attempt > RETRY_LIMIT) {
           throw new Error(
-            "Error de red al intentar cargar compras. Verifique su conexión."
+            "Error de red al intentar cargar compras. Verifique su conexion."
           );
         }
         continue;
@@ -53,7 +53,7 @@ export const getPurchases = async (
       const status = error.response.status;
 
       if (status >= 500) {
-        throw new Error(`El servidor tuvo un problema (500). Intente más tarde.`);
+        throw new Error("El servidor tuvo un problema (500). Intente mas tarde.");
       }
 
       if (status === 404) {
@@ -61,7 +61,7 @@ export const getPurchases = async (
       }
 
       if (status === 401 || status === 403) {
-        throw new Error(`No autorizado para consultar compras.`);
+        throw new Error("No autorizado para consultar compras.");
       }
 
       console.error("Error cargando compras:", error);
@@ -80,7 +80,7 @@ export const getPurchaseById = async (id: number): Promise<IPurchase> => {
     return { ...data, amount: parseFloat(data.amount) };
   } catch (error) {
     console.error("Error al obtener la compra:", error);
-    showError("Error al obtener la compra. Por favor, inténtalo de nuevo.");
+    showError("Error al obtener la compra. Por favor, intentalo de nuevo.");
     throw error;
   }
 };
@@ -91,14 +91,14 @@ export const createPurchase = async (purchase: Partial<IPurchase>) => {
     return data;
   } catch (error) {
     console.error("Error al crear la compra:", error);
-    showError("Error al crear la compra. Por favor, inténtalo de nuevo.");
+    showError("Error al crear la compra. Por favor, intentalo de nuevo.");
     throw error;
   }
 };
 
 export const cancelPurchase = async (id: number, observation?: string) => {
   try {
-    const params: any = {};
+    const params: Record<string, string> = {};
     if (observation) params.observation = observation;
 
     const { data } = await api.post(
@@ -108,9 +108,14 @@ export const cancelPurchase = async (id: number, observation?: string) => {
     );
 
     return data;
-  } catch (error) {
-    console.error("Error al anular la compra:", error);
-    showError("Error al anular la compra. Por favor, inténtalo de nuevo.");
+  } catch (error: any) {
+    const backendMessage = error?.response?.data?.message;
+    const message = Array.isArray(backendMessage)
+      ? backendMessage.join(", ")
+      : backendMessage || "Error al anular la compra. Por favor, intentalo de nuevo.";
+
+    showError(message);
+    error.message = message;
     throw error;
   }
 };

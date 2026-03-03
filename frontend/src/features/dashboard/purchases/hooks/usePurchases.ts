@@ -372,7 +372,6 @@ export function usePurchases() {
       await cancelPurchase(id, observation);
       await fetchPurchases();
     } catch (error) {
-      console.error("Error canceling purchase:", error);
       throw error;
     } finally {
       setCancelLoading(false);
