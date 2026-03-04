@@ -193,7 +193,9 @@ export async function sendPurchaseOrderNotification(
         baseURL = window.location.origin;
     } else {
         // En servidor, usar variable de entorno o URL por defecto
-        baseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+        baseURL =
+            process.env.NEXT_PUBLIC_API_URL ||
+            "https://vertecx-api-sha-09ac69f.onrender.com";
     }
     
     // Determinar si usamos el API route de Next.js o el backend externo

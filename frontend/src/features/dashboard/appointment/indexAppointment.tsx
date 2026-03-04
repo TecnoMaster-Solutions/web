@@ -8,7 +8,6 @@ import "react-big-calendar/lib/css/react-big-calendar.css";
 import { CalendarDays } from "lucide-react";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
-import { ToastContainer } from "react-toastify";
 
 import AppointmentDetailModal from "./components/AppointmentDetailCard";
 import AppointmentFilters from "./components/AppointmentFilters";
@@ -594,8 +593,6 @@ export default function IndexAppointment() {
 
   return (
     <>
-      <ToastContainer position="bottom-right" newestOnTop limit={3} style={{ zIndex: 1000000 }} />
-
       <div className="space-y-6">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-3">
