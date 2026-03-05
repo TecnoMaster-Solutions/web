@@ -82,19 +82,62 @@ function readNested(obj: unknown, ...keys: string[]) {
   return curr;
 }
 
+function listify(value: unknown): unknown[] {
+  if (Array.isArray(value)) return value;
+  if (value == null) return [];
+  return [value];
+}
+
+function toNumberList(value: unknown): number[] {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => toNumber(item))
+      .filter((id): id is number => id != null && id > 0);
+  }
+
+  if (typeof value === "string") {
+    return value
+      .split(",")
+      .map((chunk) => toNumber(chunk.trim()))
+      .filter((id): id is number => id != null && id > 0);
+  }
+
+  const one = toNumber(value);
+  return one != null && one > 0 ? [one] : [];
+}
+
 function extractOrderTechnicianIds(order: unknown): number[] {
   const rec = asRecord(order);
-  const source = rec?.technicians;
-  const list = Array.isArray(source) ? source : [];
+  const buckets = [
+    ...listify(rec?.technicians),
+    ...listify(rec?.assignedTechnicians),
+    ...listify(rec?.serviceOrderTechnicians),
+    ...listify(rec?.orderTechnicians),
+    ...listify(rec?.techniciansMap),
+    ...listify(rec?.techs),
+    ...listify(rec?.technician),
+  ];
 
-  const ids = list
-    .map((entry) => {
-      const row = asRecord(entry);
-      return toNumber(
-        row?.technicianid ?? row?.technicianId ?? row?.id ?? entry
-      );
-    })
-    .filter((id): id is number => id != null && id > 0);
+  const ids = [
+    ...toNumberList(rec?.technicianids),
+    ...toNumberList(rec?.technicianIds),
+    ...buckets
+      .map((entry) => {
+        const row = asRecord(entry);
+        return toNumber(
+          row?.technicianid ??
+            row?.technicianId ??
+            row?.serviceRequestTechniciansId ??
+            row?.serviceRequestTechniciansid ??
+            row?.id ??
+            readNested(row, "technician", "technicianid") ??
+            readNested(row, "technician", "technicianId") ??
+            readNested(row, "technician", "id") ??
+            entry
+        );
+      })
+      .filter((id): id is number => id != null && id > 0),
+  ];
 
   return Array.from(new Set(ids));
 }
@@ -102,26 +145,36 @@ function extractOrderTechnicianIds(order: unknown): number[] {
 function extractRequestTechnicianIds(request: unknown): number[] {
   const rec = asRecord(request);
   const buckets = [
-    ...(Array.isArray(rec?.technicians) ? rec.technicians : []),
-    ...(Array.isArray(rec?.assignedTechnicians) ? rec.assignedTechnicians : []),
-    ...(Array.isArray(rec?.serviceRequestTechnicians) ? rec.serviceRequestTechnicians : []),
-    ...(Array.isArray(rec?.requestTechnicians) ? rec.requestTechnicians : []),
-    ...(Array.isArray(rec?.techniciansMap) ? rec.techniciansMap : []),
+    ...listify(rec?.technicians),
+    ...listify(rec?.assignedTechnicians),
+    ...listify(rec?.serviceRequestTechnicians),
+    ...listify(rec?.requestTechnicians),
+    ...listify(rec?.techniciansMap),
+    ...listify(rec?.techs),
+    ...listify(rec?.technician),
   ];
 
-  const ids = buckets
-    .map((entry) => {
-      const row = asRecord(entry);
-      return toNumber(
-        row?.technicianid ??
-          row?.technicianId ??
-          row?.id ??
-          readNested(row, "technician", "technicianid") ??
-          readNested(row, "technician", "technicianId") ??
-          readNested(row, "technician", "id")
-      );
-    })
-    .filter((id): id is number => id != null && id > 0);
+  const ids = [
+    ...toNumberList(rec?.technicianids),
+    ...toNumberList(rec?.technicianIds),
+    ...toNumberList(rec?.technicianid),
+    ...toNumberList(rec?.technicianId),
+    ...buckets
+      .map((entry) => {
+        const row = asRecord(entry);
+        return toNumber(
+          row?.technicianid ??
+            row?.technicianId ??
+            row?.serviceRequestTechniciansId ??
+            row?.serviceRequestTechniciansid ??
+            row?.id ??
+            readNested(row, "technician", "technicianid") ??
+            readNested(row, "technician", "technicianId") ??
+            readNested(row, "technician", "id")
+        );
+      })
+      .filter((id): id is number => id != null && id > 0),
+  ];
 
   return Array.from(new Set(ids));
 }
@@ -131,8 +184,18 @@ function getOrderRange(order: unknown): TimeWindow | null {
   const stateName = readNested(rec, "state", "name") ?? rec?.statename ?? rec?.state;
   if (isCanceledState(stateName)) return null;
 
-  const startMs = parseLocalDateTimeToMs(rec?.fechainicio, rec?.horainicio);
-  const endMs = parseLocalDateTimeToMs(rec?.fechafin ?? rec?.fechainicio, rec?.horafin);
+  const startDate = rec?.fechainicio ?? rec?.fechaInicio ?? rec?.dateStart ?? rec?.startdate ?? rec?.startDate;
+  const startTime = rec?.horainicio ?? rec?.horaInicio ?? rec?.timeStart ?? rec?.starttime ?? rec?.startTime;
+  const endDate = rec?.fechafin ?? rec?.fechaFin ?? rec?.dateEnd ?? rec?.enddate ?? rec?.endDate ?? startDate;
+  const endTime = rec?.horafin ?? rec?.horaFin ?? rec?.timeEnd ?? rec?.endtime ?? rec?.endTime;
+
+  const startMs =
+    parseLocalDateTimeToMs(startDate, startTime) ??
+    parseIsoToMs(rec?.scheduledAt ?? rec?.scheduledat ?? rec?.startAt ?? rec?.startat);
+  const endMs =
+    parseLocalDateTimeToMs(endDate, endTime) ??
+    parseIsoToMs(rec?.scheduledEndAt ?? rec?.scheduledendat ?? rec?.endAt ?? rec?.endat);
+
   return normalizeRange(startMs, endMs);
 }
 
@@ -141,8 +204,19 @@ function getRequestRange(request: unknown): TimeWindow | null {
   const stateName = readNested(rec, "state", "name") ?? rec?.statename ?? rec?.state;
   if (isCanceledState(stateName)) return null;
 
-  const startMs = parseIsoToMs(rec?.scheduledAt ?? rec?.scheduledat);
-  const endMs = parseIsoToMs(rec?.scheduledEndAt ?? rec?.scheduledendat);
+  const startMs =
+    parseIsoToMs(rec?.scheduledAt ?? rec?.scheduledat ?? rec?.startAt ?? rec?.startat) ??
+    parseLocalDateTimeToMs(
+      rec?.fechaprogramada ?? rec?.fechaProgramada ?? rec?.programada,
+      rec?.horaprogramada ?? rec?.horaProgramada
+    );
+  const endMs =
+    parseIsoToMs(rec?.scheduledEndAt ?? rec?.scheduledendat ?? rec?.endAt ?? rec?.endat) ??
+    parseLocalDateTimeToMs(
+      rec?.fechafinal ?? rec?.fechaFinal ?? rec?.programada,
+      rec?.horafinal ?? rec?.horaFinal
+    );
+
   return normalizeRange(startMs, endMs);
 }
 

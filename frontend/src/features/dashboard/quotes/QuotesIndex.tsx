@@ -4,7 +4,6 @@ import React, { useEffect, useState, useCallback, useMemo } from "react";
 import Swal from "sweetalert2";
 import RequireAuth from "../../auth/requireauth";
 import { DataTable } from "../components/datatable/DataTable";
-import { ToastContainer } from "react-toastify";
 import { Column } from "../components/datatable/types/column.types";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -668,8 +667,6 @@ export default function QuotesIndex() {
   return (
     <RequireAuth>
       <div className="p-6">
-        <ToastContainer position="bottom-right" />
-
         <h1 className="text-xl font-semibold mb-4">Listado de Cotizaciones</h1>
 
         {!canViewQuotes ? (
