@@ -483,7 +483,7 @@ export default function SalesIndex() {
             <button
               onClick={handleConfirmAnnul}
               disabled={annulling}
-              className="px-4 py-2 rounded-md font-medium text-white bg-black hover:opacity-90 flex items-center gap-2"
+              className="cursor-pointer rounded-md bg-[#2a9781] px-4 py-2 font-medium text-white transition duration-300 hover:scale-105 hover:bg-[#227a69] hover:text-white disabled:cursor-not-allowed disabled:opacity-50 flex items-center gap-2"
             >
               {annulling && (
                 <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
