@@ -20,6 +20,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Debug paths
+        run: |
+          echo "Workspace: $GITHUB_WORKSPACE"
+          pwd
+          ls -la
+          echo "---- find frontend dirs ----"
+          find . -maxdepth 5 -type d \( -iname "frontend" \) -print
+          echo "---- find dockerfiles ----"
+          find . -maxdepth 6 -type f -iname "dockerfile*" -print
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -39,9 +49,12 @@ jobs:
       - name: Build and Push
         uses: docker/build-push-action@v6
         with:
-          context: ./frontend
-          file: ./frontend/Dockerfile
+          context: ./web/frontend
+          file: ./web/frontend/Dockerfile
           push: true
           tags: |
             ghcr.io/${{ steps.img.outputs.owner_lower }}/web-frontend:latest
             ghcr.io/${{ steps.img.outputs.owner_lower }}/web-frontend:${{ github.sha }}
+          build-args: |
+            CI=true
+          provenance: false
