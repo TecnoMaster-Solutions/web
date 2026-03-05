@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import PaymentResultCard from "@/features/payments/mercado-pago/components/PaymentResultCard";
 import {
@@ -12,7 +12,7 @@ import type { SalePaymentStatusResponse } from "@/features/payments/mercado-pago
 const normalizeMpParam = (value: string | null) =>
   !value || value === "null" ? null : value;
 
-export default function PagoErrorPage() {
+function PagoErrorPageContent() {
   const searchParams = useSearchParams();
   const [sale, setSale] = useState<SalePaymentStatusResponse | null>(null);
 
@@ -48,5 +48,13 @@ export default function PagoErrorPage() {
         },
       ]}
     />
+  );
+}
+
+export default function PagoErrorPage() {
+  return (
+    <Suspense fallback={<PaymentResultCard title="Pago no completado" description="Cargando..." tone="error" details={[]} />}>
+      <PagoErrorPageContent />
+    </Suspense>
   );
 }

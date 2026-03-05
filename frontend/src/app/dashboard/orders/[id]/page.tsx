@@ -1,12 +1,13 @@
 import OrderServiceDetail from "@/features/dashboard/OrdersServices/components/OrderServiceDetail";
 
 interface PageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
-export default function OrderDetailPage({ params }: PageProps) {
-  const parsedId = Number(params.id);
+export default async function OrderDetailPage({ params }: PageProps) {
+  const { id } = await params;
+  const parsedId = Number(id);
   return <OrderServiceDetail orderId={parsedId} />;
 }

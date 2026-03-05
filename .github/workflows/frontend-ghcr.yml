@@ -28,6 +28,7 @@ jobs:
           ls -la
           find . -maxdepth 4 -type d
           find . -maxdepth 4 -name Dockerfile
+          find . -maxdepth 4 -name package.json
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -74,11 +75,22 @@ jobs:
           echo "No frontend Dockerfile found in expected paths."
           exit 1
 
+      - name: Debug selected frontend build context
+        run: |
+          echo "frontend_path=${{ steps.frontend.outputs.frontend_path }}"
+          echo "context=${{ steps.frontend.outputs.context }}"
+          echo "dockerfile=${{ steps.frontend.outputs.dockerfile }}"
+          ls -la "${{ steps.frontend.outputs.context }}"
+          ls -la "${{ steps.frontend.outputs.context }}/package.json"
+          ls -la "${{ steps.frontend.outputs.dockerfile }}"
+
       - name: Build and Push
         uses: docker/build-push-action@v6
         with:
           context: ${{ steps.frontend.outputs.context }}
           file: ${{ steps.frontend.outputs.dockerfile }}
+          no-cache: true
+          pull: true
           push: true
           tags: |
             ghcr.io/${{ steps.img.outputs.owner_lower }}/web-frontend:latest

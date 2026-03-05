@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import PaymentResultCard from "@/features/payments/mercado-pago/components/PaymentResultCard";
 import {
@@ -12,7 +12,7 @@ import type { SalePaymentStatusResponse } from "@/features/payments/mercado-pago
 const normalizeMpParam = (value: string | null) =>
   !value || value === "null" ? null : value;
 
-export default function PagoPendientePage() {
+function PagoPendientePageContent() {
   const searchParams = useSearchParams();
   const [sale, setSale] = useState<SalePaymentStatusResponse | null>(null);
 
@@ -48,5 +48,13 @@ export default function PagoPendientePage() {
         },
       ]}
     />
+  );
+}
+
+export default function PagoPendientePage() {
+  return (
+    <Suspense fallback={<PaymentResultCard title="Pago pendiente" description="Cargando..." tone="pending" details={[]} />}>
+      <PagoPendientePageContent />
+    </Suspense>
   );
 }

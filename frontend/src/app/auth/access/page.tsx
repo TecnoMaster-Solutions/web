@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useLoader } from "@/shared/components/loader";
 import LoginForm from "@/features/auth/login/login";
 import RegisterForm from "@/features/auth/register/RegisterPage";
@@ -35,13 +35,15 @@ export default function AccessPage() {
         ? Volver
       </Link>
 
-      <AuthShell mode={mode}>
-        {mode === "login" ? (
-          <LoginForm onSwitch={() => setMode("register")} />
-        ) : (
-          <RegisterForm onSwitch={() => setMode("login")} />
-        )}
-      </AuthShell>
+      <Suspense fallback={<div className="min-h-screen bg-white" />}>
+        <AuthShell mode={mode}>
+          {mode === "login" ? (
+            <LoginForm onSwitch={() => setMode("register")} />
+          ) : (
+            <RegisterForm onSwitch={() => setMode("login")} />
+          )}
+        </AuthShell>
+      </Suspense>
     </>
   );
 }
