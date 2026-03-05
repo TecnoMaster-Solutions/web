@@ -4,8 +4,10 @@ on:
   push:
     branches: [ "main", "develop" ]
     paths:
+      - "frontend/**"
       - "web/frontend/**"
       - ".github/workflows/frontend-ghcr.yml"
+      - "web/.github/workflows/frontend-ghcr.yml"
   workflow_dispatch:
 
 permissions:
@@ -22,13 +24,10 @@ jobs:
 
       - name: Debug paths
         run: |
-          echo "Workspace: $GITHUB_WORKSPACE"
           pwd
           ls -la
-          echo "---- find frontend dirs ----"
-          find . -maxdepth 5 -type d \( -iname "frontend" \) -print
-          echo "---- find dockerfiles ----"
-          find . -maxdepth 6 -type f -iname "dockerfile*" -print
+          find . -maxdepth 4 -type d
+          find . -maxdepth 4 -name Dockerfile
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -46,11 +45,40 @@ jobs:
           OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           echo "owner_lower=$OWNER_LOWER" >> "$GITHUB_OUTPUT"
 
+      - name: Detect frontend path and Dockerfile
+        id: frontend
+        run: |
+          if [ -f "./web/frontend/Dockerfile" ]; then
+            echo "context=./web/frontend" >> "$GITHUB_OUTPUT"
+            echo "dockerfile=./web/frontend/Dockerfile" >> "$GITHUB_OUTPUT"
+            echo "frontend_path=web/frontend" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ -f "./frontend/Dockerfile" ]; then
+            echo "context=./frontend" >> "$GITHUB_OUTPUT"
+            echo "dockerfile=./frontend/Dockerfile" >> "$GITHUB_OUTPUT"
+            echo "frontend_path=frontend" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          DETECTED="$(find . -maxdepth 4 -type f -name Dockerfile | grep '/frontend/' | head -n 1 || true)"
+          if [ -n "$DETECTED" ]; then
+            CONTEXT_DIR="$(dirname "$DETECTED")"
+            echo "context=$CONTEXT_DIR" >> "$GITHUB_OUTPUT"
+            echo "dockerfile=$DETECTED" >> "$GITHUB_OUTPUT"
+            echo "frontend_path=${CONTEXT_DIR#./}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "No frontend Dockerfile found in expected paths."
+          exit 1
+
       - name: Build and Push
         uses: docker/build-push-action@v6
         with:
-          context: ./web/frontend
-          file: ./web/frontend/Dockerfile
+          context: ${{ steps.frontend.outputs.context }}
+          file: ${{ steps.frontend.outputs.dockerfile }}
           push: true
           tags: |
             ghcr.io/${{ steps.img.outputs.owner_lower }}/web-frontend:latest
