@@ -7,7 +7,8 @@ export function resolveAssetUrl(url?: string | null) {
   }
 
   const apiBase =
-    process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+    process.env.NEXT_PUBLIC_API_URL ||
+    "https://vertecx-api-sha-09ac69f.onrender.com";
   const normalizedBase = apiBase.replace(/\/+$/, "");
   const normalizedPath = raw.startsWith("/") ? raw : `/${raw}`;
 

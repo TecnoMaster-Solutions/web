@@ -111,6 +111,14 @@ export default function CartModal({
   onClose,
   mode = "modal",
 }: CartModalProps) {
+  const toPositiveNumber = (...values: unknown[]): number => {
+    for (const value of values) {
+      const parsed = Number(value);
+      if (Number.isFinite(parsed) && parsed > 0) return parsed;
+    }
+    return 0;
+  };
+
   const extractCustomerId = (userData: any, profileData: any): number => {
     const candidates = [
       userData?.customerid,
@@ -206,12 +214,14 @@ export default function CartModal({
     profile?.customer?.documentnumber ??
     "-";
   const customerIdForSale = extractCustomerId(user, profile);
-  const authUserId = Number(
-    authUser?.userid ??
-      (user as any)?.userid ??
-      (profile as any)?.userid ??
-      (profile as any)?.users?.userid ??
-      0
+  const authUserId = toPositiveNumber(
+    authUser?.userid,
+    (user as any)?.userid,
+    (user as any)?.id,
+    (profile as any)?.userid,
+    (profile as any)?.id,
+    (profile as any)?.users?.userid,
+    (profile as any)?.users?.id
   );
   const authUserNameLabel =
     authUser?.name ??
@@ -639,8 +649,8 @@ export default function CartModal({
 
                                   // Debe estar autenticado
                                   if (!authUserId) {
-                                    setError(
-                                      "Debes iniciar sesión para solicitar un servicio."
+                                    showError(
+                                      "Debes iniciar sesión para agendar una solicitud de servicio."
                                     );
                                     return;
                                   }
@@ -865,47 +875,45 @@ export default function CartModal({
         </div>
         </div>
       </motion.div>{" "}
-      {authUserId > 0 && (
-        <ClientCreateRequestModal
-          isOpen={openServiceModal}
-          onClose={() => {
-            setOpenServiceModal(false);
-            setPendingServiceCartItemId(null);
-            setSelectedServiceId(null);
-          }}
-          onSave={async (payload) => {
-            // Solo guardar en memoria
-            setServiceDraft(payload);
-            if (pendingServiceCartItemId) {
-              toggleService(pendingServiceCartItemId);
-            }
+      <ClientCreateRequestModal
+        isOpen={openServiceModal}
+        onClose={() => {
+          setOpenServiceModal(false);
+          setPendingServiceCartItemId(null);
+          setSelectedServiceId(null);
+        }}
+        onSave={async (payload) => {
+          // Solo guardar en memoria
+          setServiceDraft(payload);
+          if (pendingServiceCartItemId) {
+            toggleService(pendingServiceCartItemId);
+          }
 
-            showSuccess("Servicio listo. Confirma el carrito para enviarlo.");
-            setPendingServiceCartItemId(null);
-            setSelectedServiceId(null);
-            setOpenServiceModal(false);
-          }}
-          clientId={authUserId}
-          clientLabel={authUserNameLabel}
-          clientDocumentLabel={String(customerDocument || "")}
-          initialServiceId={selectedServiceId}
-          initialDireccion={fullAddress}
-          initialAddressFields={{
-            city: address.city,
-            zone: address.zone,
-            streetType: address.streetType,
-            streetNumber: address.streetNumber,
-            secondaryNumber: address.secondaryNumber,
-            complement: address.complement,
-          }}
-          onInitialAddressFieldsChange={(next) => setAddress(next)}
-          addressOptions={{
-            cities: CITIES,
-            zones: ZONES,
-            streetTypes: STREET_TYPES,
-          }}
-        />
-      )}
+          showSuccess("Servicio listo. Confirma el carrito para enviarlo.");
+          setPendingServiceCartItemId(null);
+          setSelectedServiceId(null);
+          setOpenServiceModal(false);
+        }}
+        clientId={authUserId}
+        clientLabel={authUserNameLabel}
+        clientDocumentLabel={String(customerDocument || "")}
+        initialServiceId={selectedServiceId}
+        initialDireccion={fullAddress}
+        initialAddressFields={{
+          city: address.city,
+          zone: address.zone,
+          streetType: address.streetType,
+          streetNumber: address.streetNumber,
+          secondaryNumber: address.secondaryNumber,
+          complement: address.complement,
+        }}
+        onInitialAddressFieldsChange={(next) => setAddress(next)}
+        addressOptions={{
+          cities: CITIES,
+          zones: ZONES,
+          streetTypes: STREET_TYPES,
+        }}
+      />
     </div>
   );
 }

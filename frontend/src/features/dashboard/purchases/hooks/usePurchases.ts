@@ -130,6 +130,9 @@ export function usePurchases() {
     const controller = new AbortController();
     abortRef.current = controller;
 
+    // ✅ CAMBIO MÍNIMO: cada refresh debe mostrar loader
+    setLoading(true);
+
     try {
       const data = await getPurchases(controller.signal);
       CACHE = data;
@@ -246,7 +249,6 @@ export function usePurchases() {
     }
 
     const price = parseCOP(purchasePrice);
-
     const sPrice = hasDigits(salePrice) ? parseCOP(salePrice) : autoSalePrice(price);
 
     if (price <= 0) {
@@ -327,7 +329,9 @@ export function usePurchases() {
 
     setSaving(true);
 
-    const created = form.registerDate;
+    const created = form.registerDate
+      ? new Date(`${form.registerDate}T12:00:00`).toISOString()
+      : new Date().toISOString();
 
     const productsPayload = cart.map((item) => ({
       productid: item.productid,
@@ -362,14 +366,16 @@ export function usePurchases() {
   const handleCancelPurchase = async (id: number, observation?: string) => {
     try {
       setCancelLoading(true);
+      setSaving(true);
+
       CACHE = null;
       await cancelPurchase(id, observation);
       await fetchPurchases();
     } catch (error) {
-      console.error("Error canceling purchase:", error);
       throw error;
     } finally {
       setCancelLoading(false);
+      setSaving(false);
     }
   };
 

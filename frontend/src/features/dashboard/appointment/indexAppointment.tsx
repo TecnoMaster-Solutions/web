@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Calendar, dateFnsLocalizer, type View } from "react-big-calendar";
 import { format, getDay, parse, startOfWeek } from "date-fns";
 import { es } from "date-fns/locale";
@@ -8,6 +8,7 @@ import "react-big-calendar/lib/css/react-big-calendar.css";
 import { CalendarDays } from "lucide-react";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
+import { ToastContainer } from "react-toastify";
 
 import AppointmentDetailModal from "./components/AppointmentDetailCard";
 import AppointmentFilters from "./components/AppointmentFilters";
@@ -311,6 +312,15 @@ export default function IndexAppointment() {
   const [selectedEvent, setSelectedEvent] = useState<AppointmentEvent | null>(null);
   const [modalEvent, setModalEvent] = useState<AppointmentEvent | null>(null);
   const [finalizingEventId, setFinalizingEventId] = useState<number | null>(null);
+  const finalizeToastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (finalizeToastTimeoutRef.current) {
+        clearTimeout(finalizeToastTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!filteredEvents.length) {
@@ -519,7 +529,14 @@ export default function IndexAppointment() {
         const successText = technicianWillConfirmOrder
           ? "Se registro la confirmacion del tecnico. Falta la confirmacion del cliente para finalizar la orden."
           : `Se ${verb} ${targets.join(" y ")} como ${suffix}.`;
-        showSuccess(successText);
+        setModalEvent(null);
+        if (finalizeToastTimeoutRef.current) {
+          clearTimeout(finalizeToastTimeoutRef.current);
+        }
+        finalizeToastTimeoutRef.current = setTimeout(() => {
+          showSuccess(successText);
+          finalizeToastTimeoutRef.current = null;
+        }, 250);
       } catch (err: any) {
         console.error("Error al finalizar cita:", err);
         Swal.fire(
@@ -577,6 +594,8 @@ export default function IndexAppointment() {
 
   return (
     <>
+      <ToastContainer position="bottom-right" newestOnTop limit={3} style={{ zIndex: 1000000 }} />
+
       <div className="space-y-6">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-3">

@@ -17,4 +17,9 @@ export type SupplierDTO = {
   state?: SupplierState | null;
   createat?: string;
   updateat?: string;
+  productos?: Array<{
+    productoId: number;
+    productName?: string;
+    precioUnitario: number;
+  }>;
 };

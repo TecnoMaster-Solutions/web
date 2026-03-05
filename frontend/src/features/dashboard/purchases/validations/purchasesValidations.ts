@@ -1,86 +1,111 @@
-import { IPurchase } from "@/features/dashboard/purchases/Types/Purchase.type";
+import type { IPurchase } from "@/features/dashboard/purchases/Types/Purchase.type";
 
-export interface PurchaseErrors {
-  orderNumber?: string;
-  invoiceNumber?: string;
-  supplier?: string;
-  registerDate?: string;
-  amount?: string;
-  status?: string;
-  description?: string;
-  products?: string;
-}
+export type PurchaseFormField =
+  | "orderNumber"
+  | "invoiceNumber"
+  | "supplier"
+  | "registerDate"
+  | "description"
+  | "amount"
+  | "products"
+  | "purchaseOrderId";
+
+export type PurchaseErrors = Partial<Record<PurchaseFormField, string>>;
+
+type Draft = {
+  orderNumber: string;
+  invoiceNumber: string;
+  supplier: string;
+  registerDate: string;
+  description: string; // opcional en validación
+  amount: number;
+  productsCount: number;
+  purchaseOrderId?: string;
+};
+
+const normalize = (v: unknown) => String(v ?? "").trim();
 
 export const validatePurchaseField = (
-  field: any,
-  value: any,
+  field: PurchaseFormField,
+  value: unknown,
   purchases: IPurchase[] = [],
   currentId?: number
 ): string | undefined => {
   switch (field) {
-    case "orderNumber":
-      const order = String(value).trim();
+    case "orderNumber": {
+      const order = normalize(value);
       if (!order) return "El número de orden es obligatorio";
 
-      if (
-        (purchases ?? []).some((p) => {
-          const currentOrder = p.orderNumber || p.numberoforder || ""; // ← soportar ambos
-          return (
-            currentOrder.toLowerCase() === order.toLowerCase() &&
-            p.id !== currentId
-          );
-        })
-      ) {
-        return "Ya existe una compra con este número de orden";
-      }
-      return;
+      const duplicated = (purchases ?? []).some((p) => {
+        const currentOrder = normalize((p as any).orderNumber || p.numberoforder || "");
+        const pid = (p as any).id ?? p.purchaseorderid;
+        return currentOrder.toLowerCase() === order.toLowerCase() && pid !== currentId;
+      });
 
-    case "invoiceNumber":
-      const invoice = String(value).trim();
+      if (duplicated) return "Ya existe una compra con este número de orden";
+      return;
+    }
+
+    case "invoiceNumber": {
+      const invoice = normalize(value);
       if (!invoice) return "El número de factura es obligatorio";
 
-      if (
-        (purchases ?? []).some((p) => {
-          const currentInvoice = p.invoiceNumber || p.reference || ""; // ← soportar ambos
-          return (
-            currentInvoice.toLowerCase() === invoice.toLowerCase() &&
-            p.id !== currentId
-          );
-        })
-      ) {
-        return "Ya existe una compra con este número de factura";
-      }
+      const duplicated = (purchases ?? []).some((p) => {
+        const currentInvoice = normalize((p as any).invoiceNumber || p.reference || "");
+        const pid = (p as any).id ?? p.purchaseorderid;
+        return currentInvoice.toLowerCase() === invoice.toLowerCase() && pid !== currentId;
+      });
 
+      if (duplicated) return "Ya existe una compra con este número de factura";
       return;
+    }
 
-    case "supplier":
-      if (!value) return "El proveedor es obligatorio";
+    case "supplier": {
+      const v = normalize(value);
+      if (!v) return "El proveedor es obligatorio";
+      if (Number.isNaN(Number(v)) || Number(v) <= 0) return "Proveedor inválido";
       return;
+    }
 
-    case "registerDate":
-      if (!value) return "La fecha de registro es obligatoria";
-      // Validación: que no sea una fecha futura
+    case "registerDate": {
+      const v = normalize(value);
+      if (!v) return "La fecha de registro es obligatoria";
+
       const today = new Date();
-      const dateValue = new Date(value);
-      if (dateValue > today) return "La fecha de registro no puede ser futura";
-      return;
+      const todayYMD = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
 
-    case "amount":
-      if (value === undefined || value === null || value === "")
-        return "El monto total es obligatorio";
-      const numericAmount = Number(String(value).replace(/[^\d.-]/g, ""));
-      if (isNaN(numericAmount) || numericAmount <= 0)
-        return "El monto debe ser mayor que 0";
-      return;
+      const d = new Date(v);
+      if (Number.isNaN(d.getTime())) return "Fecha inválida";
 
-    case "status":
-      if (!value) return "El estado es obligatorio";
-      if (!["Aprobado", "Anulado", "Pendiente"].includes(value))
-        return "Estado inválido";
+      const dYMD = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+      if (dYMD > todayYMD) return "La fecha de registro no puede ser futura";
       return;
+    }
 
-    case "description":
-      // Campo opcional
+    case "description": {
+      // OPCIONAL:
+      // - si viene vacío, no hay error
+      // - si el usuario escribió algo, validamos que tenga sentido mínimo
+      const v = normalize(value);
+      if (!v) return;
+      if (v.length < 3) return "Escribe una observación más clara";
+      return;
+    }
+
+    case "amount": {
+      const n = Number(value);
+      if (!Number.isFinite(n) || n <= 0) return "El monto debe ser mayor que 0";
+      return;
+    }
+
+    case "products": {
+      const n = Number(value);
+      if (!Number.isFinite(n) || n <= 0) return "Debes agregar al menos un producto al carrito";
+      return;
+    }
+
+    case "purchaseOrderId":
+      // opcional
       return;
 
     default:
@@ -88,35 +113,29 @@ export const validatePurchaseField = (
   }
 };
 
-/**
- * Valida todo el formulario de compra
- */
 export const validatePurchaseForm = (
-  data: Omit<IPurchase, "id">,
-  purchases: IPurchase[],
+  data: Draft,
+  purchases: IPurchase[] = [],
   currentId?: number
 ): PurchaseErrors => {
   const errors: PurchaseErrors = {};
 
-  const fields: any[] = [
+  const fields: PurchaseFormField[] = [
     "registerDate",
-    "status",
     "orderNumber",
     "invoiceNumber",
     "supplier",
+    // "description", // <- QUITADO porque es opcional
     "amount",
-    "description",
+    "products",
+    "purchaseOrderId",
   ];
 
-  fields.forEach((field) => {
-    const error = validatePurchaseField(
-      field as any,
-      (data as any)[field],
-      purchases ?? [],
-      currentId
-    );
-    if (error) errors[field] = error;
-  });
+  for (const f of fields) {
+    const value = f === "products" ? data.productsCount : (data as any)[f];
+    const err = validatePurchaseField(f, value, purchases, currentId);
+    if (err) errors[f] = err;
+  }
 
   return errors;
 };

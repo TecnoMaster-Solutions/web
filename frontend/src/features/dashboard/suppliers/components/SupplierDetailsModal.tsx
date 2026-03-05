@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Star,
   Mail,
@@ -10,8 +10,17 @@ import {
   Pencil,
   X,
   MapPin,
+  Package,
 } from "lucide-react";
 import Modal from "@/features/dashboard/components/Modal";
+import { getSupplierProducts } from "@/features/dashboard/suppliers/services/suppliers.service";
+
+type SupplierProduct = {
+  id: number;
+  productName: string;
+  precioUnitario: number;
+  image?: string;
+};
 
 type Supplier = {
   id?: string | number;
@@ -118,6 +127,20 @@ export default function SupplierDetailsModal({
   onToggleStatus,
   title = "Detalles del Proveedor",
 }: Props) {
+  const [products, setProducts] = useState<SupplierProduct[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+
+  // Cargar productos asociados cuando se abre el modal
+  useEffect(() => {
+    if (isOpen && supplier?.id) {
+      setLoadingProducts(true);
+      getSupplierProducts(Number(supplier.id))
+        .then((data) => setProducts(data))
+        .catch(() => setProducts([]))
+        .finally(() => setLoadingProducts(false));
+    }
+  }, [isOpen, supplier?.id]);
+
   if (!supplier) return null;
 
   return (
@@ -233,6 +256,58 @@ export default function SupplierDetailsModal({
               value={supplier.address || "—"}
               valueClassName="break-words whitespace-normal"
             />
+          </div>
+
+          {/* PRODUCTOS ASOCIADOS */}
+          <div className="mt-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Package size={14} />
+              <h4 className="text-sm font-medium text-gray-700">
+                Productos Asociados
+              </h4>
+            </div>
+            
+            {loadingProducts ? (
+              <div className="flex items-center justify-center p-4 bg-gray-50 rounded-lg">
+                <div className="w-5 h-5 border-2 border-green-600 border-t-transparent rounded-full animate-spin" />
+                <span className="ml-2 text-xs text-gray-500">Cargando productos...</span>
+              </div>
+            ) : products.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {products.map((product) => (
+                  <div
+                    key={product.id}
+                    className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg border"
+                  >
+                    {product.image ? (
+                      <img
+                        src={product.image}
+                        alt={product.productName}
+                        className="w-10 h-10 object-cover rounded"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center">
+                        <Package size={16} className="text-gray-400" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-800 truncate">
+                        {product.productName}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        ${product.precioUnitario?.toLocaleString("es-CO") ?? "0"}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-4 bg-gray-50 rounded-lg border border-dashed">
+                <p className="text-xs text-gray-500 text-center">
+                  No hay productos asociados a este proveedor
+                </p>
+              </div>
+            )}
           </div>
         </section>
       </div>

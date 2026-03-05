@@ -7,8 +7,19 @@ import { ReactNode } from "react";
 export interface PurchaseOrderItem {
   imagen?: string; // URL o base64 si luego manejas preview
   producto: string;
+  productoId?: number; // ID del producto desde product_supplier
   cantidad: number;
   precioUnitario: number;
+}
+
+/* ============================= */
+/* STATE RELATION */
+/* ============================= */
+
+export interface PurchaseOrderState {
+  stateid: number;
+  statename: string;
+  statecode?: string;
 }
 
 /* ============================= */
@@ -19,15 +30,14 @@ export interface purchaseOrder {
   id: number;
   numeroOrden: string; // Generado por backend
   proveedor: string;
+  proveedorId?: number;
   fecha: string;
-  estado: "Pendiente";
+  fechaEntrega?: string; // Nueva fecha estimada de entrega
+  estado: string;
+  state?: PurchaseOrderState; // Relación con la tabla states
   descripcion?: string;
   items: PurchaseOrderItem[];
   total: number;
-
-  // Solo para visualización si luego lo necesitas
-  fechaCreacion?: ReactNode;
-  monto?: string;
 }
 
 /* ============================= */
@@ -40,6 +50,10 @@ export interface createPurchaseOrderData {
   fecha: string;
   descripcion?: string;
   items: PurchaseOrderItem[];
+  // Datos del proveedor para notificación
+  supplierEmail?: string;
+  supplierName?: string;
+  supplierPhone?: string;
 }
 
 /* ============================= */

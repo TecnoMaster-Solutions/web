@@ -2,63 +2,105 @@
 
 import { useCallback, useMemo, useState, useEffect, useRef } from "react";
 import Swal from "sweetalert2";
-import { useRouter } from "next/navigation";
-
+import { useRouter, useSearchParams } from "next/navigation";
+import { showSuccess } from "@/shared/utils/notifications";
 import RequireAuth from "../../auth/requireauth";
 import { DataTable } from "../components/datatable/DataTable";
 import { Column } from "../components/datatable/types/column.types";
 import { usePurchases } from "./hooks/usePurchases";
-import { useLoader } from "@/shared/components/loader";
 import { IPurchase } from "./Types/Purchase.type";
+import FullScreenLoader from "@/shared/components/FullScreenLoader";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
+const normalizePurchaseState = (value?: string | null) => {
+  const normalized = String(value ?? "").trim().toLowerCase();
+
+  if (
+    normalized.includes("revoke") ||
+    normalized.includes("anul") ||
+    normalized.includes("cancel")
+  ) {
+    return "revoke";
+  }
+
+  if (normalized.includes("approved") || normalized.includes("aprob")) {
+    return "approved";
+  }
+
+  return normalized;
+};
 
 export default function PurchasesIndex() {
   const router = useRouter();
-  const purchasesHook = usePurchases();
-  const { showLoader, hideLoader } = useLoader();
+  const searchParams = useSearchParams();
 
-  const [isCancelling, setIsCancelling] = useState<number | null>(null);
+  const purchasesHook = usePurchases();
   const { fetchPurchases } = purchasesHook;
 
   const { purchases, loading, saving, handleCancelPurchase } = purchasesHook;
 
-  const initialLoadDone = useRef(false);
-  const dataLoaded = useRef(false);
+  const [isCancelling, setIsCancelling] = useState<number | null>(null);
 
+  const overlayLoading = loading || saving;
+
+  const createdToastShown = useRef(false);
+  const cancelledToastShown = useRef(false);
+
+  useEffect(() => {
+    const created = searchParams.get("created");
+    const cancelled = searchParams.get("cancelled");
+    const cancelledOrder = searchParams.get("order");
+
+    if (created === "1" && !createdToastShown.current) {
+      createdToastShown.current = true;
+
+      showSuccess("Compra registrada con exito.", { autoClose: 5000 });
+
+      const params = new URLSearchParams(window.location.search);
+      params.delete("created");
+      const newUrl =
+        params.toString().length > 0
+          ? `${window.location.pathname}?${params.toString()}`
+          : window.location.pathname;
+
+      window.history.replaceState({}, "", newUrl);
+    }
+
+    if (cancelled === "1" && !cancelledToastShown.current) {
+      cancelledToastShown.current = true;
+
+      showSuccess(
+        cancelledOrder
+          ? `Compra ${cancelledOrder} anulada correctamente.`
+          : "Compra anulada correctamente.",
+        { autoClose: 5000 }
+      );
+
+      const params = new URLSearchParams(window.location.search);
+      params.delete("cancelled");
+      params.delete("order");
+      const newUrl =
+        params.toString().length > 0
+          ? `${window.location.pathname}?${params.toString()}`
+          : window.location.pathname;
+
+      window.history.replaceState({}, "", newUrl);
+    }
+  }, [searchParams]);
+
+  const initialLoadDone = useRef(false);
   useEffect(() => {
     if (!initialLoadDone.current) {
       initialLoadDone.current = true;
-      showLoader();
-      fetchPurchases().finally(() => {
-        dataLoaded.current = true;
-      });
+      fetchPurchases();
     }
-  }, [fetchPurchases, showLoader]);
-
-  useEffect(() => {
-    if (!loading && initialLoadDone.current) {
-      const timer = setTimeout(() => {
-        if (dataLoaded.current) {
-          hideLoader();
-        }
-      }, 300);
-      return () => clearTimeout(timer);
-    }
-  }, [loading, hideLoader]);
-
-  useEffect(() => {
-    if (saving) {
-      showLoader();
-    } else {
-      if (!loading) {
-        hideLoader();
-      }
-    }
-  }, [saving, loading, showLoader, hideLoader]);
+  }, [fetchPurchases]);
 
   const columns: Column<IPurchase>[] = useMemo(
     () => [
-      { key: "numberoforder", header: "N° Orden" },
-      { key: "reference", header: "N° Factura" },
+      { key: "numberoforder", header: "N. Orden" },
+      { key: "reference", header: "N. Factura" },
       {
         key: "supplier",
         header: "Proveedor",
@@ -82,20 +124,22 @@ export default function PurchasesIndex() {
         key: "state",
         header: "Estado",
         render: (row) => {
-          const s = row.state?.name?.toLowerCase();
-          const label =
-            s === "approved"
-              ? "Aprobado"
-              : s === "revoke"
-              ? "Anulado"
-              : row.state?.name ?? "Desconocido";
+          const s = normalizePurchaseState(row.state?.name);
 
-          const cls =
-            s === "approved"
-              ? "text-green-600 font-medium"
-              : s === "revoke"
-              ? "text-green-600 font-medium"
-              : "text-gray-500 font-medium";
+          const isApproved = s === "approved";
+          const isRevoked = s === "revoke";
+
+          const label = isApproved
+            ? "Aprobado"
+            : isRevoked
+            ? "Anulado"
+            : row.state?.name ?? "Desconocido";
+
+          const cls = isApproved
+            ? "text-green-600 font-medium"
+            : isRevoked
+            ? "text-red-600 font-medium"
+            : "text-gray-500 font-medium";
 
           return <span className={cls}>{label}</span>;
         },
@@ -116,12 +160,10 @@ export default function PurchasesIndex() {
     [purchases]
   );
 
-  // Crear -> página
   const handleCreate = useCallback(() => {
     router.push("/dashboard/purchases/create");
   }, [router]);
 
-  // Ver detalle -> página dinámica
   const handleView = useCallback(
     (row: IPurchase) => {
       router.push(`/dashboard/purchases/${row.purchaseorderid}`);
@@ -143,7 +185,9 @@ export default function PurchasesIndex() {
 
   const confirmCancelPurchase = useCallback(
     async (purchase: IPurchase) => {
-      if (purchase.state?.name?.toLowerCase() === "revoke") {
+      const normalizedState = normalizePurchaseState(purchase.state?.name);
+
+      if (normalizedState === "revoke") {
         Swal.fire({
           icon: "info",
           title: "Compra ya anulada",
@@ -154,33 +198,44 @@ export default function PurchasesIndex() {
         return;
       }
 
+      if (normalizedState !== "approved") {
+        Swal.fire({
+          icon: "info",
+          title: "Compra no anulable",
+          text: `La compra #${purchase.numberoforder} solo se puede anular cuando esta aprobada.`,
+          confirmButtonText: "Aceptar",
+          confirmButtonColor: "#3085d6",
+        });
+        return;
+      }
+
       const { value: observation, isConfirmed } = await Swal.fire({
         html: `
-        <div class="flex flex-col items-center">
-          <div class="text-green-600 mb-3">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20" fill="none" 
-                viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 
-                1.732-3L13.732 4a2 2 0 00-3.464 0L3.34 
-                16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
+          <div class="flex flex-col items-center">
+            <div class="text-green-600 mb-3">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20" fill="none" 
+                  viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 
+                  1.732-3L13.732 4a2 2 0 00-3.464 0L3.34 
+                  16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+
+            <h2 class="text-xl font-semibold mb-2">Esta seguro?</h2>
+
+            <p class="text-gray-700 mb-1">
+              Desea anular la compra #${purchase.numberoforder}?
+            </p>
+
+            <p class="text-gray-500 text-sm mb-3">
+              Puedes agregar una observacion (opcional)
+            </p>
+
+            <textarea id="obs" class="w-full p-2 border rounded resize-none" 
+              rows="3" placeholder="Escribe una observacion (opcional)..."></textarea>
           </div>
-
-          <h2 class="text-xl font-semibold mb-2">¿Está seguro?</h2>
-
-          <p class="text-gray-700 mb-1">
-            ¿Desea anular la compra #${purchase.numberoforder}?
-          </p>
-
-          <p class="text-gray-500 text-sm mb-3">
-            Puedes agregar una observacón (opcional)
-          </p>
-
-          <textarea id="obs" class="w-full p-2 border rounded resize-none" 
-            rows="3" placeholder="Escribe una observación (opcional)..."></textarea>
-        </div>
-      `,
+        `,
         showCancelButton: true,
         confirmButtonText: "Confirmar",
         cancelButtonText: "Cancelar",
@@ -191,7 +246,6 @@ export default function PurchasesIndex() {
           )?.value.trim();
           return obs || undefined;
         },
-
         customClass: {
           popup: "rounded-2xl p-6",
           confirmButton:
@@ -199,7 +253,6 @@ export default function PurchasesIndex() {
           cancelButton:
             "bg-gray-200 text-gray-800 px-6 py-2 rounded-lg hover:bg-gray-300 transition mr-3",
         },
-
         buttonsStyling: false,
         width: "420px",
       });
@@ -207,45 +260,44 @@ export default function PurchasesIndex() {
       if (!isConfirmed) return;
 
       setIsCancelling(purchase.purchaseorderid);
-      showLoader();
 
       try {
         await handleCancelPurchase(purchase.purchaseorderid, observation);
 
-        Swal.fire({
-          icon: "success",
-          title: "¡Anulado!",
-          text: `La compra #${purchase.numberoforder} ha sido anulada correctamente.`,
-          timer: 2000,
-          showConfirmButton: false,
-        });
+        cancelledToastShown.current = false;
+        setIsCancelling(null);
+
+        router.push(
+          `/dashboard/purchases?cancelled=1&order=${encodeURIComponent(
+            purchase.numberoforder
+          )}`
+        );
       } catch (error) {
-        Swal.fire({
-          icon: "error",
-          title: "Error",
-          text: "No se pudo anular la compra. Intenta nuevamente.",
-        });
-      } finally {
-        setTimeout(() => {
-          hideLoader();
-          setIsCancelling(null);
-        }, 400);
+        setIsCancelling(null);
       }
     },
-    [handleCancelPurchase, showLoader, hideLoader]
+    [handleCancelPurchase, router]
   );
 
-  const isCancelDisabled = useCallback((row: IPurchase) => {
-    return row.state?.name?.toLowerCase() === "revoke";
-  }, []);
+  const purchaseActionGuard = useCallback((row: IPurchase) => {
+    const normalizedState = normalizePurchaseState(row.state?.name);
 
-  useEffect(() => {
-    return () => {
-      hideLoader();
-      initialLoadDone.current = false;
-      dataLoaded.current = false;
+    if (normalizedState === "approved") {
+      return {};
+    }
+
+    if (normalizedState === "revoke") {
+      return {
+        disableCancel: true,
+        cancelTitle: "Compra ya anulada",
+      };
+    }
+
+    return {
+      disableCancel: true,
+      cancelTitle: "Solo puedes anular compras aprobadas",
     };
-  }, [hideLoader]);
+  }, []);
 
   const memoizedDataTable = useMemo(() => {
     return (
@@ -259,8 +311,7 @@ export default function PurchasesIndex() {
         onCreate={handleCreate}
         onView={handleView}
         createButtonText="Registrar compra"
-        isCancelDisabled={isCancelDisabled}
-        disabled={isCancelling !== null}
+        actionGuard={purchaseActionGuard}
         freeze={false}
       />
     );
@@ -271,13 +322,16 @@ export default function PurchasesIndex() {
     confirmCancelPurchase,
     handleCreate,
     handleView,
-    isCancelDisabled,
-    isCancelling,
+    purchaseActionGuard,
   ]);
 
   return (
     <RequireAuth>
+      <ToastContainer position="bottom-right" />
+
       <div className="p-6">
+        <FullScreenLoader show={overlayLoading} />
+
         {(!loading || purchases.length > 0) && memoizedDataTable}
 
         {loading && purchases.length === 0 && (
