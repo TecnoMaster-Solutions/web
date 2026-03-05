@@ -1,12 +1,13 @@
 import ServiceRequestDetail from "@/features/dashboard/requests/components/ServiceRequestDetail";
 
 interface PageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
-export default function RequestDetailPage({ params }: PageProps) {
-  const parsed = Number(params.id);
+export default async function RequestDetailPage({ params }: PageProps) {
+  const { id } = await params;
+  const parsed = Number(id);
   return <ServiceRequestDetail requestId={Number.isFinite(parsed) ? parsed : NaN} />;
 }
