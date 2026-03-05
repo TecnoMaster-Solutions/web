@@ -4,7 +4,7 @@ on:
   push:
     branches: [ "main", "develop" ]
     paths:
-      - "/frontend/**"
+      - "web/frontend/**"
       - ".github/workflows/frontend-ghcr.yml"
   workflow_dispatch:
 
@@ -39,7 +39,7 @@ jobs:
       - name: Build and Push
         uses: docker/build-push-action@v6
         with:
-          context: /frontend
+          context: ./frontend
           file: ./frontend/Dockerfile
           push: true
           tags: |
