@@ -2,8 +2,8 @@ import axios, { AxiosError, AxiosHeaders, InternalAxiosRequestConfig } from "axi
 import Cookies from "js-cookie";
 
 const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ||
-  "https://vertecx-api-sha-09ac69f.onrender.com/";
+  process.env.NEXT_PUBLIC_API_URL
+  ;
 
 export const api = axios.create({
   baseURL: API_URL,
