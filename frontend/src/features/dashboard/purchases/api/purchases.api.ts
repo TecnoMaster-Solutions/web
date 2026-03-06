@@ -66,7 +66,8 @@ export const getPurchases = async (
 
       console.error("Error cargando compras:", error);
       throw new Error(
-        error?.response?.data?.message ?? "No se pudo cargar el listado de compras."
+        error?.response?.data?.message ??
+        "No se pudo cargar el listado de compras."
       );
     }
   }
@@ -89,9 +90,11 @@ export const createPurchase = async (purchase: Partial<IPurchase>) => {
   try {
     const { data } = await api.post("/purchasesmanagement", purchase);
     return data;
-  } catch (error) {
-    console.error("Error al crear la compra:", error);
-    showError("Error al crear la compra. Por favor, intentalo de nuevo.");
+  } catch (error: any) {
+    console.error("Error completo:", error);
+    console.error("STATUS:", error?.response?.status);
+    console.error("DATA:", error?.response?.data);
+    console.error("MESSAGE:", error?.response?.data?.message);
     throw error;
   }
 };
@@ -112,7 +115,8 @@ export const cancelPurchase = async (id: number, observation?: string) => {
     const backendMessage = error?.response?.data?.message;
     const message = Array.isArray(backendMessage)
       ? backendMessage.join(", ")
-      : backendMessage || "Error al anular la compra. Por favor, intentalo de nuevo.";
+      : backendMessage ||
+      "Error al anular la compra. Por favor, intentalo de nuevo.";
 
     showError(message);
     error.message = message;
@@ -138,4 +142,9 @@ export const getPurchaseOrdersForSupplier = async (
     params: { proveedorId, estadoId },
   });
   return Array.isArray(data) ? data : [];
+};
+
+export const getPurchaseOrderById = async (id: number) => {
+  const { data } = await api.get(`/purchase-orders/${id}`);
+  return data;
 };
