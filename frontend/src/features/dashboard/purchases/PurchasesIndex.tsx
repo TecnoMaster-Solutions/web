@@ -31,6 +31,23 @@ const normalizePurchaseState = (value?: string | null) => {
   return normalized;
 };
 
+const formatDateOnly = (value: any) => {
+  if (!value) return "";
+
+  if (typeof value === "string") {
+    const ymd = value.split("T")[0]; // YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(ymd)) {
+      const [y, m, d] = ymd.split("-").map(Number);
+      return `${d}/${m}/${y}`;
+    }
+  }
+
+  // fallback si viene Date o formato raro
+  const dt = new Date(value);
+  if (Number.isNaN(dt.getTime())) return "";
+  return dt.toLocaleDateString("es-CO");
+};
+
 export default function PurchasesIndex() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -97,7 +114,7 @@ export default function PurchasesIndex() {
     }
   }, [fetchPurchases]);
 
-  const columns: Column<IPurchase>[] = useMemo(
+  const columns: Column<IPurchase & { createdAtLabel?: string }>[] = useMemo(
     () => [
       { key: "numberoforder", header: "N. Orden" },
       { key: "reference", header: "N. Factura" },
@@ -109,15 +126,18 @@ export default function PurchasesIndex() {
       {
         key: "createdat",
         header: "Fecha de Registro",
-        render: (row) => new Date(row.createdat).toLocaleDateString(),
+        // ✅ CORREGIDO: no usar new Date(...).toLocaleDateString()
+        render: (row) => formatDateOnly(row.createdat),
       },
       {
         key: "amount",
         header: "Monto",
         render: (row) =>
-          row.amount.toLocaleString("es-CO", {
+          Number(row.amount || 0).toLocaleString("es-CO", {
             style: "currency",
             currency: "COP",
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
           }),
       },
       {
@@ -132,14 +152,14 @@ export default function PurchasesIndex() {
           const label = isApproved
             ? "Aprobado"
             : isRevoked
-            ? "Anulado"
-            : row.state?.name ?? "Desconocido";
+              ? "Anulado"
+              : row.state?.name ?? "Desconocido";
 
           const cls = isApproved
             ? "text-green-600 font-medium"
             : isRevoked
-            ? "text-red-600 font-medium"
-            : "text-gray-500 font-medium";
+              ? "text-red-600 font-medium"
+              : "text-gray-500 font-medium";
 
           return <span className={cls}>{label}</span>;
         },
@@ -152,6 +172,8 @@ export default function PurchasesIndex() {
     return items.map((purchase) => ({
       ...purchase,
       supplierName: purchase.supplier?.name ?? "",
+      // ✅ recomendado para buscar por fecha visible en tabla
+      createdAtLabel: formatDateOnly(purchase.createdat),
     }));
   };
 
@@ -176,7 +198,8 @@ export default function PurchasesIndex() {
       "numberoforder",
       "reference",
       "supplierName",
-      "createdat",
+      // ✅ mejor buscar por la etiqueta formateada
+      "createdAtLabel",
       "amount",
       "state",
     ],
@@ -332,16 +355,7 @@ export default function PurchasesIndex() {
       <div className="p-6">
         <FullScreenLoader show={overlayLoading} />
 
-        {(!loading || purchases.length > 0) && memoizedDataTable}
-
-        {loading && purchases.length === 0 && (
-          <div className="bg-white rounded-xl shadow-lg p-4">
-            <div className="animate-pulse space-y-4">
-              <div className="h-10 bg-gray-200 rounded"></div>
-              <div className="h-64 bg-gray-100 rounded"></div>
-            </div>
-          </div>
-        )}
+        {!loading && memoizedDataTable}
       </div>
     </RequireAuth>
   );

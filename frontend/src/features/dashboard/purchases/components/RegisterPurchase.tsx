@@ -3,14 +3,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Colors from "@/shared/theme/colors";
 import { IPurchase } from "../Types/Purchase.type";
-import { showSuccess, showWarning, showError } from "@/shared/utils/notifications";
+import { showWarning, showError } from "@/shared/utils/notifications";
 import {
   validatePurchaseForm,
   validatePurchaseField,
   type PurchaseErrors,
   type PurchaseFormField,
 } from "../validations/purchasesValidations";
-import { useLoader } from "@/shared/components/loader";
 import { PurchaseFormState } from "../hooks/usePurchases";
 
 const DEFAULT_SUPPLIER_IMAGE =
@@ -40,6 +39,30 @@ const autoSalePrice = (purchaseUnitPrice: number): number => {
   return Math.round(sale);
 };
 
+const OC_APROBADA_ID = 6;
+const OC_ANULADA_ID = 8;
+
+/**
+ * Formatea una fecha sin "corrimiento" por zona horaria.
+ * - Si viene ISO string: "2026-03-05T12:00:00.000Z" => toma "2026-03-05"
+ * - Devuelve "dd/mm/yyyy"
+ */
+const formatDateOnly = (value: any) => {
+  if (!value) return "";
+
+  if (typeof value === "string") {
+    const ymd = value.split("T")[0];
+    if (/^\d{4}-\d{2}-\d{2}$/.test(ymd)) {
+      const [y, m, d] = ymd.split("-").map(Number);
+      return `${d}/${m}/${y}`;
+    }
+  }
+
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("es-CO");
+};
+
 type CartItem = {
   productid: number;
   productname: string;
@@ -51,6 +74,7 @@ type CartItem = {
 interface Props {
   onSave: () => Promise<any>;
   onClose: (created?: boolean) => void;
+
   purchases: IPurchase[];
   fetchPurchases: () => Promise<void>;
   form: PurchaseFormState;
@@ -86,32 +110,47 @@ interface Props {
 
   purchaseOrders: any[];
   poLoading: boolean;
+
+  poDetailLoading: boolean;
+  isUsingPurchaseOrder: boolean;
 }
 
 export default function RegisterPurchaseForm({
   onSave,
   onClose,
   purchases,
-  form,
-  selectedProduct,
   fetchPurchases,
+  form,
+
+  selectedProduct,
   setSelectedProduct,
+
   quantity,
   setQuantity,
+
   purchasePrice,
   setPurchasePrice,
+
   salePrice,
   setSalePrice,
+
   cart,
   total,
-  handleChange,
-  addToCart,
+
   removeFromCart,
   updateCartItem,
+
+  handleChange,
+  addToCart,
+
   products,
   suppliers,
+
   purchaseOrders,
   poLoading,
+
+  poDetailLoading,
+  isUsingPurchaseOrder,
 }: Props) {
   const [errors, setErrors] = useState<PurchaseErrors>({});
   const [saving, setSaving] = useState(false);
@@ -119,7 +158,6 @@ export default function RegisterPurchaseForm({
   const [searchProduct, setSearchProduct] = useState("");
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
-  const { showLoader, hideLoader } = useLoader();
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const inputBase = "w-full rounded-lg border px-3 py-2 text-base shadow-sm";
@@ -127,6 +165,15 @@ export default function RegisterPurchaseForm({
   const selectBase = "w-full rounded-lg border px-3 py-2 text-base";
   const labelBase = "block text-sm font-medium mb-1";
   const labelMuted = "block text-sm font-medium text-gray-600 mb-1";
+
+  // ✅ Reglas:
+  // - Con OC: ocultar panel de agregar producto (formulario manual)
+  // - Con OC: permitir editar SOLO precio de venta en carrito
+  const disableManualProducts = isUsingPurchaseOrder || poDetailLoading;
+
+  const lockQty = isUsingPurchaseOrder || poDetailLoading;
+  const lockUnitPrice = isUsingPurchaseOrder || poDetailLoading;
+  const lockSalePrice = poDetailLoading; // ✅ con OC se puede editar saleprice (siempre que no esté cargando)
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -151,7 +198,6 @@ export default function RegisterPurchaseForm({
     });
   };
 
-  // Validar orderNumber aunque sea readOnly
   useEffect(() => {
     if (form.orderNumber !== undefined) {
       validateField("orderNumber" as any, form.orderNumber);
@@ -159,7 +205,6 @@ export default function RegisterPurchaseForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.orderNumber]);
 
-  // Validar carrito automáticamente (requerido)
   useEffect(() => {
     validateField("products" as any, cart.length);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -181,69 +226,99 @@ export default function RegisterPurchaseForm({
     );
   }, [searchProduct, products, cartProductIds]);
 
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-const handleFormSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
+    const validationErrors = validatePurchaseForm(
+      {
+        orderNumber: form.orderNumber,
+        invoiceNumber: form.invoiceNumber,
+        supplier: form.supplier,
+        registerDate: form.registerDate,
+        description: form.description,
+        amount: total,
+        productsCount: cart.length,
+        purchaseOrderId: form.purchaseOrderId,
+        purchaseOrderFinalStateId: form.purchaseOrderFinalStateId,
+      } as any,
+      purchases ?? []
+    );
 
-  const validationErrors = validatePurchaseForm(
-    {
-      orderNumber: form.orderNumber,
-      invoiceNumber: form.invoiceNumber,
-      supplier: form.supplier,
-      registerDate: form.registerDate,
-      description: form.description,
-      amount: total,
-      productsCount: cart.length,
-      purchaseOrderId: form.purchaseOrderId,
-    } as any,
-    purchases ?? []
-  );
+    if (isUsingPurchaseOrder) {
+      const fs = Number(form.purchaseOrderFinalStateId || 0);
+      if (![OC_APROBADA_ID, OC_ANULADA_ID].includes(fs)) {
+        (validationErrors as any).purchaseOrderFinalStateId =
+          "Selecciona el estado final de la OC (Aprobada o Anulada).";
+      }
+    }
 
-  setErrors(validationErrors);
+    setErrors(validationErrors);
 
-  if (Object.keys(validationErrors).length > 0) {
-    showWarning("Por favor completa los campos requeridos", { autoClose: 5000 });
-    return;
-  }
-
-  for (const item of cart) {
-    if (!item.productid) {
-      showWarning("Hay un producto inválido en el carrito.", { autoClose: 5000 });
+    if (Object.keys(validationErrors).length > 0) {
+      showWarning("Por favor completa los campos requeridos", {
+        autoClose: 5000,
+      });
       return;
     }
-    if (!Number.isFinite(item.quantity) || item.quantity <= 0) {
-      showWarning("Hay cantidades inválidas en el carrito.", { autoClose: 5000 });
-      return;
-    }
-    if (!Number.isFinite(item.unitprice) || item.unitprice <= 0) {
-      showWarning("Hay precios de compra inválidos en el carrito.", { autoClose: 5000 });
-      return;
-    }
-    if (item.saleprice !== undefined && item.saleprice < item.unitprice) {
-      showWarning(
-        `El precio de venta no puede ser menor al de compra (ID ${item.productid}).`,
-        { autoClose: 5000 }
-      );
-      return;
-    }
-  }
 
-  try {
-    setSaving(true);      
-    await onSave();        
-    await fetchPurchases(); 
-    onClose(true);         
-  } catch (error) {
-    console.error(error);
-    showError("Error al registrar la compra.");
-  } finally {
-    setSaving(false);
-  }
-};
+    if (!isUsingPurchaseOrder) {
+      for (const item of cart) {
+        if (!item.productid) {
+          showWarning("Hay un producto inválido en el carrito.", {
+            autoClose: 5000,
+          });
+          return;
+        }
+        if (!Number.isFinite(item.quantity) || item.quantity <= 0) {
+          showWarning("Hay cantidades inválidas en el carrito.", {
+            autoClose: 5000,
+          });
+          return;
+        }
+        if (!Number.isFinite(item.unitprice) || item.unitprice <= 0) {
+          showWarning("Hay precios de compra inválidos en el carrito.", {
+            autoClose: 5000,
+          });
+          return;
+        }
+        if (item.saleprice !== undefined && item.saleprice < item.unitprice) {
+          showWarning(
+            `El precio de venta no puede ser menor al de compra (ID ${item.productid}).`,
+            { autoClose: 5000 }
+          );
+          return;
+        }
+      }
+    } else {
+      for (const item of cart) {
+        if (item.saleprice !== undefined && item.saleprice < item.unitprice) {
+          showWarning(
+            `El precio de venta no puede ser menor al de compra (ID ${item.productid}).`,
+            { autoClose: 5000 }
+          );
+          return;
+        }
+      }
+    }
+
+    try {
+      setSaving(true);
+      await onSave();
+      await fetchPurchases();
+      onClose(true);
+    } catch (error) {
+      console.error(error);
+      showError("Error al registrar la compra.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const selectedSupplier = suppliers.find(
     (s) => String(s.supplierid) === String(form.supplier)
   );
+
+  const showOcFinalState = isUsingPurchaseOrder;
 
   return (
     <form
@@ -278,8 +353,9 @@ const handleFormSubmit = async (e: React.FormEvent) => {
                 validateField("registerDate", e.target.value);
               }}
               onBlur={() => validateField("registerDate", form.registerDate)}
-              className={`${inputBaseNoShadow} ${errors.registerDate ? "border-red-500" : "border-gray-300"
-                }`}
+              className={`${inputBaseNoShadow} ${
+                errors.registerDate ? "border-red-500" : "border-gray-300"
+              }`}
             />
 
             {errors.registerDate && (
@@ -296,8 +372,9 @@ const handleFormSubmit = async (e: React.FormEvent) => {
               name="orderNumber"
               value={form.orderNumber}
               readOnly
-              className={`${inputBaseNoShadow} bg-gray-100 ${errors.orderNumber ? "border-red-500" : "border-gray-300"
-                }`}
+              className={`${inputBaseNoShadow} bg-gray-100 ${
+                errors.orderNumber ? "border-red-500" : "border-gray-300"
+              }`}
             />
             {errors.orderNumber && (
               <p className="text-xs text-red-500">{errors.orderNumber}</p>
@@ -318,8 +395,9 @@ const handleFormSubmit = async (e: React.FormEvent) => {
                 validateField("invoiceNumber", e.target.value);
               }}
               onBlur={() => validateField("invoiceNumber", form.invoiceNumber)}
-              className={`${inputBaseNoShadow} ${errors.invoiceNumber ? "border-red-500" : "border-gray-300"
-                }`}
+              className={`${inputBaseNoShadow} ${
+                errors.invoiceNumber ? "border-red-500" : "border-gray-300"
+              }`}
             />
             {errors.invoiceNumber && (
               <p className="text-xs text-red-500">{errors.invoiceNumber}</p>
@@ -345,8 +423,10 @@ const handleFormSubmit = async (e: React.FormEvent) => {
                 validateField("supplier", e.target.value);
               }}
               onBlur={() => validateField("supplier", form.supplier)}
-              className={`${selectBase} ${errors.supplier ? "border-red-500" : "border-gray-300"
-                }`}
+              className={`${selectBase} ${
+                errors.supplier ? "border-red-500" : "border-gray-300"
+              }`}
+              disabled={poLoading || poDetailLoading}
             >
               <option value="">Selecciona el proveedor</option>
               {suppliers.map((s) => (
@@ -367,25 +447,32 @@ const handleFormSubmit = async (e: React.FormEvent) => {
                 name="purchaseOrderId"
                 value={form.purchaseOrderId}
                 onChange={handleChange}
-                disabled={!form.supplier || poLoading}
-                className={`${selectBase} ${!form.supplier || poLoading ? "bg-gray-100" : "bg-white"
-                  }`}
+                disabled={!form.supplier || poLoading || poDetailLoading}
+                className={`${selectBase} ${
+                  !form.supplier || poLoading || poDetailLoading
+                    ? "bg-gray-100"
+                    : "bg-white"
+                }`}
               >
                 <option value="">
                   {!form.supplier
                     ? "Selecciona primero un proveedor"
                     : poLoading
-                      ? "Cargando órdenes..."
-                      : purchaseOrders.length === 0
-                        ? "No hay órdenes pendientes para este proveedor"
-                        : "Selecciona la orden"}
+                    ? "Cargando órdenes..."
+                    : purchaseOrders.length === 0
+                    ? "No hay órdenes pendientes para este proveedor"
+                    : "Selecciona la orden (opcional)"}
                 </option>
 
-                {purchaseOrders.map((po: any) => (
-                  <option key={po.id} value={po.id}>
-                    {po.numeroOrden} — {new Date(po.fecha).toLocaleDateString()}
-                  </option>
-                ))}
+                {purchaseOrders.map((po: any) => {
+                  const dateLabel = formatDateOnly(po.fecha);
+                  return (
+                    <option key={po.id} value={po.id}>
+                      {po.numeroOrden}
+                      {dateLabel ? ` — ${dateLabel}` : ""}
+                    </option>
+                  );
+                })}
               </select>
 
               {!form.purchaseOrderId && form.supplier && !poLoading && (
@@ -393,7 +480,50 @@ const handleFormSubmit = async (e: React.FormEvent) => {
                   Solo aparecen OCs del proveedor en estado Pendiente.
                 </p>
               )}
+
+              {form.purchaseOrderId && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Al seleccionar una OC, el carrito se llena automáticamente y
+                  se bloquea la edición manual.
+                </p>
+              )}
+
+              {poDetailLoading && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Cargando detalle de la OC...
+                </p>
+              )}
             </div>
+
+            {isUsingPurchaseOrder && (
+              <div className="mt-4">
+                <label className={labelBase}>
+                  Estado final de la OC <span className="text-red-500">*</span>
+                </label>
+
+                <select
+                  name="purchaseOrderFinalStateId"
+                  value={form.purchaseOrderFinalStateId}
+                  onChange={handleChange}
+                  disabled={poDetailLoading}
+                  className={`${selectBase} ${
+                    errors.purchaseOrderFinalStateId
+                      ? "border-red-500"
+                      : "border-gray-300"
+                  }`}
+                >
+                  <option value="">Selecciona el estado final</option>
+                  <option value={String(OC_APROBADA_ID)}>Aprobada</option>
+                  <option value={String(OC_ANULADA_ID)}>Anulada</option>
+                </select>
+
+                {errors.purchaseOrderFinalStateId && (
+                  <p className="text-xs text-red-500 mt-1">
+                    {errors.purchaseOrderFinalStateId}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="lg:col-span-1">
@@ -431,7 +561,6 @@ const handleFormSubmit = async (e: React.FormEvent) => {
         </div>
       </div>
 
-      {/* ====== SECCIÓN 3: Productos (UNA sola card) ====== */}
       <div className="bg-white border rounded-lg px-5 py-4 md:px-6 md:py-5">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-base md:text-lg font-semibold">
@@ -447,164 +576,182 @@ const handleFormSubmit = async (e: React.FormEvent) => {
           <p className="text-xs text-red-500 mt-1">{errors.products}</p>
         )}
 
-        <div className="grid grid-cols-1 xl:grid-cols-5 gap-5 xl:min-h-[460px]">
-          <div className="xl:col-span-2">
-            <label className="block text-base font-medium mb-2">Producto</label>
-
-            <label className={labelMuted}>
-              Buscar o seleccionar <span className="text-red-500">*</span>
-            </label>
-
-            <div className="relative" ref={dropdownRef}>
-              <input
-                type="text"
-                placeholder="Escribe el nombre del producto"
-                className={inputBase}
-                value={
-                  selectedProduct
-                    ? products.find((p) => p.productid === Number(selectedProduct))
-                      ?.productname
-                    : searchProduct
-                }
-                onChange={(e) => {
-                  setSearchProduct(e.target.value);
-                  setSelectedProduct("");
-                  setDropdownOpen(true);
-                }}
-                onFocus={() => setDropdownOpen(true)}
-              />
-
-              {dropdownOpen && (
-                <div className="absolute top-full mt-1 w-full bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto z-50">
-                  {filteredProducts.length === 0 ? (
-                    <p className="p-3 text-base text-gray-500">
-                      No hay productos disponibles (o ya están agregados)
-                    </p>
-                  ) : (
-                    filteredProducts.map((p) => (
-                      <div
-                        key={p.productid}
-                        onClick={() => {
-                          setSelectedProduct(String(p.productid));
-                          setPurchasePrice(
-                            p.productpriceofsupplier
-                              ? String(p.productpriceofsupplier)
-                              : ""
-                          );
-                          setSalePrice("");
-                          setSearchProduct("");
-                          setDropdownOpen(false);
-                        }}
-                        className="p-2 cursor-pointer hover:bg-gray-100 text-base flex justify-between"
-                      >
-                        <span className="truncate pr-2">{p.productname}</span>
-                        <span className="text-gray-600 font-semibold">
-                          {formatCOP(p.productpriceofsupplier || 0)}
-                        </span>
-                      </div>
-                    ))
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
-              <div>
-                <label className={labelMuted}>
-                  Precio compra (unidad) <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="$ 15.000"
-                  value={
-                    hasDigits(purchasePrice)
-                      ? formatCOP(parseCOP(purchasePrice))
-                      : ""
-                  }
-                  onChange={(e) => setPurchasePrice(e.target.value)}
-                  className={inputBase}
-                />
-              </div>
-
-              <div>
-                <label className={labelMuted}>Precio venta (unidad)</label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="$ 25.000"
-                  value={hasDigits(salePrice) ? formatCOP(parseCOP(salePrice)) : ""}
-                  onChange={(e) => setSalePrice(e.target.value)}
-                  onBlur={() => {
-                    if (!hasDigits(salePrice) && hasDigits(purchasePrice)) {
-                      const price = parseCOP(purchasePrice);
-                      const auto = autoSalePrice(price);
-                      if (auto > 0) setSalePrice(String(auto));
-                    }
-                  }}
-                  className={inputBase}
-                />
-              </div>
-
-              <div className="sm:col-span-2">
-                <label className={labelMuted}>
-                  Cantidad <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  value={quantity}
-                  min={1}
-                  placeholder="0"
-                  onChange={(e) => setQuantity(Number(e.target.value))}
-                  className={inputBase}
-                />
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => {
-                if (!form.supplier) {
-                  validateField("supplier" as any, form.supplier);
-                  showWarning("Selecciona primero un proveedor.", { autoClose: 5000 });
-                  return;
-                }
-
-                if (!selectedProduct) {
-                  setErrors((prev) => ({
-                    ...prev,
-                    products: "Selecciona un producto para agregar",
-                  }));
-                  showWarning("Selecciona un producto para agregar.", { autoClose: 5000 });
-                  return;
-                }
-
-                const price = parseCOP(purchasePrice);
-                if (!price || price <= 0) {
-                  showWarning("Ingresa un precio de compra válido.", { autoClose: 5000 });
-                  return;
-                }
-
-                if (!Number.isFinite(quantity) || quantity <= 0) {
-                  showWarning("La cantidad debe ser mayor que 0.", { autoClose: 5000 });
-                  return;
-                }
-
-                addToCart();
-              }}
-              style={{ backgroundColor: Colors.buttons.primary }}
-              className="cursor-pointer mt-4 w-full px-4 py-2.5 rounded-lg text-white text-base font-medium shadow hover:scale-[1.02] transition"
-            >
-              Añadir producto +
-            </button>
+        {isUsingPurchaseOrder && (
+          <div className="mb-4 rounded-lg border bg-gray-50 px-4 py-3 text-sm text-gray-700">
+            Esta compra está asociada a una Orden de Compra. Los productos se
+            cargan desde la OC y no se pueden modificar manualmente aquí.
           </div>
+        )}
 
-          {/* Área carrito (misma card) */}
-          <div className="xl:col-span-3">
+        <div className="grid grid-cols-1 xl:grid-cols-5 gap-5 xl:min-h-[460px]">
+          {!isUsingPurchaseOrder && (
+            <div className="xl:col-span-2">
+              <label className="block text-base font-medium mb-2">
+                Producto
+              </label>
+
+              <label className={labelMuted}>
+                Buscar o seleccionar <span className="text-red-500">*</span>
+              </label>
+
+              <div className="relative" ref={dropdownRef}>
+                <input
+                  type="text"
+                  placeholder="Escribe el nombre del producto"
+                  className={inputBase}
+                  value={
+                    selectedProduct
+                      ? products.find(
+                          (p) => p.productid === Number(selectedProduct)
+                        )?.productname
+                      : searchProduct
+                  }
+                  onChange={(e) => {
+                    setSearchProduct(e.target.value);
+                    setSelectedProduct("");
+                    setDropdownOpen(true);
+                  }}
+                  onFocus={() => setDropdownOpen(true)}
+                />
+
+                {dropdownOpen && (
+                  <div className="absolute top-full mt-1 w-full bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto z-50">
+                    {filteredProducts.length === 0 ? (
+                      <p className="p-3 text-base text-gray-500">
+                        No hay productos disponibles (o ya están agregados)
+                      </p>
+                    ) : (
+                      filteredProducts.map((p) => (
+                        <div
+                          key={p.productid}
+                          onClick={() => {
+                            setSelectedProduct(String(p.productid));
+                            setPurchasePrice(
+                              p.productpriceofsupplier
+                                ? String(p.productpriceofsupplier)
+                                : ""
+                            );
+                            setSalePrice("");
+                            setSearchProduct("");
+                            setDropdownOpen(false);
+                          }}
+                          className="p-2 cursor-pointer hover:bg-gray-100 text-base flex justify-between"
+                        >
+                          <span className="truncate pr-2">{p.productname}</span>
+                          <span className="text-gray-600 font-semibold">
+                            {formatCOP(p.productpriceofsupplier || 0)}
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+                <div>
+                  <label className={labelMuted}>
+                    Precio compra (unidad) <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="$ 15.000"
+                    value={
+                      hasDigits(purchasePrice)
+                        ? formatCOP(parseCOP(purchasePrice))
+                        : ""
+                    }
+                    onChange={(e) => setPurchasePrice(e.target.value)}
+                    className={inputBase}
+                  />
+                </div>
+
+                <div>
+                  <label className={labelMuted}>Precio venta (unidad)</label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="$ 25.000"
+                    value={hasDigits(salePrice) ? formatCOP(parseCOP(salePrice)) : ""}
+                    onChange={(e) => setSalePrice(e.target.value)}
+                    onBlur={() => {
+                      if (!hasDigits(salePrice) && hasDigits(purchasePrice)) {
+                        const price = parseCOP(purchasePrice);
+                        const auto = autoSalePrice(price);
+                        if (auto > 0) setSalePrice(String(auto));
+                      }
+                    }}
+                    className={inputBase}
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className={labelMuted}>
+                    Cantidad <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={quantity}
+                    min={1}
+                    placeholder="0"
+                    onChange={(e) => setQuantity(Number(e.target.value))}
+                    className={inputBase}
+                  />
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (!form.supplier) {
+                    validateField("supplier" as any, form.supplier);
+                    showWarning("Selecciona primero un proveedor.", {
+                      autoClose: 5000,
+                    });
+                    return;
+                  }
+
+                  if (!selectedProduct) {
+                    setErrors((prev) => ({
+                      ...prev,
+                      products: "Selecciona un producto para agregar",
+                    }));
+                    showWarning("Selecciona un producto para agregar.", {
+                      autoClose: 5000,
+                    });
+                    return;
+                  }
+
+                  const price = parseCOP(purchasePrice);
+                  if (!price || price <= 0) {
+                    showWarning("Ingresa un precio de compra válido.", {
+                      autoClose: 5000,
+                    });
+                    return;
+                  }
+
+                  if (!Number.isFinite(quantity) || quantity <= 0) {
+                    showWarning("La cantidad debe ser mayor que 0.", {
+                      autoClose: 5000,
+                    });
+                    return;
+                  }
+
+                  addToCart();
+                }}
+                style={{ backgroundColor: Colors.buttons.primary }}
+                className="cursor-pointer mt-4 w-full px-4 py-2.5 rounded-lg text-white text-base font-medium shadow hover:scale-[1.02] transition"
+              >
+                Añadir producto +
+              </button>
+            </div>
+          )}
+
+          <div className={isUsingPurchaseOrder ? "xl:col-span-5" : "xl:col-span-3"}>
             <div className="flex items-center justify-between mb-2">
               <p className="text-base font-semibold text-gray-800">Carrito</p>
 
-              {/* Subtotal compra con el MISMO estilo del Subt. en ver detalle */}
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold text-green-700 bg-green-50 border border-green-200">
                 Subt. {formatCOP(total)}
               </span>
@@ -612,7 +759,9 @@ const handleFormSubmit = async (e: React.FormEvent) => {
 
             {cart.length === 0 ? (
               <div className="border rounded-lg bg-gray-50 p-4 text-base text-gray-600">
-                Agrega productos desde el panel izquierdo.
+                {isUsingPurchaseOrder
+                  ? "Esta Orden de Compra no tiene productos para cargar."
+                  : "Agrega productos desde el panel izquierdo."}
               </div>
             ) : (
               <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
@@ -628,7 +777,6 @@ const handleFormSubmit = async (e: React.FormEvent) => {
                             {item.productname}
                           </span>
 
-                          {/* Tag ID en gris claro */}
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-sm font-semibold text-gray-700 bg-gray-100 border border-gray-200 shrink-0">
                             ID {item.productid}
                           </span>
@@ -642,8 +790,17 @@ const handleFormSubmit = async (e: React.FormEvent) => {
                       <button
                         type="button"
                         onClick={() => removeFromCart(index)}
-                        className="p-2 rounded hover:bg-red-100 transition shrink-0"
-                        title="Eliminar"
+                        className={`p-2 rounded transition shrink-0 ${
+                          disableManualProducts
+                            ? "opacity-50 cursor-not-allowed"
+                            : "hover:bg-red-100"
+                        }`}
+                        title={
+                          disableManualProducts
+                            ? "Bloqueado por Orden de Compra"
+                            : "Eliminar"
+                        }
+                        disabled={disableManualProducts}
                       >
                         <img
                           src="/icons/delete.svg"
@@ -665,7 +822,10 @@ const handleFormSubmit = async (e: React.FormEvent) => {
                               quantity: Number(e.target.value),
                             })
                           }
-                          className={inputBaseNoShadow}
+                          className={`${inputBaseNoShadow} ${
+                            lockQty ? "bg-gray-100" : ""
+                          }`}
+                          disabled={lockQty}
                         />
                       </div>
 
@@ -679,7 +839,10 @@ const handleFormSubmit = async (e: React.FormEvent) => {
                             const v = parseCOP(e.target.value);
                             updateCartItem(index, { unitprice: v });
                           }}
-                          className={inputBaseNoShadow}
+                          className={`${inputBaseNoShadow} ${
+                            lockUnitPrice ? "bg-gray-100" : ""
+                          }`}
+                          disabled={lockUnitPrice}
                         />
                       </div>
 
@@ -689,7 +852,9 @@ const handleFormSubmit = async (e: React.FormEvent) => {
                           type="text"
                           inputMode="numeric"
                           value={
-                            item.saleprice === undefined ? "" : formatCOP(item.saleprice)
+                            item.saleprice === undefined
+                              ? ""
+                              : formatCOP(item.saleprice)
                           }
                           onChange={(e) =>
                             updateCartItem(index, {
@@ -698,8 +863,13 @@ const handleFormSubmit = async (e: React.FormEvent) => {
                                 : undefined,
                             })
                           }
-                          className={inputBaseNoShadow}
+                          className={`${inputBaseNoShadow} ${
+                            lockSalePrice ? "bg-gray-100" : ""
+                          }`}
+                          disabled={lockSalePrice}
+                          placeholder={isUsingPurchaseOrder ? "$ 0" : ""}
                         />
+
                         {item.saleprice !== undefined &&
                           item.saleprice < item.unitprice && (
                             <p className="text-xs text-red-500 mt-1">
@@ -708,6 +878,12 @@ const handleFormSubmit = async (e: React.FormEvent) => {
                           )}
                       </div>
                     </div>
+
+                    {isUsingPurchaseOrder && (
+                      <p className="text-xs text-gray-500 mt-2">
+                        Este ítem proviene de la OC: solo puedes editar el precio de venta.
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>
@@ -721,9 +897,7 @@ const handleFormSubmit = async (e: React.FormEvent) => {
         <textarea
           name="description"
           value={form.description}
-          onChange={(e) => {
-            handleChange(e);
-          }}
+          onChange={handleChange}
           className="w-full rounded-lg border px-3 py-2 text-base resize-none"
           rows={3}
           placeholder="Notas adicionales de la compra"
@@ -733,15 +907,17 @@ const handleFormSubmit = async (e: React.FormEvent) => {
       <div className="flex flex-col sm:flex-row justify-end gap-2">
         <button
           type="button"
-          onClick={onClose}
+          onClick={() => onClose(false)}
           className="cursor-pointer transition duration-300 hover:bg-gray-200 hover:text-black hover:scale-105 px-4 py-2.5 rounded-lg bg-gray-300 text-black text-base w-full sm:w-auto"
         >
           Cancelar
         </button>
+
         <button
           type="submit"
-          disabled={saving}
-          className="cursor-pointer transition duration-300 hover:bg-black hover:text-white hover:scale-105 px-4 py-2.5 rounded-lg bg-black text-white text-base w-full sm:w-auto"
+          disabled={saving || poDetailLoading}
+          className="cursor-pointer transition duration-300 hover:bg-black hover:text-white hover:scale-105 px-4 py-2.5 rounded-lg bg-black text-white text-base w-full sm:w-auto disabled:opacity-60 disabled:cursor-not-allowed"
+          title={poDetailLoading ? "Cargando detalle de OC..." : "Guardar"}
         >
           {saving ? "Guardando..." : "Guardar"}
         </button>
