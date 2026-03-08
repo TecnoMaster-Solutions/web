@@ -4,8 +4,7 @@ import React, { useState, useEffect, useRef, JSX } from "react";
 import { motion } from "framer-motion";
 
 import { Monitor, Camera, HardDrive, Cpu, Router } from "lucide-react";
-import { getCategories } from "@/features/dashboard/categoryProducts/connection/categoryApi";
-
+import { getCategories } from "@/features/dashboard/CategoryProducts/connection/categoryApi";
 const iconMap: Record<string, JSX.Element> = {
   monitor: <Monitor className="w-6 h-6 text-[#B20000]" />,
   camera: <Camera className="w-6 h-6 text-[#B20000]" />,
