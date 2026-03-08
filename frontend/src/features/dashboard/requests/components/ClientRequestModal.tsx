@@ -366,6 +366,7 @@ export default function ClientCreateRequestModal({
       title={title}
       isOpen={isOpen}
       onClose={onClose}
+      widthClass="md:max-w-5xl"
       footer={
         <div className="flex items-center justify-end gap-2">
           <button
@@ -388,7 +389,8 @@ export default function ClientCreateRequestModal({
         </div>
       }
     >
-      <div className="grid gap-3">
+      <div className="grid gap-2 md:grid-cols-2 md:items-start">
+        <div className="order-2 grid gap-2 md:order-1">
         {clientLabel && (
           <div className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
             <p className="text-[11px] font-medium text-gray-500">Cliente</p>
@@ -451,7 +453,9 @@ export default function ClientCreateRequestModal({
             </div>
           </div>
         )}
+        </div>
 
+        <div className="order-1 grid gap-2 md:order-2">
         <div>
           <div className="mb-1 flex items-center justify-between">
             <h3 className="text-sm font-semibold text-gray-900">
@@ -553,7 +557,7 @@ export default function ClientCreateRequestModal({
               Dirección de envío
             </p>
 
-            <select
+            <input
               value={String(initialAddressFields.city || "")}
               onChange={(e) =>
                 onInitialAddressFieldsChange({
@@ -565,18 +569,12 @@ export default function ClientCreateRequestModal({
                   complement: String(initialAddressFields.complement || ""),
                 })
               }
+              placeholder="Ciudad"
               className="w-full rounded-lg border border-gray-300 bg-white h-10 px-3 text-sm"
               disabled={saving}
-            >
-              <option value="">Ciudad</option>
-              {(addressOptions?.cities || []).map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
+            />
 
-            <select
+            <input
               value={String(initialAddressFields.zone || "")}
               onChange={(e) =>
                 onInitialAddressFieldsChange({
@@ -588,19 +586,13 @@ export default function ClientCreateRequestModal({
                   complement: String(initialAddressFields.complement || ""),
                 })
               }
+              placeholder="Zona / Barrio"
               className="w-full rounded-lg border border-gray-300 bg-white h-10 px-3 text-sm"
               disabled={saving}
-            >
-              <option value="">Zona / Barrio</option>
-              {(addressOptions?.zones || []).map((z) => (
-                <option key={z} value={z}>
-                  {z}
-                </option>
-              ))}
-            </select>
+            />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              <select
+              <input
                 value={String(initialAddressFields.streetType || "")}
                 onChange={(e) =>
                   onInitialAddressFieldsChange({
@@ -612,16 +604,10 @@ export default function ClientCreateRequestModal({
                     complement: String(initialAddressFields.complement || ""),
                   })
                 }
+                placeholder="Tipo"
                 className="w-full rounded-lg border border-gray-300 bg-white h-10 px-3 text-sm"
                 disabled={saving}
-              >
-                <option value="">Tipo</option>
-                {(addressOptions?.streetTypes || []).map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
+              />
 
               <input
                 value={String(initialAddressFields.streetNumber || "")}
@@ -732,8 +718,8 @@ export default function ClientCreateRequestModal({
             <p className="mt-1 text-xs text-red-600">{errors.description}</p>
           )}
         </div>
+        </div>
       </div>
     </Modal>
   );
 }
-

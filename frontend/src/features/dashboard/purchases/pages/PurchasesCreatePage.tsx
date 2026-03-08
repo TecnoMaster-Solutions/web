@@ -46,8 +46,11 @@ export default function PurchasesCreatePage() {
     purchaseOrders,
     poLoading,
 
-    saving, // ✅ USAR ESTE PARA EL OVERLAY NUEVO
-  } = purchasesHook;
+    saving,
+
+    poDetailLoading,
+    isUsingPurchaseOrder,
+  } = purchasesHook as any;
 
   const handleBack = () => {
     try {
@@ -62,7 +65,6 @@ export default function PurchasesCreatePage() {
     <RequireAuth>
       <ToastContainer position="bottom-right" />
 
-      {/* ✅ loader NUEVO, único */}
       <FullScreenLoader show={saving} />
 
       <div className="p-6">
@@ -131,6 +133,8 @@ export default function PurchasesCreatePage() {
           suppliers={suppliers}
           purchaseOrders={purchaseOrders}
           poLoading={poLoading}
+          poDetailLoading={!!poDetailLoading}
+          isUsingPurchaseOrder={!!isUsingPurchaseOrder}
         />
       </div>
     </RequireAuth>

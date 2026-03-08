@@ -8,7 +8,8 @@ export type PurchaseFormField =
   | "description"
   | "amount"
   | "products"
-  | "purchaseOrderId";
+  | "purchaseOrderId"
+  | "purchaseOrderFinalStateId";
 
 export type PurchaseErrors = Partial<Record<PurchaseFormField, string>>;
 
@@ -17,10 +18,12 @@ type Draft = {
   invoiceNumber: string;
   supplier: string;
   registerDate: string;
-  description: string; // opcional en validación
+  description: string;
   amount: number;
   productsCount: number;
+
   purchaseOrderId?: string;
+  purchaseOrderFinalStateId?: string;
 };
 
 const normalize = (v: unknown) => String(v ?? "").trim();
@@ -29,7 +32,8 @@ export const validatePurchaseField = (
   field: PurchaseFormField,
   value: unknown,
   purchases: IPurchase[] = [],
-  currentId?: number
+  currentId?: number,
+  draft?: Draft
 ): string | undefined => {
   switch (field) {
     case "orderNumber": {
@@ -37,9 +41,13 @@ export const validatePurchaseField = (
       if (!order) return "El número de orden es obligatorio";
 
       const duplicated = (purchases ?? []).some((p) => {
-        const currentOrder = normalize((p as any).orderNumber || p.numberoforder || "");
+        const currentOrder = normalize(
+          (p as any).orderNumber || p.numberoforder || ""
+        );
         const pid = (p as any).id ?? p.purchaseorderid;
-        return currentOrder.toLowerCase() === order.toLowerCase() && pid !== currentId;
+        return (
+          currentOrder.toLowerCase() === order.toLowerCase() && pid !== currentId
+        );
       });
 
       if (duplicated) return "Ya existe una compra con este número de orden";
@@ -51,9 +59,14 @@ export const validatePurchaseField = (
       if (!invoice) return "El número de factura es obligatorio";
 
       const duplicated = (purchases ?? []).some((p) => {
-        const currentInvoice = normalize((p as any).invoiceNumber || p.reference || "");
+        const currentInvoice = normalize(
+          (p as any).invoiceNumber || p.reference || ""
+        );
         const pid = (p as any).id ?? p.purchaseorderid;
-        return currentInvoice.toLowerCase() === invoice.toLowerCase() && pid !== currentId;
+        return (
+          currentInvoice.toLowerCase() === invoice.toLowerCase() &&
+          pid !== currentId
+        );
       });
 
       if (duplicated) return "Ya existe una compra con este número de factura";
@@ -72,7 +85,11 @@ export const validatePurchaseField = (
       if (!v) return "La fecha de registro es obligatoria";
 
       const today = new Date();
-      const todayYMD = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+      const todayYMD = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate()
+      ).getTime();
 
       const d = new Date(v);
       if (Number.isNaN(d.getTime())) return "Fecha inválida";
@@ -83,9 +100,6 @@ export const validatePurchaseField = (
     }
 
     case "description": {
-      // OPCIONAL:
-      // - si viene vacío, no hay error
-      // - si el usuario escribió algo, validamos que tenga sentido mínimo
       const v = normalize(value);
       if (!v) return;
       if (v.length < 3) return "Escribe una observación más clara";
@@ -100,13 +114,25 @@ export const validatePurchaseField = (
 
     case "products": {
       const n = Number(value);
-      if (!Number.isFinite(n) || n <= 0) return "Debes agregar al menos un producto al carrito";
+      if (!Number.isFinite(n) || n <= 0)
+        return "Debes agregar al menos un producto al carrito";
       return;
     }
 
     case "purchaseOrderId":
-      // opcional
       return;
+
+    case "purchaseOrderFinalStateId": {
+      const poId = normalize(draft?.purchaseOrderId);
+      const v = normalize(value);
+
+      if (!poId) return;
+
+      if (!v) return "Debes seleccionar el estado final de la Orden de Compra";
+      const n = Number(v);
+      if (![6, 8].includes(n)) return "Estado final inválido (solo 6 o 8)";
+      return;
+    }
 
     default:
       return;
@@ -125,15 +151,15 @@ export const validatePurchaseForm = (
     "orderNumber",
     "invoiceNumber",
     "supplier",
-    // "description", // <- QUITADO porque es opcional
     "amount",
     "products",
     "purchaseOrderId",
+    "purchaseOrderFinalStateId",
   ];
 
   for (const f of fields) {
     const value = f === "products" ? data.productsCount : (data as any)[f];
-    const err = validatePurchaseField(f, value, purchases, currentId);
+    const err = validatePurchaseField(f, value, purchases, currentId, data);
     if (err) errors[f] = err;
   }
 

@@ -480,7 +480,7 @@ export default function SalePaymentRequestsSection({
                                                     Archivo
                                                 </label>
                                                 <label className="flex w-full cursor-pointer items-center gap-3 rounded-lg border border-gray-300 bg-white p-2 text-sm text-gray-700 hover:bg-gray-50">
-                                                    <span className="rounded-md bg-black px-3 py-2 text-sm font-medium text-white">
+                                                    <span className="rounded-md bg-[#2a9781] px-3 py-2 text-sm font-medium text-white transition duration-300 hover:bg-[#227a69]">
                                                         Seleccionar archivo
                                                     </span>
                                                     <span className="truncate text-gray-500">
@@ -533,7 +533,7 @@ export default function SalePaymentRequestsSection({
                                                     type="button"
                                                     onClick={() => void submitReceipt(request.paymentRequestId)}
                                                     disabled={uploadingThisReceipt}
-                                                    className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
+                                                    className="cursor-pointer rounded-lg bg-[#2a9781] px-4 py-2 text-sm font-medium text-white transition duration-300 hover:scale-105 hover:bg-[#227a69] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                                                 >
                                                     {uploadingThisReceipt ? "Subiendo..." : request.receiptUrl ? "Reemplazar comprobante" : "Enviar comprobante"}
                                                 </button>
@@ -615,15 +615,15 @@ export default function SalePaymentRequestsSection({
                                                     type="button"
                                                     onClick={() => void submitReject(request.paymentRequestId)}
                                                     disabled={savingThisReview}
-                                                    className="rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                                    className="relative overflow-hidden rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 transition-all duration-300 before:absolute before:inset-y-0 before:left-0 before:w-0 before:bg-red-500 before:transition-all before:duration-300 before:content-[''] hover:border-red-500 hover:text-white hover:before:w-full disabled:cursor-not-allowed disabled:opacity-50"
                                                 >
-                                                    Rechazar
+                                                    <span className="relative z-10">Rechazar</span>
                                                 </button>
                                                 <button
                                                     type="button"
                                                     onClick={() => void submitApproval(request.paymentRequestId)}
                                                     disabled={savingThisReview}
-                                                    className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
+                                                    className="cursor-pointer rounded-lg bg-[#2a9781] px-4 py-2 text-sm font-medium text-white transition duration-300 hover:scale-105 hover:bg-[#227a69] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                                                 >
                                                     {savingThisReview ? "Procesando..." : "Aprobar y registrar pago"}
                                                 </button>
@@ -639,6 +639,3 @@ export default function SalePaymentRequestsSection({
         </div>
     );
 }
-
-
-
