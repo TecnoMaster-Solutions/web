@@ -1,4 +1,7 @@
-const API_URL = "http://localhost:3001/dashboard";
+const API_URL = `${
+  process.env.NEXT_PUBLIC_API_URL ||
+  "https://vertecx-api-sha-09ac69f.onrender.com"
+}/dashboard`;
 
 const buildUrl = (path: string, year?: number) => {
   if (!year) return path;

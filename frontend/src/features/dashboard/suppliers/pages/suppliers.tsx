@@ -29,9 +29,6 @@ import {
   showWarning,
 } from "@/shared/utils/notifications";
 
-import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-
 type Row = {
   id: number;
   name: string;
@@ -290,7 +287,6 @@ export default function SuppliersPage() {
   return (
     <RequireAuth>
       <main className="flex-1 flex flex-col bg-gray-100 relative">
-        <ToastContainer position="bottom-right" className="z-[10000]" />
         {busy && <Loader />}
 
         {error ? (

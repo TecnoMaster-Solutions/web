@@ -3,12 +3,33 @@ export interface IState {
   name: string;
 }
 
+export interface IPurchaseOrderDetail {
+  id?: number;
+  ordenCompraId?: number;
+  productoId: number | null;
+  cantidad: number;
+  precioUnitario: number;
+  subtotal?: number;
+  producto?: {
+    productid: number;
+    productname: string;
+    image?: string;
+    productpriceofsupplier?: number;
+    productpriceofsale?: number;
+  };
+}
+
 export interface IPurchaseOrder {
   id: number;
   numeroOrden: string;
   proveedorId: number;
   estadoId: number;
-  fecha: string;
+
+  fecha?: string;
+  fechaCreacion?: string;
+  fechaEstimadaEntrega?: string;
+
+  detalles?: IPurchaseOrderDetail[];
 }
 
 export interface IPurchase {
@@ -23,9 +44,10 @@ export interface IPurchase {
 
   observation?: string;
 
-
   purchaseOrderId?: number | null;
   purchaseOrder?: IPurchaseOrder | null;
+
+  purchaseOrderFinalStateId?: number;
 
   supplier?: {
     supplierid: number;

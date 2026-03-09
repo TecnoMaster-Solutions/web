@@ -25,7 +25,6 @@ import {
   splitDateTime,
   toLocalDateTimeValue,
 } from "@/features/dashboard/requests/utils/schedule";
-import { ToastContainer } from "react-toastify";
 import { showError, showSuccess } from "@/shared/utils/notifications";
 import DownloadXLSXButton from "@/features/dashboard/components/DownloadXLSXButton";
 import { useRequestStates } from "@/features/dashboard/requests/hooks/useRequestStates";
@@ -851,7 +850,6 @@ export default function ServiceRequestsPage() {
     <RequireAuth>
       <div className="relative" style={{ paddingLeft: isDesktop ? sidebarW : 0 }}>
         <main className="min-h-[100dvh] bg-gray-100 relative">
-        <ToastContainer position="bottom-right" />
         {busy && <Loader />}
 
         {error ? (

@@ -13,6 +13,41 @@ import FullScreenLoader from "@/shared/components/FullScreenLoader";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
+const normalizePurchaseState = (value?: string | null) => {
+  const normalized = String(value ?? "").trim().toLowerCase();
+
+  if (
+    normalized.includes("revoke") ||
+    normalized.includes("anul") ||
+    normalized.includes("cancel")
+  ) {
+    return "revoke";
+  }
+
+  if (normalized.includes("approved") || normalized.includes("aprob")) {
+    return "approved";
+  }
+
+  return normalized;
+};
+
+const formatDateOnly = (value: any) => {
+  if (!value) return "";
+
+  if (typeof value === "string") {
+    const ymd = value.split("T")[0]; // YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(ymd)) {
+      const [y, m, d] = ymd.split("-").map(Number);
+      return `${d}/${m}/${y}`;
+    }
+  }
+
+  // fallback si viene Date o formato raro
+  const dt = new Date(value);
+  if (Number.isNaN(dt.getTime())) return "";
+  return dt.toLocaleDateString("es-CO");
+};
+
 export default function PurchasesIndex() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -37,7 +72,7 @@ export default function PurchasesIndex() {
     if (created === "1" && !createdToastShown.current) {
       createdToastShown.current = true;
 
-      showSuccess("Compra registrada con éxito.", { autoClose: 5000 });
+      showSuccess("Compra registrada con exito.", { autoClose: 5000 });
 
       const params = new URLSearchParams(window.location.search);
       params.delete("created");
@@ -79,10 +114,10 @@ export default function PurchasesIndex() {
     }
   }, [fetchPurchases]);
 
-  const columns: Column<IPurchase>[] = useMemo(
+  const columns: Column<IPurchase & { createdAtLabel?: string }>[] = useMemo(
     () => [
-      { key: "numberoforder", header: "N° Orden" },
-      { key: "reference", header: "N° Factura" },
+      { key: "numberoforder", header: "N. Orden" },
+      { key: "reference", header: "N. Factura" },
       {
         key: "supplier",
         header: "Proveedor",
@@ -91,38 +126,40 @@ export default function PurchasesIndex() {
       {
         key: "createdat",
         header: "Fecha de Registro",
-        render: (row) => new Date(row.createdat).toLocaleDateString(),
+        // ✅ CORREGIDO: no usar new Date(...).toLocaleDateString()
+        render: (row) => formatDateOnly(row.createdat),
       },
       {
         key: "amount",
         header: "Monto",
         render: (row) =>
-          row.amount.toLocaleString("es-CO", {
+          Number(row.amount || 0).toLocaleString("es-CO", {
             style: "currency",
             currency: "COP",
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
           }),
       },
       {
         key: "state",
         header: "Estado",
         render: (row) => {
-          const s = row.state?.name?.toLowerCase();
+          const s = normalizePurchaseState(row.state?.name);
 
           const isApproved = s === "approved";
-          const isRevoked = s === "revoke"; // anulado/inactivo
+          const isRevoked = s === "revoke";
 
           const label = isApproved
             ? "Aprobado"
             : isRevoked
-            ? "Anulado"
-            : row.state?.name ?? "Desconocido";
+              ? "Anulado"
+              : row.state?.name ?? "Desconocido";
 
-          // ✅ Aprobado en verde, Anulado en rojo
           const cls = isApproved
             ? "text-green-600 font-medium"
             : isRevoked
-            ? "text-red-600 font-medium"
-            : "text-gray-500 font-medium";
+              ? "text-red-600 font-medium"
+              : "text-gray-500 font-medium";
 
           return <span className={cls}>{label}</span>;
         },
@@ -135,6 +172,8 @@ export default function PurchasesIndex() {
     return items.map((purchase) => ({
       ...purchase,
       supplierName: purchase.supplier?.name ?? "",
+      // ✅ recomendado para buscar por fecha visible en tabla
+      createdAtLabel: formatDateOnly(purchase.createdat),
     }));
   };
 
@@ -159,7 +198,8 @@ export default function PurchasesIndex() {
       "numberoforder",
       "reference",
       "supplierName",
-      "createdat",
+      // ✅ mejor buscar por la etiqueta formateada
+      "createdAtLabel",
       "amount",
       "state",
     ],
@@ -168,12 +208,24 @@ export default function PurchasesIndex() {
 
   const confirmCancelPurchase = useCallback(
     async (purchase: IPurchase) => {
-      // ✅ Si ya está anulado, no permitir y mostrar info
-      if (purchase.state?.name?.toLowerCase() === "revoke") {
+      const normalizedState = normalizePurchaseState(purchase.state?.name);
+
+      if (normalizedState === "revoke") {
         Swal.fire({
           icon: "info",
           title: "Compra ya anulada",
-          text: `La compra #${purchase.numberoforder} ya está anulada.`,
+          text: `La compra #${purchase.numberoforder} ya esta anulada.`,
+          confirmButtonText: "Aceptar",
+          confirmButtonColor: "#3085d6",
+        });
+        return;
+      }
+
+      if (normalizedState !== "approved") {
+        Swal.fire({
+          icon: "info",
+          title: "Compra no anulable",
+          text: `La compra #${purchase.numberoforder} solo se puede anular cuando esta aprobada.`,
           confirmButtonText: "Aceptar",
           confirmButtonColor: "#3085d6",
         });
@@ -193,18 +245,18 @@ export default function PurchasesIndex() {
               </svg>
             </div>
 
-            <h2 class="text-xl font-semibold mb-2">¿Está seguro?</h2>
+            <h2 class="text-xl font-semibold mb-2">Esta seguro?</h2>
 
             <p class="text-gray-700 mb-1">
-              ¿Desea anular la compra #${purchase.numberoforder}?
+              Desea anular la compra #${purchase.numberoforder}?
             </p>
 
             <p class="text-gray-500 text-sm mb-3">
-              Puedes agregar una observación (opcional)
+              Puedes agregar una observacion (opcional)
             </p>
 
             <textarea id="obs" class="w-full p-2 border rounded resize-none" 
-              rows="3" placeholder="Escribe una observación (opcional)..."></textarea>
+              rows="3" placeholder="Escribe una observacion (opcional)..."></textarea>
           </div>
         `,
         showCancelButton: true,
@@ -245,20 +297,29 @@ export default function PurchasesIndex() {
         );
       } catch (error) {
         setIsCancelling(null);
-
-        Swal.fire({
-          icon: "error",
-          title: "Error",
-          text: "No se pudo anular la compra. Intenta nuevamente.",
-        });
       }
     },
     [handleCancelPurchase, router]
   );
 
-  // ✅ Deshabilitar botón "Anular" si ya está anulado
-  const isCancelDisabled = useCallback((row: IPurchase) => {
-    return row.state?.name?.toLowerCase() === "revoke";
+  const purchaseActionGuard = useCallback((row: IPurchase) => {
+    const normalizedState = normalizePurchaseState(row.state?.name);
+
+    if (normalizedState === "approved") {
+      return {};
+    }
+
+    if (normalizedState === "revoke") {
+      return {
+        disableCancel: true,
+        cancelTitle: "Compra ya anulada",
+      };
+    }
+
+    return {
+      disableCancel: true,
+      cancelTitle: "Solo puedes anular compras aprobadas",
+    };
   }, []);
 
   const memoizedDataTable = useMemo(() => {
@@ -273,8 +334,7 @@ export default function PurchasesIndex() {
         onCreate={handleCreate}
         onView={handleView}
         createButtonText="Registrar compra"
-        isCancelDisabled={isCancelDisabled}
-        disabled={isCancelling !== null}
+        actionGuard={purchaseActionGuard}
         freeze={false}
       />
     );
@@ -285,8 +345,7 @@ export default function PurchasesIndex() {
     confirmCancelPurchase,
     handleCreate,
     handleView,
-    isCancelDisabled,
-    isCancelling,
+    purchaseActionGuard,
   ]);
 
   return (
@@ -296,16 +355,7 @@ export default function PurchasesIndex() {
       <div className="p-6">
         <FullScreenLoader show={overlayLoading} />
 
-        {(!loading || purchases.length > 0) && memoizedDataTable}
-
-        {loading && purchases.length === 0 && (
-          <div className="bg-white rounded-xl shadow-lg p-4">
-            <div className="animate-pulse space-y-4">
-              <div className="h-10 bg-gray-200 rounded"></div>
-              <div className="h-64 bg-gray-100 rounded"></div>
-            </div>
-          </div>
-        )}
+        {!loading && memoizedDataTable}
       </div>
     </RequireAuth>
   );

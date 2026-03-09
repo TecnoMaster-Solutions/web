@@ -191,7 +191,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                 }}
               />
               {errors.documentnumber && touched.documentnumber && (
-                <span className="text-green-500 text-xs mt-1">
+                <span className="text-red-500 text-xs mt-1">
                   {errors.documentnumber}
                 </span>
               )}
@@ -224,7 +224,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
               }}
             />
             {errors.name && touched.name && (
-              <span className="text-green-500 text-xs mt-1">{errors.name}</span>
+              <span className="text-red-500 text-xs mt-1">{errors.name}</span>
             )}
           </div>
 
@@ -248,7 +248,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                 }}
               />
               {errors.lastname && touched.lastname && (
-                <span className="text-green-500 text-xs mt-1">
+                <span className="text-red-500 text-xs mt-1">
                   {errors.lastname}
                 </span>
               )}
@@ -278,7 +278,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
               }}
             />
             {errors.phone && touched.phone && (
-              <span className="text-green-500 text-xs mt-1">{errors.phone}</span>
+              <span className="text-red-500 text-xs mt-1">{errors.phone}</span>
             )}
           </div>
 
@@ -301,7 +301,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
               }}
             />
             {errors.email && touched.email && (
-              <span className="text-green-500 text-xs mt-1">{errors.email}</span>
+              <span className="text-red-500 text-xs mt-1">{errors.email}</span>
             )}
           </div>
         </div>
@@ -343,7 +343,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
             )}
           </select>
           {errors.roleid && touched.roleid && (
-            <span className="text-green-500 text-xs mt-1">
+            <span className="text-red-500 text-xs mt-1">
               {errors.roleid}
             </span>
           )}
@@ -367,7 +367,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
             <option value={2}>Inactivo</option>
           </select>
           {errors.stateid && touched.stateid && (
-            <span className="text-green-500 text-xs mt-1">{errors.stateid}</span>
+            <span className="text-red-500 text-xs mt-1">{errors.stateid}</span>
           )}
         </div>
 
@@ -423,7 +423,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                 )}
               </div>
               {errors.CV && touched.CV && (
-                <span className="text-green-500 text-xs mt-1">{errors.CV}</span>
+                <span className="text-red-500 text-xs mt-1">{errors.CV}</span>
               )}
             </div>
 
@@ -469,7 +469,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                     })}
                   </div>
                   {errors.techniciantypeids && touched.techniciantypeids && (
-                    <span className="text-green-500 text-xs mt-1">
+                    <span className="text-red-500 text-xs mt-1">
                       {errors.techniciantypeids}
                     </span>
                   )}
@@ -504,7 +504,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                 }}
               />
               {errors.customercity && touched.customercity && (
-                <span className="text-green-500 text-xs mt-1">
+                <span className="text-red-500 text-xs mt-1">
                   {errors.customercity}
                 </span>
               )}
@@ -531,7 +531,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                 }}
               />
               {errors.customerzipcode && touched.customerzipcode && (
-                <span className="text-green-500 text-xs mt-1">
+                <span className="text-red-500 text-xs mt-1">
                   {errors.customerzipcode}
                 </span>
               )}

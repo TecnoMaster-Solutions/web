@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import React, { useMemo, useState, useCallback, useEffect, useRef } from "react";
+import { ChevronDown } from "lucide-react";
 import Colors from "@/shared/theme/colors";
 import { SearchIcon } from "./icons/SearchIcon";
 import { PlusIcon } from "./icons/PlusIcon";
@@ -100,10 +101,11 @@ const DataTableComponent = <T extends { [key: string]: any }>(
   const { canView, canCreate, canUpdate, canDelete } = usePermissions();
 
   const [q, setQ] = useState("");
-  const [pageSizeOption, setPageSizeOption] = useState<string | number>("");
+  const [pageSizeOption, setPageSizeOption] = useState<string | number>(5);
   const [pageSize, setPageSize] = useState<number>(5);
   const [page, setPage] = useState(1);
   const [scrollTop, setScrollTop] = useState(0);
+  const [animateCells, setAnimateCells] = useState(true);
 
   const isMounted = useRef(false);
 
@@ -120,6 +122,12 @@ const DataTableComponent = <T extends { [key: string]: any }>(
     // setPageSizeOption(defaultPageSize);
     // setPage(1);
   }, [defaultPageSize]);
+
+  useEffect(() => {
+    if (loading) return;
+    const timer = setTimeout(() => setAnimateCells(false), 450);
+    return () => clearTimeout(timer);
+  }, [loading, pageSize, page]);
 
   const normalizeText = useCallback((value: unknown): string => {
     return String(value ?? "")
@@ -300,7 +308,10 @@ const DataTableComponent = <T extends { [key: string]: any }>(
   }, [filtered, page, pageSize]);
 
   const goTo = useCallback(
-    (p: number) => setPage(Math.min(Math.max(p, 1), totalPages)),
+    (p: number) => {
+      setAnimateCells(true);
+      setPage(Math.min(Math.max(p, 1), totalPages));
+    },
     [totalPages]
   );
 
@@ -365,6 +376,7 @@ const DataTableComponent = <T extends { [key: string]: any }>(
               colIndex={colIndex}
               header={String(c.header ?? "")}
               width={c.width}
+              animateOnMount={animateCells}
               className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm"
             >
               <div className="truncate" title={String((row as any)[c.key])}>
@@ -374,7 +386,12 @@ const DataTableComponent = <T extends { [key: string]: any }>(
           ))}
 
           {showActionsColumn && (
-            <OptimizedTd header="Acciones" width={ACTIONS_COL_WIDTH} className="min-w-[230px] whitespace-nowrap">
+            <OptimizedTd
+              header="Acciones"
+              width={ACTIONS_COL_WIDTH}
+              animateOnMount={animateCells}
+              className="min-w-[230px] whitespace-nowrap"
+            >
               {renderActions ? (
                 renderActions(row)
               ) : (
@@ -394,7 +411,11 @@ const DataTableComponent = <T extends { [key: string]: any }>(
           )}
 
           {renderTail && (
-            <OptimizedTd header={tailHeader ?? "Imprimir"} className="text-center">
+            <OptimizedTd
+              header={tailHeader ?? "Imprimir"}
+              animateOnMount={animateCells}
+              className="text-center"
+            >
               {renderTail(row)}
             </OptimizedTd>
           )}
@@ -532,35 +553,34 @@ const DataTableComponent = <T extends { [key: string]: any }>(
                   setPage(1);
                 }}
                 placeholder={searchPlaceholder}
-                className="w-full rounded-full bg-white px-9 py-2 text-sm shadow-sm border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent"
+                className="w-full rounded-full bg-white px-9 py-2 text-sm shadow-sm border border-gray-200 transition-colors hover:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-500"
               />
             </div>
 
-            <div className="flex items-center gap-2">
-              <select
-                value={pageSizeOption}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  if (value === "") {
-                    setPageSizeOption("");
-                    setPageSize(5);
-                  } else {
-                    const num = Number(value);
+            <div className="ml-2 flex items-center gap-2">
+              <span className="text-sm text-[#506176]">Mostrar</span>
+              <div className="relative">
+                <select
+                  value={pageSizeOption}
+                  onChange={(e) => {
+                    const num = Number(e.target.value);
+                    setAnimateCells(true);
                     setPageSizeOption(num);
                     setPageSize(num);
-                  }
-                  setPage(1);
-                }}
-                className="rounded-md border border-gray-300 px-2 py-1 text-sm focus:ring-2 focus:ring-green-400"
-              >
-                <option value="">Mostrar</option>
-                <option value={8}>8</option>
-                <option value={10}>10</option>
-                <option value={15}>15</option>
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-              </select>
+                    setPage(1);
+                  }}
+                  className="h-10 w-16 appearance-none rounded-lg bg-white pl-3 pr-7 text-sm text-[#172B4D] border border-gray-200 transition-colors hover:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-500"
+                >
+                  <option value={5}>5</option>
+                  <option value={8}>8</option>
+                  <option value={10}>10</option>
+                  <option value={15}>15</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6B7A90]" />
+              </div>
             </div>
           </div>
         )}
@@ -689,4 +709,3 @@ export const DataTable = React.memo(
     );
   }
 ) as typeof DataTableComponent;
-

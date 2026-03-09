@@ -180,6 +180,7 @@ export interface IReviewSalePaymentRequestDto {
 export interface IUploadSalePaymentReceiptDto {
     receiptReference?: string;
     receiptNotes?: string;
+    receiptUrl?: string;
     file: File | null;
 }
 

@@ -1,4 +1,5 @@
 import { apiClient } from "@/shared/utils/apiClient";
+import { uploadFile } from "@/shared/services/uploadFile";
 import {
     ISale,
     ISalesPayment,
@@ -186,20 +187,21 @@ export async function uploadSalePaymentReceipt(
     paymentRequestId: number,
     data: IUploadSalePaymentReceiptDto
 ): Promise<ISalePaymentRequest> {
-    const formData = new FormData();
+    if (!data.file) {
+        throw new Error("Debes adjuntar un archivo.");
+    }
 
-    if (data.receiptReference) formData.append("receiptReference", data.receiptReference);
-    if (data.receiptNotes) formData.append("receiptNotes", data.receiptNotes);
-    if (data.file) formData.append("file", data.file);
+    const receiptUrl = await uploadFile(data.file);
+    if (!receiptUrl) {
+        throw new Error("No se pudo subir el comprobante a Cloudinary.");
+    }
 
     return apiClient.post<ISalePaymentRequest>(
         `/sales/my-payment-requests/${paymentRequestId}/receipt`,
-        formData,
         {
-            headers: {
-                "Content-Type": "multipart/form-data",
-            },
-        }
+            receiptReference: data.receiptReference,
+            receiptNotes: data.receiptNotes,
+            receiptUrl,
+        },
     );
 }
-

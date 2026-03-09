@@ -1,7 +1,16 @@
 import axios, { AxiosError, AxiosHeaders, InternalAxiosRequestConfig } from "axios";
 import Cookies from "js-cookie";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/";
+console.log("API URL:", process.env.NEXT_PUBLIC_API_URL);
+
+if (!process.env.NEXT_PUBLIC_API_URL) {
+  throw new Error("NEXT_PUBLIC_API_URL is not defined");
+}
+
+const API_URL = (
+  process.env.NEXT_PUBLIC_API_URL ||
+  "https://vertecx-api-sha-09ac69f.onrender.com"
+).replace(/\/+$/, "");
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -87,7 +96,7 @@ async function refreshAccessToken(): Promise<string> {
   if (!rt) throw new Error("NO_REFRESH_TOKEN");
 
   const { data } = await axios.post<TokensResponse>(
-    `${API_URL}auth/refresh`,
+    `${API_URL}/auth/refresh`,
     { refresh_token: rt },
     {
       withCredentials: true,

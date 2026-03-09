@@ -6,26 +6,15 @@ import { getQueryClient } from "@/lib/react-query";
 import { AuthProvider } from "@/features/auth/authcontext";
 import { CartProvider } from "@/features/landing/contexts/CartContext";
 import { LoaderProvider } from "@/shared/components/loader";
-import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
 import PendingToastListener from "@/shared/components/PendingToastListener";
+import NotificationsRoot from "@/shared/components/NotificationsRoot";
 
 export default function AppProviders({ children }: { children: ReactNode }) {
   const qc = getQueryClient();
 
   return (
     <QueryClientProvider client={qc}>
-      <ToastContainer
-        position="bottom-right"
-        autoClose={3000}
-        hideProgressBar={false}
-        closeOnClick
-        pauseOnHover
-        draggable
-        newestOnTop
-        limit={3}
-        style={{ zIndex: 999999 }}
-      />
+      <NotificationsRoot />
 
       <PendingToastListener />
 

@@ -32,7 +32,6 @@ function createTransporter() {
   const port = parseInt(process.env.SMTP_PORT || "587");
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
-  const from = process.env.SMTP_FROM || process.env.SMTP_USER;
 
   // Si no hay configuración SMTP, usar modo simulación
   if (!user || !pass) {
@@ -62,13 +61,13 @@ async function sendEmailNotification(
 
     // Si no hay transporter configurado, simular envío
     if (!transporter) {
-      // Simulación: solo registrar en consola
       console.log("========== CORREO ELECTRÓNICO (SIMULADO) ==========");
       console.log("Para:", to);
       console.log("Asunto:", subject);
       console.log("Contenido disponible en la consola anterior");
       console.log("=====================================================");
-      return true;
+      // No marcar como enviado: evita falsos positivos en UI.
+      return false;
     }
 
     const from = process.env.SMTP_FROM || process.env.SMTP_USER;
@@ -99,25 +98,9 @@ async function sendWhatsAppNotification(
     console.log("Mensaje:", message);
     console.log("============================================");
     
-    // En un ambiente real, aquí integrarías con la API de WhatsApp
-    // usando Meta Cloud API, Twilio, o algún otro proveedor
-    /*
-    const response = await fetch(`https://graph.facebook.com/v17.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        messaging_product: 'whatsapp',
-        to: phone,
-        type: 'text',
-        text: { body: message }
-      })
-    });
-    */
-    
-    return true;
+    // Aún no hay integración real activa en este endpoint.
+    // Evitamos reportar envío exitoso para no mostrar falsos positivos.
+    return false;
   } catch (error) {
     console.error("Error enviando WhatsApp:", error);
     return false;
@@ -298,4 +281,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

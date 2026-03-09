@@ -1,8 +1,9 @@
 "use client";
-import { X, ChevronUp, ChevronDown } from "lucide-react";
+import { X, ChevronUp, ChevronDown, Eye } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { useRouter } from "next/navigation";
 import { useCart } from "../contexts/CartContext";
 import ClientCreateRequestModal from "@/features/dashboard/requests/components/ClientRequestModal";
 import { useCreateServiceRequest } from "@/features/dashboard/requests/hooks/useServiceRequests";
@@ -111,6 +112,15 @@ export default function CartModal({
   onClose,
   mode = "modal",
 }: CartModalProps) {
+  const router = useRouter();
+  const toPositiveNumber = (...values: unknown[]): number => {
+    for (const value of values) {
+      const parsed = Number(value);
+      if (Number.isFinite(parsed) && parsed > 0) return parsed;
+    }
+    return 0;
+  };
+
   const extractCustomerId = (userData: any, profileData: any): number => {
     const candidates = [
       userData?.customerid,
@@ -206,12 +216,14 @@ export default function CartModal({
     profile?.customer?.documentnumber ??
     "-";
   const customerIdForSale = extractCustomerId(user, profile);
-  const authUserId = Number(
-    authUser?.userid ??
-      (user as any)?.userid ??
-      (profile as any)?.userid ??
-      (profile as any)?.users?.userid ??
-      0
+  const authUserId = toPositiveNumber(
+    authUser?.userid,
+    (user as any)?.userid,
+    (user as any)?.id,
+    (profile as any)?.userid,
+    (profile as any)?.id,
+    (profile as any)?.users?.userid,
+    (profile as any)?.users?.id
   );
   const authUserNameLabel =
     authUser?.name ??
@@ -639,8 +651,8 @@ export default function CartModal({
 
                                   // Debe estar autenticado
                                   if (!authUserId) {
-                                    setError(
-                                      "Debes iniciar sesión para solicitar un servicio."
+                                    showError(
+                                      "Debes iniciar sesión para agendar una solicitud de servicio."
                                     );
                                     return;
                                   }
@@ -684,21 +696,36 @@ export default function CartModal({
                               )}
                             </td>
                             <td className="p-3 text-center">
-                              <button
-                                className="cursor-pointer"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  removeFromCart(item.id);
-                                }}
-                              >
-                                <Image
-                                  src="/assets/imgs/Boton_medio.png"
-                                  alt="Eliminar"
-                                  width={28}
-                                  height={28}
-                                  className=" transition hover:scale-110 hover:bg-red-300/60 rounded"
-                                />
-                              </button>
+                              <div className="flex items-center justify-center gap-2">
+                                <button
+                                  type="button"
+                                  title="Ver detalle del producto"
+                                  aria-label="Ver detalle del producto"
+                                  className="cursor-pointer p-1.5 rounded border border-gray-300 text-gray-700 transition duration-200 hover:scale-110 hover:text-green-600 hover:border-green-500 hover:bg-green-50"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    router.push(`/landing/products/${item.id}`);
+                                  }}
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </button>
+
+                                <button
+                                  className="cursor-pointer"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    removeFromCart(item.id);
+                                  }}
+                                >
+                                  <Image
+                                    src="/assets/imgs/Boton_medio.png"
+                                    alt="Eliminar"
+                                    width={28}
+                                    height={28}
+                                    className=" transition hover:scale-110 hover:bg-red-300/60 rounded"
+                                  />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         </tbody>
@@ -865,47 +892,45 @@ export default function CartModal({
         </div>
         </div>
       </motion.div>{" "}
-      {authUserId > 0 && (
-        <ClientCreateRequestModal
-          isOpen={openServiceModal}
-          onClose={() => {
-            setOpenServiceModal(false);
-            setPendingServiceCartItemId(null);
-            setSelectedServiceId(null);
-          }}
-          onSave={async (payload) => {
-            // Solo guardar en memoria
-            setServiceDraft(payload);
-            if (pendingServiceCartItemId) {
-              toggleService(pendingServiceCartItemId);
-            }
+      <ClientCreateRequestModal
+        isOpen={openServiceModal}
+        onClose={() => {
+          setOpenServiceModal(false);
+          setPendingServiceCartItemId(null);
+          setSelectedServiceId(null);
+        }}
+        onSave={async (payload) => {
+          // Solo guardar en memoria
+          setServiceDraft(payload);
+          if (pendingServiceCartItemId) {
+            toggleService(pendingServiceCartItemId);
+          }
 
-            showSuccess("Servicio listo. Confirma el carrito para enviarlo.");
-            setPendingServiceCartItemId(null);
-            setSelectedServiceId(null);
-            setOpenServiceModal(false);
-          }}
-          clientId={authUserId}
-          clientLabel={authUserNameLabel}
-          clientDocumentLabel={String(customerDocument || "")}
-          initialServiceId={selectedServiceId}
-          initialDireccion={fullAddress}
-          initialAddressFields={{
-            city: address.city,
-            zone: address.zone,
-            streetType: address.streetType,
-            streetNumber: address.streetNumber,
-            secondaryNumber: address.secondaryNumber,
-            complement: address.complement,
-          }}
-          onInitialAddressFieldsChange={(next) => setAddress(next)}
-          addressOptions={{
-            cities: CITIES,
-            zones: ZONES,
-            streetTypes: STREET_TYPES,
-          }}
-        />
-      )}
+          showSuccess("Servicio listo. Confirma el carrito para enviarlo.");
+          setPendingServiceCartItemId(null);
+          setSelectedServiceId(null);
+          setOpenServiceModal(false);
+        }}
+        clientId={authUserId}
+        clientLabel={authUserNameLabel}
+        clientDocumentLabel={String(customerDocument || "")}
+        initialServiceId={selectedServiceId}
+        initialDireccion={fullAddress}
+        initialAddressFields={{
+          city: address.city,
+          zone: address.zone,
+          streetType: address.streetType,
+          streetNumber: address.streetNumber,
+          secondaryNumber: address.secondaryNumber,
+          complement: address.complement,
+        }}
+        onInitialAddressFieldsChange={(next) => setAddress(next)}
+        addressOptions={{
+          cities: CITIES,
+          zones: ZONES,
+          streetTypes: STREET_TYPES,
+        }}
+      />
     </div>
   );
 }

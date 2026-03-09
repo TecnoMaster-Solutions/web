@@ -14,14 +14,43 @@ const formatCOP = (value: any) =>
   Number(value || 0).toLocaleString("es-CO", {
     style: "currency",
     currency: "COP",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   });
+
+/**
+ * Evita el corrimiento de fecha por zona horaria:
+ * - Si viene ISO string: "2026-03-05T12:00:00.000Z" => toma "2026-03-05"
+ * - Devuelve "dd/mm/yyyy"
+ */
+const formatDateOnly = (value: string | Date | null | undefined) => {
+  if (!value) return "";
+
+  if (typeof value === "string") {
+    const ymd = value.split("T")[0]; // YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(ymd)) {
+      const [y, m, d] = ymd.split("-").map(Number);
+      return `${d}/${m}/${y}`;
+    }
+  }
+
+  // Fallback por si viene Date u otro formato
+  const dt = new Date(value);
+  if (Number.isNaN(dt.getTime())) return "";
+  // Nota: este fallback sí puede aplicar TZ, pero solo se usa si no viene ISO normal
+  return dt.toLocaleDateString("es-CO");
+};
 
 export default function ViewPurchase({ purchase }: ViewPurchaseProps) {
   const products = purchase.purchaseProducts ?? [];
 
   const statusLabel = useMemo(() => {
     const s = purchase.state?.name?.toLowerCase();
-    return s === "approved" ? "Aprobada" : s === "revoke" ? "Anulada" : "Desconocido";
+    return s === "approved"
+      ? "Aprobada"
+      : s === "revoke"
+      ? "Anulada"
+      : "Desconocido";
   }, [purchase.state?.name]);
 
   const statusClass = useMemo(() => {
@@ -29,8 +58,8 @@ export default function ViewPurchase({ purchase }: ViewPurchaseProps) {
     return s === "approved"
       ? "text-green-600 font-medium"
       : s === "revoke"
-        ? "text-red-600 font-medium"
-        : "text-gray-600 font-medium";
+      ? "text-red-600 font-medium"
+      : "text-gray-600 font-medium";
   }, [purchase.state?.name]);
 
   return (
@@ -53,7 +82,9 @@ export default function ViewPurchase({ purchase }: ViewPurchaseProps) {
           <Field label="N° Factura" value={purchase.reference ?? ""} />
 
           <div>
-            <label className="block text-sm font-medium text-gray-600">Estado</label>
+            <label className="block text-sm font-medium text-gray-600">
+              Estado
+            </label>
             <input
               type="text"
               value={statusLabel}
@@ -62,13 +93,10 @@ export default function ViewPurchase({ purchase }: ViewPurchaseProps) {
             />
           </div>
 
-          <Field
-            label="Fecha Registro"
-            value={purchase.createdat ? new Date(purchase.createdat).toLocaleDateString() : ""}
-          />
+          <Field label="Fecha Registro" value={formatDateOnly(purchase.createdat as any)} />
           <Field
             label="Fecha Actualización"
-            value={purchase.updatedat ? new Date(purchase.updatedat).toLocaleDateString() : ""}
+            value={formatDateOnly(purchase.updatedat as any)}
           />
 
           <Field
@@ -77,13 +105,17 @@ export default function ViewPurchase({ purchase }: ViewPurchaseProps) {
               purchase.purchaseOrder?.numeroOrden
                 ? purchase.purchaseOrder.numeroOrden
                 : purchase.purchaseOrderId
-                  ? String(purchase.purchaseOrderId)
-                  : "No aplica"
+                ? String(purchase.purchaseOrderId)
+                : "No aplica"
             }
           />
 
           <div className="lg:col-span-4">
-            <Field label="Observación" value={purchase.observation || "Sin observación"} multiline />
+            <Field
+              label="Observación"
+              value={purchase.observation || "Sin observación"}
+              multiline
+            />
           </div>
         </div>
       </div>
@@ -97,7 +129,10 @@ export default function ViewPurchase({ purchase }: ViewPurchaseProps) {
           <Field label="Teléfono" value={purchase.supplier?.phone ?? ""} />
           <Field label="Email" value={purchase.supplier?.email ?? ""} />
           <Field label="Dirección" value={purchase.supplier?.address ?? ""} />
-          <Field label="Persona de Contacto" value={purchase.supplier?.contactname ?? ""} />
+          <Field
+            label="Persona de Contacto"
+            value={purchase.supplier?.contactname ?? ""}
+          />
         </div>
       </div>
 
@@ -125,7 +160,6 @@ export default function ViewPurchase({ purchase }: ViewPurchaseProps) {
                   className="border rounded-lg bg-gray-50 p-4 shadow-sm hover:shadow-md transition"
                 >
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                    {/* Left: imagen + nombre */}
                     <div className="flex items-start gap-3 min-w-0 flex-1">
                       <div className="w-14 h-14 rounded-md bg-white border overflow-hidden flex items-center justify-center shrink-0">
                         <Image
@@ -164,7 +198,8 @@ export default function ViewPurchase({ purchase }: ViewPurchaseProps) {
                         <Chip label={`Cant. ${item.quantity}`} />
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold text-green-700 bg-green-50 border border-green-200">
                           Subt. {formatCOP(item.subtotal)}
-                        </span>                      </div>
+                        </span>
+                      </div>
 
                       <div className="mt-2 flex flex-wrap gap-2 lg:justify-end">
                         <Chip label={`Prov. ${formatCOP(proveedor)}`} />
@@ -217,8 +252,9 @@ function Field({
 function Chip({ label, strong }: { label: string; strong?: boolean }) {
   return (
     <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs border bg-white ${strong ? "text-gray-900 font-semibold" : "text-gray-700"
-        }`}
+      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs border bg-white ${
+        strong ? "text-gray-900 font-semibold" : "text-gray-700"
+      }`}
     >
       {label}
     </span>
