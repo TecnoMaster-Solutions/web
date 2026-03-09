@@ -4,6 +4,16 @@ export type DataTableProps<T> = {
   data: T[];
   columns: Column<T>[];
   pageSize?: number;
+  showPageSizeSelector?: boolean;
+  serverPagination?: {
+    page: number;
+    totalPages: number;
+    onPageChange: (page: number) => void;
+  };
+  serverSearch?: {
+    value: string;
+    onChange: (value: string) => void;
+  };
   searchableKeys?: (keyof T)[];
   actionGuard?: (row: T) => {
     disableEdit?: boolean;

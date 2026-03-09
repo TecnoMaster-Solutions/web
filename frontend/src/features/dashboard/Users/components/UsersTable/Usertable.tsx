@@ -18,6 +18,13 @@ const mapStateIdToLabel = (stateid: number): string => {
 
 export const UsersTable: React.FC<UsersTableProps> = ({
   users,
+  loading,
+  currentPage,
+  totalPages,
+  pageSize,
+  search,
+  onPageChange,
+  onSearchChange,
   onView,
   onEdit,
   onDelete,
@@ -25,7 +32,7 @@ export const UsersTable: React.FC<UsersTableProps> = ({
 }) => {
   const usersForTable: UserForTable[] = users.map((u, index) => ({
     ...u,
-    rowNumber: index + 1,
+    rowNumber: (currentPage - 1) * pageSize + index + 1,
     stateLabel: mapStateIdToLabel(u.stateid),
     stateSearch: u.stateid === 1 ? "activo" : "inactivo",
     fullNameSearch: `${u.name ?? ""} ${u.lastname ?? ""}`.toLowerCase().trim(),
@@ -109,7 +116,17 @@ export const UsersTable: React.FC<UsersTableProps> = ({
       module="users"
       data={usersForTable}
       columns={columns}
-      pageSize={10}
+      pageSize={pageSize}
+      showPageSizeSelector={false}
+      serverPagination={{
+        page: currentPage,
+        totalPages,
+        onPageChange,
+      }}
+      serverSearch={{
+        value: search,
+        onChange: onSearchChange,
+      }}
       searchableKeys={[
         "name",
         "fullNameSearch",
@@ -128,6 +145,7 @@ export const UsersTable: React.FC<UsersTableProps> = ({
       actionGuard={actionGuard}
       searchPlaceholder="Buscar por nombre, correo, documento o teléfono…"
       createButtonText="Crear Usuario"
+      loading={loading}
     />
 
   );

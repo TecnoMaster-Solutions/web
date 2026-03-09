@@ -1,31 +1,95 @@
 import { api } from "@/shared/utils/apiClient";
 import { showError } from "@/shared/utils/notifications";
-import { Category, CreateCategoryData, EditCategoryData } from "../types/typeCategoryProducts";
+import {
+  Category,
+  CategoriesPaginatedResult,
+  CreateCategoryData,
+  EditCategoryData,
+} from "../types/typeCategoryProducts";
 
 const RETRY_LIMIT = 2;
 
-// Obtener todas las categorías
-export const getCategories = async (signal?: AbortSignal): Promise<Category[]> => {
+type GetCategoriesParams = {
+  signal?: AbortSignal;
+  page?: number;
+  limit?: number;
+  search?: string;
+};
+
+// Obtener categorias (paginado opcional)
+export function getCategories(): Promise<Category[]>;
+export function getCategories(
+  params: GetCategoriesParams,
+): Promise<Category[] | CategoriesPaginatedResult>;
+export async function getCategories({
+  signal,
+  page,
+  limit,
+  search,
+}: GetCategoriesParams = {}): Promise<Category[] | CategoriesPaginatedResult> {
   let attempt = 0;
+  const shouldPaginate = Number.isInteger(page) && Number.isInteger(limit);
 
   while (attempt <= RETRY_LIMIT) {
     try {
       const { data } = await api.get("/products-categories", {
+        params: shouldPaginate
+          ? {
+              page,
+              limit,
+              ...(search?.trim() ? { search: search.trim() } : {}),
+            }
+          : undefined,
         signal,
         timeout: 5000,
         validateStatus: (s) => s >= 200 && s < 500,
       });
 
-      if (!Array.isArray(data)) {
-        throw new Error(`Respuesta inválida del servidor. Se esperaba un arreglo y llegó: ${typeof data}`);
+      if (Array.isArray(data)) {
+        return data.map((c: any) => ({
+          ...c,
+          status: Boolean(c.status),
+        }));
       }
 
-      return data.map((c: any) => ({
-        ...c,
-        status: Boolean(c.status),
-      }));
+      if (
+        data &&
+        typeof data === "object" &&
+        Array.isArray(data.data) &&
+        data.meta &&
+        typeof data.meta === "object"
+      ) {
+        return {
+          data: data.data.map((c: any) => ({
+            ...c,
+            status: Boolean(c.status),
+          })),
+          meta: {
+            page: Number(data.meta.page ?? 1),
+            limit: Number(data.meta.limit ?? limit ?? 5),
+            total: Number(data.meta.total ?? data.data.length),
+            totalPages: Number(data.meta.totalPages ?? 1),
+          },
+        };
+      }
+
+      throw new Error(
+        `Respuesta invalida del servidor. Formato no reconocido: ${typeof data}`,
+      );
     } catch (error: any) {
-      if (error?.name === "CanceledError" || error?.code === "ERR_CANCELED") return [];
+      if (error?.name === "CanceledError" || error?.code === "ERR_CANCELED") {
+        return shouldPaginate
+          ? {
+              data: [],
+              meta: {
+                page: page ?? 1,
+                limit: limit ?? 5,
+                total: 0,
+                totalPages: 1,
+              },
+            }
+          : [];
+      }
 
       if (typeof error?.message === "string" && !error?.response && !error?.code) {
         throw error;
@@ -33,48 +97,80 @@ export const getCategories = async (signal?: AbortSignal): Promise<Category[]> =
 
       if (error?.code === "ECONNABORTED") {
         attempt++;
-        if (attempt > RETRY_LIMIT) throw new Error("La petición expiró. Intente nuevamente.");
+        if (attempt > RETRY_LIMIT) {
+          throw new Error("La peticion expiro. Intente nuevamente.");
+        }
         continue;
       }
 
       if (!error.response) {
         attempt++;
-        if (attempt > RETRY_LIMIT) throw new Error("Error de red al cargar categorías.");
+        if (attempt > RETRY_LIMIT) {
+          throw new Error("Error de red al cargar categorias.");
+        }
         continue;
       }
 
       const status = error.response.status;
 
-      if (status >= 500) throw new Error("El servidor tuvo un problema (500). Intente más tarde.");
-      if (status === 404) return [];
-      if (status === 401 || status === 403) throw new Error("No autorizado para consultar categorías.");
+      if (status >= 500) {
+        throw new Error("El servidor tuvo un problema (500). Intente mas tarde.");
+      }
+
+      if (status === 404) {
+        return shouldPaginate
+          ? {
+              data: [],
+              meta: {
+                page: page ?? 1,
+                limit: limit ?? 5,
+                total: 0,
+                totalPages: 1,
+              },
+            }
+          : [];
+      }
+
+      if (status === 401 || status === 403) {
+        throw new Error("No autorizado para consultar categorias.");
+      }
 
       throw new Error(
-        error?.response?.data?.message ?? "No se pudo cargar el listado de categorías."
+        error?.response?.data?.message ?? "No se pudo cargar el listado de categorias.",
       );
     }
   }
 
-  return [];
-};
+  return shouldPaginate
+    ? {
+        data: [],
+        meta: {
+          page: page ?? 1,
+          limit: limit ?? 5,
+          total: 0,
+          totalPages: 1,
+        },
+      }
+    : [];
+}
 
-// Obtener categoría por ID
+// Obtener categoria por ID
 export const getCategoryById = async (id: number): Promise<Category> => {
   try {
     const { data } = await api.get(`/products-categories/${id}`);
     return data;
   } catch (error) {
-    console.error("Error al obtener categoría:", error);
-    showError("No se pudo obtener la categoría.");
+    console.error("Error al obtener categoria:", error);
+    showError("No se pudo obtener la categoria.");
     throw error;
   }
 };
 
-// Crear categoría
+// Crear categoria
 export const createCategory = async (category: CreateCategoryData) => {
   try {
     if (!category.name.trim()) {
-      showError("El nombre de la categoría es obligatorio.");
+      showError("El nombre de la categoria es obligatorio.");
       throw new Error("Nombre requerido");
     }
 
@@ -87,13 +183,13 @@ export const createCategory = async (category: CreateCategoryData) => {
 
     return data;
   } catch (error: any) {
-    console.error("Error al crear categoría:", error);
-    showError(error?.response?.data?.message ?? "No se pudo crear la categoría.");
+    console.error("Error al crear categoria:", error);
+    showError(error?.response?.data?.message ?? "No se pudo crear la categoria.");
     throw error;
   }
 };
 
-// Actualizar categoría
+// Actualizar categoria
 export const updateCategory = async (id: number, category: EditCategoryData) => {
   let attempt = 0;
 
@@ -110,19 +206,21 @@ export const updateCategory = async (id: number, category: EditCategoryData) => 
     } catch (error: any) {
       if (error?.code === "ECONNABORTED") {
         attempt++;
-        if (attempt > RETRY_LIMIT) throw new Error("El servidor tardó demasiado. Intente nuevamente.");
+        if (attempt > RETRY_LIMIT) {
+          throw new Error("El servidor tardo demasiado. Intente nuevamente.");
+        }
         continue;
       }
 
       const message = error?.response?.data?.message;
-      console.error("Error al actualizar categoría:", error);
-      showError(message ?? "Error al actualizar la categoría.");
+      console.error("Error al actualizar categoria:", error);
+      showError(message ?? "Error al actualizar la categoria.");
       throw error;
     }
   }
 };
 
-// Eliminar categoría
+// Eliminar categoria
 export const deleteCategory = async (id: number) => {
   let attempt = 0;
 
@@ -135,24 +233,27 @@ export const deleteCategory = async (id: number) => {
     } catch (error: any) {
       if (!error.response) {
         attempt++;
-        if (attempt > RETRY_LIMIT) throw new Error("Error de red eliminando categoría.");
+        if (attempt > RETRY_LIMIT) {
+          throw new Error("Error de red eliminando categoria.");
+        }
         continue;
       }
 
       const status = error.response.status;
 
       if (status === 409 || status === 400) {
-        // categoría con productos asociados
         throw new Error(
           error.response.data?.message ??
-            "No se puede eliminar la categoría porque tiene productos asociados."
+            "No se puede eliminar la categoria porque tiene productos asociados.",
         );
       }
 
-      if (status >= 500) throw new Error("El servidor tuvo un error al eliminar la categoría.");
+      if (status >= 500) {
+        throw new Error("El servidor tuvo un error al eliminar la categoria.");
+      }
 
       const msg = error.response.data?.message;
-      showError(msg ?? "Error al eliminar la categoría.");
+      showError(msg ?? "Error al eliminar la categoria.");
       throw error;
     }
   }

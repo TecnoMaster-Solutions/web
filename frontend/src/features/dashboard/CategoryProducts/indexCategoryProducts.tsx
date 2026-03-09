@@ -19,12 +19,17 @@ function Loader() {
   );
 }
 
-
 export default function CategoriesPage() {
   const {
     categories,
+    pagedCategories,
     categoryProductCounts,
+    initialLoading,
     loading,
+    currentPage,
+    totalPages,
+    pageSize,
+    search,
     isCreateModalOpen,
     setIsCreateModalOpen,
     editingCategory,
@@ -34,20 +39,22 @@ export default function CategoriesPage() {
     handleView,
     handleEdit,
     handleDeleteCategory,
+    handlePageChange,
+    handleSearchChange,
     closeModals,
   } = useCategories();
 
   const columns: Column<Category>[] = [
-    { key: "rowNumber", header: "ID" },
+    { key: "id", header: "ID" },
     { key: "name", header: "Nombre" },
     {
       key: "description",
-      header: "Descripción",
+      header: "Descripcion",
       render: (row: Category) => {
         const desc =
           row.description && row.description.trim() !== ""
             ? row.description
-            : "No hay descripción";
+            : "No hay descripcion";
 
         const maxLength = 60;
         const truncated =
@@ -59,10 +66,9 @@ export default function CategoriesPage() {
             className="flex justify-center items-center text-center w-full h-full"
           >
             <span
-              className={`block max-w-[250px] truncate ${desc === "No hay descripción"
-                  ? "text-gray-400 italic"
-                  : "text-gray-700"
-                }`}
+              className={`block max-w-[250px] truncate ${
+                desc === "No hay descripcion" ? "text-gray-400 italic" : "text-gray-700"
+              }`}
             >
               {truncated}
             </span>
@@ -70,7 +76,6 @@ export default function CategoriesPage() {
         );
       },
     },
-
     {
       key: "status",
       header: "Estado",
@@ -78,9 +83,7 @@ export default function CategoriesPage() {
         <span
           className="rounded-full px-2 py-0.5 text-xs font-medium"
           style={{
-            color: row.status
-              ? Colors.states.success
-              : Colors.states.inactive,
+            color: row.status ? Colors.states.success : Colors.states.inactive,
           }}
         >
           {row.status ? "Activo" : "Inactivo"}
@@ -89,7 +92,7 @@ export default function CategoriesPage() {
     },
   ];
 
-  const categoriesWithCounts = categories.map((category) => ({
+  const categoriesWithCounts = pagedCategories.map((category) => ({
     ...category,
     productsCount: categoryProductCounts[category.id] ?? 0,
   }));
@@ -98,7 +101,7 @@ export default function CategoriesPage() {
     .sort((a, b) => a.id - b.id)
     .map((c, index) => ({
       ...c,
-      rowNumber: index + 1,
+      rowNumber: (currentPage - 1) * pageSize + index + 1,
       statusSearch: c.status ? "activo" : "inactivo",
     }));
 
@@ -110,16 +113,14 @@ export default function CategoriesPage() {
 
     const deleteTitle =
       count === 1
-        ? "No se puede eliminar: la categoría tiene 1 producto asociado"
-        : `No se puede eliminar: la categoría tiene ${count} productos asociados`;
+        ? "No se puede eliminar: la categoria tiene 1 producto asociado"
+        : `No se puede eliminar: la categoria tiene ${count} productos asociados`;
 
     return {
       disableDelete: true,
       deleteTitle,
     };
   }, []);
-
-
 
   return (
     <div className="min-h-screen flex">
@@ -139,8 +140,6 @@ export default function CategoriesPage() {
       <div className="flex-1 flex flex-col">
         <main className="flex-1 flex flex-col">
           <div className="flex-1 px-6 py-6">
-
-            {/* Modal de Crear Categoría */}
             <CreateCategoryModal
               isOpen={isCreateModalOpen}
               onClose={() => setIsCreateModalOpen(false)}
@@ -148,7 +147,6 @@ export default function CategoriesPage() {
               categories={categories}
             />
 
-            {/* Modal de Editar Categoría */}
             <EditCategoryModal
               isOpen={!!editingCategory}
               category={editingCategory}
@@ -161,29 +159,39 @@ export default function CategoriesPage() {
               categories={categories}
             />
 
-            {/* Modal de Ver Categoría */}
             <ViewCategoryModal
               isOpen={!!viewingCategory}
               category={viewingCategory}
               onClose={closeModals}
             />
 
-            {loading ? (
+            {initialLoading ? (
               <Loader />
             ) : (
               <DataTable<Category>
                 module="categories"
                 data={categoriesForTable}
                 columns={columns}
-                pageSize={10}
+                pageSize={pageSize}
+                showPageSizeSelector={false}
+                serverPagination={{
+                  page: currentPage,
+                  totalPages,
+                  onPageChange: handlePageChange,
+                }}
+                serverSearch={{
+                  value: search,
+                  onChange: handleSearchChange,
+                }}
                 searchableKeys={["id", "name", "description", "statusSearch"]}
                 onCreate={() => setIsCreateModalOpen(true)}
-                createButtonText="Crear Categoría"
-                searchPlaceholder="Buscar categorías..."
+                createButtonText="Crear Categoria"
+                searchPlaceholder="Buscar categorias..."
                 onView={handleView}
                 onEdit={handleEdit}
                 onDelete={handleDeleteCategory}
                 actionGuard={categoryActionGuard}
+                loading={loading}
               />
             )}
           </div>
@@ -192,4 +200,3 @@ export default function CategoriesPage() {
     </div>
   );
 }
-
