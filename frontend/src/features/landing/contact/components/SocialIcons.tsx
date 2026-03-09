@@ -1,5 +1,4 @@
-import React from 'react';
-import { Facebook, Instagram, MessageCircle, LucideIcon } from 'lucide-react';
+import { Facebook, Instagram, Twitter, LucideIcon } from 'lucide-react';
 
 // Interface para cada red social
 interface SocialItem {
@@ -13,30 +12,30 @@ interface SocialIconsProps {
   className?: string;
 }
 
-const SocialIcons: React.FC<SocialIconsProps> = ({ 
-  className = "" 
+const SocialIcons: React.FC<SocialIconsProps> = ({
+  className = ""
 }) => {
   // Array de redes sociales con sus respectivos iconos y enlaces
   const socials: SocialItem[] = [
-    { 
-      icon: Facebook, 
-      href: 'https://facebook.com', 
-      label: 'Facebook' 
+    {
+      icon: Instagram,
+      href: 'https://instagram.com',
+      label: 'Instagram'
     },
-    { 
-      icon: Instagram, 
-      href: 'https://www.instagram.com/sistemas.pc/', 
-      label: 'Instagram' 
+    {
+      icon: Facebook,
+      href: 'https://facebook.com',
+      label: 'Facebook'
     },
-    { 
-      icon: MessageCircle, 
-      href: 'https://wa.me/573138976', 
-      label: 'WhatsApp' 
+    {
+      icon: Twitter,
+      href: 'https://twitter.com',
+      label: 'Twitter'
     }
   ];
 
   return (
-    <div className={`flex gap-4 justify-center ${className}`}>
+    <div className={`flex gap-6 justify-center ${className}`}>
       {socials.map((social) => {
         const Icon = social.icon;
         return (
@@ -45,11 +44,11 @@ const SocialIcons: React.FC<SocialIconsProps> = ({
             href={social.href}
             target="_blank"
             rel="noopener noreferrer"
-            className="group w-12 h-12 bg-gray-700 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-all duration-300 transform hover:scale-110 hover:shadow-lg"
+            className="w-14 h-14 bg-white border border-gray-100 rounded-full flex items-center justify-center shadow-sm text-[#04652c] transition-all duration-300 hover:text-[#06a646] hover:shadow-md transform hover:-translate-y-1"
             aria-label={`Visitar nuestro ${social.label}`}
             title={social.label}
           >
-            <Icon className="w-6 h-6 group-hover:scale-105 transition-transform duration-200" />
+            <Icon className="w-6 h-6" />
           </a>
         );
       })}

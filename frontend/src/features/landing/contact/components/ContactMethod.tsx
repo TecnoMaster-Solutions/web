@@ -10,34 +10,34 @@ interface ContactMethodProps {
   className?: string;
 }
 
-const ContactMethod: React.FC<ContactMethodProps> = ({ 
-  icon: Icon, 
-  title, 
-  description, 
+const ContactMethod: React.FC<ContactMethodProps> = ({
+  icon: Icon,
+  title,
+  description,
   contact,
-  className = "" 
+  className = ""
 }) => {
   return (
-    <div className={`text-center ${className}`}>
+    <div className={`text-center flex flex-col items-center ${className}`}>
       {/* Icon Container */}
-      <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4 hover:bg-red-100 transition-colors duration-200">
-        <Icon className="w-8 h-8 text-red-600" />
+      <div className="w-16 h-16 bg-[#e8f5e9] rounded-full flex items-center justify-center mb-6">
+        <Icon className="w-7 h-7 text-[#04652c]" />
       </div>
-      
+
       {/* Title */}
-      <h3 className="text-xl font-semibold mb-2 text-gray-900">
+      <h3 className="text-xl font-bold mb-3 text-gray-900">
         {title}
       </h3>
-      
+
       {/* Description */}
-      <p className="text-gray-600 text-sm mb-3">
+      <p className="text-gray-500 text-sm mb-4 max-w-[200px]">
         {description}
       </p>
-      
+
       {/* Contact Information */}
       {contact && (
-        <div className="mt-2">
-          <p className="text-red-600 font-medium text-sm hover:text-red-700 transition-colors duration-200">
+        <div className="mt-auto">
+          <p className="text-[#04652c] font-bold text-base">
             {contact}
           </p>
         </div>

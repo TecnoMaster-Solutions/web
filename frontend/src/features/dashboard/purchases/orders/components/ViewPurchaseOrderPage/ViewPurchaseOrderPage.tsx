@@ -67,16 +67,16 @@ export const ViewPurchaseOrderPage: React.FC<ViewPurchaseOrderPageProps> = ({
   };
 
   return (
-    <div className="flex flex-col gap-6 md:flex-row h-full max-h-[calc(100vh-160px)] overflow-y-auto p-2">
+    <div className="flex flex-col gap-6 md:flex-row h-full p-2 pb-16">
       {/* Left Column: Details */}
       <div className="md:w-[65%] flex flex-col gap-6">
-        
+
         {/* General Info Card */}
         <div className="p-4 bg-white rounded-lg border border-gray-200 shadow-sm">
           <h3 className="mb-4 text-lg font-bold" style={{ color: Colors.texts.primary }}>
             Información General
           </h3>
-          
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1 text-gray-500">
@@ -120,7 +120,7 @@ export const ViewPurchaseOrderPage: React.FC<ViewPurchaseOrderPageProps> = ({
                 Fecha de Entrega
               </label>
               <div className="px-3 py-2 bg-gray-50 rounded-md border border-gray-200">
-                {purchaseOrder.fechaEntrega 
+                {purchaseOrder.fechaEntrega
                   ? formatDate(purchaseOrder.fechaEntrega)
                   : "No especificada"
                 }
@@ -132,7 +132,7 @@ export const ViewPurchaseOrderPage: React.FC<ViewPurchaseOrderPageProps> = ({
                 Fecha de Creación
               </label>
               <div className="px-3 py-2 bg-gray-50 rounded-md border border-gray-200">
-                {purchaseOrder.fecha 
+                {purchaseOrder.fecha
                   ? formatDate(purchaseOrder.fecha)
                   : "—"
                 }
@@ -148,33 +148,33 @@ export const ViewPurchaseOrderPage: React.FC<ViewPurchaseOrderPageProps> = ({
           </h3>
 
           {purchaseOrder.items && purchaseOrder.items.length > 0 ? (
-            <div className="space-y-3 max-h-[400px] overflow-y-auto">
+            <div className="space-y-3 min-h-[160px]">
               {purchaseOrder.items.map((item, index) => (
                 <div
                   key={index}
                   className="bg-gray-50 p-3 rounded-md border hover:shadow-sm transition"
                 >
-                  <div className="flex items-start justify-between gap-3 mb-3">
+                  <div className="flex items-start justify-between mb-3">
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-sm text-gray-800">
+                        <span className="font-medium text-[15px] text-gray-800">
                           {item.producto || "Sin producto seleccionado"}
                         </span>
                         {item.productoId && (
-                          <span className="bg-green-600 text-white text-xs font-bold rounded-full px-2 py-0.5">
+                          <span className="bg-[#10b981] text-white text-[10px] font-bold rounded px-1.5 py-0.5">
                             ID {item.productoId}
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-gray-600 mt-1">
+                      <p className="text-[11px] text-gray-400 mt-1">
                         Subtotal: {formatCOP(item.cantidad * item.precioUnitario)}
                       </p>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-start">
                     {/* Producto (solo lectura) */}
-                    <div className="sm:col-span-2">
+                    <div className="sm:col-span-5">
                       <label className="block text-xs font-medium text-gray-600 mb-1">
                         Producto
                       </label>
@@ -184,7 +184,7 @@ export const ViewPurchaseOrderPage: React.FC<ViewPurchaseOrderPageProps> = ({
                     </div>
 
                     {/* Cantidad */}
-                    <div>
+                    <div className="sm:col-span-2">
                       <label className="block text-xs font-medium text-gray-600 mb-1">
                         Cantidad
                       </label>
@@ -194,7 +194,7 @@ export const ViewPurchaseOrderPage: React.FC<ViewPurchaseOrderPageProps> = ({
                     </div>
 
                     {/* Precio Unitario */}
-                    <div className="sm:col-span-2">
+                    <div className="sm:col-span-3">
                       <label className="block text-xs font-medium text-gray-600 mb-1">
                         Precio Unitario
                       </label>
@@ -204,7 +204,7 @@ export const ViewPurchaseOrderPage: React.FC<ViewPurchaseOrderPageProps> = ({
                     </div>
 
                     {/* Imagen */}
-                    <div className="flex flex-col items-center">
+                    <div className="sm:col-span-2 flex flex-col items-center">
                       <label className="block text-xs font-medium text-gray-600 mb-1">
                         Imagen
                       </label>
@@ -232,7 +232,7 @@ export const ViewPurchaseOrderPage: React.FC<ViewPurchaseOrderPageProps> = ({
 
         {/* Observaciones */}
         {purchaseOrder.descripcion && (
-          <div className="p-4 bg-white rounded-lg border border-gray-200 shadow-sm">
+          <div className="p-4 bg-white rounded-lg border border-gray-200 shadow-sm mb-12">
             <label className="block text-sm font-medium mb-2 text-gray-700">
               Observaciones
             </label>
@@ -242,19 +242,13 @@ export const ViewPurchaseOrderPage: React.FC<ViewPurchaseOrderPageProps> = ({
           </div>
         )}
 
-        {/* Info Extra */}
-        <div className="p-4 bg-blue-50 rounded-lg">
-          <p className="text-sm text-blue-800">
-            <strong>ID:</strong> #{purchaseOrder.id}
-          </p>
-        </div>
       </div>
 
       {/* Right Column: Summary */}
       <div className="md:w-[35%] flex flex-col gap-6">
         <div className="p-6 bg-white rounded-lg border border-gray-200 shadow-sm sticky top-4">
           <h3 className="text-2xl font-bold mb-6" style={{ color: Colors.texts.primary }}>
-            Resumen
+            Resumen Financiero
           </h3>
 
           <div className="space-y-4 text-sm">
