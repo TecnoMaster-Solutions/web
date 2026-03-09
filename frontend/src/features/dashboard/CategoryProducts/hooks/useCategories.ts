@@ -10,16 +10,10 @@ import {
 } from "../connection/categoryApi";
 import {
   Category,
+  CategoriesPaginatedResult,
   CreateCategoryData,
   EditCategoryData,
 } from "../types/typeCategoryProducts";
-
-const sortCategories = (list: Category[]): Category[] =>
-  [...list].sort((a, b) => {
-    const nameA = a.name ?? "";
-    const nameB = b.name ?? "";
-    return nameA.localeCompare(nameB, "es", { sensitivity: "base" });
-  });
 
 const waitForNextRender = async () => {
   await new Promise<void>((resolve) => {
@@ -56,18 +50,11 @@ const parseCategoryPayload = (payload: any): Category | null => {
   if (!resolved || typeof resolved !== "object") return null;
 
   const idValue = resolved.id ?? resolved.categoryid ?? resolved.category_id;
-  const numericId =
-    typeof idValue === "number" ? idValue : Number(idValue);
+  const numericId = typeof idValue === "number" ? idValue : Number(idValue);
   const id =
-    typeof idValue === "number"
-      ? idValue
-      : Number.isFinite(numericId)
-        ? numericId
-        : null;
+    typeof idValue === "number" ? idValue : Number.isFinite(numericId) ? numericId : null;
 
-  if (id === null) {
-    return null;
-  }
+  if (id === null) return null;
 
   return {
     id,
@@ -83,15 +70,18 @@ const extractPayloadCategory = (response: any): Category | null => {
 };
 
 export const useCategories = () => {
+  const PAGE_SIZE = 5;
   const [categories, setCategories] = useState<Category[]>([]);
+  const [pagedCategories, setPagedCategories] = useState<Category[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [search, setSearch] = useState("");
+  const [initialLoading, setInitialLoading] = useState(true);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [editingCategory, setEditingCategory] =
-    useState<EditCategoryData | null>(null);
+  const [editingCategory, setEditingCategory] = useState<EditCategoryData | null>(null);
   const [viewingCategory, setViewingCategory] = useState<Category | null>(null);
   const [loading, setLoading] = useState(true);
-  const [categoryProductCounts, setCategoryProductCounts] = useState<
-    Record<number, number>
-  >({});
+  const [categoryProductCounts, setCategoryProductCounts] = useState<Record<number, number>>({});
 
   const hasFetchedRef = useRef(false);
 
@@ -106,31 +96,50 @@ export const useCategories = () => {
       });
       setCategoryProductCounts(counts);
     } catch (error) {
-      console.error(
-        "Error al cargar productos para verificar las categorías:",
-        error,
-      );
+      console.error("Error al cargar productos para verificar las categorias:", error);
       setCategoryProductCounts({});
     }
   }, []);
 
-  const refreshCategories = useCallback(async () => {
-    const list = await getCategories();
-    setCategories(sortCategories(list));
-    void refreshCategoryProductCounts();
-    await waitForNextRender();
+  const refreshAllCategories = useCallback(async () => {
+    const list = (await getCategories()) as Category[];
+    setCategories(list);
     return list;
-  }, [refreshCategoryProductCounts]);
+  }, []);
+
+  const refreshCategories = useCallback(
+    async (targetPage: number = currentPage, searchText: string = search) => {
+      const response = (await getCategories({
+        page: targetPage,
+        limit: PAGE_SIZE,
+        search: searchText,
+      })) as CategoriesPaginatedResult;
+
+      const list = Array.isArray(response?.data) ? response.data : [];
+      const meta = response?.meta;
+
+      setPagedCategories(list);
+      setCurrentPage(Number(meta?.page ?? targetPage));
+      setTotalPages(Math.max(1, Number(meta?.totalPages ?? 1)));
+      return { list, meta };
+    },
+    [currentPage, search],
+  );
 
   useEffect(() => {
     const load = async () => {
-      setLoading(true);
+      setInitialLoading(true);
       try {
-        await refreshCategories();
+        await Promise.all([
+          refreshCategories(1, ""),
+          refreshAllCategories(),
+          refreshCategoryProductCounts(),
+        ]);
       } catch (error) {
         console.error("Error al cargar categorias:", error);
         showError("No se pudieron cargar las categorias.");
       } finally {
+        setInitialLoading(false);
         setLoading(false);
       }
     };
@@ -139,41 +148,51 @@ export const useCategories = () => {
       hasFetchedRef.current = true;
       load();
     }
-  }, [refreshCategories]);
+  }, [refreshAllCategories, refreshCategories, refreshCategoryProductCounts]);
 
-  const addCategoryToState = useCallback((category: Category) => {
-    setCategories((prev) => sortCategories([...prev, category]));
-  }, []);
+  const handlePageChange = useCallback(
+    async (nextPage: number) => {
+      setLoading(true);
+      try {
+        await refreshCategories(nextPage, search);
+      } catch (error) {
+        console.error("Error al cambiar de pagina:", error);
+        showError("No se pudo cargar la pagina de categorias.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [refreshCategories, search],
+  );
 
-  const updateCategoryInState = useCallback((category: Category) => {
-    setCategories((prev) =>
-      sortCategories(prev.map((item) => (item.id === category.id ? category : item))),
-    );
-  }, []);
-
-  const removeCategoryFromState = useCallback((categoryId: number) => {
-    setCategories((prev) =>
-      sortCategories(prev.filter((item) => item.id !== categoryId)),
-    );
-  }, []);
+  const handleSearchChange = useCallback(
+    async (value: string) => {
+      setSearch(value);
+      setLoading(true);
+      try {
+        await refreshCategories(1, value);
+      } catch (error) {
+        console.error("Error al buscar categorias:", error);
+        showError("No se pudo buscar categorias.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [refreshCategories],
+  );
 
   const handleCreateCategory = useCallback(
     async (categoryData: CreateCategoryData) => {
       setLoading(true);
       try {
         setIsCreateModalOpen(false);
-
-        const response = await createCategory(categoryData);
-        const createdCategory = extractPayloadCategory(response);
-
-        if (createdCategory) {
-          addCategoryToState(createdCategory);
-        } else {
-          await refreshCategories();
-        }
-
+        await createCategory(categoryData);
+        await Promise.all([
+          refreshCategories(1, search),
+          refreshAllCategories(),
+          refreshCategoryProductCounts(),
+        ]);
         showSuccess("Categoria creada exitosamente!");
-        await waitForNextRender();
       } catch (error) {
         console.error("Error al crear categoria:", error);
         showError("No se pudo crear la categoria.");
@@ -181,7 +200,7 @@ export const useCategories = () => {
         setLoading(false);
       }
     },
-    [addCategoryToState, refreshCategories],
+    [refreshAllCategories, refreshCategories, refreshCategoryProductCounts, search],
   );
 
   const handleEditCategory = useCallback(
@@ -192,13 +211,20 @@ export const useCategories = () => {
         const updatedCategory = extractPayloadCategory(response);
 
         if (updatedCategory) {
-          updateCategoryInState(updatedCategory);
+          setPagedCategories((prev) =>
+            prev.map((item) => (item.id === updatedCategory.id ? updatedCategory : item)),
+          );
+          setCategories((prev) =>
+            prev.map((item) => (item.id === updatedCategory.id ? updatedCategory : item)),
+          );
         } else {
-          await refreshCategories();
+          await Promise.all([
+            refreshCategories(currentPage, search),
+            refreshAllCategories(),
+          ]);
         }
 
         showSuccess("Categoria actualizada exitosamente!");
-        await waitForNextRender();
       } catch (error) {
         console.error("Error al actualizar categoria:", error);
         showError("No se pudo actualizar la categoria.");
@@ -207,7 +233,7 @@ export const useCategories = () => {
         setEditingCategory(null);
       }
     },
-    [refreshCategories, updateCategoryInState],
+    [currentPage, refreshAllCategories, refreshCategories, search],
   );
 
   const handleDeleteCategory = useCallback(
@@ -223,7 +249,19 @@ export const useCategories = () => {
           setLoading(true);
           try {
             await deleteCategory(category.id);
-            removeCategoryFromState(category.id);
+            const activeSearch = search.trim();
+
+            if (activeSearch) {
+              setSearch("");
+              await refreshCategories(1, "");
+            } else {
+              const { list } = await refreshCategories(currentPage, search);
+              if (list.length === 0 && currentPage > 1) {
+                await refreshCategories(currentPage - 1, search);
+              }
+            }
+
+            await Promise.all([refreshAllCategories(), refreshCategoryProductCounts()]);
             await waitForNextRender();
           } catch (error) {
             console.error("Error al eliminar categoria:", error);
@@ -236,7 +274,7 @@ export const useCategories = () => {
         },
       );
     },
-    [removeCategoryFromState],
+    [currentPage, refreshAllCategories, refreshCategories, refreshCategoryProductCounts, search],
   );
 
   const handleView = useCallback((category: Category) => {
@@ -261,8 +299,14 @@ export const useCategories = () => {
 
   return {
     categories,
+    pagedCategories,
     categoryProductCounts,
+    initialLoading,
     loading,
+    currentPage,
+    totalPages,
+    pageSize: PAGE_SIZE,
+    search,
     isCreateModalOpen,
     setIsCreateModalOpen,
     editingCategory,
@@ -270,6 +314,8 @@ export const useCategories = () => {
     handleCreateCategory,
     handleEditCategory,
     handleDeleteCategory,
+    handlePageChange,
+    handleSearchChange,
     handleView,
     handleEdit,
     closeModals,

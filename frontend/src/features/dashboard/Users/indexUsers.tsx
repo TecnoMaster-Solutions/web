@@ -18,7 +18,12 @@ function Loader() {
 export default function UsersPage() {
   const {
     users,
+    initialLoading,
     loading,
+    currentPage,
+    totalPages,
+    pageSize,
+    search,
     isCreateModalOpen,
     setIsCreateModalOpen,
     editingUser,
@@ -28,6 +33,8 @@ export default function UsersPage() {
     handleView,
     handleEdit,
     handleDelete,
+    handlePageChange,
+    handleSearchChange,
     closeModals
   } = useUser();
   // Determinar si los modales están abiertos basado en el estado
@@ -79,11 +86,18 @@ export default function UsersPage() {
             {/* NO necesitas DeleteConfirmation modal aquí */}
             {/* SweetAlert2 se encargará del modal de confirmación */}
 
-            {loading ? (
+            {initialLoading ? (
               <Loader />
             ) : (
               <UsersTable
                 users={Array.isArray(users) ? users : []}
+                loading={loading}
+                currentPage={currentPage}
+                totalPages={totalPages}
+                pageSize={pageSize}
+                search={search}
+                onPageChange={handlePageChange}
+                onSearchChange={handleSearchChange}
                 onView={handleView}
                 onEdit={handleEdit}
                 onDelete={handleDelete}

@@ -24,7 +24,7 @@ export function PaginationComponent({
 
   return (
     <div className="border-t border-[#E6E6E6] bg-white px-3 py-3">
-      <div className="relative flex items-center justify-center">
+      <div className="flex flex-col items-center gap-2 md:relative md:flex-row md:items-center md:justify-center">
         <div className="inline-flex items-center gap-1 px-2 py-1">
           <PageBtn
             onClick={() => goTo(page - 1)}
@@ -50,7 +50,7 @@ export function PaginationComponent({
             <ChevronRight className="h-4 w-4" />
           </PageBtn>
         </div>
-        <span className="absolute right-0 text-xs text-gray-500">
+        <span className="text-xs text-gray-500 md:absolute md:right-0">
           Pagina {page} de {totalPages}
         </span>
       </div>

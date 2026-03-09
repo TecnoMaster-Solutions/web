@@ -45,6 +45,18 @@ export interface UserForTable extends User {
   rowNumber: number;
 }
 
+export interface UsersPaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface UsersPaginatedResult {
+  data: User[];
+  meta: UsersPaginationMeta;
+}
+
 export interface CreateUserData {
   name: string;
   lastname?: string | null;
@@ -139,6 +151,13 @@ export interface ViewUserModalProps {
 
 export interface UsersTableProps {
   users: User[];
+  loading: boolean;
+  currentPage: number;
+  totalPages: number;
+  pageSize: number;
+  search: string;
+  onPageChange: (page: number) => void;
+  onSearchChange: (value: string) => void;
   onView: (user: User) => void;
   onEdit: (user: EditUser) => void;
   onDelete: (user: User) => void;

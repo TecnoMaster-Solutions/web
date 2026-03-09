@@ -2,7 +2,12 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { showSuccess, showError } from "@/shared/utils/notifications";
 import { confirmDelete } from "@/shared/utils/Delete/confirmDelete";
 
-import { User, EditUser, CreateUserData } from "../types/typesUser";
+import {
+  User,
+  EditUser,
+  CreateUserData,
+  UsersPaginatedResult,
+} from "../types/typesUser";
 import { getUsers, createUser, updateUser, deleteUser } from "../connection/userApi";
 
 
@@ -38,35 +43,54 @@ export const buildUserPayload = (
   //  HOOK PRINCIPAL
 
 export const useUser = () => {
+  const PAGE_SIZE = 5;
   const [users, setUsers] = useState<User[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [search, setSearch] = useState("");
+  const [initialLoading, setInitialLoading] = useState(true);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<EditUser | null>(null);
   const [viewingUser, setViewingUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const sortUsers = useCallback(
     (list: User[]) => [...list].sort((a, b) => (a.userid ?? 0) - (b.userid ?? 0)),
     []
   );
 
-  const refreshUsers = useCallback(async () => {
-    const list = await getUsers();
+  const refreshUsers = useCallback(
+    async (targetPage: number = currentPage, searchText: string = search) => {
+    const response = (await getUsers({
+      page: targetPage,
+      limit: PAGE_SIZE,
+      search: searchText,
+    })) as UsersPaginatedResult;
+
+    const list = Array.isArray(response?.data) ? response.data : [];
+    const meta = response?.meta;
+
     setUsers(sortUsers(list));
-    return list;
-  }, [sortUsers]);
+    setCurrentPage(Number(meta?.page ?? targetPage));
+    setTotalPages(Math.max(1, Number(meta?.totalPages ?? 1)));
+
+    return { list, meta };
+    },
+    [currentPage, search, sortUsers]
+  );
 
   const hasFetchedRef = useRef(false);
 
   useEffect(() => {
     const load = async () => {
-      setLoading(true);
+      setInitialLoading(true);
       try {
         await refreshUsers();
       } catch (error) {
         console.error("Error al cargar usuarios:", error);
         showError("Error al cargar usuarios desde el servidor");
       } finally {
-        setLoading(false);
+        setInitialLoading(false);
       }
     };
 
@@ -75,6 +99,37 @@ export const useUser = () => {
       load();
     }
   }, [refreshUsers]);
+
+  const handlePageChange = useCallback(
+    async (nextPage: number) => {
+      setLoading(true);
+      try {
+        await refreshUsers(nextPage, search);
+      } catch (error) {
+        console.error("Error al cambiar de página:", error);
+        showError("No se pudo cargar la página de usuarios.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [refreshUsers, search]
+  );
+
+  const handleSearchChange = useCallback(
+    async (value: string) => {
+      setSearch(value);
+      setLoading(true);
+      try {
+        await refreshUsers(1, value);
+      } catch (error) {
+        console.error("Error al buscar usuarios:", error);
+        showError("No se pudo buscar usuarios.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [refreshUsers]
+  );
 
 
   // CREAR USUARIO
@@ -87,7 +142,7 @@ export const useUser = () => {
 
         const payload = buildUserPayload(data);
         await createUser(payload);
-        await refreshUsers();
+        await refreshUsers(1, search);
 
         showSuccess("Usuario creado exitosamente");
       } catch (error: any) {
@@ -97,7 +152,7 @@ export const useUser = () => {
         setLoading(false);
       }
     },
-    [refreshUsers]
+    [refreshUsers, search]
   );
 
   // EDITAR USUARIO
@@ -109,7 +164,7 @@ export const useUser = () => {
       try {
         const payload = buildUserPayload(data);
         await updateUser(data.userid, payload);
-        await refreshUsers();
+        await refreshUsers(currentPage, search);
 
         showSuccess("Usuario actualizado exitosamente");
         setEditingUser(null);
@@ -120,7 +175,7 @@ export const useUser = () => {
         setLoading(false);
       }
     },
-    [refreshUsers]
+    [currentPage, refreshUsers, search]
   );
 
 
@@ -140,7 +195,11 @@ export const useUser = () => {
             if (!userToDelete.userid) return;
 
             await deleteUser(userToDelete.userid);
-            await refreshUsers();
+            const { list } = await refreshUsers(currentPage, search);
+
+            if (list.length === 0 && currentPage > 1) {
+              await refreshUsers(currentPage - 1, search);
+            }
           } catch (error) {
             console.error("Delete error:", error);
             showError("Error al eliminar usuario");
@@ -150,7 +209,7 @@ export const useUser = () => {
         }
       );
     },
-    [refreshUsers]
+    [currentPage, refreshUsers, search]
   );
 
   // HANDLERS DE VIEW / EDIT UI
@@ -165,7 +224,12 @@ export const useUser = () => {
 
   return {
     users,
+    initialLoading,
     loading,
+    currentPage,
+    totalPages,
+    pageSize: PAGE_SIZE,
+    search,
     isCreateModalOpen,
     setIsCreateModalOpen,
     editingUser,
@@ -174,6 +238,8 @@ export const useUser = () => {
     handleCreateUser,
     handleEditUser,
     handleDelete,
+    handlePageChange,
+    handleSearchChange,
     handleView,
     handleEdit,
 

@@ -1,15 +1,36 @@
 import { api } from "@/shared/utils/apiClient";
 import { showError } from "@/shared/utils/notifications";
+import { User, UsersPaginatedResult } from "../types/typesUser";
 
 const RETRY_LIMIT = 2;
 
+type GetUsersParams = {
+  signal?: AbortSignal;
+  page?: number;
+  limit?: number;
+  search?: string;
+};
+
 // GET USERS (con retry, abort, validación de respuesta)
-export const getUsers = async (signal?: AbortSignal) => {
+export const getUsers = async ({
+  signal,
+  page,
+  limit,
+  search,
+}: GetUsersParams = {}): Promise<User[] | UsersPaginatedResult> => {
   let attempt = 0;
 
   while (attempt <= RETRY_LIMIT) {
     try {
       const { data } = await api.get("/users", {
+        params:
+          Number.isInteger(page) && Number.isInteger(limit)
+            ? {
+                page,
+                limit,
+                ...(search?.trim() ? { search: search.trim() } : {}),
+              }
+            : undefined,
         signal,
         timeout: 8000,
         validateStatus: (s) => s >= 200 && s < 500,
@@ -19,17 +40,37 @@ export const getUsers = async (signal?: AbortSignal) => {
         throw new Error("Respuesta inválida del servidor.");
       }
 
-      // El backend devuelve { success, data: [...] }
-      if (!Array.isArray(data)) {
-        throw new Error(
-          `Se esperaba un array de usuarios. Recibido: ${typeof data.data}`
-        );
+      if (Array.isArray(data)) {
+        return data;
       }
 
-      return data;
+      if (
+        data &&
+        typeof data === "object" &&
+        Array.isArray(data.data) &&
+        data.meta &&
+        typeof data.meta === "object"
+      ) {
+        return {
+          data: data.data,
+          meta: {
+            page: Number(data.meta.page ?? 1),
+            limit: Number(data.meta.limit ?? limit ?? 5),
+            total: Number(data.meta.total ?? data.data.length),
+            totalPages: Number(data.meta.totalPages ?? 1),
+          },
+        };
+      }
+
+      throw new Error(
+        "Formato de respuesta de usuarios no reconocido por el cliente."
+      );
     } catch (error: any) {
       if (error?.name === "CanceledError" || error?.code === "ERR_CANCELED") {
-        return [];
+        return {
+          data: [],
+          meta: { page: page ?? 1, limit: limit ?? 5, total: 0, totalPages: 1 },
+        };
       }
 
       if (error?.code === "ECONNABORTED") {
@@ -51,7 +92,12 @@ export const getUsers = async (signal?: AbortSignal) => {
       if (status >= 500)
         throw new Error("El servidor tuvo un problema. Intente más tarde.");
 
-      if (status === 404) return [];
+      if (status === 404) {
+        return {
+          data: [],
+          meta: { page: page ?? 1, limit: limit ?? 5, total: 0, totalPages: 1 },
+        };
+      }
 
       if (status === 401 || status === 403)
         throw new Error("No autorizado para consultar usuarios.");
@@ -63,7 +109,10 @@ export const getUsers = async (signal?: AbortSignal) => {
     }
   }
 
-  return [];
+  return {
+    data: [],
+    meta: { page: page ?? 1, limit: limit ?? 5, total: 0, totalPages: 1 },
+  };
 };
 
 // GET USER BY ID

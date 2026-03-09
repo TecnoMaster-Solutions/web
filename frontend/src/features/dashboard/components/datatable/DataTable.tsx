@@ -73,6 +73,9 @@ const DataTableComponent = <T extends { [key: string]: any }>(
     data,
     columns,
     pageSize: defaultPageSize = 8,
+    showPageSizeSelector = true,
+    serverPagination,
+    serverSearch,
     searchableKeys = [],
     onView,
     onEdit,
@@ -106,14 +109,32 @@ const DataTableComponent = <T extends { [key: string]: any }>(
   const [page, setPage] = useState(1);
   const [scrollTop, setScrollTop] = useState(0);
   const [animateCells, setAnimateCells] = useState(true);
+  const [isDesktop, setIsDesktop] = useState(() =>
+    typeof window === "undefined" ? true : window.innerWidth >= 768
+  );
 
   const isMounted = useRef(false);
+  const isServerPagination = Boolean(serverPagination);
+  const isServerSearch = Boolean(serverSearch);
 
   useEffect(() => {
     isMounted.current = true;
     return () => {
       isMounted.current = false;
     };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handleResize = () => {
+      const desktop = window.innerWidth >= 768;
+      setIsDesktop(desktop);
+      setAnimateCells(true);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   useEffect(() => {
@@ -124,7 +145,10 @@ const DataTableComponent = <T extends { [key: string]: any }>(
   }, [defaultPageSize]);
 
   useEffect(() => {
-    if (loading) return;
+    if (loading) {
+      setAnimateCells(true);
+      return;
+    }
     const timer = setTimeout(() => setAnimateCells(false), 450);
     return () => clearTimeout(timer);
   }, [loading, pageSize, page]);
@@ -249,6 +273,7 @@ const DataTableComponent = <T extends { [key: string]: any }>(
   const filtered = useMemo(() => {
     // Mientras carga, no filtrar (evita parpadeos y costo)
     if (loading) return Array.isArray(data) ? data : [];
+    if (isServerSearch) return Array.isArray(data) ? data : [];
 
     const term = normalizeText(q);
     if (!term) return data;
@@ -296,23 +321,33 @@ const DataTableComponent = <T extends { [key: string]: any }>(
         });
       });
     });
-  }, [q, data, searchableKeys, normalize, normalizeText, loading]);
+  }, [q, data, searchableKeys, normalize, normalizeText, loading, isServerSearch]);
 
-  const totalPages = useMemo(
-    () => Math.max(1, Math.ceil(filtered.length / pageSize)),
-    [filtered.length, pageSize]
-  );
+  const totalPages = useMemo(() => {
+    if (isServerPagination) {
+      return Math.max(1, serverPagination?.totalPages ?? 1);
+    }
+    return Math.max(1, Math.ceil(filtered.length / pageSize));
+  }, [filtered.length, isServerPagination, pageSize, serverPagination?.totalPages]);
 
   const current = useMemo(() => {
+    if (isServerPagination) {
+      return filtered;
+    }
     return filtered.slice((page - 1) * pageSize, page * pageSize);
-  }, [filtered, page, pageSize]);
+  }, [filtered, isServerPagination, page, pageSize]);
 
   const goTo = useCallback(
     (p: number) => {
       setAnimateCells(true);
-      setPage(Math.min(Math.max(p, 1), totalPages));
+      const nextPage = Math.min(Math.max(p, 1), totalPages);
+      if (isServerPagination && serverPagination) {
+        serverPagination.onPageChange(nextPage);
+        return;
+      }
+      setPage(nextPage);
     },
-    [totalPages]
+    [isServerPagination, serverPagination, totalPages]
   );
 
   const handleScroll = useCallback(
@@ -358,7 +393,6 @@ const DataTableComponent = <T extends { [key: string]: any }>(
   const Row = useMemo(() => {
     const RowComponent = React.memo(({ row, index }: { row: T; index: number }) => {
       const currentStartIndex = disableInternalScroll ? 0 : Math.floor(scrollTop / ROW_HEIGHT);
-      const isDesktop = typeof window !== "undefined" ? window.innerWidth >= 768 : true;
       const colsToRender = isDesktop ? columns : visibleColumns;
 
       return (
@@ -446,6 +480,7 @@ const DataTableComponent = <T extends { [key: string]: any }>(
     scrollTop,
     showActionsColumn,
     disableInternalScroll,
+    isDesktop,
   ]);
 
   /* ================================
@@ -547,41 +582,53 @@ const DataTableComponent = <T extends { [key: string]: any }>(
             <div className="relative flex-1">
               <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
               <input
-                value={q}
+                value={isServerSearch ? serverSearch?.value ?? "" : q}
                 onChange={(e) => {
-                  setQ(e.target.value);
-                  setPage(1);
+                  const nextValue = e.target.value;
+                  setAnimateCells(true);
+                  if (isServerSearch && serverSearch) {
+                    serverSearch.onChange(nextValue);
+                  } else {
+                    setQ(nextValue);
+                    if (isServerPagination && serverPagination) {
+                      serverPagination.onPageChange(1);
+                    } else {
+                      setPage(1);
+                    }
+                  }
                 }}
                 placeholder={searchPlaceholder}
                 className="w-full rounded-full bg-white px-9 py-2 text-sm shadow-sm border border-gray-200 transition-colors hover:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-500"
               />
             </div>
 
-            <div className="ml-2 flex items-center gap-2">
-              <span className="text-sm text-[#506176]">Mostrar</span>
-              <div className="relative">
-                <select
-                  value={pageSizeOption}
-                  onChange={(e) => {
-                    const num = Number(e.target.value);
-                    setAnimateCells(true);
-                    setPageSizeOption(num);
-                    setPageSize(num);
-                    setPage(1);
-                  }}
-                  className="h-10 w-16 appearance-none rounded-lg bg-white pl-3 pr-7 text-sm text-[#172B4D] border border-gray-200 transition-colors hover:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-500"
-                >
-                  <option value={5}>5</option>
-                  <option value={8}>8</option>
-                  <option value={10}>10</option>
-                  <option value={15}>15</option>
-                  <option value={20}>20</option>
-                  <option value={50}>50</option>
-                  <option value={100}>100</option>
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6B7A90]" />
+            {showPageSizeSelector && !isServerPagination && (
+              <div className="ml-2 flex items-center gap-2">
+                <span className="text-sm text-[#506176]">Mostrar</span>
+                <div className="relative">
+                  <select
+                    value={pageSizeOption}
+                    onChange={(e) => {
+                      const num = Number(e.target.value);
+                      setAnimateCells(true);
+                      setPageSizeOption(num);
+                      setPageSize(num);
+                      setPage(1);
+                    }}
+                    className="h-10 w-16 appearance-none rounded-lg bg-white pl-3 pr-7 text-sm text-[#172B4D] border border-gray-200 transition-colors hover:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-500"
+                  >
+                    <option value={5}>5</option>
+                    <option value={8}>8</option>
+                    <option value={10}>10</option>
+                    <option value={15}>15</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6B7A90]" />
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
 
@@ -677,7 +724,13 @@ const DataTableComponent = <T extends { [key: string]: any }>(
               </div>
             </div>
 
-            {totalPages > 1 && <Pagination page={page} totalPages={totalPages} goTo={goTo} />}
+            {totalPages > 1 && (
+              <Pagination
+                page={isServerPagination ? Math.max(1, serverPagination?.page ?? 1) : page}
+                totalPages={totalPages}
+                goTo={goTo}
+              />
+            )}
           </>
         )}
       </div>

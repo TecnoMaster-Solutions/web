@@ -7,8 +7,20 @@ export interface Category {
   productsCount?: number;
   stateLabel?: string;
   stateSearch?: "activo" | "inactivo";
-  statusSearch: string;
-  rowNumber: number;
+  statusSearch?: string;
+  rowNumber?: number;
+}
+
+export interface CategoriesPaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface CategoriesPaginatedResult {
+  data: Category[];
+  meta: CategoriesPaginationMeta;
 }
 
 export interface CategoryBase {

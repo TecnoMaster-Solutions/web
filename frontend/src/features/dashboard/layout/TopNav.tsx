@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
-import { UserCircle, LogOut, Pencil, Menu, X } from "lucide-react";
+import { UserCircle, LogOut, Pencil } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { routes } from "@/shared/routes";
 import { useAuth } from "@/features/auth/authcontext";
@@ -55,7 +55,6 @@ export default function TopNav({
   const [displayedText, setDisplayedText] = useState("");
   const [profileOpen, setProfileOpen] = useState(false);
   const [menuProfileOpen, setMenuProfileOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
 
   const btnRef = useRef<HTMLButtonElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -147,13 +146,6 @@ export default function TopNav({
           {displayedText}
         </h1>
 
-        <button
-          onClick={() => setMenuOpen((v) => !v)}
-          className="md:hidden text-[#04652c] mr-2"
-          aria-label="Abrir menú"
-        >
-          {menuOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
 
         <div className="relative">
           <button
@@ -241,3 +233,4 @@ export default function TopNav({
     </>
   );
 }
+
