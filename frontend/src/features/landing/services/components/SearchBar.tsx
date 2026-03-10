@@ -22,7 +22,7 @@ const SearchBar = ({ placeholder = "Buscar servicios...", searchTerm, setSearchT
     >
       <Search
         className={`absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 pointer-events-none transition-colors duration-300 ${
-          isFocused ? "text-red-400" : "text-gray-400"
+          isFocused ? "text-[#04652c]" : "text-gray-400"
         }`}
       />
       <motion.input
@@ -36,8 +36,8 @@ const SearchBar = ({ placeholder = "Buscar servicios...", searchTerm, setSearchT
                    focus:outline-none placeholder-gray-400 transition-all duration-300"
         whileFocus={{
           backgroundColor: "#fff",
-          borderColor: "rgba(178,0,0,0.6)",
-          boxShadow: "0 4px 12px rgba(178,0,0,0.1)",
+          borderColor: "rgba(4,101,44,0.6)",
+          boxShadow: "0 4px 12px rgba(4,101,44,0.1)",
         }}
         transition={{ type: "spring", stiffness: 150, damping: 18 }}
       />

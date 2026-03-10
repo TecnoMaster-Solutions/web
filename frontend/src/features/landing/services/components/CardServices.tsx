@@ -160,16 +160,16 @@ export default function CardServices({
           <div>
             <h3 className="text-lg font-bold text-gray-800">{title}</h3>
             {category && (
-              <span className="text-sm font-semibold text-[#B20000]">{category}</span>
+              <span className="text-sm font-semibold text-[#04652c]">{category}</span>
             )}
             <p className="text-gray-600 text-sm mt-1">{description}</p>
           </div>
 
           <motion.button
-            className="mt-4 bg-[#B20000] text-white rounded-full px-4 py-2 flex items-center justify-center gap-2"
+            className="mt-4 bg-[#04652c] text-white rounded-full px-4 py-2 flex items-center justify-center gap-2"
             whileHover={{
               scale: 1.05,
-              boxShadow: "0 4px 12px rgba(178,0,0,0.3)",
+              boxShadow: "0 4px 12px rgba(4,101,44,0.3)",
             }}
             whileTap={{ scale: 0.95 }}
             transition={{ type: "spring", stiffness: 250, damping: 15 }}
