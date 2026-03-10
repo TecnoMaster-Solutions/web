@@ -67,17 +67,13 @@ export default function ProductDetailPage() {
 
   const stock = Number(product?.stock ?? 0);
 
-  // ✅ Cantidad actual de este producto que ya está en el carrito
   const qtyInCart = useMemo(() => {
     if (!product) return 0;
     const existing = cart.find((p) => String(p.id) === String(product.id));
     return existing?.quantity ?? 0;
   }, [cart, product]);
 
-  // ✅ Disponible "para agregar" según el carrito actual (no cambia estado del producto)
   const remaining = Math.max(0, stock - qtyInCart);
-
-  // ❗ Mantener estado real del inventario (BD), como pediste
   const inStock = stock > 0;
 
   const activeImage = allImages[activeIdx] || product?.image || DEFAULT_IMG;
@@ -85,7 +81,6 @@ export default function ProductDetailPage() {
   const clampQty = (next: number) => {
     if (!inStock) return 1;
 
-    // ✅ No dejar seleccionar más de lo que queda disponible considerando carrito
     const max = Math.max(1, remaining || 1);
     const safe = Number.isFinite(next) ? next : 1;
     return Math.min(Math.max(1, safe), max);
@@ -99,7 +94,6 @@ export default function ProductDetailPage() {
       return;
     }
 
-    // ✅ Validación: lo que ya hay en carrito + lo que quiere agregar NO puede superar el stock real
     if (qtyInCart + qty > stock) {
       showError(`No puedes agregar más. Stock disponible: ${stock}`, {
         toastId: `stock-limit-${product.id}`,
@@ -193,7 +187,7 @@ export default function ProductDetailPage() {
                           className={[
                             "shrink-0 rounded-xl border overflow-hidden bg-white transition",
                             idx === activeIdx
-                              ? "ring-2 ring-[#B20000] border-transparent"
+                              ? "ring-2 ring-[#04652c] border-transparent"
                               : "border-gray-200 hover:ring-2 hover:ring-gray-300",
                           ].join(" ")}
                           style={{ width: 74, height: 74 }}
@@ -215,7 +209,7 @@ export default function ProductDetailPage() {
                   </h1>
 
                   <div className="mt-2 flex items-center gap-3 flex-wrap">
-                    <span className="text-sm font-semibold text-[#B20000]">
+                    <span className="text-sm font-semibold text-[#04652c]">
                       {product.category}
                     </span>
 
@@ -238,7 +232,7 @@ export default function ProductDetailPage() {
 
                   {product.price !== undefined && (
                     <div className="mt-4">
-                      <span className="block text-2xl sm:text-3xl font-extrabold text-[#B20000]">
+                      <span className="block text-2xl sm:text-3xl font-extrabold text-[#04652c]">
                         ${product.price.toLocaleString("es-CO")}
                       </span>
                     </div>
@@ -281,7 +275,7 @@ export default function ProductDetailPage() {
                         type="button"
                         className="w-8 h-8 rounded-full border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed"
                         onClick={() => setQty((q) => clampQty(q + 1))}
-                        disabled={!inStock || qty >= remaining} // ✅ se bloquea por límite real
+                        disabled={!inStock || qty >= remaining}
                         aria-label="Aumentar"
                       >
                         +
@@ -289,11 +283,11 @@ export default function ProductDetailPage() {
                     </div>
 
                     <motion.button
-                      className="bg-[#B20000] text-white rounded-full px-6 py-3 text-sm font-semibold flex items-center justify-center gap-3 shadow-lg hover:bg-red-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                      className="bg-[#04652c] text-white rounded-full px-6 py-3 text-sm font-semibold flex items-center justify-center gap-3 shadow-lg hover:bg-[#035423] transition disabled:opacity-60 disabled:cursor-not-allowed"
                       whileHover={inStock ? { scale: 1.03 } : {}}
                       whileTap={inStock ? { scale: 0.97 } : {}}
                       onClick={handleAddToCart}
-                      disabled={!inStock} // ✅ solo stock real 0 lo deshabilita
+                      disabled={!inStock}
                       type="button"
                     >
                       <FaShoppingCart />

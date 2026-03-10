@@ -17,17 +17,15 @@ const Pagination = ({ currentPage, totalPages, onPageChange }: PaginationProps) 
 
   return (
     <div className="flex justify-center mt-8 gap-2">
-      {/* Botón anterior */}
       <motion.button
         onClick={() => currentPage > 1 && onPageChange(currentPage - 1)}
         className={`p-2 rounded-full border border-gray-200 bg-white shadow-sm hover:shadow-md transition-all
-          ${currentPage === 1 ? "opacity-50 cursor-not-allowed" : "hover:border-[#B20000] hover:text-[#B20000]"}`}
+          ${currentPage === 1 ? "opacity-50 cursor-not-allowed" : "hover:border-[#04652c] hover:text-[#04652c]"}`}
         whileTap={{ scale: 0.9 }}
       >
         <ChevronLeft className="w-5 h-5" />
       </motion.button>
 
-      {/* Números */}
       {pages.map((page) => (
         <motion.button
           key={page}
@@ -35,8 +33,8 @@ const Pagination = ({ currentPage, totalPages, onPageChange }: PaginationProps) 
           className={`w-10 h-10 rounded-full border text-sm font-medium transition-all 
             ${
               currentPage === page
-                ? "bg-[#B20000] text-white shadow-md"
-                : "bg-white border-gray-200 text-gray-700 hover:border-[#B20000] hover:text-[#B20000] hover:shadow"
+                ? "bg-[#04652c] text-white shadow-md"
+                : "bg-white border-gray-200 text-gray-700 hover:border-[#04652c] hover:text-[#04652c] hover:shadow"
             }`}
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
@@ -45,14 +43,13 @@ const Pagination = ({ currentPage, totalPages, onPageChange }: PaginationProps) 
         </motion.button>
       ))}
 
-      {/* Botón siguiente */}
       <motion.button
         onClick={() => currentPage < totalPages && onPageChange(currentPage + 1)}
         className={`p-2 rounded-full border border-gray-200 bg-white shadow-sm hover:shadow-md transition-all
           ${
             currentPage === totalPages
               ? "opacity-50 cursor-not-allowed"
-              : "hover:border-[#B20000] hover:text-[#B20000]"
+              : "hover:border-[#04652c] hover:text-[#04652c]"
           }`}
         whileTap={{ scale: 0.9 }}
       >

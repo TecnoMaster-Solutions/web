@@ -54,7 +54,7 @@ export default function CardProduct({
           <h3 className="text-lg font-bold text-gray-800">{title}</h3>
 
           {category && (
-            <span className="text-sm font-semibold text-[#B20000]">
+            <span className="text-sm font-semibold text-[#04652c]">
               {category}
             </span>
           )}
@@ -82,7 +82,7 @@ export default function CardProduct({
           </p>
 
           {price !== undefined && (
-            <span className="block text-lg font-bold text-[#B20000] mt-2">
+            <span className="block text-lg font-bold text-[#04652c] mt-2">
               ${price.toLocaleString("es-CO")}
             </span>
           )}
@@ -94,14 +94,14 @@ export default function CardProduct({
             disabled={!inStock}
             className={`rounded-full px-4 py-1.5 w-1/2 text-sm flex items-center justify-center gap-2 transition ${
               inStock
-                ? "bg-[#B20000] text-white"
+                ? "bg-[#04652c] text-white"
                 : "bg-gray-300 text-gray-500 cursor-not-allowed"
             }`}
             whileHover={
               inStock
                 ? {
                     scale: 1.05,
-                    boxShadow: "0 4px 12px rgba(178,0,0,0.3)",
+                    boxShadow: "0 4px 12px rgba(4,101,44,0.3)",
                   }
                 : {}
             }
@@ -113,10 +113,10 @@ export default function CardProduct({
           </motion.button>
 
           <motion.button
-            className="border border-[#B20000] text-[#B20000] rounded-full px-4 py-1.5 w-1/2 text-sm"
+            className="border border-[#04652c] text-[#04652c] rounded-full px-4 py-1.5 w-1/2 text-sm"
             whileHover={{
               scale: 1.05,
-              boxShadow: "0 4px 12px rgba(178,0,0,0.1)",
+              boxShadow: "0 4px 12px rgba(4,101,44,0.1)",
             }}
             whileTap={{ scale: 0.95 }}
             transition={{ type: "spring", stiffness: 250, damping: 15 }}
