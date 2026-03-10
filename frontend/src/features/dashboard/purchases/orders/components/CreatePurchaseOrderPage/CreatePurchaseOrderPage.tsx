@@ -49,10 +49,10 @@ export const CreatePurchaseOrderPage: React.FC<CreatePurchaseOrderPageProps> = (
     isSubmitting,
     setItems,
     handleSubmit,
-  } = useCreatePurchaseOrderForm({ 
-    isOpen: true, 
-    onClose, 
-    onSave: async () => {} 
+  } = useCreatePurchaseOrderForm({
+    isOpen: true,
+    onClose,
+    onSave: async () => { }
   });
 
   const [suppliers, setSuppliers] = useState<ISupplier[]>([]);
@@ -62,13 +62,13 @@ export const CreatePurchaseOrderPage: React.FC<CreatePurchaseOrderPageProps> = (
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [orderNumber, setOrderNumber] = useState("");
-  
-  const [productSearch, setProductSearch] = useState<{[key: number]: string}>({});
-  const [dropdownOpen, setDropdownOpen] = useState<{[key: number]: boolean}>({});
+
+  const [productSearch, setProductSearch] = useState<{ [key: number]: string }>({});
+  const [dropdownOpen, setDropdownOpen] = useState<{ [key: number]: boolean }>({});
   const [rows, setRows] = useState<ItemRow[]>([
     { productoNombre: "", productId: undefined, cantidad: 1, precioUnitario: 0 },
   ]);
-  
+
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [loadingAllProducts, setLoadingAllProducts] = useState(false);
 
@@ -79,13 +79,13 @@ export const CreatePurchaseOrderPage: React.FC<CreatePurchaseOrderPageProps> = (
     setRows([{ productoNombre: "", productId: undefined, cantidad: 1, precioUnitario: 0 }]);
     setProductSearch({});
     setDropdownOpen({});
-    
+
     setLoadingSuppliers(true);
     getSuppliers()
       .then((data) => setSuppliers(data))
       .catch(() => showError("Error al cargar proveedores."))
       .finally(() => setLoadingSuppliers(false));
-    
+
     setLoadingAllProducts(true);
     getProducts("active")
       .then((data) => setAllProducts(data))
@@ -142,12 +142,12 @@ export const CreatePurchaseOrderPage: React.FC<CreatePurchaseOrderPageProps> = (
       prev.map((row, i) =>
         i === index
           ? {
-              productoNombre: productName,
-              productId: prod?.productid,
-              cantidad: row.cantidad,
-              precioUnitario: prod?.productpriceofsupplier ?? row.precioUnitario,
-              imagen: prod?.image ?? undefined,
-            }
+            productoNombre: productName,
+            productId: prod?.productid,
+            cantidad: row.cantidad,
+            precioUnitario: prod?.productpriceofsupplier ?? row.precioUnitario,
+            imagen: prod?.image ?? undefined,
+          }
           : row
       )
     );
@@ -160,12 +160,12 @@ export const CreatePurchaseOrderPage: React.FC<CreatePurchaseOrderPageProps> = (
       prev.map((row, i) =>
         i === index
           ? {
-              productoNombre: product.name,
-              productId: product.id,
-              cantidad: row.cantidad,
-              precioUnitario: product.supplierPrice ?? row.precioUnitario,
-              imagen: product.image ?? undefined,
-            }
+            productoNombre: product.name,
+            productId: product.id,
+            cantidad: row.cantidad,
+            precioUnitario: product.supplierPrice ?? row.precioUnitario,
+            imagen: product.image ?? undefined,
+          }
           : row
       )
     );
@@ -178,10 +178,10 @@ export const CreatePurchaseOrderPage: React.FC<CreatePurchaseOrderPageProps> = (
       prev.map((row, i) =>
         i === index
           ? {
-              ...row,
-              productoNombre: value,
-              productId: undefined,
-            }
+            ...row,
+            productoNombre: value,
+            productId: undefined,
+          }
           : row
       )
     );
@@ -242,12 +242,6 @@ export const CreatePurchaseOrderPage: React.FC<CreatePurchaseOrderPageProps> = (
       showWarning(`${itemsWithoutId.length} producto(s) se guardarán como entrada manual sin vinculación a la base de datos.`);
     }
 
-    // ============================================================
-    // FLUJO CORREGIDO: 
-    // 1. Primero: Guardar la orden en la base de datos
-    // 2. Segundo: Intentar enviar la notificación al proveedor
-    //    (si falla, la orden ya está guardada)
-    // ============================================================
 
     const subtotal = rows.reduce((acc, r) => acc + r.cantidad * r.precioUnitario, 0);
     const iva = subtotal * 0.19;
@@ -268,11 +262,8 @@ export const CreatePurchaseOrderPage: React.FC<CreatePurchaseOrderPageProps> = (
       })),
     };
 
-    // ============================================================
-    // PRIMER PASO: Guardar la orden en la base de datos
-    // ============================================================
     setIsSending(true);
-    
+
     let savedOrder: PurchaseOrderAPIResponse | null = null;
     try {
       savedOrder = await onSave(purchaseOrderData);
@@ -290,11 +281,8 @@ export const CreatePurchaseOrderPage: React.FC<CreatePurchaseOrderPageProps> = (
       return;
     }
 
-    // ============================================================
-    // SEGUNDO paso: Intentar enviar la notificación al proveedor
-    // (la orden ya está guardada, la notificación es secundario)
-    // ============================================================
-    
+
+
     // Preparar datos para la notificación
     const notificationPayload = {
       numeroOrden: realOrderNumber,
@@ -316,13 +304,13 @@ export const CreatePurchaseOrderPage: React.FC<CreatePurchaseOrderPageProps> = (
     if (selectedSupplier.email || selectedSupplier.phone) {
       try {
         const notificationResult = await sendPurchaseOrderNotification(notificationPayload);
-        
+
         if (notificationResult.success) {
           showSuccess(
-            `Orden guardada. Notificación enviada por ${notificationResult.channel === "both" 
-              ? "WhatsApp y correo" 
-              : notificationResult.channel === "email" 
-                ? "correo" 
+            `Orden guardada. Notificación enviada por ${notificationResult.channel === "both"
+              ? "WhatsApp y correo"
+              : notificationResult.channel === "email"
+                ? "correo"
                 : "WhatsApp"
             }.`
           );
@@ -336,10 +324,10 @@ export const CreatePurchaseOrderPage: React.FC<CreatePurchaseOrderPageProps> = (
     }
 
     setIsSending(false);
-    
+
     // Notificar éxito del guardado
     showSuccess("Orden de compra guardada exitosamente.");
-    
+
     onSaved();
     onClose();
   };
@@ -349,7 +337,7 @@ export const CreatePurchaseOrderPage: React.FC<CreatePurchaseOrderPageProps> = (
   const total = subtotal + iva;
 
   return (
-    <div className="flex flex-col gap-6 md:flex-row h-full max-h-[calc(100vh-160px)] overflow-y-auto p-2">
+    <div className="flex flex-col gap-6 md:flex-row w-full p-2 ">
       {(isSubmitting || isSending) && (
         <div className="fixed inset-0 bg-white/80 flex items-center justify-center z-50">
           <div className="flex flex-col items-center gap-3">
@@ -471,7 +459,7 @@ export const CreatePurchaseOrderPage: React.FC<CreatePurchaseOrderPageProps> = (
             </div>
           )}
 
-          <div className="space-y-3 max-h-[400px] overflow-y-auto">
+          <div className="space-y-3 min-h-[220px]">
             {rows.map((row, index) => (
               <div
                 key={index}
@@ -480,16 +468,16 @@ export const CreatePurchaseOrderPage: React.FC<CreatePurchaseOrderPageProps> = (
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-sm text-gray-800">
+                      <span className="font-medium text-[15px] text-gray-800">
                         {row.productoNombre || "Sin producto seleccionado"}
                       </span>
                       {row.productId && (
-                        <span className="bg-green-600 text-white text-xs font-bold rounded-full px-2 py-0.5">
+                        <span className="bg-[#10b981] text-white text-[10px] font-bold rounded px-1.5 py-0.5">
                           ID {row.productId}
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-gray-600 mt-1">
+                    <p className="text-[11px] text-gray-400 mt-1">
                       Subtotal: ${(row.cantidad * row.precioUnitario).toLocaleString("es-CO")}
                     </p>
                   </div>
@@ -497,19 +485,19 @@ export const CreatePurchaseOrderPage: React.FC<CreatePurchaseOrderPageProps> = (
                   <button
                     type="button"
                     onClick={() => handleRemoveRow(index)}
-                    className="p-2 rounded hover:bg-red-100 transition shrink-0"
+                    className="text-red-500 hover:text-red-700 transition shrink-0 p-1"
                     title="Eliminar"
                     disabled={rows.length === 1}
                   >
-                    <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
                   </button>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-start">
                   {/* Selector de producto */}
-                  <div className="sm:col-span-2 relative">
+                  <div className="sm:col-span-5 relative">
                     <label className="block text-xs font-medium text-gray-600 mb-1">
                       Producto
                     </label>
@@ -586,7 +574,7 @@ export const CreatePurchaseOrderPage: React.FC<CreatePurchaseOrderPageProps> = (
                   </div>
 
                   {/* Cantidad */}
-                  <div>
+                  <div className="sm:col-span-2">
                     <label className="block text-xs font-medium text-gray-600 mb-1">
                       Cantidad
                     </label>
@@ -600,7 +588,7 @@ export const CreatePurchaseOrderPage: React.FC<CreatePurchaseOrderPageProps> = (
                   </div>
 
                   {/* Precio Unitario */}
-                  <div className="sm:col-span-2">
+                  <div className="sm:col-span-3">
                     <label className="block text-xs font-medium text-gray-600 mb-1">
                       Precio Unitario
                     </label>
@@ -615,7 +603,7 @@ export const CreatePurchaseOrderPage: React.FC<CreatePurchaseOrderPageProps> = (
                   </div>
 
                   {/* Imagen */}
-                  <div className="flex flex-col items-center">
+                  <div className="sm:col-span-2 flex flex-col items-center">
                     <label className="block text-xs font-medium text-gray-600 mb-1">
                       Imagen
                     </label>
@@ -639,15 +627,14 @@ export const CreatePurchaseOrderPage: React.FC<CreatePurchaseOrderPageProps> = (
           <button
             type="button"
             onClick={handleAddRow}
-            className="cursor-pointer mt-4 w-full px-4 py-2 rounded-md text-white text-sm font-medium shadow hover:scale-[1.02] transition"
-            style={{ backgroundColor: Colors.buttons.primary }}
+            className="cursor-pointer mt-4 w-full px-4 py-3 rounded-md text-white text-sm font-medium shadow hover:bg-[#059669] transition bg-[#10b981]"
           >
             Añadir producto +
           </button>
         </div>
 
         {/* Observaciones */}
-        <div className="p-4 bg-white rounded-lg border border-gray-200 shadow-sm">
+        <div className="p-4 bg-white rounded-lg border border-gray-200 shadow-sm mb-12">
           <label className="block text-sm font-medium mb-2 text-gray-700">
             Observaciones
           </label>
@@ -665,7 +652,7 @@ export const CreatePurchaseOrderPage: React.FC<CreatePurchaseOrderPageProps> = (
       <div className="md:w-[35%] flex flex-col gap-6">
         <div className="p-6 bg-white rounded-lg border border-gray-200 shadow-sm sticky top-4">
           <h3 className="text-2xl font-bold mb-6" style={{ color: Colors.texts.primary }}>
-            Total
+            Resumen Financiero
           </h3>
 
           <div className="space-y-4 text-sm">

@@ -91,32 +91,46 @@ const Nav = () => {
 
   return (
     <>
-      <nav className="bg-white shadow-md sticky top-0 z-50">
+      <nav className="bg-white/80 backdrop-blur-md shadow-md sticky top-0 z-50 transition-all duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           {/* Logo */}
           <Link
             href={routes.path}
-            className="relative flex items-center overflow-hidden group rounded-md"
+            className="flex items-center group rounded-md"
           >
-            <Image
-              src="/assets/imgs/logo.png"
-              alt="logo"
-              width={180}
-              height={50}
-              priority
-              className="relative z-10 cursor-pointer transition duration-300 group-hover:scale-105"
-            />
+            <span className="text-2xl md:text-3xl font-extrabold text-[#04652c] tracking-tight group-hover:scale-105 transition-transform duration-300">
+              TecnoMaster
+            </span>
           </Link>
 
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center gap-8 text-gray-900 font-semibold text-lg">
-            {[...links, ...(isAuthenticated ? [] : guestLinks)].map((link) => (
+            {links.map((link) => (
               <Link key={link.href} href={link.href} className="relative group">
-                <span className="relative z-10">{link.label}</span>
+                <span className="relative z-10 hover:text-[#06a646] transition-colors duration-300">{link.label}</span>
                 {/* underline animado */}
-                <span className="absolute left-0 -bottom-1 h-[3px] w-full origin-left scale-x-0 bg-red-700 transition-transform duration-300 group-hover:scale-x-100" />
+                <span className="absolute left-0 -bottom-1 h-[3px] w-full origin-left scale-x-0 bg-[#04652c] transition-transform duration-300 group-hover:scale-x-100" />
               </Link>
             ))}
+
+            {!isAuthenticated && (
+              <div className="flex items-center gap-8 ml-4 font-bold text-gray-900 font-semibold text-lg">
+                <Link
+                  href={routes.auth.login}
+                  className="relative group transition-all duration-300"
+                >
+                  <span className="relative z-10 group-hover:text-[#06a646] transition-colors duration-300">Acceder</span>
+                  <span className="absolute left-0 -bottom-1 h-[3px] w-full origin-left scale-x-0 bg-[#04652c] transition-transform duration-300 group-hover:scale-x-100" />
+                </Link>
+                <Link
+                  href={routes.auth.register}
+                  className="relative group transition-all duration-300"
+                >
+                  <span className="relative z-10 group-hover:text-[#06a646] transition-colors duration-300">Registrarse</span>
+                  <span className="absolute left-0 -bottom-1 h-[3px] w-full origin-left scale-x-0 bg-[#04652c] transition-transform duration-300 group-hover:scale-x-100" />
+                </Link>
+              </div>
+            )}
 
             {isAuthenticated && (
               <div className="relative">
@@ -213,12 +227,12 @@ const Nav = () => {
               className="relative cursor-pointer ml-4 text-black px-4 py-1 rounded-md flex items-center justify-center group transition-colors duration-300"
               aria-label="Abrir carrito"
             >
-              <span className="absolute rounded-md inset-0 bg-red-800 scale-x-0 origin-left transition-transform duration-300 ease-out group-hover:scale-x-100"></span>
+              <span className="absolute rounded-md inset-0 bg-[#04652c] scale-x-0 origin-left transition-transform duration-300 ease-out group-hover:scale-x-100"></span>
               <ShoppingCart className="h-7 w-7 relative z-10 transition-colors duration-300 group-hover:text-white" />
 
               {/* Bolita con la cantidad */}
               {totalItems > 0 && (
-                <span className="absolute -top-2 -right-2 bg-[#B20000] text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-md">
+                <span className="absolute -top-2 -right-2 bg-[#06a646] text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-md">
                   {totalItems}
                 </span>
               )}
@@ -242,22 +256,40 @@ const Nav = () => {
 
         {/* Mobile Menu */}
         <div
-          className={`md:hidden bg-white px-6 py-5 flex flex-col gap-5 shadow-md transform transition-all duration-300 ${
-            isMenuOpen
-              ? "max-h-[600px] opacity-100"
-              : "max-h-0 opacity-0 overflow-hidden"
-          }`}
+          className={`md:hidden bg-white px-6 py-5 flex flex-col gap-5 shadow-md transform transition-all duration-300 ${isMenuOpen
+            ? "max-h-[600px] opacity-100"
+            : "max-h-0 opacity-0 overflow-hidden"
+            }`}
         >
-          {[...links, ...(isAuthenticated ? [] : guestLinks)].map((link) => (
+          {links.map((link) => (
             <Link
               key={link.href}
               href={link.href}
               onClick={() => setIsMenuOpen(false)}
-              className="text-lg font-medium text-gray-800 hover:text-red-700 transition-colors"
+              className="text-lg font-medium text-gray-800 hover:text-[#06a646] transition-colors"
             >
               {link.label}
             </Link>
           ))}
+
+          {!isAuthenticated && (
+            <div className="flex flex-col gap-4 mt-2 px-1">
+              <Link
+                href={routes.auth.login}
+                onClick={() => setIsMenuOpen(false)}
+                className="text-lg font-bold text-gray-800 hover:text-[#06a646] transition-colors"
+              >
+                Acceder
+              </Link>
+              <Link
+                href={routes.auth.register}
+                onClick={() => setIsMenuOpen(false)}
+                className="text-lg font-bold text-gray-800 hover:text-[#06a646] transition-colors"
+              >
+                Registrarse
+              </Link>
+            </div>
+          )}
 
           {isAuthenticated && (
             <div className="pt-2 border-t">
@@ -328,11 +360,11 @@ const Nav = () => {
               router.push(routes.landing.cart);
               setIsMenuOpen(false);
             }}
-            className="relative cursor-pointer bg-red-700 hover:bg-red-800 text-white px-4 py-2 rounded-md flex items-center justify-center transition"
+            className="relative cursor-pointer bg-[#04652c] hover:bg-[#06a646] text-white px-4 py-2 rounded-md flex items-center justify-center transition"
           >
             <ShoppingCart className="h-5 w-5 mr-2" /> Carrito
             {totalItems > 0 && (
-              <span className="absolute top-0 right-0 -mt-2 -mr-2 bg-[#B20000] text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-md">
+              <span className="absolute top-0 right-0 -mt-2 -mr-2 bg-[#06a646] text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-md">
                 {totalItems}
               </span>
             )}
