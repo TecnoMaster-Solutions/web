@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 
 type AccordionItem = {
   question: string;
@@ -13,51 +13,47 @@ interface AccordionProps {
 }
 
 export default function Accordion({ items }: AccordionProps) {
-  const [openIndex, setOpenIndex] = useState<number | null>(0); // Primera pregunta abierta por defecto
+  const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   const toggleItem = (index: number) => {
     setOpenIndex(openIndex === index ? null : index);
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {items.map((item, index) => (
-        <div key={index}>
+        <div
+          key={index}
+          className="rounded-[20px] overflow-hidden border border-gray-100 shadow-sm"
+        >
           {/* Botón de la pregunta */}
           <button
             onClick={() => toggleItem(index)}
-            className={`w-full flex justify-between items-center text-left px-6 py-4 rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-              openIndex === index 
-                ? 'bg-white border-2 border-gray-800 text-gray-800 focus:ring-gray-800' 
-                : 'bg-gray-600 text-white hover:bg-gray-700 focus:ring-gray-600'
-            }`}
-            aria-expanded={openIndex === index}
-            aria-controls={`accordion-content-${index}`}
+            className={`w-full flex justify-between items-center text-left px-8 py-6 transition-all duration-300 focus:outline-none ${openIndex === index
+                ? 'bg-[#04652c] text-white'
+                : 'bg-white text-gray-800 hover:bg-gray-50'
+              }`}
           >
-            <h3 className="text-lg font-medium">
+            <h3 className="text-lg font-bold">
               {item.question}
             </h3>
-            <ChevronDown 
-              className={`w-5 h-5 transition-transform duration-200 flex-shrink-0 ml-4 ${
-                openIndex === index ? 'rotate-180' : ''
-              }`}
-            />
+            {openIndex === index ? (
+              <ChevronUp className="w-6 h-6 text-white" />
+            ) : (
+              <ChevronDown className="w-6 h-6 text-gray-400" />
+            )}
           </button>
-          
+
           {/* Contenido expandible */}
           <div
-            id={`accordion-content-${index}`}
-            className={`overflow-hidden transition-all duration-300 ${
-              openIndex === index ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-            }`}
+            className={`transition-all duration-500 ease-in-out ${openIndex === index ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
+              }`}
           >
-            {openIndex === index && (
-              <div className="px-6 py-4 mt-2 bg-gray-50 rounded-lg">
-                <p className="text-gray-700 leading-relaxed">
-                  {item.answer}
-                </p>
-              </div>
-            )}
+            <div className="bg-white px-8 py-6 border-t border-gray-50">
+              <p className="text-gray-600 leading-relaxed font-medium whitespace-pre-wrap">
+                {item.answer}
+              </p>
+            </div>
           </div>
         </div>
       ))}

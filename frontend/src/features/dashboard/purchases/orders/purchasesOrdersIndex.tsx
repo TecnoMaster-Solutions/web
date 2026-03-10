@@ -57,28 +57,6 @@ export default function PurchaseOrdersIndex() {
     });
   }, [purchaseOrders, sortField, sortDir]);
 
-  const sortButtons = (
-    <div className="flex items-center gap-2">
-      {(["fecha", "total"] as const).map((field) => (
-        <button
-          key={field}
-          onClick={() => handleSort(field)}
-          className={`flex items-center gap-1 px-3 py-1.5 text-sm font-medium border rounded-lg transition-colors ${
-            sortField === field
-              ? "bg-green-600 text-white border-green-600"
-              : "text-gray-600 bg-white hover:bg-gray-50 border-gray-300"
-          }`}
-          title={`Ordenar por ${field === "fecha" ? "Fecha" : "Total"}`}
-        >
-          {field === "fecha" ? "Fecha" : "Total"}
-          <span className="text-xs">
-            {sortField === field ? (sortDir === "asc" ? " ↑" : " ↓") : " ↕"}
-          </span>
-        </button>
-      ))}
-    </div>
-  );
-
   // Handlers for navigation
   const handleCreateClick = () => {
     setCurrentView("create");
@@ -101,7 +79,7 @@ export default function PurchaseOrdersIndex() {
   };
 
   return (
-    <div className="min-h-screen flex">
+    <div className="flex">
       <ToastContainer
         position="bottom-right"
         autoClose={3000}
@@ -110,8 +88,8 @@ export default function PurchaseOrdersIndex() {
 
       <div className="flex-1 flex flex-col">
         <main className="flex-1 flex flex-col">
-          <div className="px-6 pt-6 space-y-6">
-            
+          <div className="px-6 pt-6 pb-6 space-y-6">
+
             {/* Header - Only show when not in list view */}
             {currentView !== "list" && (
               <div className="flex items-center gap-4 mb-4">
@@ -130,7 +108,7 @@ export default function PurchaseOrdersIndex() {
                     {currentView === "create" ? "Crear Orden de Compra" : "Ver Orden de Compra"}
                   </h1>
                   <p className="text-sm text-gray-500">
-                    {currentView === "create" 
+                    {currentView === "create"
                       ? "Registre una nueva orden de compra — complete los datos y guarde"
                       : "Detalles de la orden de compra"
                     }
@@ -154,13 +132,12 @@ export default function PurchaseOrdersIndex() {
                     purchaseOrders={sortedOrders}
                     onView={handleViewClick}
                     onCreate={handleCreateClick}
-                    rightActions={sortButtons}
                   />
                 )}
               </>
             )}
 
-{/* Create View */}
+            {/* Create View */}
             {currentView === "create" && (
               <CreatePurchaseOrderPage
                 onClose={handleBackToList}

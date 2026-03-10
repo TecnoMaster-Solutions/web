@@ -1,59 +1,58 @@
 import React from "react";
 import Image from "next/image";
-import Colors from "@/shared/theme/colors";
+import { CheckCircle2 } from "lucide-react";
 import { routes } from "@/shared/routes";
 
 const Trajectory = () => {
+  const checkItems = [
+    "Certificación Internacional ISO",
+    "Soporte 24/7 Personalizado",
+    "Alianzas con Líderes Globales",
+  ];
+
   return (
-    <section className="relative py-10 px-4 sm:px-10 md:px-20 flex flex-col md:flex-row items-center md:items-start gap-10 md:gap-12 overflow-hidden">
-      {/* Imagen de fondo */}
-      <div className="absolute inset-0 -z-2">
-        <Image
-          src="/assets/imgs/trajectory.webp"
-          alt="Cohete Startup"
-          fill
-          className="object-cover opacity-40"
-          priority
-        />
-        {/* Degradado para combinar con fondo blanco */}
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-white"></div>
+    <section className="relative py-16 px-6 sm:px-12 md:px-24 flex flex-col md:flex-row items-center gap-12 md:gap-16 bg-white overflow-hidden">
+      {/* Imagen Principal (Izquierda) */}
+      <div className="flex-1 flex justify-center relative w-full mb-8 md:mb-0">
+        <div className="relative w-full max-w-sm sm:max-w-md md:max-w-xl aspect-square bg-gray-50 rounded-3xl shadow-lg border border-gray-100 overflow-hidden group">
+          <Image
+            src="/assets/imgs/camera.png"
+            alt="Cámara de seguridad web"
+            className="object-cover transition-transform duration-500 group-hover:scale-105"
+            fill
+          />
+          {/* Decorative green shape */}
+          <div className="absolute -bottom-4 -left-4 w-32 h-32 bg-[#04652c]/10 rounded-full blur-2xl"></div>
+        </div>
       </div>
 
-      {/* Texto */}
-      <div className="flex-1 relative z-10 text-center md:text-left">
-        <h2 className="text-3xl sm:text-4xl md:text-6xl font-extrabold text-red-700 mb-6 md:mb-8 leading-tight">
-          ¡Conoce nuestra <br className="hidden sm:block" /> Trayectoria!
+      {/* Texto (Derecha) */}
+      <div className="flex-1 text-center md:text-left">
+        <h2 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-[#04652c] mb-6 tracking-tight leading-tight">
+          ¡Conoce nuestra <br className="hidden lg:block" /> Trayectoria!
         </h2>
-        <p className="text-base sm:text-lg md:text-xl text-gray-700 mb-6 md:mb-8 leading-relaxed">
-          Con más de 20 años de experiencia,{" "}
-          <span className="font-semibold">Tech Solutions</span> se ha
-          consolidado como líder en soluciones tecnológicas. Hemos ayudado a
-          cientos de empresas a crecer y optimizar sus operaciones a través de
-          la tecnología.
+        <p className="text-lg md:text-xl text-gray-600 mb-8 leading-relaxed max-w-2xl">
+          Más de 20 años brindando seguridad y soporte técnico especializado con los más altos estándares de calidad en el mercado. En TecnoMaster nos especializamos en infraestructura crítica y protección de activos digitales.
         </p>
+
+        {/* Lista de checks */}
+        <ul className="mb-10 space-y-4 text-left inline-block md:block max-w-md">
+          {checkItems.map((item, idx) => (
+            <li key={idx} className="flex items-center gap-3 text-gray-700 font-medium text-lg">
+              <CheckCircle2 className="text-[#04652c] w-6 h-6 flex-shrink-0" />
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+
         <button
-          style={{ backgroundColor: Colors.buttons.primary }}
           onClick={() => {
             window.location.href = routes.landing.trajectory;
           }}
-          className="relative cursor-pointer inline-flex items-center justify-center px-6 sm:px-8 py-3 text-base sm:text-lg font-semibold text-white rounded-md shadow-lg overflow-hidden group transition-transform duration-300 hover:scale-105"
+          className="relative inline-flex items-center justify-center px-8 py-3.5 text-lg font-semibold text-white rounded-lg shadow-md overflow-hidden bg-[#04652c] hover:bg-[#06a646] transition-colors hover:shadow-xl hover:-translate-y-1 duration-300"
         >
-          <span className="absolute inset-0 bg-red-800 scale-x-0 origin-left transition-transform duration-300 ease-out group-hover:scale-x-100"></span>
-          <span className="relative z-10 transition-colors duration-300 group-hover:text-white">
-            Ver más
-          </span>
+          Saber Más
         </button>
-      </div>
-
-      {/* Imagen principal */}
-      <div className="flex-1 flex justify-center relative z-15 w-full">
-        <Image
-          src="/assets/imgs/camera.png"
-          alt="Cámara de seguridad"
-          className="rounded-2xl shadow-xl w-full max-w-sm sm:max-w-md md:max-w-2xl object-cover"
-          width={700}
-          height={700}
-        />
       </div>
     </section>
   );

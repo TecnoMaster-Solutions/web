@@ -13,15 +13,15 @@ interface CardProps {
 
 // Definir las variantes de estilos
 const cardVariants: Record<CardVariant, string> = {
-  default: "card",
-  elevated: "card shadow-lg hover:shadow-xl transition-shadow duration-200",
-  bordered: "bg-white rounded-2xl border-2 border-gray-200 p-6 hover:border-red-600 transition-colors duration-200"
+  default: "bg-white rounded-xl shadow-sm border border-gray-100 p-6",
+  elevated: "bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 p-8",
+  bordered: "bg-white rounded-xl border border-gray-200 p-6 hover:border-[#04652c] transition-colors duration-200"
 };
 
-const Card: React.FC<CardProps> = ({ 
-  children, 
-  variant = "default", 
-  className = "" 
+const Card: React.FC<CardProps> = ({
+  children,
+  variant = "default",
+  className = ""
 }) => {
   return (
     <div className={cn(cardVariants[variant], className)}>
