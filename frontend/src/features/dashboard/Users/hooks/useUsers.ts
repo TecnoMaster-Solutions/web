@@ -44,6 +44,7 @@ export const buildUserPayload = (
 
 export const useUser = () => {
   const PAGE_SIZE = 5;
+  const SEARCH_DEBOUNCE_MS = 350;
   const [users, setUsers] = useState<User[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -53,6 +54,8 @@ export const useUser = () => {
   const [editingUser, setEditingUser] = useState<EditUser | null>(null);
   const [viewingUser, setViewingUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchAbortRef = useRef<AbortController | null>(null);
 
   const sortUsers = useCallback(
     (list: User[]) => [...list].sort((a, b) => (a.userid ?? 0) - (b.userid ?? 0)),
@@ -60,11 +63,16 @@ export const useUser = () => {
   );
 
   const refreshUsers = useCallback(
-    async (targetPage: number = currentPage, searchText: string = search) => {
+    async (
+      targetPage: number = currentPage,
+      searchText: string = search,
+      signal?: AbortSignal
+    ) => {
     const response = (await getUsers({
       page: targetPage,
       limit: PAGE_SIZE,
       search: searchText,
+      signal,
     })) as UsersPaginatedResult;
 
     const list = Array.isArray(response?.data) ? response.data : [];
@@ -100,6 +108,15 @@ export const useUser = () => {
     }
   }, [refreshUsers]);
 
+  useEffect(() => {
+    return () => {
+      if (searchDebounceRef.current) {
+        clearTimeout(searchDebounceRef.current);
+      }
+      searchAbortRef.current?.abort();
+    };
+  }, []);
+
   const handlePageChange = useCallback(
     async (nextPage: number) => {
       setLoading(true);
@@ -116,17 +133,32 @@ export const useUser = () => {
   );
 
   const handleSearchChange = useCallback(
-    async (value: string) => {
+    (value: string) => {
       setSearch(value);
-      setLoading(true);
-      try {
-        await refreshUsers(1, value);
-      } catch (error) {
-        console.error("Error al buscar usuarios:", error);
-        showError("No se pudo buscar usuarios.");
-      } finally {
-        setLoading(false);
-      }
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+      searchAbortRef.current?.abort();
+
+      const controller = new AbortController();
+      searchAbortRef.current = controller;
+
+      searchDebounceRef.current = setTimeout(async () => {
+        setLoading(true);
+        try {
+          await refreshUsers(1, value, controller.signal);
+        } catch (error: any) {
+          if (
+            error?.name === "CanceledError" ||
+            error?.code === "ERR_CANCELED" ||
+            controller.signal.aborted
+          ) {
+            return;
+          }
+          console.error("Error al buscar usuarios:", error);
+          showError("No se pudo buscar usuarios.");
+        } finally {
+          if (!controller.signal.aborted) setLoading(false);
+        }
+      }, SEARCH_DEBOUNCE_MS);
     },
     [refreshUsers]
   );
