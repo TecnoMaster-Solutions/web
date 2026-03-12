@@ -1,4 +1,5 @@
 import { apiClient } from "@/shared/utils/apiClient";
+import { getPublicRuntimeConfig } from "@/lib/runtime-config";
 import { PurchaseOrderItem, purchaseOrder } from "../types/typesPurchaseOrder";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -186,16 +187,14 @@ export async function sendPurchaseOrderNotification(
     payload: SendNotificationPayload
 ): Promise<NotificationResult> {
     // Determinar la URL base
+    const { apiUrl, appUrl } = getPublicRuntimeConfig();
     let baseURL = "";
     
     // Verificar si estamos en el navegador (client-side)
     if (typeof window !== "undefined" && window.location) {
         baseURL = window.location.origin;
     } else {
-        // En servidor, usar variable de entorno o URL por defecto
-        baseURL =
-            process.env.NEXT_PUBLIC_API_URL ||
-            "https://vertecx-api-sha-09ac69f.onrender.com";
+        baseURL = appUrl;
     }
     
     // Determinar si usamos el API route de Next.js o el backend externo
@@ -225,7 +224,7 @@ export async function sendPurchaseOrderNotification(
         // Si falla con 404, intentar con el backend externo
         if (response.status === 404) {
             console.log("Primary URL failed, trying external backend...");
-            url = `${baseURL}/purchase-orders/send-notification`;
+            url = `${apiUrl}/purchase-orders/send-notification`;
             console.log("Notification URL (fallback):", url);
             
             const fallbackResponse = await fetch(url, {

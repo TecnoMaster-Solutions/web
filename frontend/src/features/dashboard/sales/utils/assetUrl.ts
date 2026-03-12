@@ -1,3 +1,5 @@
+import { getPublicRuntimeConfig } from "@/lib/runtime-config";
+
 export function resolveAssetUrl(url?: string | null) {
   const raw = String(url ?? "").trim();
   if (!raw) return "";
@@ -6,9 +8,7 @@ export function resolveAssetUrl(url?: string | null) {
     return raw;
   }
 
-  const apiBase =
-    process.env.NEXT_PUBLIC_API_URL ||
-    "https://vertecx-api-sha-09ac69f.onrender.com";
+  const apiBase = getPublicRuntimeConfig().apiUrl;
   const normalizedBase = apiBase.replace(/\/+$/, "");
   const normalizedPath = raw.startsWith("/") ? raw : `/${raw}`;
 

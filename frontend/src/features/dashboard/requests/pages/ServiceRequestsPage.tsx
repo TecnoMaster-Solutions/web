@@ -254,6 +254,9 @@ export default function ServiceRequestsPage() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(5);
+  const [search, setSearch] = useState("");
   const [openCreate, setOpenCreate] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
   const [openView, setOpenView] = useState(false);
@@ -268,10 +271,6 @@ export default function ServiceRequestsPage() {
   const { has, canView, canCreate, canUpdate, canDelete } = usePermissions();
   const isDesktop = useDesktopQuery();
   const sidebarW = useSidebarWidth("#app-sidebar");
-
-  const { data, isLoading, error } = useServiceRequests();
-  const createMut = useCreateServiceRequest();
-  const updateMut = useUpdateServiceRequest();
 
   const normalizedRole = useMemo(() => {
     const candidates = [
@@ -315,28 +314,23 @@ export default function ServiceRequestsPage() {
     return extractAuthTechnicianId(user, profile);
   }, [isTechnicianRole, user, profile]);
 
-  const filteredData = useMemo(() => {
-    const list = Array.isArray(data) ? data : [];
+  const requestQuery = useMemo(
+    () => ({
+      page,
+      limit,
+      search,
+      clientId: isClientRole ? clientIdFromAuth ?? undefined : undefined,
+      technicianId: isTechnicianRole ? technicianIdFromAuth ?? undefined : undefined,
+    }),
+    [clientIdFromAuth, isClientRole, isTechnicianRole, limit, page, search, technicianIdFromAuth]
+  );
 
-    return list.filter((r: any) => {
-      if (isClientRole) {
-        const clientIds = extractRequestClientIds(r);
-        const targetClientId = clientIdFromAuth ?? -1;
-        if (!clientIds.includes(targetClientId)) return false;
-      }
-
-      if (isTechnicianRole) {
-        const techIds = extractTechnicianIds(r);
-        const targetTechId = technicianIdFromAuth ?? -1;
-        if (!techIds.some((id) => id === targetTechId)) return false;
-      }
-
-      return true;
-    });
-  }, [data, clientIdFromAuth, isClientRole, isTechnicianRole, technicianIdFromAuth]);
+  const { data, isLoading, error } = useServiceRequests(requestQuery);
+  const createMut = useCreateServiceRequest();
+  const updateMut = useUpdateServiceRequest();
 
   const rows: Row[] = useMemo(() => {
-    const list = Array.isArray(filteredData) ? filteredData : [];
+    const list = Array.isArray(data?.data) ? data.data : [];
     return list.map((r: any) => {
       const id = r?.serviceRequestId ?? r?.id ?? "";
       const servicio = r?.service?.name ?? r?.serviceType ?? "";
@@ -410,7 +404,9 @@ export default function ServiceRequestsPage() {
         technicianNames,
       };
     });
-  }, [filteredData]);
+  }, [data]);
+
+  const totalPages = data?.meta?.totalPages ?? 1;
 
   const xlsxRows = useMemo(() => {
     return rows.map((r) => ({
@@ -862,7 +858,25 @@ export default function ServiceRequestsPage() {
             data={rows}
             columns={columns}
             pageSize={5}
+            serverPagination={{
+              page,
+              limit,
+              totalPages,
+              onPageChange: setPage,
+              onPageSizeChange: (nextLimit) => {
+                setLimit(nextLimit);
+                setPage(1);
+              },
+            }}
+            serverSearch={{
+              value: search,
+              onChange: (value) => {
+                setSearch(value);
+                setPage(1);
+              },
+            }}
             disableInternalScroll
+            searchPlaceholder="Buscar solicitudes"
             searchableKeys={["id", "cliente", "servicio", "tipo", "estado"]}
             actionGuard={(row) => {
               const estado = String(row?.estado ?? "").toLowerCase().trim();

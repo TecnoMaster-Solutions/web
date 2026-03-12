@@ -2,6 +2,7 @@
 import React, { useState, FormEvent } from 'react';
 import { User, Mail, MessageSquare, Send } from 'lucide-react';
 import { showSuccess, showError } from '@/shared/utils/notifications';
+import { getPublicRuntimeConfig } from '@/lib/runtime-config';
 
 interface ContactFormData {
   nombre: string;
@@ -17,6 +18,7 @@ const ContactForm: React.FC = () => {
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const apiUrl = getPublicRuntimeConfig().apiUrl;
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -36,7 +38,7 @@ const ContactForm: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('http://localhost:3001/contact', {
+      const response = await fetch(`${apiUrl}/contact`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),

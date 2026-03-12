@@ -34,11 +34,11 @@ export default function DashboardLayout({
     routes.dashboard.productsCategories,
     routes.dashboard.purchases,
     routes.dashboard.purchasesGraph,
+    routes.dashboard.purchasesOrders,
     routes.dashboard.quotes,
     routes.dashboard.roles,
     routes.dashboard.sales,
     routes.dashboard.services,
-    routes.dashboard.suppliers,
     routes.dashboard.technicians,
   ];
 

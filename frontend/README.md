@@ -20,6 +20,23 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Environment variables
+
+Local development uses `web/frontend/.env`, which is ignored by git.
+Create it from `web/frontend/.env.example`.
+
+Required variables:
+
+- `NEXT_PUBLIC_API_URL`
+- `NEXT_PUBLIC_APP_URL`
+
+The frontend image no longer needs these values during `docker build`.
+Like the backend, configuration is read at runtime from container environment variables.
+
+For deployed containers, pass them when starting the container, for example with `--env-file`.
+
+The app exposes runtime config through `/runtime-config.js`, so updating the container environment and recreating the container is enough to change the frontend target API without rebuilding the image.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

@@ -1,7 +1,6 @@
-const API_URL = `${
-  process.env.NEXT_PUBLIC_API_URL ||
-  "https://vertecx-api-sha-09ac69f.onrender.com"
-}/typeofdocuments`;
+import { getPublicRuntimeConfig } from "@/lib/runtime-config";
+
+const API_URL = () => `${getPublicRuntimeConfig().apiUrl}/typeofdocuments`;
 
 export interface DocumentTypeResponse {
   typeofdocumentid: number;
@@ -10,7 +9,7 @@ export interface DocumentTypeResponse {
 }
 
 export const getDocumentTypes = async (): Promise<DocumentTypeResponse[]> => {
-  const response = await fetch(API_URL);
+  const response = await fetch(API_URL());
 
   if (!response.ok) {
     throw new Error("Error al obtener los tipos de documento");

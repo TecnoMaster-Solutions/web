@@ -185,6 +185,49 @@ const firstPositiveInteger = (...values: unknown[]): number | null => {
   return null;
 };
 
+function useDesktopQuery() {
+  const [isDesktop, setIsDesktop] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const fn = () => setIsDesktop(mq.matches);
+    fn();
+    mq.addEventListener?.("change", fn);
+    return () => mq.removeEventListener?.("change", fn);
+  }, []);
+  return isDesktop;
+}
+
+function useSidebarWidth(selector = "#app-sidebar") {
+  const [w, setW] = useState(0);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const el = document.querySelector(selector) as HTMLElement | null;
+    if (!el) return;
+    const update = () => setW(el.offsetWidth || 0);
+    update();
+    let ro: ResizeObserver | null = null;
+    if ("ResizeObserver" in window) {
+      ro = new ResizeObserver(() => update());
+      ro.observe(el);
+    }
+    const mo = new MutationObserver(update);
+    mo.observe(el, { attributes: true, attributeFilter: ["class", "style"] });
+    window.addEventListener("resize", update);
+    return () => {
+      if (ro) {
+        try {
+          ro.disconnect();
+        } catch {}
+        ro = null;
+      }
+      mo.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  }, [selector]);
+  return w;
+}
+
 const extractRoleName = (user: unknown, profile: unknown): string => {
   const userObj = (user ?? {}) as Record<string, unknown>;
   const profileObj = (profile ?? {}) as Record<string, unknown>;
@@ -207,62 +250,12 @@ const extractRoleName = (user: unknown, profile: unknown): string => {
   );
 };
 
-const quoteBelongsToCustomer = (
-  quote: QuoteListItem,
-  customerId: number | null,
-  userId: number | null,
-): boolean => {
-  if (!customerId && !userId) return false;
-
-  const quoteCustomerId = firstPositiveInteger(
-    quote.customerid,
-    quote.customer?.customerid,
-    quote.serviceRequest?.customerid,
-    quote.serviceRequest?.clientId,
-  );
-  if (customerId && quoteCustomerId && quoteCustomerId === customerId) return true;
-
-  const quoteCustomerUserId = firstPositiveInteger(
-    quote.customer?.userid,
-    quote.serviceRequest?.customer?.userid,
-  );
-  if (userId && quoteCustomerUserId && quoteCustomerUserId === userId) return true;
-
-  return false;
-};
-
-const quoteBelongsToTechnician = (
-  quote: QuoteListItem,
-  technicianId: number | null,
-  userId: number | null,
-): boolean => {
-  if (!technicianId && !userId) return false;
-
-  const quoteTechnicianIds = [
-    firstPositiveInteger(quote.technicianid, quote.technician?.technicianid),
-    ...(quote.serviceRequest?.techniciansMap ?? []).map((mapItem) =>
-      firstPositiveInteger(mapItem?.technicianid, mapItem?.technician?.technicianid),
-    ),
-  ].filter((id): id is number => Boolean(id));
-
-  if (technicianId && quoteTechnicianIds.includes(technicianId)) return true;
-
-  const quoteTechnicianUserIds = [
-    firstPositiveInteger(quote.technician?.userid),
-    ...(quote.serviceRequest?.techniciansMap ?? []).map((mapItem) =>
-      firstPositiveInteger(mapItem?.technician?.userid),
-    ),
-  ].filter((id): id is number => Boolean(id));
-
-  if (userId && quoteTechnicianUserIds.includes(userId)) return true;
-
-  return false;
-};
-
 export default function QuotesIndex() {
   const router = useRouter();
   const { user, profile } = useAuth();
   const { canView, canCreate, canUpdate, canDelete, has } = usePermissions();
+  const isDesktop = useDesktopQuery();
+  const sidebarW = useSidebarWidth("#app-sidebar");
   const canViewQuotes = canView("quotes");
   const canCreateQuotes = canCreate("quotes");
   const canUpdateQuotes = canUpdate("quotes");
@@ -272,8 +265,14 @@ export default function QuotesIndex() {
   const canDeactivateQuotes = has("quotes", "deactivate");
   const canCancelQuotes = canUpdateQuotes || canDeactivateQuotes;
   const canExportQuotes = has("quotes", "download_report") || has("quotes", "export");
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(5);
+  const [search, setSearch] = useState("");
+  const [totalPages, setTotalPages] = useState(1);
   const [quotesData, setQuotesData] = useState<QuoteTableRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const authUser = user as any;
+  const authProfile = profile as any;
 
   const roleName = useMemo(() => extractRoleName(user, profile), [user, profile]);
   const isClientRole = useMemo(
@@ -285,33 +284,29 @@ export default function QuotesIndex() {
     [roleName],
   );
 
-  const currentUserId = useMemo(
-    () => firstPositiveInteger(user?.userid, profile?.userid, profile?.users?.userid),
-    [user, profile],
-  );
   const currentCustomerId = useMemo(
     () =>
       firstPositiveInteger(
-        user?.customerid,
-        user?.customer?.customerid,
-        user?.customers?.[0]?.customerid,
-        profile?.customerid,
-        profile?.customer?.customerid,
-        profile?.customers?.[0]?.customerid,
+        authUser?.customerid,
+        authUser?.customer?.customerid,
+        authUser?.customers?.[0]?.customerid,
+        authProfile?.customerid,
+        authProfile?.customer?.customerid,
+        authProfile?.customers?.[0]?.customerid,
       ),
-    [user, profile],
+    [authProfile, authUser],
   );
   const currentTechnicianId = useMemo(
     () =>
       firstPositiveInteger(
-        user?.technicianid,
-        user?.technician?.technicianid,
-        user?.technicians?.[0]?.technicianid,
-        profile?.technicianid,
-        profile?.technician?.technicianid,
-        profile?.technicians?.[0]?.technicianid,
+        authUser?.technicianid,
+        authUser?.technician?.technicianid,
+        authUser?.technicians?.[0]?.technicianid,
+        authProfile?.technicianid,
+        authProfile?.technician?.technicianid,
+        authProfile?.technicians?.[0]?.technicianid,
       ),
-    [user, profile],
+    [authProfile, authUser],
   );
 
   const createCustomerAndAssignToQuote = useCallback(
@@ -456,42 +451,58 @@ export default function QuotesIndex() {
   const fetchQuotes = useCallback(async () => {
     if (!canViewQuotes) {
       setQuotesData([]);
+      setTotalPages(1);
       setLoading(false);
       return;
     }
 
     setLoading(true);
     try {
-      const data = await getQuotes();
-      const allQuotes: QuoteListItem[] = Array.isArray(data) ? data : [];
-      const filteredQuotes = allQuotes.filter((quote) => {
-        if (isClientRole) {
-          return quoteBelongsToCustomer(quote, currentCustomerId, currentUserId);
-        }
-        if (isTechnicianRole) {
-          return quoteBelongsToTechnician(quote, currentTechnicianId, currentUserId);
-        }
-        return true;
+      const response = await getQuotes({
+        page,
+        limit,
+        search,
+        customerid: isClientRole ? currentCustomerId ?? undefined : undefined,
+        technicianid: isTechnicianRole ? currentTechnicianId ?? undefined : undefined,
       });
+      const allQuotes: QuoteListItem[] = Array.isArray(response)
+        ? response
+        : Array.isArray(response?.data)
+          ? response.data
+          : [];
 
-      const mapped: QuoteTableRow[] = filteredQuotes.map((q: QuoteListItem) => {
+      const mapped: QuoteTableRow[] = allQuotes.map((q: QuoteListItem) => {
         const rawStatus = q.state?.name ?? "";
         const clientName = resolveClientName(q);
         const requestId = resolveRequestId(q);
+        const technicianName = `${q.technician?.users?.name ?? ""} ${q.technician?.users?.lastname ?? ""}`.trim() || "Sin tecnico";
+        const details = Array.isArray(q.details) ? q.details : [];
+        const itemsSummary = details
+          .map((detail) => String(detail?.description ?? "").trim())
+          .filter(Boolean)
+          .join(", ");
 
         return {
           id: q.quotesid,
           requestRef: requestId ? `#${requestId}` : "Directa",
           client: clientName,
+          technician: technicianName,
+          serviceType: String(q.servicetype ?? "Sin tipo"),
+          itemsSummary: itemsSummary || "Sin items",
           status: rawStatus,
           statusSearch: normalizeQuoteStatusText(rawStatus),
-          creationDate: q.createdat,
+          creationDate: String(q.createdat ?? ""),
           amount: Number(q.total ?? 0),
+          detailsCount: details.length,
           raw: q,
         };
       });
 
       setQuotesData(mapped);
+      setTotalPages(Array.isArray(response) ? 1 : response.meta?.totalPages ?? 1);
+    } catch {
+      setQuotesData([]);
+      setTotalPages(1);
     } finally {
       setLoading(false);
     }
@@ -499,9 +510,11 @@ export default function QuotesIndex() {
     canViewQuotes,
     currentCustomerId,
     currentTechnicianId,
-    currentUserId,
     isClientRole,
     isTechnicianRole,
+    limit,
+    page,
+    search,
   ]);
 
   useEffect(() => {
@@ -666,55 +679,73 @@ export default function QuotesIndex() {
 
   return (
     <RequireAuth>
-      <div className="p-6">
-        <h1 className="text-xl font-semibold mb-4">Listado de Cotizaciones</h1>
-
-        {!canViewQuotes ? (
-          <div className="flex items-center justify-center py-20">
-            <span className="text-gray-500">
-              No tienes permisos para visualizar cotizaciones.
-            </span>
-          </div>
-        ) : (
-
-        <DataTable<QuoteTableRow>
-          module="quotes"
-          data={quotesData}
-          columns={columns}
-          loading={loading}
-          searchableKeys={[
-            "id",
-            "requestRef",
-            "client",
-            "statusSearch",
-            "amount",
-            "creationDate",
-          ]}
-          pageSize={8}
-          onView={(row) => router.push(`/dashboard/quotes/${row.id}`)}
-          onCreate={canCreateQuotes ? () => router.push("/dashboard/quotes/register") : undefined}
-          createButtonText="Crear Cotización"
-          onCheck={canApproveQuotes ? handleApproveQuote : undefined}
-          onCancel={canCancelQuotes ? handleCancelQuote : undefined}
-          onDelete={canDeleteQuotes ? handleRevokeQuote : undefined}
-          rightActions={
-            canExportQuotes ? (
-            <button
-              type="button"
-              className="relative cursor-pointer inline-flex h-9 items-center gap-2 overflow-hidden rounded-md px-4 text-sm font-semibold text-white transition-transform duration-200 hover:scale-105 group"
-              style={{ background: Colors.buttons.primary }}
-              onClick={() => showInfo("Conecta aquí la descarga del reporte.")}
-            >
-              <span className="absolute inset-0 bg-[#227a69] scale-x-0 origin-left transition-transform duration-300 ease-out group-hover:scale-x-100"></span>
-              <span className="relative z-10 flex items-center gap-2 group-hover:text-white transition-colors duration-300">
-                <Image src="/icons/download.svg" alt="Descargar" width={16} height={16} />
-                Descargar Reporte
+      <div className="relative" style={{ paddingLeft: isDesktop ? sidebarW : 0 }}>
+        <main className="min-h-[100dvh] bg-gray-100 relative">
+          {!canViewQuotes ? (
+            <div className="flex-1 flex items-center justify-center p-8">
+              <span className="text-gray-500">
+                No tienes permisos para visualizar cotizaciones.
               </span>
-            </button>
-            ) : null
-          }
-        />
-        )}
+            </div>
+          ) : (
+          <DataTable<QuoteTableRow>
+            module="quotes"
+            data={quotesData}
+            columns={columns}
+            loading={loading}
+            serverPagination={{
+              page,
+              limit,
+              totalPages,
+              onPageChange: setPage,
+              onPageSizeChange: (nextLimit) => {
+                setLimit(nextLimit);
+                setPage(1);
+              },
+            }}
+            serverSearch={{
+              value: search,
+              onChange: (value) => {
+                setSearch(value);
+                setPage(1);
+              },
+            }}
+            searchPlaceholder="Buscar cotizaciones"
+            searchableKeys={[
+              "id",
+              "requestRef",
+              "client",
+              "statusSearch",
+              "amount",
+              "creationDate",
+            ]}
+            pageSize={5}
+            disableInternalScroll
+            onView={(row) => router.push(`/dashboard/quotes/${row.id}`)}
+            onCreate={canCreateQuotes ? () => router.push("/dashboard/quotes/register") : undefined}
+            createButtonText="Crear Cotización"
+            onCheck={canApproveQuotes ? handleApproveQuote : undefined}
+            onCancel={canCancelQuotes ? handleCancelQuote : undefined}
+            onDelete={canDeleteQuotes ? handleRevokeQuote : undefined}
+            rightActions={
+              canExportQuotes ? (
+              <button
+                type="button"
+                className="relative cursor-pointer inline-flex h-9 items-center gap-2 overflow-hidden rounded-md px-4 text-sm font-semibold text-white transition-transform duration-200 hover:scale-105 group"
+                style={{ background: Colors.buttons.primary }}
+                onClick={() => showInfo("Conecta aquí la descarga del reporte.")}
+              >
+                <span className="absolute inset-0 bg-[#227a69] scale-x-0 origin-left transition-transform duration-300 ease-out group-hover:scale-x-100"></span>
+                <span className="relative z-10 flex items-center gap-2 group-hover:text-white transition-colors duration-300">
+                  <Image src="/icons/download.svg" alt="Descargar" width={16} height={16} />
+                  Descargar Reporte
+                </span>
+              </button>
+              ) : null
+            }
+          />
+          )}
+        </main>
       </div>
     </RequireAuth>
   );
