@@ -2,33 +2,40 @@
 import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-
-const suppliers = [
-  "/assets/imgs/suppliers/segurpro.png",
-  "/assets/imgs/suppliers/electroExito.png",
-  "/assets/imgs/suppliers/gvSolutions.png",
-  "/assets/imgs/suppliers/pcmayorista.png",
-  "/assets/imgs/suppliers/tecnoElectra.png",
-];
+import { getSuppliers, SupplierDTO } from "@/features/dashboard/suppliers/services/suppliers.service";
 
 const SuppliersSlider = () => {
   const itemsToShow = 4;
-  const [current, setCurrent] = useState(suppliers.length); // Empezamos en el primer set real
+  const [suppliers, setSuppliers] = useState<SupplierDTO[]>([]);
+  const [current, setCurrent] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(true);
   const sliderRef = useRef(null);
 
-  const extendedSuppliers = [
-    ...suppliers.slice(-itemsToShow), // Últimos elementos al inicio
-    ...suppliers, // Array original
-    ...suppliers.slice(0, itemsToShow), // Primeros elementos al final
-  ];
+  useEffect(() => {
+    const fetchSuppliers = async () => {
+      try {
+        const data = await getSuppliers();
+        const validSuppliers = data.filter((s) => s.image);
+        setSuppliers(validSuppliers);
+        setCurrent(validSuppliers.length);
+      } catch (error) {
+        console.error("Error fetching suppliers:", error);
+      }
+    };
+    fetchSuppliers();
+  }, []);
+
+  const extendedSuppliers = suppliers.length > 0 ? [
+    ...suppliers.slice(-itemsToShow),
+    ...suppliers,
+    ...suppliers.slice(0, itemsToShow),
+  ] : [];
 
   const nextSlide = () => {
-    if (!isTransitioning) return;
+    if (!isTransitioning || suppliers.length === 0) return;
 
     setCurrent((prev) => {
       const newIndex = prev + 1;
-      // Si llegamos al final del set original, resetear al inicio
       if (newIndex >= suppliers.length + itemsToShow) {
         setTimeout(() => {
           setIsTransitioning(false);
@@ -41,11 +48,10 @@ const SuppliersSlider = () => {
   };
 
   const prevSlide = () => {
-    if (!isTransitioning) return;
+    if (!isTransitioning || suppliers.length === 0) return;
 
     setCurrent((prev) => {
       const newIndex = prev - 1;
-      // Si llegamos al inicio, ir al final del set original
       if (newIndex < itemsToShow) {
         setTimeout(() => {
           setIsTransitioning(false);
@@ -57,64 +63,69 @@ const SuppliersSlider = () => {
     });
   };
 
-  // Autoplay
   useEffect(() => {
+    if (suppliers.length === 0) return;
     const interval = setInterval(() => {
       nextSlide();
     }, 3000);
     return () => clearInterval(interval);
-  }, [isTransitioning]);
+  }, [isTransitioning, suppliers.length]);
+
+  if (suppliers.length === 0) {
+    return null; // Don't render if no suppliers to avoid breaking layout
+  }
 
   return (
-    <section className="py-12 relative h-80">
+    <section className="py-16 relative bg-gray-50/50">
       {/* Título */}
-      <h2
-        className="text-center text-3xl md:text-5xl font-bold mb-8"
-        style={{ color: "#B20000" }}
-      >
-        Nuestros Proveedores
-      </h2>
+      <div className="flex justify-center mb-12">
+        <h2 className="text-3xl md:text-5xl font-bold text-gray-800 border-l-8 border-[#04652c] pl-4 uppercase tracking-wide">
+          Nuestros Proveedores
+        </h2>
+      </div>
 
-      <div className="relative flex items-center px-12">
+      <div className="relative flex items-center max-w-7xl mx-auto px-4 sm:px-12">
         {/* Flecha izquierda */}
         <button
           onClick={prevSlide}
-          className="cursor-pointer absolute left-0 top-1/2 -translate-y-1/2 z-20 p-2 hover:scale-110 transition-transform"
+          className="cursor-pointer absolute left-0 top-1/2 -translate-y-1/2 z-20 p-2 text-[#04652c] hover:text-[#06a646] hover:scale-110 transition-transform bg-white rounded-full shadow-md ml-2"
         >
-          {/* Ícono más grande y responsive */}
           <ChevronLeft
-            className="text-black w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 lg:w-16 lg:h-16"
-            strokeWidth={3}
+            className="w-8 h-8 md:w-10 md:h-10"
+            strokeWidth={2.5}
           />
         </button>
 
         {/* Contenedor del slider */}
-        <div className="overflow-hidden w-full" ref={sliderRef}>
+        <div className="overflow-hidden w-full px-4 py-6" ref={sliderRef}>
           <div
-            className={`flex ${
-              isTransitioning
-                ? "transition-transform duration-300 ease-in-out"
-                : ""
-            }`}
+            className={`flex items-center ${isTransitioning
+              ? "transition-transform duration-500 ease-in-out"
+              : ""
+              }`}
             style={{
-              transform: `translateX(-${(current * 25) / itemsToShow}%)`,
+              transform: `translateX(-${(current * 100) / itemsToShow}%)`,
               width: `${(extendedSuppliers.length * 100) / itemsToShow}%`,
             }}
           >
-            {extendedSuppliers.map((src, index) => (
+            {extendedSuppliers.map((supplier: any, index: number) => (
               <div
-                key={`${src}-${index}`}
-                className="flex-shrink-0 flex justify-center items-center p-6"
-                style={{ width: `${25 / itemsToShow}%` }}
+                key={`${supplier.nit || index}-${index}`}
+                className="flex-shrink-0 flex justify-center items-center px-4"
+                style={{ width: `${100 / itemsToShow}%` }}
               >
-                {/* Imagen más grande y responsive */}
-                <div className="cursor-pointer relative w-40 h-20 sm:w-52 sm:h-28 md:w-64 md:h-32 lg:w-80 lg:h-40 grayscale hover:grayscale-0 transition-all duration-300 hover:scale-110">
-                  <Image
-                    src={src}
-                    alt={`Proveedor ${(index % suppliers.length) + 1}`}
-                    fill
-                    className="object-contain"
-                  />
+                <div className="flex flex-col items-center justify-center p-6 bg-white rounded-xl shadow-sm hover:shadow-lg border border-gray-100 transition-all duration-300 hover:scale-105 w-full h-48 sm:h-56">
+                  <div className="relative w-full h-24 sm:h-32 mb-4 group">
+                    <Image
+                      src={supplier.image || ""}
+                      alt={supplier.name || "Proveedor"}
+                      fill
+                      className="object-contain filter grayscale group-hover:grayscale-0 transition-all duration-300"
+                    />
+                  </div>
+                  <h3 className="text-sm md:text-base font-semibold text-gray-700 text-center truncate w-full">
+                    {supplier.name}
+                  </h3>
                 </div>
               </div>
             ))}
@@ -124,12 +135,11 @@ const SuppliersSlider = () => {
         {/* Flecha derecha */}
         <button
           onClick={nextSlide}
-          className="cursor-pointer absolute right-0 top-1/2 -translate-y-1/2 z-20 p-2 hover:scale-110 transition-transform"
+          className="cursor-pointer absolute right-0 top-1/2 -translate-y-1/2 z-20 p-2 text-[#04652c] hover:text-[#06a646] hover:scale-110 transition-transform bg-white rounded-full shadow-md mr-2"
         >
-          {/* Ícono más grande y responsive */}
           <ChevronRight
-            className="text-black w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 lg:w-16 lg:h-16"
-            strokeWidth={3}
+            className="w-8 h-8 md:w-10 md:h-10"
+            strokeWidth={2.5}
           />
         </button>
       </div>

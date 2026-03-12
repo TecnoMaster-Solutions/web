@@ -21,6 +21,7 @@ type UseAppointmentFiltersArgs = {
   events: AppointmentEvent[];
   clientProfileId: number | null;
   technicianProfileUserId: number | null;
+  searchTerm: string;
 };
 
 type SourceFilter = "all" | "order" | "request";
@@ -29,10 +30,10 @@ export const useAppointmentFilters = ({
   events,
   clientProfileId,
   technicianProfileUserId,
+  searchTerm,
 }: UseAppointmentFiltersArgs) => {
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
   const [stateFilter, setStateFilter] = useState("all");
-  const [searchTerm, setSearchTerm] = useState("");
   const [serviceTypeFilter, setServiceTypeFilter] = useState<ServiceTypeFilterKey | "all">("all");
   const [technicianFilter, setTechnicianFilter] = useState<"all" | string>("all");
   const [clientFilter, setClientFilter] = useState<"all" | string>("all");
@@ -87,7 +88,6 @@ export const useAppointmentFilters = ({
   }, [events]);
 
   const filteredEvents = useMemo(() => {
-    const term = searchTerm.trim().toLowerCase();
     const techFilterId = technicianFilter === "all" ? null : Number(technicianFilter);
 
     return events.filter((event) => {
@@ -126,14 +126,10 @@ export const useAppointmentFilters = ({
         if (!eventTechIds.has(techFilterId)) return false;
       }
 
-      if (!term) return true;
-
-      const haystack = `${event.title} ${event.clientLabel} ${event.stateLabel}`.toLowerCase();
-      return haystack.includes(term);
+      return true;
     });
   }, [
     events,
-    searchTerm,
     sourceFilter,
     stateFilter,
     serviceTypeFilter,
@@ -156,7 +152,6 @@ export const useAppointmentFilters = ({
   const clearFilters = useCallback(() => {
     setSourceFilter("all");
     setStateFilter("all");
-    setSearchTerm("");
     setServiceTypeFilter("all");
     setTechnicianFilter("all");
     setClientFilter("all");
@@ -180,7 +175,6 @@ export const useAppointmentFilters = ({
     handlers: {
       setSourceFilter,
       setStateFilter,
-      setSearchTerm,
       setServiceTypeFilter,
       setTechnicianFilter,
       setClientFilter,

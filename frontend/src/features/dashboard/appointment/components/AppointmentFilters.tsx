@@ -2,6 +2,7 @@
 
 import { SERVICE_TYPE_FILTERS } from "../types/calendar.constants";
 import type { AppointmentFilterOption } from "../hooks/useAppointmentFilters";
+import type { AppointmentEvent } from "../types/typeAppointment";
 
 export type AppointmentFiltersProps = {
   eventsLength: number;
@@ -17,17 +18,24 @@ export type AppointmentFiltersProps = {
   serviceTypeFilter: string;
   technicianFilter: string;
   clientFilter: string;
+  searchMatches: AppointmentEvent[];
+  selectedEventKey: string | null;
   onSourceChange: (value: string) => void;
   onStateChange: (value: string) => void;
   onSearchChange: (value: string) => void;
   onServiceTypeChange: (value: string) => void;
   onTechnicianChange: (value: string) => void;
   onClientChange: (value: string) => void;
+  onSelectSearchMatch: (event: AppointmentEvent) => void;
   onClearFilters: () => void;
 };
 
 const baseSelectClass =
   "w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:border-black focus:bg-white focus:outline-none";
+const searchDateFormatter = new Intl.DateTimeFormat("es-CO", {
+  dateStyle: "short",
+  timeStyle: "short",
+});
 
 const AppointmentFilters = ({
   eventsLength,
@@ -43,12 +51,15 @@ const AppointmentFilters = ({
   serviceTypeFilter,
   technicianFilter,
   clientFilter,
+  searchMatches,
+  selectedEventKey,
   onSourceChange,
   onStateChange,
   onSearchChange,
   onServiceTypeChange,
   onTechnicianChange,
   onClientChange,
+  onSelectSearchMatch,
   onClearFilters,
 }: AppointmentFiltersProps) => (
   <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -101,6 +112,40 @@ const AppointmentFilters = ({
         />
       </label>
     </div>
+
+    {searchTerm.trim().length > 0 && searchMatches.length > 1 && (
+      <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-2">
+        <div className="px-2 pb-2 text-xs font-semibold text-slate-500">
+          Coincidencias: {searchMatches.length}
+        </div>
+        <div className="max-h-56 space-y-1 overflow-auto">
+          {searchMatches.map((event) => {
+            const eventKey = `${event.source}-${event.id}`;
+            const sourceLabel = event.source === "order" ? "Orden" : "Solicitud";
+            const active = selectedEventKey === eventKey;
+            return (
+              <button
+                key={eventKey}
+                type="button"
+                onClick={() => onSelectSearchMatch(event)}
+                className={`w-full rounded-md border px-3 py-2 text-left transition ${
+                  active
+                    ? "border-slate-900 bg-slate-900 text-white"
+                    : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
+                }`}
+              >
+                <p className={`truncate text-xs font-semibold ${active ? "text-white" : "text-slate-900"}`}>
+                  {event.title}
+                </p>
+                <p className={`truncate text-[11px] ${active ? "text-slate-200" : "text-slate-500"}`}>
+                  {sourceLabel} #{event.id} - {searchDateFormatter.format(event.start)} - {event.stateLabel}
+                </p>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    )}
 
     <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       <label className="space-y-1 text-xs font-semibold text-slate-500">

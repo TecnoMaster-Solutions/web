@@ -35,6 +35,7 @@ export default function DashboardLayout({
     routes.dashboard.purchases,
     routes.dashboard.purchasesGraph,
     routes.dashboard.purchasesOrders,
+    routes.dashboard.quotes,
     routes.dashboard.roles,
     routes.dashboard.sales,
     routes.dashboard.services,
@@ -133,17 +134,16 @@ export default function DashboardLayout({
             width: hideAside
               ? "100%"
               : isCollapsed
-              ? "100%"
-              : "calc(100% - 16rem)",
+                ? "100%"
+                : "calc(100% - 16rem)",
             marginLeft: hideAside ? 0 : isCollapsed ? 0 : "16rem",
           }}
         >
           <TopNav />
 
           <main
-            className={`flex-1 h-50 bg-gray-100 p-6 overflow-x-hidden scrollbar-thin ${
-              isNoScrollRoute ? "overflow-y-hidden" : "overflow-y-auto"
-            }`}
+            className={`flex-1 h-50 bg-gray-100 p-6 overflow-x-hidden scrollbar-thin ${isNoScrollRoute ? "overflow-y-hidden" : "overflow-y-auto"
+              }`}
           >
             {children}
           </main>

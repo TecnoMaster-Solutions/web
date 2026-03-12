@@ -10,7 +10,7 @@ const HeaderSlider = () => {
   const [current, setCurrent] = useState(0);
 
   // Texto animado
-  const fullText = "Bienvenido";
+  const fullText = "Bienvenido a TecnoMaster";
   const [displayedText, setDisplayedText] = useState("");
 
   useEffect(() => {
@@ -45,15 +45,22 @@ const HeaderSlider = () => {
         className="object-cover transition-all duration-700"
       />
 
+      <div className="absolute inset-0 bg-[#04652c]/80 z-10" />
+
       {/* Texto encima */}
-      <div className="absolute inset-0 flex flex-col justify-center items-center text-center px-4">
-        <h2 className="text-4xl md:text-8xl font-bold text-white drop-shadow-lg animate-fadeIn">
+      <div className="absolute inset-0 z-20 flex flex-col justify-center items-center text-center px-4">
+        <h2 className="text-4xl md:text-7xl font-bold text-white drop-shadow-lg animate-fadeIn">
           {displayedText}
           <span className="animate-pulse">|</span>
         </h2>
-        <p className="mt-4 text-2xl md:text-5xl font-bold text-white drop-shadow-lg animate-fadeIn delay-500">
-          Tu aliado tecnológico de confianza.
+        <p className="mt-6 text-xl md:text-3xl font-medium text-gray-200 drop-shadow-md animate-fadeIn delay-500 max-w-3xl">
+          Soluciones tecnológicas avanzadas para su empresa
         </p>
+        <button
+          className="mt-10 px-8 py-3 rounded-md text-lg font-semibold text-white bg-[#04652c] hover:bg-[#06a646] transition-all duration-300 shadow-lg hover:scale-105"
+        >
+          Ver Más
+        </button>
       </div>
 
       {/* Flecha izquierda */}
@@ -61,7 +68,7 @@ const HeaderSlider = () => {
         onClick={() =>
           setCurrent((prev) => (prev === 0 ? images.length - 1 : prev - 1))
         }
-        className="cursor-pointer absolute left-4 top-1/2 -translate-y-1/2 text-white text-9xl font-bold hover:scale-110 transition-transform"
+        className="cursor-pointer absolute left-4 top-1/2 -translate-y-1/2 z-30 text-white/70 hover:text-white text-6xl md:text-8xl font-bold hover:scale-110 transition-all duration-300"
       >
         ‹
       </button>
@@ -69,19 +76,18 @@ const HeaderSlider = () => {
       {/* Flecha derecha */}
       <button
         onClick={() => setCurrent((prev) => (prev + 1) % images.length)}
-        className="cursor-pointer absolute  right-4 top-1/2 -translate-y-1/2 text-white text-9xl font-bold hover:scale-110 transition-transform"
+        className="cursor-pointer absolute right-4 top-1/2 -translate-y-1/2 z-30 text-white/70 hover:text-white text-6xl md:text-8xl font-bold hover:scale-110 transition-all duration-300"
       >
         ›
       </button>
 
       {/* Indicadores */}
-      <div className="absolute bottom-4 w-full flex justify-center gap-2">
+      <div className="absolute bottom-6 w-full z-30 flex justify-center gap-3">
         {images.map((_, index) => (
           <div
             key={index}
-            className={`w-3 h-3 rounded-full cursor-pointer ${
-              index === current ? "bg-white" : "bg-gray-500"
-            }`}
+            className={`w-3 h-3 rounded-full cursor-pointer ${index === current ? "bg-white" : "bg-gray-500"
+              }`}
             onClick={() => setCurrent(index)}
           />
         ))}

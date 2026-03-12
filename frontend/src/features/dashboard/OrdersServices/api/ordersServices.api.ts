@@ -14,6 +14,7 @@ import type {
 
 const BASE = "orders-services";
 const IN_PROCESS_STATE_ID = 7;
+type RequestOptions = { signal?: AbortSignal };
 
 export type PaginationMeta = {
   page: number;
@@ -92,11 +93,20 @@ export async function createOrderService(
 
 export async function fetchOrdersServices(): Promise<OrderServiceDTO[]>;
 export async function fetchOrdersServices(
+  search?: string,
+  options?: RequestOptions
+): Promise<OrderServiceDTO[]>;
+export async function fetchOrdersServices(
   params: FetchOrdersServicesParams
 ): Promise<PaginatedResponse<OrderServiceDTO>>;
 export async function fetchOrdersServices(
-  params?: FetchOrdersServicesParams
+  paramsOrSearch?: FetchOrdersServicesParams | string,
+  options?: RequestOptions
 ): Promise<PaginatedResponse<OrderServiceDTO> | OrderServiceDTO[]> {
+  const params =
+    typeof paramsOrSearch === "string"
+      ? { search: paramsOrSearch }
+      : paramsOrSearch;
   const hasPagination =
     params?.page !== undefined || params?.limit !== undefined;
   const { data } = await api.get<PaginatedResponse<OrderServiceDTO> | OrderServiceDTO[]>(BASE, {
@@ -112,6 +122,7 @@ export async function fetchOrdersServices(
       sort: params?.sort,
       order: params?.order,
     },
+    signal: options?.signal,
   });
   const rows = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
   const dueOrders = rows.filter((order) => shouldAutoMoveToInProcess(order));
@@ -141,6 +152,41 @@ export async function fetchOrdersServices(
     };
   }
   return normalizedRows;
+}
+
+export async function fetchOrdersServicesByDateRange(
+  from: string,
+  to: string,
+  search?: string,
+  options?: RequestOptions
+): Promise<OrderServiceDTO[]> {
+  const trimmedSearch = search?.trim();
+  const { data } = await api.get<OrderServiceDTO[]>(`${BASE}/by-date-range`, {
+    params: {
+      from,
+      to,
+      ...(trimmedSearch ? { search: trimmedSearch } : {}),
+    },
+    signal: options?.signal,
+  });
+
+  const dueOrders = data.filter((order) => shouldAutoMoveToInProcess(order));
+  if (!dueOrders.length) return data;
+
+  const updates = await Promise.allSettled(
+    dueOrders.map((order) =>
+      updateOrderService(order.ordersservicesid, { stateid: IN_PROCESS_STATE_ID })
+    )
+  );
+
+  const updatedById = new Map<number, OrderServiceDTO>();
+  updates.forEach((res) => {
+    if (res.status === "fulfilled") {
+      updatedById.set(res.value.ordersservicesid, res.value);
+    }
+  });
+
+  return data.map((order) => updatedById.get(order.ordersservicesid) ?? order);
 }
 
 export async function fetchOrderServiceById(id: number): Promise<OrderServiceDTO> {

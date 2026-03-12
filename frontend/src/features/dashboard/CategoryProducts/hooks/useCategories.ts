@@ -71,6 +71,7 @@ const extractPayloadCategory = (response: any): Category | null => {
 
 export const useCategories = () => {
   const PAGE_SIZE = 5;
+  const SEARCH_DEBOUNCE_MS = 350;
   const [categories, setCategories] = useState<Category[]>([]);
   const [pagedCategories, setPagedCategories] = useState<Category[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -84,6 +85,8 @@ export const useCategories = () => {
   const [categoryProductCounts, setCategoryProductCounts] = useState<Record<number, number>>({});
 
   const hasFetchedRef = useRef(false);
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchAbortRef = useRef<AbortController | null>(null);
 
   const refreshCategoryProductCounts = useCallback(async () => {
     try {
@@ -108,11 +111,16 @@ export const useCategories = () => {
   }, []);
 
   const refreshCategories = useCallback(
-    async (targetPage: number = currentPage, searchText: string = search) => {
+    async (
+      targetPage: number = currentPage,
+      searchText: string = search,
+      signal?: AbortSignal,
+    ) => {
       const response = (await getCategories({
         page: targetPage,
         limit: PAGE_SIZE,
         search: searchText,
+        signal,
       })) as CategoriesPaginatedResult;
 
       const list = Array.isArray(response?.data) ? response.data : [];
@@ -150,6 +158,15 @@ export const useCategories = () => {
     }
   }, [refreshAllCategories, refreshCategories, refreshCategoryProductCounts]);
 
+  useEffect(() => {
+    return () => {
+      if (searchDebounceRef.current) {
+        clearTimeout(searchDebounceRef.current);
+      }
+      searchAbortRef.current?.abort();
+    };
+  }, []);
+
   const handlePageChange = useCallback(
     async (nextPage: number) => {
       setLoading(true);
@@ -166,17 +183,32 @@ export const useCategories = () => {
   );
 
   const handleSearchChange = useCallback(
-    async (value: string) => {
+    (value: string) => {
       setSearch(value);
-      setLoading(true);
-      try {
-        await refreshCategories(1, value);
-      } catch (error) {
-        console.error("Error al buscar categorias:", error);
-        showError("No se pudo buscar categorias.");
-      } finally {
-        setLoading(false);
-      }
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+      searchAbortRef.current?.abort();
+
+      const controller = new AbortController();
+      searchAbortRef.current = controller;
+
+      searchDebounceRef.current = setTimeout(async () => {
+        setLoading(true);
+        try {
+          await refreshCategories(1, value, controller.signal);
+        } catch (error: any) {
+          if (
+            error?.name === "CanceledError" ||
+            error?.code === "ERR_CANCELED" ||
+            controller.signal.aborted
+          ) {
+            return;
+          }
+          console.error("Error al buscar categorias:", error);
+          showError("No se pudo buscar categorias.");
+        } finally {
+          if (!controller.signal.aborted) setLoading(false);
+        }
+      }, SEARCH_DEBOUNCE_MS);
     },
     [refreshCategories],
   );

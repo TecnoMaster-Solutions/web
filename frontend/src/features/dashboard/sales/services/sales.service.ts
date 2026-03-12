@@ -2,6 +2,7 @@ import { apiClient } from "@/shared/utils/apiClient";
 import { uploadFile } from "@/shared/services/uploadFile";
 import {
     ISale,
+    ISalesPaginatedResult,
     ISalesPayment,
     ICreateSaleDto,
     ICreateSalePaymentDto,
@@ -39,6 +40,25 @@ function unwrapList<T>(payload: any): T[] {
     return Array.isArray(data) ? (data as T[]) : [];
 }
 
+function asPaginatedList<T>(
+    payload: any
+): { data: T[]; meta: { page: number; limit: number; total: number; totalPages: number } } | null {
+    if (!payload || typeof payload !== "object") return null;
+    if (!Array.isArray(payload.data) || !payload.meta || typeof payload.meta !== "object") {
+        return null;
+    }
+
+    return {
+        data: payload.data as T[],
+        meta: {
+            page: Number(payload.meta.page ?? 1),
+            limit: Number(payload.meta.limit ?? 5),
+            total: Number(payload.meta.total ?? 0),
+            totalPages: Number(payload.meta.totalPages ?? 1),
+        },
+    };
+}
+
 function normalizeCustomer(customer: CustomerApi): ICustomer | null {
     const customerid = Number(customer.customerid ?? customer.id);
     if (!Number.isFinite(customerid) || customerid <= 0) return null;
@@ -64,8 +84,57 @@ function normalizeCustomer(customer: CustomerApi): ICustomer | null {
     };
 }
 
-export async function getSales(): Promise<ISale[]> {
-    return apiClient.get<ISale[]>("/sales");
+type GetSalesParams = {
+    signal?: AbortSignal;
+    page?: number;
+    limit?: number;
+    search?: string;
+};
+
+export function getSales(): Promise<ISale[]>;
+export function getSales(params: GetSalesParams): Promise<ISale[] | ISalesPaginatedResult>;
+export async function getSales({
+    signal,
+    page,
+    limit,
+    search,
+}: GetSalesParams = {}): Promise<ISale[] | ISalesPaginatedResult> {
+    const shouldPaginate = Number.isInteger(page) && Number.isInteger(limit);
+    const response = await apiClient.get<any>("/sales", {
+        params: {
+            ...(shouldPaginate ? { page, limit } : {}),
+            ...(search?.trim() ? { search: search.trim() } : {}),
+        },
+        signal,
+    });
+
+    const paginated = asPaginatedList<ISale>(response);
+    if (paginated) {
+        return {
+            data: paginated.data,
+            meta: {
+                page: Number(paginated.meta.page ?? page ?? 1),
+                limit: Number(paginated.meta.limit ?? limit ?? 5),
+                total: Number(paginated.meta.total ?? paginated.data.length),
+                totalPages: Number(paginated.meta.totalPages ?? 1),
+            },
+        };
+    }
+
+    const list = unwrapList<ISale>(response);
+    if (shouldPaginate) {
+        return {
+            data: list,
+            meta: {
+                page: page ?? 1,
+                limit: limit ?? 5,
+                total: list.length,
+                totalPages: 1,
+            },
+        };
+    }
+
+    return list;
 }
 
 export async function getSaleById(id: number): Promise<ISale> {

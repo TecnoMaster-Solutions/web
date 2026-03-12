@@ -1,9 +1,7 @@
 import type { Metadata } from 'next';
 import Image from 'next/image';
-import { Target, Eye, Flag, ChevronDown } from 'lucide-react';
+import { Target, Eye, Flag } from 'lucide-react';
 import Container from '@/features/landing/about/components/Container';
-import SectionTitle from '@/features/landing/about/components/SectionTitle';
-import Card from '@/features/landing/about/components/Card';
 import { JSX } from 'react';
 import Nav from '../layout/Nav';
 import Footer from '../layout/Footer';
@@ -51,23 +49,15 @@ export const metadata: Metadata = {
 const faqItems: FAQItem[] = [
   {
     question: "¿Cuál es su horario de atención al cliente?",
-    answer: "Nuestro horario de atención es de lunes a viernes de 9:00 AM a 6:00 PM, y sábados de 9:00 AM a 2:00 PM. También puedes contactarnos por email en cualquier momento."
+    answer: "De lunes a viernes desde las 8:00 A.M. hasta las 6:00 P.M. Sábados de 8:00 A.M. hasta las 12:00 P.M."
   },
   {
-    question: "¿Cómo solicitar una cotización?",
+    question: "¿Cómo puedo solicitar una cotización para paneles solares?",
     answer: "Puedes solicitar una cotización a través de nuestro formulario de contacto, por teléfono o por email. Te responderemos en un máximo de 24 horas con una propuesta personalizada."
   },
   {
-    question: "¿Qué métodos de pago aceptan?",
-    answer: "Aceptamos transferencias bancarias, tarjetas de crédito y débito, PayPal, y pagos en efectivo. También ofrecemos planes de financiamiento para proyectos grandes."
-  },
-  {
-    question: "¿Ofrecen garantía en sus servicios?",
-    answer: "Sí, todos nuestros servicios incluyen garantía. El período varía según el tipo de servicio, pero generalmente ofrecemos entre 6 meses a 2 años de garantía."
-  },
-  {
-    question: "¿Trabajan con empresas de todos los tamaños?",
-    answer: "Absolutamente. Trabajamos desde emprendedores y pequeñas empresas hasta grandes corporaciones. Adaptamos nuestras soluciones a las necesidades específicas de cada cliente."
+    question: "¿Ofrecen soporte técnico especializado post-venta?",
+    answer: "Sí, todos nuestros servicios incluyen garantía y soporte técnico especializado. Contamos con un equipo de expertos listos para atender cualquier requerimiento después de la instalación."
   }
 ];
 
@@ -101,7 +91,7 @@ export default function About(): JSX.Element {
   return (
     <>
       <Nav />
-      
+
       {/* JSON-LD Schema para SEO */}
       <script
         type="application/ld+json"
@@ -110,116 +100,123 @@ export default function About(): JSX.Element {
         }}
       />
 
-      {/* Hero Section */}
-      <section className="bg-red-600 text-white relative overflow-hidden">
-        {/* Contenido principal */}
-        <div className="relative z-10 py-16 lg:py-20">
-          <Container>
-            <div className="grid lg:grid-cols-2 gap-12 items-center">
-              {/* Columna de texto */}
-              <div>
-                <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
-                  Sobre Nosotros
-                </h1>
-                <p className="text-lg md:text-xl lg:text-2xl leading-relaxed text-red-100">
-                  Somos una empresa comprometida con la excelencia, la innovación y el crecimiento de nuestros clientes. Con más de una década de experiencia, hemos ayudado a cientos de empresas a alcanzar sus objetivos.
+      {/* Hero Section - Sobre Nosotros */}
+      <section className="bg-[#f0f7f0] relative py-16 lg:py-24">
+        <Container>
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            {/* Columna Izquierda: Título y Texto */}
+            <div>
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-black mb-8">
+                Sobre <span className="text-[#04652c]">Nosotros</span>
+              </h1>
+
+              <div className="bg-white p-8 md:p-10 rounded-2xl shadow-sm border border-gray-50 max-w-xl">
+                <p className="text-gray-700 leading-relaxed mb-6 font-medium">
+                  Somos una empresa líder en desarrollo de soluciones tecnológicas innovadoras, comprometida con la excelencia y la satisfacción de nuestros clientes.
+                </p>
+                <p className="text-gray-700 leading-relaxed font-medium">
+                  Nuestra pasión por la sostenibilidad nos impulsa a crear herramientas digitales que optimizan el uso de energías renovables, llevando la tecnología solar al siguiente nivel de eficiencia.
                 </p>
               </div>
-              
-              {/* Columna de imagen */}
-              <div className="flex justify-center lg:justify-end">
-                <div className="relative w-72 h-48 md:w-96 md:h-64 lg:w-[400px] lg:h-[280px] rounded-xl overflow-hidden shadow-2xl">
-                  <Image
-                    src="/assets/imgs/about.png"
-                    alt="Paneles solares - energía renovable"
-                    fill
-                    className="object-cover"
-                    priority
-                  />
-                </div>
-              </div>
             </div>
-          </Container>
-        </div>
-        
-        {/* Onda decorativa */}
-        <div className="absolute bottom-0 left-0 w-full overflow-hidden">
-          <svg
-            className="relative block w-full h-16 lg:h-20"
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 1200 120"
-            preserveAspectRatio="none"
-          >
-            <path
-              d="M0,120V73.71c47.79-22.2,103.59-32.17,158-28,70.36,5.37,136.33,33.31,206.8,37.5C438.64,87.57,512.34,66.33,583,47.95c69.27-18,138.3-24.88,209.4-13.08,36.15,6,69.85,17.84,104.45,29.34C989.49,95,1113,134.29,1200,67.53V120Z"
-              fill="white"
-            />
-          </svg>
-        </div>
-      </section>
 
-      {/* Sección de Pilares */}
-      <section className="py-16 lg:py-20 bg-white">
-        <Container>
-          <div className="text-center mb-12">
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-800 mb-4">
-              Nuestros Pilares
-            </h2>
-          </div>
-          
-          <div className="grid md:grid-cols-3 gap-8">
-            {/* Card de Visión */}
-            <Card variant="pillar">
-              <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Eye className="w-10 h-10 text-gray-800" />
+            {/* Columna Derecha: Imagen */}
+            <div className="relative group">
+              <div className="relative aspect-[4/3] rounded-[40px] overflow-hidden shadow-2xl transition-transform duration-500 group-hover:scale-[1.02]">
+                <Image
+                  src="/assets/imgs/about.png"
+                  alt="Tecnología y Sostenibilidad - TecnoMaster"
+                  fill
+                  className="object-cover"
+                  priority
+                />
               </div>
-              <h3 className="text-xl font-bold mb-3 text-gray-800">VISIÓN</h3>
-              <p className="text-sm text-gray-600 leading-relaxed">
-                Ser la empresa líder en nuestro sector, reconocida por la calidad 
-                de nuestros servicios y el impacto positivo en la comunidad empresarial.
-              </p>
-            </Card>
-
-            {/* Card de Misión */}
-            <Card variant="pillar">
-              <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Target className="w-10 h-10 text-gray-800" />
-              </div>
-              <h3 className="text-xl font-bold mb-3 text-gray-800">MISIÓN</h3>
-              <p className="text-sm text-gray-600 leading-relaxed">
-                Proporcionar soluciones innovadoras y personalizadas que impulsen 
-                el crecimiento y éxito de nuestros clientes, superando sus expectativas.
-              </p>
-            </Card>
-
-            {/* Card de Objetivo */}
-            <Card variant="pillar">
-              <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Flag className="w-10 h-10 text-gray-800" />
-              </div>
-              <h3 className="text-xl font-bold mb-3 text-gray-800">OBJETIVO</h3>
-              <p className="text-sm text-gray-600 leading-relaxed">
-                Mantener la excelencia en cada proyecto, construir relaciones duraderas 
-                y contribuir al desarrollo sostenible del sector empresarial.
-              </p>
-            </Card>
+              {/* Overlay decorativo suave */}
+              <div className="absolute inset-0 rounded-[40px] ring-1 ring-black/5 pointer-events-none"></div>
+            </div>
           </div>
         </Container>
       </section>
 
-      {/* Sección de FAQ */}
-      <section className="py-16 lg:py-20 bg-white">
+
+      {/* Sección de Pilares */}
+      <section className="py-20 lg:py-28 bg-white">
         <Container>
-          {/* Título y subtítulo centrados */}
-          <div className="text-center mb-12">
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-800 mb-4">
-              Preguntas Frecuentes
+          <div className="text-center mb-16">
+            <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-4 inline-block relative">
+              Nuestros <span className="text-[#04652c]">Pilares</span>
+              <div className="absolute -bottom-2 left-0 w-full h-1 bg-[#04652c] rounded-full"></div>
             </h2>
-            <p className="text-lg text-gray-600">
-              Encuentra respuestas a las consultas más comunes
+            <p className="text-lg text-gray-500 mt-6 max-w-2xl mx-auto font-medium">
+              Valores fundamentales que guían cada uno de nuestros proyectos y decisiones.
             </p>
           </div>
-          
+
+          <div className="grid md:grid-cols-3 gap-8">
+            {/* Card de Visión */}
+            <div className="bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 border border-gray-100 flex flex-col">
+              {/* Parte Superior: Icono y Fondo Gris */}
+              <div className="bg-[#f8f9fa] py-12 flex justify-center items-center">
+                <div className="w-20 h-20 bg-[#e8f5e9] rounded-full flex items-center justify-center">
+                  <Eye className="w-10 h-10 text-[#04652c]" />
+                </div>
+              </div>
+              {/* Parte Inferior: Contenido */}
+              <div className="p-8 text-center flex-grow">
+                <h3 className="text-2xl font-bold mb-4 text-[#04652c]">Visión</h3>
+                <p className="text-gray-600 leading-relaxed font-medium">
+                  Ser referentes globales en la implementación de tecnologías verdes, transformando la manera en que el mundo consume energía.
+                </p>
+              </div>
+            </div>
+
+            {/* Card de Misión */}
+            <div className="bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 border border-gray-100 flex flex-col">
+              <div className="bg-[#f8f9fa] py-12 flex justify-center items-center">
+                <div className="w-20 h-20 bg-[#e8f5e9] rounded-full flex items-center justify-center">
+                  <Target className="w-10 h-10 text-[#04652c]" />
+                </div>
+              </div>
+              <div className="p-8 text-center flex-grow">
+                <h3 className="text-2xl font-bold mb-4 text-[#04652c]">Misión</h3>
+                <p className="text-gray-600 leading-relaxed font-medium">
+                  Proveer soluciones tecnológicas de vanguardia que faciliten la transición hacia un futuro energético sostenible y eficiente.
+                </p>
+              </div>
+            </div>
+
+            {/* Card de Objetivo */}
+            <div className="bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 border border-gray-100 flex flex-col">
+              <div className="bg-[#f8f9fa] py-12 flex justify-center items-center">
+                <div className="w-20 h-20 bg-[#e8f5e9] rounded-full flex items-center justify-center">
+                  <Flag className="w-10 h-10 text-[#04652c]" />
+                </div>
+              </div>
+              <div className="p-8 text-center flex-grow">
+                <h3 className="text-2xl font-bold mb-4 text-[#04652c]">Objetivo</h3>
+                <p className="text-gray-600 leading-relaxed font-medium">
+                  Alcanzar la máxima satisfacción del cliente mediante la innovación continua y el compromiso con la calidad técnica.
+                </p>
+              </div>
+            </div>
+          </div>
+        </Container>
+      </section>
+
+
+      {/* Sección de FAQ */}
+      <section className="py-20 lg:py-28 bg-[#f8f9fa]">
+        <Container>
+          {/* Título y subtítulo centrados */}
+          <div className="text-center mb-16">
+            <h2 className="text-4xl lg:text-5xl font-black text-gray-900 mb-6">
+              Preguntas Frecuentes
+            </h2>
+            <p className="text-lg text-gray-500 max-w-2xl mx-auto font-medium">
+              Encuentra respuestas a las consultas más comunes sobre nuestros servicios y tecnología.
+            </p>
+          </div>
+
           {/* Componente Accordion */}
           <div className="max-w-4xl mx-auto">
             <Accordion items={faqItems} />
@@ -230,4 +227,4 @@ export default function About(): JSX.Element {
       <Footer />
     </>
   );
-};
+}

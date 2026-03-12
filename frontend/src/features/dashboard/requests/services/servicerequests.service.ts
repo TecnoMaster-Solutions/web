@@ -77,6 +77,7 @@ export type CreateServiceRequestInput = {
 
 export type UpdateServiceRequestInput = Partial<CreateServiceRequestInput>;
 const IN_PROCESS_STATE_ID = 7;
+type RequestOptions = { signal?: AbortSignal };
 
 export type PaginationMeta = {
   page: number;
@@ -181,11 +182,20 @@ async function readAxiosErrorBody(e: AxiosError<any>) {
 
 export async function listServiceRequests(): Promise<ServiceRequestDTO[]>;
 export async function listServiceRequests(
+  search?: string,
+  options?: RequestOptions
+): Promise<ServiceRequestDTO[]>;
+export async function listServiceRequests(
   params: ListServiceRequestsParams
 ): Promise<PaginatedResponse<ServiceRequestDTO>>;
 export async function listServiceRequests(
-  params?: ListServiceRequestsParams
+  paramsOrSearch?: ListServiceRequestsParams | string,
+  options?: RequestOptions
 ): Promise<PaginatedResponse<ServiceRequestDTO> | ServiceRequestDTO[]> {
+  const params =
+    typeof paramsOrSearch === "string"
+      ? { search: paramsOrSearch }
+      : paramsOrSearch;
   const hasPagination =
     params?.page !== undefined || params?.limit !== undefined;
   const res = await api.get<any>("/service-requests", {
@@ -198,6 +208,7 @@ export async function listServiceRequests(
       clientId: params?.clientId,
       technicianId: params?.technicianId,
     },
+    signal: options?.signal,
   });
   const payload = res.data;
   const rows = hasPagination
@@ -242,6 +253,46 @@ export async function listServiceRequests(
   }
 
   return normalizedRows;
+}
+
+export async function listServiceRequestsByDateRange(
+  from: string,
+  to: string,
+  search?: string,
+  options?: RequestOptions
+): Promise<ServiceRequestDTO[]> {
+  const trimmedSearch = search?.trim();
+  const res = await api.get<any>("/service-requests/by-date-range", {
+    params: {
+      from,
+      to,
+      ...(trimmedSearch ? { search: trimmedSearch } : {}),
+    },
+    signal: options?.signal,
+  });
+  const rows = unwrapList<ServiceRequestDTO>(res.data);
+  const dueRows = rows.filter((row) => shouldAutoMoveRequestToInProcess(row));
+  if (!dueRows.length) return rows;
+
+  const updates = await Promise.allSettled(
+    dueRows.map((row) => {
+      const id = getServiceRequestId(row);
+      if (!id) return Promise.resolve(null);
+      return updateServiceRequest(id, { stateId: IN_PROCESS_STATE_ID });
+    })
+  );
+
+  const updatedById = new Map<number, ServiceRequestDTO>();
+  updates.forEach((resUpdate) => {
+    if (resUpdate.status !== "fulfilled" || !resUpdate.value) return;
+    const updatedId = getServiceRequestId(resUpdate.value);
+    if (updatedId) updatedById.set(updatedId, resUpdate.value);
+  });
+
+  return rows.map((row) => {
+    const id = getServiceRequestId(row);
+    return id ? updatedById.get(id) ?? row : row;
+  });
 }
 
 export async function getServiceRequest(id: number): Promise<ServiceRequestDTO> {

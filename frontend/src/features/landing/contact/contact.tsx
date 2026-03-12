@@ -1,6 +1,5 @@
-import { Mail, MapPin, Phone } from 'lucide-react';
+import { Mail, MapPin, Phone, SendHorizontal } from 'lucide-react';
 import Container from '@/features/landing/contact/components/container';
-import SectionTitle from '@/features/landing/contact/components/SectionTitle';
 import Card from '@/features/landing/contact/components/Card';
 import ContactMethod from '@/features/landing/contact/components/ContactMethod';
 import SocialIcons from '@/features/landing/contact/components/SocialIcons';
@@ -8,118 +7,108 @@ import ContactForm from '@/features/landing/contact/components/ContactForm';
 import Nav from '../layout/Nav';
 import Footer from '../layout/Footer';
 
-interface ContactProps {
-  className?: string;
-}
-
-export default function Contact({ className = '' }: ContactProps) {
+export default function Contact() {
   return (
-    <div className={className}>
+    <div className="min-h-screen bg-white">
       <Nav />
 
-      {/* Hero Section */}
-      <section className="section py-16 bg-white">
+      {/* SECCIÓN 1 — Formas de contacto */}
+      <section className="py-24 bg-gray-50/50">
         <Container>
-          <SectionTitle
-            title="Formas de contacto"
-            subtitle="Elige el canal que más te convenga para ponerte en contacto"
-            className="text-center mb-12"
-          />
-        </Container>
-      </section>
+          <div className="text-center max-w-2xl mx-auto mb-16">
+            <h2 className="text-5xl font-extrabold text-[#04652c] mb-6">
+              Formas de contacto
+            </h2>
+            <p className="text-gray-500 text-lg leading-relaxed">
+              Elige la opción que más te convenga para ponerte en contacto con nosotros. Nuestro equipo está listo para ayudarte.
+            </p>
+          </div>
 
-      {/* Contact Methods Section */}
-      <section className="section py-16 bg-gray-50">
-        <Container>
           <div className="grid md:grid-cols-3 gap-8">
-            <Card
-              variant="elevated"
-              className="text-center p-8 bg-white shadow-lg hover:shadow-xl transition-shadow duration-300"
-            >
+            <Card variant="default" className="h-[300px]">
               <ContactMethod
                 icon={Mail}
-                title="Correo electrónico"
-                description="Escríbenos directamente"
-                contact="ventas@empresa.com"
-                className="text-red-600"
+                title="Correo Electrónico"
+                description="Nuestro equipo está para atenderte."
+                contact="sistemaspcg@gmail.com"
               />
             </Card>
 
-            <Card
-              variant="elevated"
-              className="text-center p-8 bg-white shadow-lg hover:shadow-xl transition-shadow duration-300"
-            >
+            <Card variant="default" className="h-[300px]">
               <ContactMethod
                 icon={MapPin}
-                title="Punto físico"
-                description="Visítanos"
-                contact="Monterrey"
-                className="text-red-600"
+                title="Punto Físico"
+                description="Visítanos en nuestra oficina principal."
+                contact="CC Monterrey"
               />
             </Card>
 
-            <Card
-              variant="elevated"
-              className="text-center p-8 bg-white shadow-lg hover:shadow-xl transition-shadow duration-300"
-            >
+            <Card variant="default" className="h-[300px]">
               <ContactMethod
                 icon={Phone}
                 title="Teléfono"
-                description="Llámanos ahora"
-                contact="+57 313 685 09 68"
-                className="text-red-600"
+                description="Lun-Vie de 8am a 6pm."
+                contact="+57 313 685 0968"
               />
             </Card>
           </div>
         </Container>
       </section>
 
-      {/* Contact Form Section */}
-      <section className="section py-20 bg-gradient-to-br from-red-800 via-red-700 to-red-600 relative overflow-hidden">
+      {/* SECCIÓN 2 — Formulario "Contáctanos" */}
+      <section className="py-24 bg-[#04652c] relative overflow-hidden">
+        {/* Decoración de puntos */}
+        <div className="absolute top-0 left-0 p-8 flex flex-wrap w-32 h-32 gap-2 opacity-20">
+          {[...Array(16)].map((_, i) => (
+            <div key={i} className="w-2 h-2 bg-white rounded-sm" />
+          ))}
+        </div>
+
         <Container>
-          <div className="grid lg:grid-cols-2 gap-12 items-center relative z-10">
-            <div className="order-2 lg:order-1">
-              <div className="bg-white rounded-lg shadow-2xl p-8">
-                <h3 className="text-2xl font-bold text-gray-800 mb-6 text-center">
-                  Contáctanos
-                </h3>
-                <ContactForm />
-              </div>
+          <div className="grid lg:grid-cols-2 gap-20 items-center">
+            {/* Columna Izquierda: Formulario */}
+            <div className="bg-white rounded-[2.5rem] p-10 shadow-2xl">
+              <h3 className="text-3xl font-extrabold text-[#04652c] mb-8">
+                Contáctanos
+              </h3>
+              <ContactForm />
             </div>
 
-            <div className="order-1 lg:order-2 text-white text-center lg:text-left">
-              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-8 leading-tight">
-                ¡Déjanos un correo!
+            {/* Columna Derecha: Decorativa */}
+            <div className="text-white text-center flex flex-col items-center">
+              <h2 className="text-5xl md:text-6xl font-black mb-12 leading-tight">
+                ¡Déjanos un<br />correo electrónico!
               </h2>
-              <div className="flex justify-center lg:justify-start">
-                <div className="w-32 h-32 md:w-40 md:h-40 lg:w-48 lg:h-48 bg-white/10 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/20">
-                  <Mail className="w-16 h-16 md:w-20 md:h-20 lg:w-24 lg:h-24 text-white drop-shadow-lg" />
+
+              <div className="relative group">
+                {/* Círculo verde medio */}
+                <div className="w-56 h-56 bg-[#06a646] rounded-full flex items-center justify-center shadow-2xl transform transition-transform group-hover:scale-105 duration-500">
+                  <Mail className="w-24 h-24 text-white" />
+                </div>
+
+                {/* Botón circular secundario con ícono de envío */}
+                <div className="absolute -bottom-2 -right-2 w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-xl cursor-pointer hover:bg-gray-50 transition-colors">
+                  <SendHorizontal className="w-8 h-8 text-[#04652c]" />
                 </div>
               </div>
             </div>
           </div>
-
-          {/* Decorative elements */}
-          <div className="absolute top-10 right-10 w-20 h-20 bg-white/5 rounded-full blur-xl"></div>
-          <div className="absolute bottom-10 left-10 w-32 h-32 bg-white/5 rounded-full blur-xl"></div>
         </Container>
       </section>
 
-      {/* Social Media Section */}
-      <section className="section py-16 bg-gray-100">
+      {/* SECCIÓN 3 — Redes Sociales */}
+      <section className="py-24 bg-white">
         <Container>
-          <SectionTitle
-            title="Conoce nuestras redes sociales"
-            subtitle="Síguenos para estar al día con nuestras novedades"
-            className="text-center mb-12"
-          />
-          <div className="flex justify-center">
-            <SocialIcons />
+          <div className="text-center mb-12">
+            <h3 className="text-2xl font-bold text-gray-800">
+              Conoce nuestras redes sociales
+            </h3>
           </div>
+          <SocialIcons />
         </Container>
       </section>
 
       <Footer />
-    </div> 
+    </div>
   );
 }
