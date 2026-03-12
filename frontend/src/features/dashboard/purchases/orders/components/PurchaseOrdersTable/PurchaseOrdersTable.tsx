@@ -27,17 +27,17 @@ export const PurchaseOrdersTable: React.FC<PurchaseOrdersTableProps> = ({
       searchQuery: `${order.numeroOrden ?? ""} ${order.proveedor ?? ""} ${order.estado ?? ""} ${order.fecha ?? ""}`.toLowerCase(),
     }));
 
-const columns: Column<purchaseOrderForTable>[] = [
-    { key: "id", header: "#" },
+  const columns: Column<purchaseOrderForTable>[] = [
+    { key: "id", header: "ID" },
     { key: "numeroOrden", header: "N° Orden" },
     { key: "proveedor", header: "Proveedor" },
-    { 
-      key: "fecha", 
+    {
+      key: "fecha",
       header: "Fecha",
       render: (order) => order.fecha ? new Date(order.fecha).toLocaleDateString('es-CO') : '-'
     },
-    { 
-      key: "fechaEntrega", 
+    {
+      key: "fechaEntrega",
       header: "Fecha Entrega",
       render: (order) => order.fechaEntrega ? new Date(order.fechaEntrega).toLocaleDateString('es-CO') : 'No especificada'
     },

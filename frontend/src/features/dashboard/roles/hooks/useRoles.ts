@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { AxiosError } from "axios";
 import { Role, CreateRoleData, EditRoleData } from "../types/typeRoles";
 import { showSuccess, showWarning } from "@/shared/utils/notifications";
@@ -40,6 +40,18 @@ export const useRoles = () => {
   const [viewingRole, setViewingRole] = useState<Role | null>(null);
   const [creating, setCreating] = useState(false);
 
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(6);
+  const [total, setTotal] = useState(0);
+
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  const abortRef = useRef<AbortController | null>(null);
+  const firstLoadRef = useRef(true);
+
+  const [tableLoading, setTableLoading] = useState(false);
+
   const [loadingCount, setLoadingCount] = useState(0);
   const loading = loadingCount > 0;
   const startLoading = () => setLoadingCount((c) => c + 1);
@@ -53,25 +65,84 @@ export const useRoles = () => {
   const DEFAULT_ADMIN_WARNING =
     "El rol administrador inicial no puede ser editado ni eliminado.";
 
-  const loadRoles = useCallback(async () => {
-    startLoading();
-    try {
-      const rows = await apiGetRoles();
-      const mapped: Role[] = rows.map((r: any) => ({
-        id: r.id,
-        name: r.name,
-        state: r.state,
-        permissions: [],
-      }));
-      setRoles(mapped);
-    } finally {
-      stopLoading();
-    }
-  }, []);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search.trim());
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [search]);
 
   useEffect(() => {
-    loadRoles();
-  }, [loadRoles]);
+    setPage(1);
+  }, [debouncedSearch]);
+
+  const loadRoles = useCallback(
+    async (
+      customPage: number = page,
+      customLimit: number = limit,
+      customSearch: string = debouncedSearch
+    ) => {
+      abortRef.current?.abort();
+
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      if (firstLoadRef.current) {
+        startLoading();
+      } else {
+        setTableLoading(true);
+      }
+
+      try {
+        const response = await apiGetRoles({
+          page: customPage,
+          limit: customLimit,
+          search: customSearch,
+          signal: controller.signal,
+        });
+
+        const mapped: Role[] = response.data.map((r: any) => ({
+          id: r.id,
+          name: r.name,
+          state: r.state,
+          permissions: [],
+        }));
+
+        setRoles(mapped);
+        setPage(Number(response.meta.page ?? customPage));
+        setLimit(Number(response.meta.limit ?? customLimit));
+        setTotal(Number(response.meta.total ?? 0));
+      } catch (err: any) {
+        if (
+          err?.name === "CanceledError" ||
+          err?.code === "ERR_CANCELED" ||
+          err?.message === "canceled"
+        ) {
+          return;
+        }
+
+        console.error("Error al cargar roles:", err);
+        showWarning("No se pudieron cargar los roles.");
+      } finally {
+        if (firstLoadRef.current) {
+          stopLoading();
+          firstLoadRef.current = false;
+        } else {
+          setTableLoading(false);
+        }
+      }
+    },
+    [page, limit, debouncedSearch]
+  );
+
+  useEffect(() => {
+    loadRoles(page, limit, debouncedSearch);
+
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, [page, limit, debouncedSearch, loadRoles]);
 
   const handleCreateRole = async (payload: CreateRoleData) => {
     const errors = validateRoleForm(payload, roles);
@@ -111,7 +182,9 @@ export const useRoles = () => {
         roleconfigurations,
         status: "active",
       });
-      await loadRoles();
+
+      await loadRoles(1, limit, debouncedSearch);
+      setPage(1);
       setIsCreateModalOpen(false);
       showSuccess("Rol creado exitosamente!");
     } finally {
@@ -174,7 +247,7 @@ export const useRoles = () => {
         status: payload.state,
       });
 
-      await loadRoles();
+      await loadRoles(page, limit, debouncedSearch);
       setEditingRole(null);
       showSuccess("Rol actualizado exitosamente!");
     } catch (err: any) {
@@ -200,7 +273,10 @@ export const useRoles = () => {
           MODULE_BACK_TO_UI[String(cfg.permission.module).toLowerCase()] ??
           cfg.permission.module;
 
-        const actions = privilegeNameToUiActions(moduleUi as any, cfg.privilege.name);
+        const actions = privilegeNameToUiActions(
+          moduleUi as any,
+          cfg.privilege.name
+        );
 
         const allowed = (ALL_MODULE_PERMISSIONS as any)[moduleUi] ?? [];
         const filtered = actions.filter((a: string) => allowed.includes(a));
@@ -236,7 +312,10 @@ export const useRoles = () => {
           MODULE_BACK_TO_UI[String(cfg.permission.module).toLowerCase()] ??
           cfg.permission.module;
 
-        const actions = privilegeNameToUiActions(moduleUi as any, cfg.privilege.name);
+        const actions = privilegeNameToUiActions(
+          moduleUi as any,
+          cfg.privilege.name
+        );
 
         const allowed = (ALL_MODULE_PERMISSIONS as any)[moduleUi] ?? [];
         const filtered = actions.filter((a: string) => allowed.includes(a));
@@ -284,7 +363,13 @@ export const useRoles = () => {
         startLoading();
         try {
           await apiDeleteRole(role.id);
-          await loadRoles();
+
+          const nextTotal = Math.max(total - 1, 0);
+          const lastPage = Math.max(1, Math.ceil(nextTotal / limit));
+          const nextPage = page > lastPage ? lastPage : page;
+
+          await loadRoles(nextPage, limit, debouncedSearch);
+          setPage(nextPage);
 
           showSuccess(`El rol "${role.name}" ha sido eliminado correctamente.`);
         } catch (err) {
@@ -295,7 +380,7 @@ export const useRoles = () => {
           } else if (ax.response?.status === 400 || ax.response?.status === 409) {
             showWarning(
               ax.response?.data?.message ??
-              "No se puede eliminar el rol (está vinculado a usuarios)."
+                "No se puede eliminar el rol (está vinculado a usuarios)."
             );
           } else {
             showWarning("Ocurrió un error al eliminar el rol.");
@@ -316,6 +401,15 @@ export const useRoles = () => {
   return {
     roles,
     loading,
+    tableLoading,
+
+    page,
+    limit,
+    total,
+    search,
+    setPage,
+    setLimit,
+    setSearch,
 
     isCreateModalOpen,
     setIsCreateModalOpen,

@@ -1,5 +1,6 @@
 import '@/app/globals.css';
 import type { ReactNode } from 'react';
+import Script from 'next/script';
 import AppProviders from './providers';
 
 export const metadata = {
@@ -19,6 +20,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="es">
       <body>
+        <Script src="/runtime-config.js" strategy="beforeInteractive" />
         <AppProviders>{children}</AppProviders>
       </body>
     </html>

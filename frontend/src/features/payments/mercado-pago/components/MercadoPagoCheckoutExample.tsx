@@ -1,20 +1,16 @@
 "use client";
 
+import { getPublicRuntimeConfig } from "@/lib/runtime-config";
 import MercadoPagoCheckoutButton from "./MercadoPagoCheckoutButton";
 import type { MercadoPagoCheckoutPreferencePayload } from "../types";
 
 function getAppBaseUrl() {
-  return (
-    process.env.NEXT_PUBLIC_APP_URL ||
-    (typeof window !== "undefined" ? window.location.origin : "http://localhost:3000")
-  );
+  const { appUrl } = getPublicRuntimeConfig();
+  return appUrl || (typeof window !== "undefined" ? window.location.origin : "http://localhost:3000");
 }
 
 function getApiBaseUrl() {
-  return (
-    process.env.NEXT_PUBLIC_API_URL ||
-    "https://vertecx-api-sha-09ac69f.onrender.com"
-  );
+  return getPublicRuntimeConfig().apiUrl;
 }
 
 export default function MercadoPagoCheckoutExample() {

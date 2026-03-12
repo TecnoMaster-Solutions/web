@@ -22,6 +22,14 @@ export default function Index() {
   const {
     roles,
     loading,
+    tableLoading,
+    page,
+    limit,
+    total,
+    search,
+    setPage,
+    setLimit,
+    setSearch,
     isCreateModalOpen,
     setIsCreateModalOpen,
     isEditModalOpen,
@@ -69,6 +77,13 @@ export default function Index() {
 
             <RolesTable
               roles={roles}
+              page={page}
+              limit={limit}
+              total={total}
+              search={search}
+              loading={tableLoading}
+              onPageChange={setPage}
+              onSearchChange={setSearch}
               onView={(r) => {
                 handleView(r);
                 setIsViewModalOpen(true);
@@ -88,4 +103,3 @@ export default function Index() {
     </div>
   );
 }
-

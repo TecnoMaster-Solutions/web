@@ -152,7 +152,7 @@ export default function CreateRoleModal({
                   className="block text-base font-semibold mb-1"
                   style={{ color: Colors.texts.primary }}
                 >
-                  Nombre del rol <span className="text-green-500">*</span>
+                  Nombre del rol <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -167,7 +167,7 @@ export default function CreateRoleModal({
                   onBlur={validateForm}
                 />
                 {errors.name && (
-                  <span className="text-xs text-green-500">{errors.name}</span>
+                  <span className="text-xs text-red-500">{errors.name}</span>
                 )}
               </div>
 
@@ -177,12 +177,12 @@ export default function CreateRoleModal({
                   style={{ color: Colors.texts.primary }}
                 >
                   Asignar permisos y privilegios{" "}
-                  <span className="text-green-500">*</span>
+                  <span className="text-red-500">*</span>
                 </h3>
               </div>
 
               {errors.permissions && (
-                <p className="text-left text-xs text-green-500">
+                <p className="text-left text-xs text-red-500">
                   {errors.permissions}
                 </p>
               )}

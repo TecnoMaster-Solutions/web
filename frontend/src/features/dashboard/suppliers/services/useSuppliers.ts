@@ -10,18 +10,19 @@ import {
   SupplierDTO,
   CreateSupplierInput,
   UpdateSupplierInput,
+  ListSuppliersParams,
 } from '@/features/dashboard/suppliers/services/suppliers.service';
 
 export const supplierKeys = {
   all: ['suppliers'] as const,
-  list: () => ['suppliers'] as const,
+  list: (params?: ListSuppliersParams) => ['suppliers', params] as const,
   detail: (id: number) => ['suppliers', id] as const,
 };
 
-export function useSuppliers() {
-  return useQuery<SupplierDTO[]>({
-    queryKey: supplierKeys.list(),
-    queryFn: listSuppliers,
+export function useSuppliers(params?: ListSuppliersParams) {
+  return useQuery({
+    queryKey: supplierKeys.list(params),
+    queryFn: () => (params ? listSuppliers(params) : listSuppliers()),
   });
 }
 
@@ -37,7 +38,7 @@ export function useCreateSupplier() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (dto: CreateSupplierInput) => createSupplier(dto),
-    onSuccess: () => qc.invalidateQueries({ queryKey: supplierKeys.list() }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: supplierKeys.all }),
   });
 }
 
@@ -46,7 +47,7 @@ export function useUpdateSupplier(id: number) {
   return useMutation({
     mutationFn: (dto: UpdateSupplierInput) => updateSupplier(id, dto),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: supplierKeys.list() });
+      qc.invalidateQueries({ queryKey: supplierKeys.all });
       qc.invalidateQueries({ queryKey: supplierKeys.detail(id) });
     },
   });
@@ -56,6 +57,6 @@ export function useDeleteSupplier() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: number) => deleteSupplier(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: supplierKeys.list() }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: supplierKeys.all }),
   });
 }

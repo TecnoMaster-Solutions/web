@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import { DataTable } from "@/features/dashboard/components/datatable/DataTable";
 import { Column } from "@/features/dashboard/components/datatable/types/column.types";
 import Modal from "@/features/dashboard/components/Modal";
@@ -137,9 +137,9 @@ export default function SalesIndex() {
 
   const authRole = normalizeRoleName(
     (user as any)?.rolename ??
-      (profile as any)?.rolename ??
-      (profile as any)?.role?.name ??
-      (profile as any)?.users?.rolename
+    (profile as any)?.rolename ??
+    (profile as any)?.role?.name ??
+    (profile as any)?.users?.rolename
   );
   const authClientId = extractAuthClientId(user, profile);
   const isClientUser = authRole.includes("cliente");
@@ -329,20 +329,53 @@ export default function SalesIndex() {
   );
 
   const exportToExcel = async () => {
-    const data = (await getSales()) as ISale[];
-    const rows = mapSalesToRows(data).map((sale) => ({
-      "#": sale.id,
-      "Codigo": sale.codigo,
-      Cliente: sale.cliente,
-      Fecha: sale.fecha,
-      Total: sale.total,
-      Estado: sale.estado,
-      "Estado Pago": sale.estadoPago,
-    }));
-    const ws = XLSX.utils.json_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Ventas");
-    XLSX.writeFile(wb, `ventas_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Ventas");
+
+    worksheet.columns = [
+      { header: "ID", key: "id", width: 12 },
+      { header: "Codigo", key: "codigo", width: 20 },
+      { header: "Cliente", key: "cliente", width: 32 },
+      { header: "Fecha", key: "fecha", width: 16 },
+      { header: "Total", key: "total", width: 18 },
+      { header: "Estado", key: "estado", width: 18 },
+      { header: "Estado Pago", key: "estadoPago", width: 18 },
+    ];
+
+    worksheet.getRow(1).eachCell((cell) => {
+      cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FFDC2626" },
+      };
+      cell.font = { color: { argb: "FFFFFFFF" }, bold: true };
+      cell.alignment = { horizontal: "center" };
+    });
+
+    sales.forEach((sale) => {
+      worksheet.addRow({
+        id: sale.id,
+        codigo: sale.codigo,
+        cliente: sale.cliente,
+        fecha: sale.fecha,
+        total: sale.total,
+        estado: sale.estado,
+        estadoPago: sale.estadoPago,
+      });
+    });
+
+    worksheet.getColumn("total").numFmt = '"$"#,##0.00';
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `ventas_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    link.click();
+    window.URL.revokeObjectURL(url);
   };
 
   const handleOpenAnnul = (row: SaleRow) => {
@@ -485,8 +518,8 @@ export default function SalesIndex() {
           renderExtraActions={(row) =>
             <>
               {canOpenPaymentFlow &&
-              row.estado !== "Anulada" &&
-              !isGatewayPaymentMethod(row.paymentMethod) ? (
+                row.estado !== "Anulada" &&
+                !isGatewayPaymentMethod(row.paymentMethod) ? (
                 <button
                   onClick={() => setPaymentSaleId(row.id)}
                   className="p-1 rounded-full cursor-pointer text-black transition-all duration-300 hover:scale-110 hover:bg-[#06a646]/30"
@@ -520,13 +553,14 @@ export default function SalesIndex() {
               {hasSalesExport ? (
                 <button
                   onClick={exportToExcel}
-                  className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-green-700 bg-green-50 hover:bg-green-100 border border-green-300 rounded-lg transition-colors"
+                  className="cursor-pointer inline-flex h-9 items-center rounded-md px-3 text-sm font-semibold text-white shadow-sm hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
+                  style={{ background: Colors.buttons.primary }}
                   title="Exportar a Excel"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                   </svg>
-                  Excel
+                  Descargar Reporte
                 </button>
               ) : null}
             </div>
