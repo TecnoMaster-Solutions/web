@@ -209,10 +209,17 @@ export function usePurchases() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const data = await getProductsForPurchase();
-        setProducts(data);
+        const response = await getProductsForPurchase();
+        const normalizedProducts = Array.isArray(response)
+          ? response
+          : Array.isArray((response as any)?.data)
+            ? (response as any).data
+            : [];
+
+        setProducts(normalizedProducts);
       } catch (err) {
         console.error("Error cargando productos", err);
+        setProducts([]);
       }
     };
 
@@ -571,26 +578,26 @@ export function usePurchases() {
 
     const payload = isUsingPurchaseOrder
       ? {
-          ...payloadBase,
-          purchaseOrderId: Number(form.purchaseOrderId),
-          purchaseOrderFinalStateId: Number(form.purchaseOrderFinalStateId),
-          products: cart.map((item) => ({
-            productid: item.productid,
-            saleprice: Number(item.saleprice ?? 0),
-          })),
-        }
+        ...payloadBase,
+        purchaseOrderId: Number(form.purchaseOrderId),
+        purchaseOrderFinalStateId: Number(form.purchaseOrderFinalStateId),
+        products: cart.map((item) => ({
+          productid: item.productid,
+          saleprice: Number(item.saleprice ?? 0),
+        })),
+      }
       : {
-          ...payloadBase,
-          products: cart.map((item) => ({
-            productid: item.productid,
-            quantity: item.quantity,
-            unitprice: item.unitprice,
-            productpriceofsupplier: item.unitprice,
-            ...(item.saleprice !== undefined
-              ? { saleprice: item.saleprice }
-              : {}),
-          })),
-        };
+        ...payloadBase,
+        products: cart.map((item) => ({
+          productid: item.productid,
+          quantity: item.quantity,
+          unitprice: item.unitprice,
+          productpriceofsupplier: item.unitprice,
+          ...(item.saleprice !== undefined
+            ? { saleprice: item.saleprice }
+            : {}),
+        })),
+      };
 
     try {
       return await createPurchase(payload as any);
