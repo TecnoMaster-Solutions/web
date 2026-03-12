@@ -78,6 +78,30 @@ export type CreateServiceRequestInput = {
 export type UpdateServiceRequestInput = Partial<CreateServiceRequestInput>;
 const IN_PROCESS_STATE_ID = 7;
 
+export type PaginationMeta = {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+};
+
+export type PaginatedResponse<T> = {
+  data: T[];
+  meta: PaginationMeta;
+};
+
+export type ListServiceRequestsParams = {
+  page?: number;
+  limit?: number;
+  search?: string;
+  stateId?: number;
+  serviceId?: number;
+  clientId?: number;
+  technicianId?: number;
+};
+
 function getServiceRequestId(row: ServiceRequestDTO): number | null {
   const rawId = row.serviceRequestId ?? row.servicerequestid ?? row.id;
   const idNum = Number(rawId);
@@ -155,11 +179,40 @@ async function readAxiosErrorBody(e: AxiosError<any>) {
   return data;
 }
 
-export async function listServiceRequests(): Promise<ServiceRequestDTO[]> {
-  const res = await api.get<any>("/service-requests");
-  const rows = unwrapList<ServiceRequestDTO>(res.data);
+export async function listServiceRequests(): Promise<ServiceRequestDTO[]>;
+export async function listServiceRequests(
+  params: ListServiceRequestsParams
+): Promise<PaginatedResponse<ServiceRequestDTO>>;
+export async function listServiceRequests(
+  params?: ListServiceRequestsParams
+): Promise<PaginatedResponse<ServiceRequestDTO> | ServiceRequestDTO[]> {
+  const hasPagination =
+    params?.page !== undefined || params?.limit !== undefined;
+  const res = await api.get<any>("/service-requests", {
+    params: {
+      page: params?.page,
+      limit: params?.limit,
+      search: params?.search?.trim() || undefined,
+      stateId: params?.stateId,
+      serviceId: params?.serviceId,
+      clientId: params?.clientId,
+      technicianId: params?.technicianId,
+    },
+  });
+  const payload = res.data;
+  const rows = hasPagination
+    ? (Array.isArray(payload?.data) ? payload.data : []) as ServiceRequestDTO[]
+    : unwrapList<ServiceRequestDTO>(res.data);
   const dueRows = rows.filter((row) => shouldAutoMoveRequestToInProcess(row));
-  if (!dueRows.length) return rows;
+  if (!dueRows.length) {
+    if (hasPagination) {
+      return {
+        data: rows,
+        meta: payload?.meta,
+      };
+    }
+    return rows;
+  }
 
   const updates = await Promise.allSettled(
     dueRows.map((row) => {
@@ -176,10 +229,19 @@ export async function listServiceRequests(): Promise<ServiceRequestDTO[]> {
     if (updatedId) updatedById.set(updatedId, resUpdate.value);
   });
 
-  return rows.map((row) => {
+  const normalizedRows = rows.map((row) => {
     const id = getServiceRequestId(row);
     return id ? updatedById.get(id) ?? row : row;
   });
+
+  if (hasPagination) {
+    return {
+      data: normalizedRows,
+      meta: payload?.meta,
+    };
+  }
+
+  return normalizedRows;
 }
 
 export async function getServiceRequest(id: number): Promise<ServiceRequestDTO> {

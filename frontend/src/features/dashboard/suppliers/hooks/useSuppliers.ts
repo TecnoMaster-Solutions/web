@@ -1,21 +1,22 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { listSuppliers, getSupplier, createSupplier, updateSupplier, deleteSupplier } from "@/features/dashboard/suppliers/services/suppliers.service";
 import type { SupplierDTO } from "@/features/dashboard/suppliers/types/Supplier.type";
-import type { CreateSupplierInput, UpdateSupplierInput } from "@/features/dashboard/suppliers/services/suppliers.service";
+import type {
+  CreateSupplierInput,
+  UpdateSupplierInput,
+  ListSuppliersParams,
+} from "@/features/dashboard/suppliers/services/suppliers.service";
 
 export const supplierKeys = {
   all: ["suppliers"] as const,
-  list: () => [...supplierKeys.all, "list"] as const,
+  list: (params: ListSuppliersParams) => [...supplierKeys.all, "list", params] as const,
   detail: (id: number) => [...supplierKeys.all, "detail", id] as const,
 };
 
-export function useSuppliers() {
+export function useSuppliers(params: ListSuppliersParams) {
   return useQuery({
-    queryKey: supplierKeys.list(),
-    queryFn: async () => {
-      const res = await listSuppliers();
-      return res as SupplierDTO[];
-    },
+    queryKey: supplierKeys.list(params),
+    queryFn: async () => listSuppliers(params),
   });
 }
 
@@ -38,7 +39,7 @@ export function useCreateSupplier() {
       return res;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: supplierKeys.list() });
+      qc.invalidateQueries({ queryKey: supplierKeys.all });
     },
   });
 }
@@ -51,7 +52,7 @@ export function useUpdateSupplier() {
       return res;
     },
     onSuccess: (_data, vars) => {
-      qc.invalidateQueries({ queryKey: supplierKeys.list() });
+      qc.invalidateQueries({ queryKey: supplierKeys.all });
       if (vars?.id) qc.invalidateQueries({ queryKey: supplierKeys.detail(vars.id) });
     },
   });
@@ -65,7 +66,7 @@ export function useDeleteSupplier() {
       return id;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: supplierKeys.list() });
+      qc.invalidateQueries({ queryKey: supplierKeys.all });
     },
   });
 }

@@ -1,11 +1,12 @@
 import axios, { AxiosError, AxiosHeaders, InternalAxiosRequestConfig } from "axios";
 import Cookies from "js-cookie";
+import { getPublicRuntimeConfig } from "./runtime-config";
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL;
+function getApiUrl() {
+  return getPublicRuntimeConfig().apiUrl;
+}
 
 export const api = axios.create({
-  baseURL: API_URL,
   withCredentials: true,
   headers: { "Content-Type": "application/json" },
 });
@@ -73,6 +74,7 @@ export function getRefreshToken() {
 
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const headers = (config.headers ?? new AxiosHeaders()) as AxiosHeaders;
+  config.baseURL = getApiUrl() || undefined;
   if (accessToken && !headers.has("Authorization")) {
     headers.set("Authorization", `Bearer ${accessToken}`);
   }
@@ -88,7 +90,7 @@ async function refreshAccessToken(): Promise<string> {
   if (!rt) throw new Error("NO_REFRESH_TOKEN");
 
   const { data } = await axios.post<TokensResponse>(
-    `${API_URL}auth/refresh`,
+    `${getApiUrl()}/auth/refresh`,
     { refresh_token: rt },
     {
       withCredentials: true,

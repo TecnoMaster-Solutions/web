@@ -8,25 +8,29 @@ import {
   type ServiceRequestDTO,
   type CreateServiceRequestInput,
   type UpdateServiceRequestInput,
+  type ListServiceRequestsParams,
 } from "@/features/dashboard/requests/services/servicerequests.service";
 
 export const serviceRequestKeys = {
   all: ["requests"] as const,
-  list: () => [...serviceRequestKeys.all, "list"] as const,
+  list: (params: ListServiceRequestsParams) =>
+    [...serviceRequestKeys.all, "list", params] as const,
   detail: (id: number) => [...serviceRequestKeys.all, "detail", id] as const,
 };
 
-export function useServiceRequests() {
+export function useServiceRequests(params: ListServiceRequestsParams) {
   return useQuery({
-    queryKey: serviceRequestKeys.list(),
+    queryKey: serviceRequestKeys.list(params),
     queryFn: async () => {
-      const res = await listServiceRequests();
-      const requests = Array.isArray(res) ? res : [];
-      return [...requests].sort((a, b) => {
+      const res = await listServiceRequests(params);
+      const requests = Array.isArray(res) ? [] : Array.isArray(res.data) ? res.data : [];
+      const meta = Array.isArray(res) ? undefined : res.meta;
+      const data = [...requests].sort((a, b) => {
         const idA = Number(a.serviceRequestId ?? a.servicerequestid ?? a.id ?? 0);
         const idB = Number(b.serviceRequestId ?? b.servicerequestid ?? b.id ?? 0);
         return idB - idA;
       });
+      return { data, meta };
     },
   });
 }
@@ -47,7 +51,7 @@ export function useCreateServiceRequest() {
   return useMutation({
     mutationFn: async (payload: CreateServiceRequestInput) => createServiceRequest(payload),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: serviceRequestKeys.list() });
+      qc.invalidateQueries({ queryKey: serviceRequestKeys.all });
     },
   });
 }
@@ -58,7 +62,7 @@ export function useUpdateServiceRequest() {
     mutationFn: async (vars: { id: number; payload: UpdateServiceRequestInput }) =>
       updateServiceRequest(vars.id, vars.payload),
     onSuccess: (_data, vars) => {
-      qc.invalidateQueries({ queryKey: serviceRequestKeys.list() });
+      qc.invalidateQueries({ queryKey: serviceRequestKeys.all });
       if (vars?.id) qc.invalidateQueries({ queryKey: serviceRequestKeys.detail(vars.id) });
     },
   });
@@ -72,7 +76,7 @@ export function useDeleteServiceRequest() {
       return id;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: serviceRequestKeys.list() });
+      qc.invalidateQueries({ queryKey: serviceRequestKeys.all });
     },
   });
 }

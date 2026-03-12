@@ -3,6 +3,27 @@ import type { SupplierDTO } from "@/features/dashboard/suppliers/types/Supplier.
 
 type ApiEnvelope<T> = T | { data: T };
 
+export type PaginationMeta = {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+};
+
+export type PaginatedResponse<T> = {
+  data: T[];
+  meta: PaginationMeta;
+};
+
+export type ListSuppliersParams = {
+  page: number;
+  limit: number;
+  search?: string;
+  stateid?: number;
+};
+
 function unwrapData<T>(payload: ApiEnvelope<T>): T {
   if (payload && typeof payload === "object" && "data" in payload) {
     return payload.data;
@@ -30,9 +51,28 @@ export type CreateSupplierInput = {
 
 export type UpdateSupplierInput = Partial<CreateSupplierInput>;
 
-export async function listSuppliers(): Promise<SupplierDTO[]> {
-  const response = await apiClient.get<ApiEnvelope<SupplierDTO[]>>("/suppliers");
-  return unwrapData(response);
+export async function listSuppliers(): Promise<SupplierDTO[]>;
+export async function listSuppliers(
+  params: ListSuppliersParams
+): Promise<PaginatedResponse<SupplierDTO>>;
+export async function listSuppliers(
+  params?: ListSuppliersParams
+): Promise<PaginatedResponse<SupplierDTO> | SupplierDTO[]> {
+  const response = await apiClient.get<ApiEnvelope<SupplierDTO[]> | PaginatedResponse<SupplierDTO>>(
+    "/suppliers",
+    {
+      params: {
+        page: params?.page,
+        limit: params?.limit,
+        search: params?.search?.trim() || undefined,
+        stateid: params?.stateid,
+      },
+    }
+  );
+  if (params?.page !== undefined || params?.limit !== undefined) {
+    return response as PaginatedResponse<SupplierDTO>;
+  }
+  return unwrapData(response as ApiEnvelope<SupplierDTO[]>);
 }
 
 export async function getSupplier(id: number): Promise<SupplierDTO> {
@@ -75,6 +115,8 @@ export async function getSupplierProducts(supplierId: number) {
   return unwrapData(response);
 }
 
-export const getSuppliers = listSuppliers;
+export async function getSuppliers(): Promise<SupplierDTO[]> {
+  return listSuppliers();
+}
 
 export type { SupplierDTO };

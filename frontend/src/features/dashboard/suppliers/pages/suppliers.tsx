@@ -64,6 +64,9 @@ function getErrorMessage(err: any) {
 }
 
 export default function SuppliersPage() {
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(5);
+  const [search, setSearch] = useState("");
   const [openCreate, setOpenCreate] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
   const [openDetails, setOpenDetails] = useState(false);
@@ -72,16 +75,17 @@ export default function SuppliersPage() {
 
   const queryClient = useQueryClient();
 
-  const { data, isLoading, error } = useSuppliers();
+  const { data, isLoading, error } = useSuppliers({ page, limit, search });
   const createMut = useCreateSupplier();
   const updateMut = useUpdateSupplier(selected?.id ?? 0);
+  const paginatedData = Array.isArray(data) ? null : data;
 
   useEffect(() => {
     if (error) showError(getErrorMessage(error));
   }, [error]);
 
   const rows: Row[] = useMemo(() => {
-    const list = Array.isArray(data) ? data : [];
+    const list = Array.isArray(paginatedData?.data) ? paginatedData.data : [];
     return list.map((s: SupplierDTO) => ({
       id: s.supplierid,
       name: s.name,
@@ -95,7 +99,9 @@ export default function SuppliersPage() {
       imageUrl: s.image || null,
       productos: s.productos,
     }));
-  }, [data]);
+  }, [paginatedData]);
+
+  const totalPages = paginatedData?.meta?.totalPages ?? 1;
 
   const columns: Column<Row>[] = [
     { key: "id", header: "Id" },
@@ -299,6 +305,25 @@ export default function SuppliersPage() {
             data={rows}
             columns={columns}
             pageSize={5}
+            disableInternalScroll
+            serverPagination={{
+              page,
+              limit,
+              totalPages,
+              onPageChange: setPage,
+              onPageSizeChange: (nextLimit) => {
+                setLimit(nextLimit);
+                setPage(1);
+              },
+            }}
+            serverSearch={{
+              value: search,
+              onChange: (value) => {
+                setSearch(value);
+                setPage(1);
+              },
+            }}
+            searchPlaceholder="Buscar proveedores"
             searchableKeys={searchableKeys}
             onView={onView}
             onEdit={onEdit}

@@ -15,6 +15,33 @@ import type {
 const BASE = "orders-services";
 const IN_PROCESS_STATE_ID = 7;
 
+export type PaginationMeta = {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+};
+
+export type PaginatedResponse<T> = {
+  data: T[];
+  meta: PaginationMeta;
+};
+
+export type FetchOrdersServicesParams = {
+  page?: number;
+  limit?: number;
+  search?: string;
+  stateId?: number;
+  clientId?: number;
+  technicianId?: number;
+  dateFrom?: string;
+  dateTo?: string;
+  sort?: "ordersservicesid" | "createdat" | "fechainicio" | "total";
+  order?: "ASC" | "DESC" | "asc" | "desc";
+};
+
 function parseOrderStartAt(order: OrderServiceDTO): Date | null {
   const datePart = String(order.fechainicio ?? "").trim();
   const timeRaw = String(order.horainicio ?? "").trim();
@@ -63,10 +90,35 @@ export async function createOrderService(
   return data;
 }
 
-export async function fetchOrdersServices(): Promise<OrderServiceDTO[]> {
-  const { data } = await api.get<OrderServiceDTO[]>(BASE);
-  const dueOrders = data.filter((order) => shouldAutoMoveToInProcess(order));
-  if (!dueOrders.length) return data;
+export async function fetchOrdersServices(): Promise<OrderServiceDTO[]>;
+export async function fetchOrdersServices(
+  params: FetchOrdersServicesParams
+): Promise<PaginatedResponse<OrderServiceDTO>>;
+export async function fetchOrdersServices(
+  params?: FetchOrdersServicesParams
+): Promise<PaginatedResponse<OrderServiceDTO> | OrderServiceDTO[]> {
+  const hasPagination =
+    params?.page !== undefined || params?.limit !== undefined;
+  const { data } = await api.get<PaginatedResponse<OrderServiceDTO> | OrderServiceDTO[]>(BASE, {
+    params: {
+      page: params?.page,
+      limit: params?.limit,
+      search: params?.search?.trim() || undefined,
+      stateId: params?.stateId,
+      clientId: params?.clientId,
+      technicianId: params?.technicianId,
+      dateFrom: params?.dateFrom,
+      dateTo: params?.dateTo,
+      sort: params?.sort,
+      order: params?.order,
+    },
+  });
+  const rows = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
+  const dueOrders = rows.filter((order) => shouldAutoMoveToInProcess(order));
+  if (!dueOrders.length) {
+    if (hasPagination && !Array.isArray(data)) return data;
+    return rows;
+  }
 
   const updates = await Promise.allSettled(
     dueOrders.map((order) =>
@@ -81,7 +133,14 @@ export async function fetchOrdersServices(): Promise<OrderServiceDTO[]> {
     }
   });
 
-  return data.map((order) => updatedById.get(order.ordersservicesid) ?? order);
+  const normalizedRows = rows.map((order) => updatedById.get(order.ordersservicesid) ?? order);
+  if (hasPagination && !Array.isArray(data)) {
+    return {
+      data: normalizedRows,
+      meta: data.meta,
+    };
+  }
+  return normalizedRows;
 }
 
 export async function fetchOrderServiceById(id: number): Promise<OrderServiceDTO> {

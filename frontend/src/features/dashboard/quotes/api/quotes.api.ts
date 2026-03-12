@@ -1,6 +1,29 @@
 import { api } from "@/shared/utils/apiClient";
 import { showError } from "@/shared/utils/notifications";
 
+export type PaginationMeta = {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+};
+
+export type PaginatedResponse<T> = {
+  data: T[];
+  meta: PaginationMeta;
+};
+
+export type GetQuotesParams = {
+  page?: number;
+  limit?: number;
+  search?: string;
+  statesid?: number;
+  customerid?: number;
+  technicianid?: number;
+};
+
 export const createQuote = async (payload: any) => {
   try {
     const { data } = await api.post("/quotes", payload);
@@ -22,9 +45,18 @@ export const createQuote = async (payload: any) => {
   }
 };
 
-export const getQuotes = async () => {
+export const getQuotes = async (params?: GetQuotesParams) => {
   try {
-    const { data } = await api.get("/quotes");
+    const { data } = await api.get("/quotes", {
+      params: {
+        page: params?.page,
+        limit: params?.limit,
+        search: params?.search?.trim() || undefined,
+        statesid: params?.statesid,
+        customerid: params?.customerid,
+        technicianid: params?.technicianid,
+      },
+    });
     return data;
   } catch (error) {
     console.error("Error al obtener las cotizaciones:", error);
@@ -176,4 +208,3 @@ export const cancelQuote = async (quoteId: number): Promise<void> => {
     throw error;
   }
 };
-

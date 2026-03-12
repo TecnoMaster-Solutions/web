@@ -556,6 +556,10 @@ export default function OrdersServicesIndexPage() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(5);
+  const [search, setSearch] = useState("");
+  const [totalPages, setTotalPages] = useState(1);
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -617,26 +621,15 @@ export default function OrdersServicesIndexPage() {
     return extractAuthTechnicianId(user, profile);
   }, [isTechnicianRole, user, profile]);
 
-  const filterOrdersForAuth = useCallback(
-    (list: any[]) => {
-      const arr = Array.isArray(list) ? list : [];
-      return arr.filter((o) => {
-        if (isClientRole) {
-          const clientIds = extractOrderClientIds(o);
-          const targetClientId = clientIdFromAuth ?? -1;
-          if (!clientIds.includes(targetClientId)) return false;
-        }
-
-        if (isTechnicianRole) {
-          const techIds = extractOrderTechnicianIds(o);
-          const targetTechId = technicianIdFromAuth ?? -1;
-          if (!techIds.includes(targetTechId)) return false;
-        }
-
-        return true;
-      });
-    },
-    [clientIdFromAuth, isClientRole, isTechnicianRole, technicianIdFromAuth]
+  const fetchParams = useMemo(
+    () => ({
+      page,
+      limit,
+      search,
+      clientId: isClientRole ? clientIdFromAuth ?? undefined : undefined,
+      technicianId: isTechnicianRole ? technicianIdFromAuth ?? undefined : undefined,
+    }),
+    [clientIdFromAuth, isClientRole, isTechnicianRole, limit, page, search, technicianIdFromAuth]
   );
 
   // Disparar notificación al aterrizar desde /new (flash toast)
@@ -657,7 +650,7 @@ export default function OrdersServicesIndexPage() {
     }
 
     showWarning(toast.message);
-  }, [filterOrdersForAuth]);
+  }, []);
 
   useEffect(() => {
     if (cancelHandledRef.current) return;
@@ -695,31 +688,35 @@ export default function OrdersServicesIndexPage() {
   const reloadOrders = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await fetchOrdersServices();
-      const filtered = filterOrdersForAuth(Array.isArray(data) ? data : []);
-      const mapped = filtered.map(toRow);
+      const response = await fetchOrdersServices(fetchParams);
+      const list = Array.isArray(response) ? response : response.data;
+      const mapped = list.map(toRow);
       setRows(sortRowsByIdDesc(mapped));
+      setTotalPages(Array.isArray(response) ? 1 : response.meta?.totalPages ?? 1);
     } catch {
       setRows([]);
+      setTotalPages(1);
       showError("No se pudieron cargar las órdenes desde el backend.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetchParams]);
 
   useEffect(() => {
     let mounted = true;
     (async () => {
       setLoading(true);
       try {
-        const data = await fetchOrdersServices();
-        const filtered = filterOrdersForAuth(Array.isArray(data) ? data : []);
-        const mapped = filtered.map(toRow);
+        const response = await fetchOrdersServices(fetchParams);
+        const list = Array.isArray(response) ? response : response.data;
+        const mapped = list.map(toRow);
         if (!mounted) return;
         setRows(sortRowsByIdDesc(mapped));
+        setTotalPages(Array.isArray(response) ? 1 : response.meta?.totalPages ?? 1);
       } catch {
         if (!mounted) return;
         setRows([]);
+        setTotalPages(1);
         showError("No se pudieron cargar las órdenes desde el backend.");
       } finally {
         if (!mounted) return;
@@ -729,7 +726,7 @@ export default function OrdersServicesIndexPage() {
     return () => {
       mounted = false;
     };
-  }, [filterOrdersForAuth]);
+  }, [fetchParams]);
 
   useEffect(() => {
     const anyOpen = reportOpen || historyOpen;
@@ -1307,9 +1304,26 @@ const extraActions = useCallback(
                 module={MODULE_KEY}
                 data={Array.isArray(rows) ? rows : []}
                 columns={columns}
-                pageSize={8}
+                pageSize={5}
+                serverPagination={{
+                  page,
+                  limit,
+                  totalPages,
+                  onPageChange: setPage,
+                  onPageSizeChange: (nextLimit) => {
+                    setLimit(nextLimit);
+                    setPage(1);
+                  },
+                }}
+                serverSearch={{
+                  value: search,
+                  onChange: (value) => {
+                    setSearch(value);
+                    setPage(1);
+                  },
+                }}
                 searchableKeys={["id", "cliente", "tecnico", "tipo", "fechaProgramada", "estado", "monto", "descripcion"]}
-                searchPlaceholder="Buscar (id, cliente, tipo, estado, fecha, monto, descripción)-"
+                searchPlaceholder="Buscar órdenes de servicio"
                 rightActions={rightActions}
                 onCreate={openCreate}
                 createButtonText="Crear Orden"

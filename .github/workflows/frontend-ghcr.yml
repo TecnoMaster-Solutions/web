@@ -97,6 +97,4 @@ jobs:
             ghcr.io/${{ steps.img.outputs.owner_lower }}/web-frontend:${{ github.sha }}
           build-args: |
             CI=true
-            NEXT_PUBLIC_API_URL=https://vertecx-api-sha-09ac69f.onrender.com
-            NEXT_PUBLIC_APP_URL=http://localhost:3000
           provenance: false
