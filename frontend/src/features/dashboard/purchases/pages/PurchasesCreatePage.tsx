@@ -13,44 +13,44 @@ export default function PurchasesCreatePage() {
   const router = useRouter();
   const purchasesHook = usePurchases();
 
-  const {
-    handleAddPurchase,
-    purchases,
-    fetchPurchases,
-    form,
+const {
+  handleAddPurchase,
+  purchases,
+  fetchPurchases,
+  form,
 
-    selectedProduct,
-    setSelectedProduct,
+  selectedProduct,
+  setSelectedProduct,
 
-    quantity,
-    setQuantity,
+  quantity,
+  setQuantity,
 
-    purchasePrice,
-    setPurchasePrice,
+  purchasePrice,
+  setPurchasePrice,
 
-    salePrice,
-    setSalePrice,
+  salePrice,
+  setSalePrice,
 
-    cart,
-    total,
+  cart,
+  totalAmount,
 
-    removeFromCart,
-    updateCartItem,
+  removeFromCart,
+  updateCartItem,
 
-    handleChange,
-    addToCart,
+  handleChange,
+  addToCart,
 
-    products,
-    suppliers,
+  products,
+  suppliers,
 
-    purchaseOrders,
-    poLoading,
+  purchaseOrders,
+  poLoading,
 
-    saving,
+  saving,
 
-    poDetailLoading,
-    isUsingPurchaseOrder,
-  } = purchasesHook as any;
+  poDetailLoading,
+  isUsingPurchaseOrder,
+} = purchasesHook as any;
 
   const handleBack = () => {
     try {
@@ -124,7 +124,7 @@ export default function PurchasesCreatePage() {
           salePrice={salePrice}
           setSalePrice={setSalePrice}
           cart={cart}
-          total={total}
+          total={totalAmount}
           removeFromCart={removeFromCart}
           updateCartItem={updateCartItem}
           handleChange={handleChange}
