@@ -193,7 +193,7 @@ export default function EditRoleModal({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-base font-semibold mb-1" style={{ color: Colors.texts.primary }}>
-                    Nombre del rol <span className="text-green-500">*</span>
+                    Nombre del rol <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -207,7 +207,7 @@ export default function EditRoleModal({
                     className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-300 disabled:opacity-60"
                     style={{ borderColor: errors.name ? "red" : Colors.table.lines }}
                   />
-                  {errors.name && <span className="text-xs text-green-500">{errors.name}</span>}
+                  {errors.name && <span className="text-xs text-red-500">{errors.name}</span>}
                 </div>
 
                 <div>
@@ -229,12 +229,12 @@ export default function EditRoleModal({
 
               <div className="flex items-center justify-between">
                 <h3 className="text-base font-semibold" style={{ color: Colors.texts.primary }}>
-                  Permisos Asignados <span className="text-green-500">*</span>
+                  Permisos Asignados <span className="text-red-500">*</span>
                 </h3>
               </div>
 
               {errors.permissions && (
-                <p className="text-left text-xs text-green-500">{errors.permissions}</p>
+                <p className="text-left text-xs text-red-500">{errors.permissions}</p>
               )}
 
               <div className="overflow-hidden rounded-xl border max-h-64 overflow-y-auto custom-scroll">

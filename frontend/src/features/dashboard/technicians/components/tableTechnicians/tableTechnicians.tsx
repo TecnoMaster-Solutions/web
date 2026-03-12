@@ -8,17 +8,20 @@ import { Technician } from "../../types/typesTechnicians";
 
 interface TechniciansTableProps {
   technicians: Technician[];
+  page: number;
+  limit: number;
+  totalPages: number;
+  search: string;
+  tableLoading?: boolean;
+  onPageChange: (page: number) => void;
+  onSearchChange: (value: string) => void;
   onView: (t: Technician) => void;
   onEdit: (t: Technician) => void;
   onDelete: (t: Technician) => void;
   onCreate: () => void;
 }
 
-type TechnicianRow = Technician & {
-  rowNumber: number;
-  searchText: string;
-  stateSearch: "activo" | "inactivo";
-};
+type TechnicianRow = Technician;
 
 function abbreviateType(type: string): string {
   const clean = type.trim();
@@ -38,76 +41,26 @@ function abbreviateType(type: string): string {
   return `${clean.slice(0, 12)}…`;
 }
 
-function normalizeForSearch(value: string): string {
-  const lower = value.toLowerCase();
-  const withoutAccents = lower.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  return `${lower} ${withoutAccents}`;
-}
-
-function toStateSearch(state: unknown): "activo" | "inactivo" {
-  const s = String(state ?? "")
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim();
-
-  return s === "activo" ? "activo" : "inactivo";
-}
-
-function buildSearchText(t: Technician): string {
-  const parts: string[] = [];
-
-  const add = (val?: string | number | null) => {
-    if (val === undefined || val === null) return;
-    const str = String(val).trim();
-    if (!str) return;
-    parts.push(normalizeForSearch(str));
-  };
-
-  const fullName = `${t.name ?? ""} ${t.lastName ?? ""}`.trim();
-  const doc = `${t.documentType ?? ""} ${t.documentNumber ?? ""}`.trim();
-
-  add(t.id);
-  add(fullName);
-  add(doc);
-  add(t.phone);
-  add(t.email);
-
-  const types = t.types ?? [];
-  types.forEach((tp) => {
-    add(tp);
-    add(abbreviateType(tp));
-  });
-
-  return parts.join(" ");
-}
-
 const TechniciansTable: React.FC<TechniciansTableProps> = ({
   technicians,
+  page,
+  limit,
+  totalPages,
+  search,
+  tableLoading = false,
   onView,
   onEdit,
   onDelete,
   onCreate,
+  onPageChange,
+  onSearchChange,
 }) => {
   const rows: TechnicianRow[] = useMemo(() => {
-    // ✅ Orden DESC (últimos primero)
-    const sorted = [...technicians].sort(
-      (a, b) => Number(b.id ?? 0) - Number(a.id ?? 0)
-    );
-
-    // ✅ Numeración consistente: empieza en total y va bajando
-    const total = sorted.length;
-
-    return sorted.map((t, index) => ({
-      ...t,
-      rowNumber: total - index,
-      searchText: buildSearchText(t),
-      stateSearch: toStateSearch(t.state),
-    }));
+    return [...technicians].sort((a, b) => Number(b.id ?? 0) - Number(a.id ?? 0));
   }, [technicians]);
 
   const columns: Column<TechnicianRow>[] = [
-    { key: "rowNumber", header: "#" },
+    { key: "id", header: "ID" },
     {
       key: "name",
       header: "Nombre",
@@ -195,8 +148,18 @@ const TechniciansTable: React.FC<TechniciansTableProps> = ({
       module="technicians"
       data={rows}
       columns={columns}
-      pageSize={4} // ✅ solo 4 por página
-      searchableKeys={["searchText", "stateSearch"]}
+      pageSize={limit}
+      searchableKeys={["name"]}
+      serverPagination={{
+        page,
+        totalPages,
+        onPageChange,
+      }}
+      serverSearch={{
+        value: search,
+        onChange: onSearchChange,
+      }}
+      loading={tableLoading}
       onView={onView}
       onEdit={onEdit}
       onDelete={onDelete}

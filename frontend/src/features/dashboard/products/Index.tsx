@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -9,26 +9,37 @@ import ProductsTable from "./components/ProductsTable";
 import CreateProductModal from "./components/CreateProductModal/CreateProductModal";
 import EditProductModal from "./components/EditProductModal/EditProductModal";
 import ViewProductModal from "./components/ViewProductModal/ViewProductModal";
-import type { Product } from "./types/typesProducts";
 
 export default function ProductsIndex() {
   const {
     products,
     loading,
+    tableLoading,
+
+    page,
+    limit,
+    total,
+    totalPages,
+    search,
+    setPage,
+    setLimit,
+    setSearch,
 
     isCreateModalOpen,
     setIsCreateModalOpen,
 
     isEditModalOpen,
+    isViewModalOpen,
+
     editingProduct,
+    viewingProduct,
     setEditingProduct,
+    setViewingProduct,
 
     handleCreateProduct,
     handleEditProduct,
     handleDelete,
   } = useProducts();
-
-  const [viewingProduct, setViewingProduct] = useState<Product | null>(null);
 
   return (
     <div className="min-h-screen flex">
@@ -59,13 +70,20 @@ export default function ProductsIndex() {
             />
 
             <ViewProductModal
-              isOpen={!!viewingProduct}
+              isOpen={isViewModalOpen}
               product={viewingProduct}
               onClose={() => setViewingProduct(null)}
             />
 
             <ProductsTable
               products={products}
+              page={page}
+              limit={limit}
+              totalPages={totalPages}
+              search={search}
+              tableLoading={tableLoading}
+              onPageChange={setPage}
+              onSearchChange={setSearch}
               onView={(p) => setViewingProduct(p)}
               onEdit={(p) => setEditingProduct(p)}
               onDelete={handleDelete}

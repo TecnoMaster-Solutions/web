@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Technician,
   CreateTechnicianData,
@@ -45,8 +45,6 @@ const validateTechnician = (data: MinimalTechForValidate) => {
   return true;
 };
 
-const MIN_LOADER_MS = 450;
-
 export const useTechnicians = () => {
   const [technicians, setTechnicians] = useState<Technician[]>([]);
   const [typeNameToId, setTypeNameToId] = useState<Record<string, number>>(
@@ -54,62 +52,97 @@ export const useTechnicians = () => {
       Object.entries(TECH_TYPE_MAP).map(([k, v]) => [normalizeTypeName(k), v])
     )
   );
-  const [typeOptions, setTypeOptions] = useState<string[]>(
-    Object.keys(TECH_TYPE_MAP)
-  );
+  const [typeOptions, setTypeOptions] = useState<string[]>(Object.keys(TECH_TYPE_MAP));
 
-  const [loading, setLoading] = useState(false);
-  const busyRef = useRef(0);
-  const startRef = useRef<number | null>(null);
+  const [loadingCount, setLoadingCount] = useState(0);
+  const loading = loadingCount > 0;
+  const startLoading = () => setLoadingCount((c) => c + 1);
+  const stopLoading = () => setLoadingCount((c) => Math.max(0, c - 1));
+
+  const [tableLoading, setTableLoading] = useState(false);
+
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(4);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingTechnician, setEditingTechnician] = useState<Technician | null>(null);
-  const isEditModalOpen = editingTechnician !== null;
+  const [viewingTechnician, setViewingTechnician] = useState<Technician | null>(null);
 
-  const startLoading = () => {
-    busyRef.current += 1;
-    if (busyRef.current === 1) {
-      startRef.current = Date.now();
-      setLoading(true);
-    }
-  };
+  const isEditModalOpen = useMemo(() => editingTechnician !== null, [editingTechnician]);
+  const isViewModalOpen = useMemo(() => viewingTechnician !== null, [viewingTechnician]);
 
-  const stopLoading = async () => {
-    busyRef.current = Math.max(0, busyRef.current - 1);
-    if (busyRef.current > 0) return;
+  const firstLoadRef = useRef(true);
+  const abortRef = useRef<AbortController | null>(null);
 
-    const start = startRef.current ?? Date.now();
-    const elapsed = Date.now() - start;
-    const remaining = Math.max(0, MIN_LOADER_MS - elapsed);
-
-    if (remaining > 0) await new Promise((r) => setTimeout(r, remaining));
-
-    startRef.current = null;
-    setLoading(false);
-  };
-
-  const withLoading = async <T,>(fn: () => Promise<T>) => {
-    startLoading();
-    try {
-      return await fn();
-    } finally {
-      await stopLoading();
-    }
-  };
-
-  const loadTechnicians = async () => {
-    await withLoading(async () => {
-      try {
-        const list = await getTechniciansApi();
-        setTechnicians(list);
-      } catch (error) {
-        console.error(error);
-        toast.error("No se pudieron cargar los técnicos.");
-      }
+  const waitForRender = useCallback(async () => {
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
     });
-  };
+  }, []);
 
-  const loadTechnicianTypes = async () => {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search.trim());
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch]);
+
+  const loadTechnicians = useCallback(
+    async (customPage: number, customLimit: number, customSearch: string) => {
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      if (firstLoadRef.current) {
+        startLoading();
+      } else {
+        setTableLoading(true);
+      }
+
+      try {
+        const response = await getTechniciansApi({
+          page: customPage,
+          limit: customLimit,
+          search: customSearch,
+          signal: controller.signal,
+        });
+
+        setTechnicians(response.data);
+        setTotal(Number(response.meta.total ?? 0));
+        setTotalPages(Number(response.meta.totalPages ?? 1));
+        await waitForRender();
+      } catch (error: any) {
+        if (
+          error?.name !== "AbortError" &&
+          error?.code !== "ERR_CANCELED" &&
+          error?.name !== "CanceledError"
+        ) {
+          console.error(error);
+          toast.error("No se pudieron cargar los técnicos.");
+        }
+      } finally {
+        if (firstLoadRef.current) {
+          stopLoading();
+          firstLoadRef.current = false;
+        } else {
+          setTableLoading(false);
+        }
+      }
+    },
+    [waitForRender]
+  );
+
+  const loadTechnicianTypes = useCallback(async () => {
     try {
       const types = await getTechnicianTypes();
       if (types.length > 0) {
@@ -123,7 +156,7 @@ export const useTechnicians = () => {
     } catch (error) {
       console.error(error);
     }
-  };
+  }, []);
 
   const mapTechTypesToIds = (types: string[]) =>
     (types ?? [])
@@ -131,10 +164,18 @@ export const useTechnicians = () => {
       .filter((id): id is number => typeof id === "number");
 
   useEffect(() => {
-    loadTechnicians();
+    loadTechnicians(page, limit, debouncedSearch);
     loadTechnicianTypes();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, [page, limit, debouncedSearch, loadTechnicians, loadTechnicianTypes]);
+
+  const refreshTechnicians = useCallback(async () => {
+    await loadTechnicians(page, limit, debouncedSearch);
+    return 200 as const;
+  }, [loadTechnicians, page, limit, debouncedSearch]);
 
   const handleCreateTechnician = async (data: CreateTechnicianData) => {
     const { resumePdf, typeid, ...rest } = data;
@@ -148,35 +189,39 @@ export const useTechnicians = () => {
         phone: rest.phone,
         email: rest.email,
       })
-    ) return;
+    ) {
+      return;
+    }
 
     try {
-      await withLoading(async () => {
-        const imageUrl = rest.image ? await uploadImageToCloudinary(rest.image) : undefined;
-        const resumeUrl = resumePdf ? await uploadPdfToCloudinary(resumePdf) : undefined;
+      startLoading();
 
-        const techniciantypeids = mapTechTypesToIds(rest.types);
+      const imageUrl = rest.image
+        ? await uploadImageToCloudinary(rest.image)
+        : undefined;
+      const resumeUrl = resumePdf
+        ? await uploadPdfToCloudinary(resumePdf)
+        : undefined;
 
-        const payload: CreateTechnicianPayload = {
-          name: rest.name,
-          lastname: rest.lastName,
-          email: rest.email,
-          documentnumber: rest.documentNumber,
-          phone: rest.phone,
-          techniciantypeids,
-          CV: resumeUrl ?? null,
-          image: imageUrl ?? null,
-          typeid: typeid,
-        };
+      const techniciantypeids = mapTechTypesToIds(rest.types);
 
-        await createTechnicianApi(payload);
+      const payload: CreateTechnicianPayload = {
+        name: rest.name,
+        lastname: rest.lastName,
+        email: rest.email,
+        documentnumber: rest.documentNumber,
+        phone: rest.phone,
+        techniciantypeids,
+        CV: resumeUrl ?? null,
+        image: imageUrl ?? null,
+        typeid: typeid,
+      };
 
-        const list = await getTechniciansApi();
-        setTechnicians(list);
+      await createTechnicianApi(payload);
+      await refreshTechnicians();
 
-        setIsCreateModalOpen(false);
-        toast.success("Técnico creado exitosamente");
-      });
+      setIsCreateModalOpen(false);
+      toast.success("Técnico creado exitosamente");
     } catch (error) {
       console.error(error);
       const apiMessage =
@@ -188,6 +233,8 @@ export const useTechnicians = () => {
           ? `No se pudo crear el técnico: ${apiMessage}`
           : "No se pudo crear el técnico. Intenta nuevamente."
       );
+    } finally {
+      stopLoading();
     }
   };
 
@@ -203,63 +250,74 @@ export const useTechnicians = () => {
         phone: rest.phone,
         email: rest.email,
       })
-    ) return;
+    ) {
+      return;
+    }
 
     const existing = technicians.find((t) => t.id === id);
-    if (!existing) return toast.error("No se encontró el técnico en la lista local.");
+    if (!existing) {
+      toast.error("No se encontró el técnico en la lista local.");
+      return;
+    }
 
     try {
-      await withLoading(async () => {
-        const imageUrl = rest.image ? await uploadImageToCloudinary(rest.image) : existing.image;
-        const resumeUrl = resumePdf ? await uploadPdfToCloudinary(resumePdf) : existing.resumeUrl;
+      startLoading();
 
-        const techniciantypeids = rest.types ? mapTechTypesToIds(rest.types) : undefined;
-        const stateid = rest.state === "Inactivo" ? 2 : 1;
+      const imageUrl = rest.image
+        ? await uploadImageToCloudinary(rest.image)
+        : existing.image;
+      const resumeUrl = resumePdf
+        ? await uploadPdfToCloudinary(resumePdf)
+        : existing.resumeUrl;
 
-        const body: UpdateTechnicianPayload = {
-          name: rest.name,
-          lastname: rest.lastName,
-          documentnumber: rest.documentNumber,
-          phone: rest.phone,
-          stateid,
-          typeid: rest.typeid,
-        };
+      const techniciantypeids = rest.types
+        ? mapTechTypesToIds(rest.types)
+        : undefined;
+      const stateid = rest.state === "Inactivo" ? 2 : 1;
 
-        if (rest.email !== existing.email) body.email = rest.email;
-        if (imageUrl && imageUrl !== existing.image) body.image = imageUrl;
-        if (resumeUrl && resumeUrl !== existing.resumeUrl) body.CV = resumeUrl;
-        if (techniciantypeids && techniciantypeids.length > 0) body.techniciantypeids = techniciantypeids;
+      const body: UpdateTechnicianPayload = {
+        name: rest.name,
+        lastname: rest.lastName,
+        documentnumber: rest.documentNumber,
+        phone: rest.phone,
+        stateid,
+        typeid: rest.typeid,
+      };
 
-        await updateTechnicianApi(id, body);
+      if (rest.email !== existing.email) body.email = rest.email;
+      if (imageUrl && imageUrl !== existing.image) body.image = imageUrl;
+      if (resumeUrl && resumeUrl !== existing.resumeUrl) body.CV = resumeUrl;
+      if (techniciantypeids && techniciantypeids.length > 0) {
+        body.techniciantypeids = techniciantypeids;
+      }
 
-        const list = await getTechniciansApi();
-        setTechnicians(list);
+      await updateTechnicianApi(id, body);
+      await refreshTechnicians();
 
-        setEditingTechnician(null);
-        toast.success("Técnico actualizado correctamente");
-      });
+      setEditingTechnician(null);
+      toast.success("Técnico actualizado correctamente");
     } catch (error) {
       console.error(error);
       toast.error("No se pudo actualizar el técnico. Intenta nuevamente.");
+    } finally {
+      stopLoading();
     }
   };
-  
-const handleDeleteTechnician = async (tech: Technician): Promise<boolean> => {
-  return confirmDelete(
-    {
-      itemName: `${tech.name} ${tech.lastName}`,
-      itemType: "técnico",
-      successMessage: `El técnico "${tech.name} ${tech.lastName}" ha sido eliminado correctamente.`,
-      errorMessage: "No se pudo eliminar el técnico. Intenta nuevamente.",
-      skipSuccessToast: true,
-    },
-    async () => {
-      await withLoading(async () => {
+
+  const handleDeleteTechnician = async (tech: Technician): Promise<boolean> => {
+    return confirmDelete(
+      {
+        itemName: `${tech.name} ${tech.lastName}`,
+        itemType: "técnico",
+        successMessage: `El técnico "${tech.name} ${tech.lastName}" ha sido eliminado correctamente.`,
+        errorMessage: "No se pudo eliminar el técnico. Intenta nuevamente.",
+        skipSuccessToast: true,
+      },
+      async () => {
+        startLoading();
         try {
           await deleteTechnicianApi(tech.id);
-
-          const list = await getTechniciansApi();
-          setTechnicians(list);
+          await refreshTechnicians();
 
           toast.success(
             `El técnico "${tech.name} ${tech.lastName}" ha sido eliminado correctamente.`
@@ -268,31 +326,47 @@ const handleDeleteTechnician = async (tech: Technician): Promise<boolean> => {
           console.warn("Error al eliminar técnico:", error);
 
           const apiMessage =
-            error?.response?.data?.message ??
-            error?.message ??
-            "";
+            error?.response?.data?.message ?? error?.message ?? "";
 
           toast.warning(
-            apiMessage ||
-              "No se pudo eliminar el técnico. Intenta nuevamente."
+            apiMessage || "No se pudo eliminar el técnico. Intenta nuevamente."
           );
+        } finally {
+          stopLoading();
         }
-      });
-    }
-  );
-};
+      }
+    );
+  };
 
   return {
     technicians,
     typeOptions,
+
+    loading,
+    tableLoading,
+
+    page,
+    limit,
+    total,
+    totalPages,
+    search,
+    setPage,
+    setLimit,
+    setSearch,
+
     isCreateModalOpen,
     setIsCreateModalOpen,
+
     isEditModalOpen,
+    isViewModalOpen,
     editingTechnician,
+    viewingTechnician,
     setEditingTechnician,
+    setViewingTechnician,
+
     handleCreateTechnician,
     handleEditTechnician,
     handleDeleteTechnician,
-    loading,
+    refreshTechnicians,
   };
 };

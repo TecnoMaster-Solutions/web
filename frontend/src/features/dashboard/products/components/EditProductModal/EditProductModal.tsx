@@ -95,8 +95,8 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
       Array.isArray((product as any).images) && (product as any).images.length > 0
         ? ((product as any).images as string[])
         : product.image
-        ? [product.image]
-        : [];
+          ? [product.image]
+          : [];
 
     setImages(initial);
     setErrors({});
@@ -242,7 +242,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2">
                 <label className="block text-sm font-medium mb-1" style={{ color: Colors.texts.primary }}>
-                  Nombre <span className="text-green-500">*</span>
+                  Nombre <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -257,13 +257,13 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
                   style={{ borderColor: (errors as any).name ? "red" : Colors.table.lines }}
                 />
                 {(errors as any).name && (
-                  <span className="text-xs text-green-500">{(errors as any).name}</span>
+                  <span className="text-xs text-red-500">{(errors as any).name}</span>
                 )}
               </div>
 
               <div className="col-span-2">
                 <label className="block text-sm font-medium mb-1" style={{ color: Colors.texts.primary }}>
-                  Categorí­a del proveedor <span className="text-green-500">*</span>
+                  Categorí­a del proveedor <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -278,13 +278,13 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
                   style={{ borderColor: (errors as any).supplierCategory ? "red" : Colors.table.lines }}
                 />
                 {(errors as any).supplierCategory && (
-                  <span className="text-xs text-green-500">{(errors as any).supplierCategory}</span>
+                  <span className="text-xs text-red-500">{(errors as any).supplierCategory}</span>
                 )}
               </div>
 
               <div>
                 <label className="block text-sm font-medium mb-1" style={{ color: Colors.texts.primary }}>
-                  Categoría <span className="text-green-500">*</span>
+                  Categoría <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={categoryId}
@@ -306,13 +306,13 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
                   ))}
                 </select>
                 {(errors as any).categoryId && (
-                  <span className="text-xs text-green-500">{(errors as any).categoryId}</span>
+                  <span className="text-xs text-red-500">{(errors as any).categoryId}</span>
                 )}
               </div>
 
               <div>
                 <label className="block text-sm font-medium mb-1" style={{ color: Colors.texts.primary }}>
-                  Código <span className="text-green-500">*</span>
+                  Código <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -327,7 +327,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
                   style={{ borderColor: (errors as any).code ? "red" : Colors.table.lines }}
                 />
                 {(errors as any).code && (
-                  <span className="text-xs text-green-500">{(errors as any).code}</span>
+                  <span className="text-xs text-red-500">{(errors as any).code}</span>
                 )}
               </div>
 
@@ -347,13 +347,11 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
             </div>
           </div>
 
-          {/* DERECHA: imágenes + estado abajo */}
           <div className="min-h-0 flex flex-col gap-4">
-            {/* BLOQUE IMAGENES */}
             <div className="min-h-0 flex flex-col">
               <div className="flex items-end justify-between mb-2">
                 <label className="block text-sm font-medium" style={{ color: Colors.texts.primary }}>
-                  Imágenes <span className="text-green-500">*</span>
+                  Imágenes <span className="text-red-500">*</span>
                 </label>
 
                 <div className="flex items-center gap-3">
@@ -365,7 +363,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
                         validateField("images" as any, []);
                         if (fileInputRef.current) fileInputRef.current.value = "";
                       }}
-                      className="text-xs text-green-600 hover:text-green-700"
+                      className="text-xs text-red-600 hover:text-red-700"
                     >
                       Limpiar
                     </button>
@@ -481,13 +479,12 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
                   )}
 
                   {(errors as any).images && (
-                    <p className="mt-2 text-xs text-green-600">{(errors as any).images}</p>
+                    <p className="mt-2 text-xs text-red-600">{(errors as any).images}</p>
                   )}
                 </div>
               </div>
             </div>
 
-            {/*  ESTADO ABAJO DE IMAGENES */}
             <div>
               <label className="block text-sm font-medium mb-1" style={{ color: Colors.texts.primary }}>
                 Estado

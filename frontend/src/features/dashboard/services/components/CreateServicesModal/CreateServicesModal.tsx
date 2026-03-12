@@ -151,7 +151,7 @@ const CreateServiceModal: React.FC<CreateServiceModalProps> = ({
             className="block text-sm font-medium mb-1"
             style={{ color: Colors.texts.primary }}
           >
-            Imagen <span className="text-green-500">*</span>
+            Imagen <span className="text-red-500">*</span>
           </label>
 
           <input
@@ -207,7 +207,7 @@ const CreateServiceModal: React.FC<CreateServiceModalProps> = ({
             {image && (
               <div className="flex flex-col items-center space-y-1">
                 {imageName && (
-                  <div className="text-xs text-green-600 font-medium">
+                  <div className="text-xs text-red-600 font-medium">
                     {imageName}
                   </div>
                 )}
@@ -217,7 +217,7 @@ const CreateServiceModal: React.FC<CreateServiceModalProps> = ({
                     setImage(null);
                     setErrors((p) => ({ ...p, image: "La imagen es obligatoria" }));
                   }}
-                  className="text-green-500 text-xs hover:text-green-700 px-2 py-1 border border-green-200 rounded-md"
+                  className="text-red-500 text-xs hover:text-red-700 px-2 py-1 border border-red-200 rounded-md"
                   style={{ borderColor: Colors.states.nullable }}
                 >
                   Eliminar imagen
@@ -226,7 +226,7 @@ const CreateServiceModal: React.FC<CreateServiceModalProps> = ({
             )}
 
             {errors.image && (
-              <span className="text-xs text-green-500 mt-1">{errors.image}</span>
+              <span className="text-xs text-red-500 mt-1">{errors.image}</span>
             )}
           </div>
         </div>
@@ -236,7 +236,7 @@ const CreateServiceModal: React.FC<CreateServiceModalProps> = ({
             className="block text-sm font-medium mb-1"
             style={{ color: Colors.texts.primary }}
           >
-            Nombre <span className="text-green-500">*</span>
+            Nombre <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
@@ -248,7 +248,7 @@ const CreateServiceModal: React.FC<CreateServiceModalProps> = ({
             style={{ borderColor: errors.name ? "red" : Colors.table.lines }}
           />
           {errors.name && (
-            <span className="text-xs text-green-500">{errors.name}</span>
+            <span className="text-xs text-red-500">{errors.name}</span>
           )}
         </div>
 
@@ -257,7 +257,7 @@ const CreateServiceModal: React.FC<CreateServiceModalProps> = ({
             className="block text-sm font-medium mb-1"
             style={{ color: Colors.texts.primary }}
           >
-            Tipo de servicio <span className="text-green-500">*</span>
+            Tipo de servicio <span className="text-red-500">*</span>
           </label>
           <select
             value={typeofserviceid || ""}
@@ -287,7 +287,7 @@ const CreateServiceModal: React.FC<CreateServiceModalProps> = ({
             ))}
           </select>
           {errors.typeofserviceid && (
-            <span className="text-xs text-green-500">{errors.typeofserviceid}</span>
+            <span className="text-xs text-red-500">{errors.typeofserviceid}</span>
           )}
         </div>
 

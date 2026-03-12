@@ -6,52 +6,30 @@ import Colors from "@/shared/theme/colors";
 
 interface RolesTableProps {
   roles: Role[];
+  page: number;
+  limit: number;
+  total: number;
+  search: string;
+  loading?: boolean;
+  onPageChange: (page: number) => void;
+  onSearchChange: (value: string) => void;
   onView: (role: Role) => void;
   onEdit: (role: Role) => void;
   onDelete: (role: Role) => void;
   onCreate: () => void;
 }
 
-type RoleRow = Role & {
-  rowNumber: number;
-  searchText: string;
-  stateSearch: "activo" | "inactivo";
-};
-
-const normalizeForSearch = (value: string): string => {
-  const lower = value.toLowerCase();
-  const withoutAccents = lower.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  return `${lower} ${withoutAccents}`;
-};
-
-const toStateSearch = (state: unknown): "activo" | "inactivo" => {
-  const s = String(state ?? "")
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim();
-
-  return s === "activo" ? "activo" : "inactivo";
-};
-
-const buildSearchText = (role: Role): string => {
-  const parts: string[] = [];
-
-  const add = (val?: string | number | null) => {
-    if (val === undefined || val === null) return;
-    const str = String(val).trim();
-    if (!str) return;
-    parts.push(normalizeForSearch(str));
-  };
-
-  add(role.id);
-  add(role.name);
-
-  return parts.join(" ");
-};
+type RoleRow = Role;
 
 export const RolesTable: React.FC<RolesTableProps> = ({
   roles,
+  page,
+  limit,
+  total,
+  search,
+  loading = false,
+  onPageChange,
+  onSearchChange,
   onView,
   onEdit,
   onDelete,
@@ -69,21 +47,10 @@ export const RolesTable: React.FC<RolesTableProps> = ({
     };
   };
 
-  const rows: RoleRow[] = useMemo(() => {
-    const sortedRoles = [...roles].sort(
-      (a, b) => Number(a.id ?? 0) - Number(b.id ?? 0)
-    );
-
-    return sortedRoles.map((r, index) => ({
-      ...r,
-      rowNumber: index + 1,
-      searchText: buildSearchText(r),
-      stateSearch: toStateSearch(r.state),
-    }));
-  }, [roles]);
+  const rows: RoleRow[] = useMemo(() => roles, [roles]);
 
   const columns: Column<RoleRow>[] = [
-    { key: "rowNumber", header: "#" },
+    { key: "id", header: "ID" },
     { key: "name", header: "Nombre" },
     {
       key: "state",
@@ -109,8 +76,17 @@ export const RolesTable: React.FC<RolesTableProps> = ({
       module="roles"
       data={rows}
       columns={columns}
-      pageSize={6}
-      searchableKeys={["searchText", "stateSearch"]}
+      pageSize={limit}
+      searchableKeys={["id", "name", "state"]}
+      serverPagination={{
+        page,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
+        onPageChange,
+      }}
+      serverSearch={{
+        value: search,
+        onChange: onSearchChange,
+      }}
       onView={onView}
       onEdit={onEdit}
       onDelete={onDelete}
@@ -118,6 +94,7 @@ export const RolesTable: React.FC<RolesTableProps> = ({
       searchPlaceholder="Buscar roles..."
       createButtonText="Crear Rol"
       actionGuard={protectDefaultAdmin}
+      loading={loading}
     />
   );
 };
