@@ -205,3 +205,15 @@ export interface IAnnulSaleData {
     cliente: string;
     fecha: string;
 }
+
+export interface ISalesPaginationMeta {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+}
+
+export interface ISalesPaginatedResult {
+    data: ISale[];
+    meta: ISalesPaginationMeta;
+}

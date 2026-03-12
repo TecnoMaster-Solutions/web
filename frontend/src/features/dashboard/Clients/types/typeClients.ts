@@ -18,6 +18,18 @@ export interface Client {
   hasAssociations: boolean;
 }
 
+export interface ClientsPaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface ClientsPaginatedResult {
+  data: Client[];
+  meta: ClientsPaginationMeta;
+}
+
 // ================================
 // CREATE FORM DATA (UI FORM STATE)
 // ================================

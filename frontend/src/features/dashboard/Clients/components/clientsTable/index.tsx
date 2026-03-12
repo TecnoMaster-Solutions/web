@@ -19,7 +19,7 @@ export const ClientsTable: React.FC<ClientsTableProps> = ({
   onCreate,
 }) => {
   const columns: Column<Client>[] = [
-    { key: "id", header: "Id" },
+    { key: "id", header: "ID" },
     { key: "tipo", header: "Tipo" },
     { key: "documento", header: "Documento" },
     {

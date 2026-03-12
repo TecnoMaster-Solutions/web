@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   getClients,
   deleteClient,
@@ -10,6 +10,7 @@ import { api } from "@/shared/utils/apiClient";
 
 import {
   Client,
+  ClientsPaginatedResult,
   CreateClientData,
   EditClientData,
   ClientFormErrors,
@@ -295,12 +296,24 @@ function validateEditClientForm(
 // =====================================================
 
 export function useClients() {
+  const PAGE_SIZE = 5;
+  const SEARCH_DEBOUNCE_MS = 350;
+
   const [clients, setClients] = useState<Client[]>([]);
+  const [pagedClients, setPagedClients] = useState<Client[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [search, setSearch] = useState("");
+  const [initialLoading, setInitialLoading] = useState(true);
   const [loading, setLoading] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [viewingClient, setViewingClient] = useState<Client | null>(null);
 
+  const hasFetchedRef = useRef(false);
+  const pageAbortRef = useRef<AbortController | null>(null);
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchAbortRef = useRef<AbortController | null>(null);
   const busyRef = useRef(false);
   const startRef = useRef(0);
 
@@ -340,19 +353,129 @@ export function useClients() {
     }
   };
 
-  const loadClients = async () => {
-    const data = await getClients();
-    // Mapear tipoId desde el ClientUI (ya incluido en clients.api.ts)
-    const mapped: Client[] = data.map((c) => ({
+  const normalizeClientList = useCallback((list: Client[]): Client[] => {
+    return list.map((c) => ({
       ...c,
       tipoId: (c as Client & { tipoId?: number }).tipoId ?? 0,
     }));
-    setClients(mapped);
-  };
+  }, []);
+
+  const loadAllClients = useCallback(async () => {
+    const data = (await getClients()) as Client[];
+    setClients(normalizeClientList(data));
+  }, [normalizeClientList]);
+
+  const loadClientsPage = useCallback(
+    async (targetPage: number, searchText: string, signal?: AbortSignal) => {
+      const response = (await getClients({
+        page: targetPage,
+        limit: PAGE_SIZE,
+        search: searchText,
+        signal,
+      })) as ClientsPaginatedResult;
+
+      const list = Array.isArray(response?.data) ? response.data : [];
+      const meta = response?.meta;
+
+      setPagedClients(normalizeClientList(list));
+      setCurrentPage(Number(meta?.page ?? targetPage));
+      setTotalPages(Math.max(1, Number(meta?.totalPages ?? 1)));
+      return { list, meta };
+    },
+    [normalizeClientList],
+  );
 
   useEffect(() => {
-    withLoading(loadClients);
+    const load = async () => {
+      setInitialLoading(true);
+      setLoading(true);
+      try {
+        await Promise.all([loadClientsPage(1, ""), loadAllClients()]);
+      } catch (error: any) {
+        console.error("Error cargando clientes:", error);
+        const msg = error?.response?.data?.message || "No se pudieron cargar los clientes.";
+        showError(Array.isArray(msg) ? msg[0] : msg);
+      } finally {
+        setInitialLoading(false);
+        setLoading(false);
+      }
+    };
+
+    if (!hasFetchedRef.current) {
+      hasFetchedRef.current = true;
+      void load();
+    }
+  }, [loadAllClients, loadClientsPage]);
+
+  useEffect(() => {
+    return () => {
+      if (searchDebounceRef.current) {
+        clearTimeout(searchDebounceRef.current);
+      }
+      pageAbortRef.current?.abort();
+      searchAbortRef.current?.abort();
+    };
   }, []);
+
+  const handlePageChange = useCallback(
+    async (nextPage: number) => {
+      pageAbortRef.current?.abort();
+      const controller = new AbortController();
+      pageAbortRef.current = controller;
+
+      setLoading(true);
+      try {
+        await loadClientsPage(nextPage, search, controller.signal);
+      } catch (error: any) {
+        if (
+          error?.name === "CanceledError" ||
+          error?.code === "ERR_CANCELED" ||
+          controller.signal.aborted
+        ) {
+          return;
+        }
+        console.error("Error al cambiar de pagina en clientes:", error);
+        const msg = error?.response?.data?.message || "No se pudo cargar la pagina de clientes.";
+        showError(Array.isArray(msg) ? msg[0] : msg);
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    },
+    [loadClientsPage, search],
+  );
+
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      setSearch(value);
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+      pageAbortRef.current?.abort();
+      searchAbortRef.current?.abort();
+
+      const controller = new AbortController();
+      searchAbortRef.current = controller;
+
+      searchDebounceRef.current = setTimeout(async () => {
+        setLoading(true);
+        try {
+          await loadClientsPage(1, value, controller.signal);
+        } catch (error: any) {
+          if (
+            error?.name === "CanceledError" ||
+            error?.code === "ERR_CANCELED" ||
+            controller.signal.aborted
+          ) {
+            return;
+          }
+          console.error("Error al buscar clientes:", error);
+          const msg = error?.response?.data?.message || "No se pudieron buscar los clientes.";
+          showError(Array.isArray(msg) ? msg[0] : msg);
+        } finally {
+          if (!controller.signal.aborted) setLoading(false);
+        }
+      }, SEARCH_DEBOUNCE_MS);
+    },
+    [loadClientsPage],
+  );
 
   // ── CREATE CLIENT ──────────────────────────────────────────────────────────
   const handleCreateClient = async (form: CreateClientData): Promise<boolean> => {
@@ -376,7 +499,7 @@ export function useClients() {
         showSuccess("Cliente creado exitosamente.");
       });
 
-      await loadClients();
+      await Promise.all([loadClientsPage(1, search), loadAllClients()]);
       return true;
     } catch {
       return false;
@@ -409,32 +532,7 @@ export function useClients() {
         showSuccess("Cliente actualizado correctamente.");
       });
 
-      setClients((prev) =>
-        prev.map((client) =>
-          client.id === form.id
-            ? {
-                ...client,
-                nombre: form.nombre.trim(),
-                apellido: form.apellido.trim(),
-                tipoId: Number(form.tipo),
-                tipo:
-                  {
-                    1: "CC",
-                    2: "TI",
-                    3: "CE",
-                    4: "PPN",
-                  }[Number(form.tipo)] ?? client.tipo,
-                documento: form.documento.trim(),
-                telefono: form.telefono.replace(/\D/g, ""),
-                correoElectronico: form.correoElectronico.trim(),
-                estado: form.estado,
-                ciudad: form.ciudad.trim(),
-                codigoPostal: form.codigoPostal.trim(),
-              }
-            : client
-        )
-      );
-      void loadClients();
+      await Promise.all([loadClientsPage(currentPage, search), loadAllClients()]);
     } catch {
       return;
     } finally {
@@ -476,7 +574,17 @@ export function useClients() {
 
     // Solo recargar si realmente se borró
     if (deleted) {
-      await loadClients();
+      const activeSearch = search.trim();
+      if (activeSearch) {
+        setSearch("");
+        await loadClientsPage(1, "");
+      } else {
+        const { list } = await loadClientsPage(currentPage, search);
+        if (list.length === 0 && currentPage > 1) {
+          await loadClientsPage(currentPage - 1, search);
+        }
+      }
+      await loadAllClients();
     }
   };
 
@@ -496,7 +604,13 @@ export function useClients() {
 
   return {
     clients,
+    pagedClients,
+    initialLoading,
     loading,
+    currentPage,
+    totalPages,
+    pageSize: PAGE_SIZE,
+    search,
     isCreateModalOpen,
     setIsCreateModalOpen,
     editingClient,
@@ -504,6 +618,8 @@ export function useClients() {
     handleCreateClient,
     handleEditClient,
     handleDeleteClient,
+    handlePageChange,
+    handleSearchChange,
     handleView,
     handleEdit,
     closeModals,

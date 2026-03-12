@@ -14,6 +14,7 @@ import type {
 
 const BASE = "orders-services";
 const IN_PROCESS_STATE_ID = 7;
+type RequestOptions = { signal?: AbortSignal };
 
 function parseOrderStartAt(order: OrderServiceDTO): Date | null {
   const datePart = String(order.fechainicio ?? "").trim();
@@ -63,8 +64,50 @@ export async function createOrderService(
   return data;
 }
 
-export async function fetchOrdersServices(): Promise<OrderServiceDTO[]> {
-  const { data } = await api.get<OrderServiceDTO[]>(BASE);
+export async function fetchOrdersServices(
+  search?: string,
+  options?: RequestOptions
+): Promise<OrderServiceDTO[]> {
+  const trimmedSearch = search?.trim();
+  const { data } = await api.get<OrderServiceDTO[]>(BASE, {
+    params: trimmedSearch ? { search: trimmedSearch } : undefined,
+    signal: options?.signal,
+  });
+  const dueOrders = data.filter((order) => shouldAutoMoveToInProcess(order));
+  if (!dueOrders.length) return data;
+
+  const updates = await Promise.allSettled(
+    dueOrders.map((order) =>
+      updateOrderService(order.ordersservicesid, { stateid: IN_PROCESS_STATE_ID })
+    )
+  );
+
+  const updatedById = new Map<number, OrderServiceDTO>();
+  updates.forEach((res) => {
+    if (res.status === "fulfilled") {
+      updatedById.set(res.value.ordersservicesid, res.value);
+    }
+  });
+
+  return data.map((order) => updatedById.get(order.ordersservicesid) ?? order);
+}
+
+export async function fetchOrdersServicesByDateRange(
+  from: string,
+  to: string,
+  search?: string,
+  options?: RequestOptions
+): Promise<OrderServiceDTO[]> {
+  const trimmedSearch = search?.trim();
+  const { data } = await api.get<OrderServiceDTO[]>(`${BASE}/by-date-range`, {
+    params: {
+      from,
+      to,
+      ...(trimmedSearch ? { search: trimmedSearch } : {}),
+    },
+    signal: options?.signal,
+  });
+
   const dueOrders = data.filter((order) => shouldAutoMoveToInProcess(order));
   if (!dueOrders.length) return data;
 
