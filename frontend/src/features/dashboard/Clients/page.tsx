@@ -48,7 +48,7 @@ export default function ClientsPage() {
   };
 
   const columns: Column<Client>[] = [
-    { key: "id", header: "Id" },
+    { key: "id", header: "ID" },
     { key: "tipo", header: "Tipo" },
     { key: "documento", header: "Documento" },
     {

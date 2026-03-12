@@ -343,10 +343,12 @@ export function useClients() {
   const loadClients = async () => {
     const data = await getClients();
     // Mapear tipoId desde el ClientUI (ya incluido en clients.api.ts)
-    const mapped: Client[] = data.map((c) => ({
-      ...c,
-      tipoId: (c as Client & { tipoId?: number }).tipoId ?? 0,
-    }));
+    const mapped: Client[] = data
+      .map((c) => ({
+        ...c,
+        tipoId: (c as Client & { tipoId?: number }).tipoId ?? 0,
+      }))
+      .sort((a, b) => b.id - a.id);
     setClients(mapped);
   };
 
@@ -413,24 +415,24 @@ export function useClients() {
         prev.map((client) =>
           client.id === form.id
             ? {
-                ...client,
-                nombre: form.nombre.trim(),
-                apellido: form.apellido.trim(),
-                tipoId: Number(form.tipo),
-                tipo:
-                  {
-                    1: "CC",
-                    2: "TI",
-                    3: "CE",
-                    4: "PPN",
-                  }[Number(form.tipo)] ?? client.tipo,
-                documento: form.documento.trim(),
-                telefono: form.telefono.replace(/\D/g, ""),
-                correoElectronico: form.correoElectronico.trim(),
-                estado: form.estado,
-                ciudad: form.ciudad.trim(),
-                codigoPostal: form.codigoPostal.trim(),
-              }
+              ...client,
+              nombre: form.nombre.trim(),
+              apellido: form.apellido.trim(),
+              tipoId: Number(form.tipo),
+              tipo:
+                {
+                  1: "CC",
+                  2: "TI",
+                  3: "CE",
+                  4: "PPN",
+                }[Number(form.tipo)] ?? client.tipo,
+              documento: form.documento.trim(),
+              telefono: form.telefono.replace(/\D/g, ""),
+              correoElectronico: form.correoElectronico.trim(),
+              estado: form.estado,
+              ciudad: form.ciudad.trim(),
+              codigoPostal: form.codigoPostal.trim(),
+            }
             : client
         )
       );

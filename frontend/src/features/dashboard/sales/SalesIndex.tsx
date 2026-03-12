@@ -126,9 +126,9 @@ export default function SalesIndex() {
 
   const authRole = normalizeRoleName(
     (user as any)?.rolename ??
-      (profile as any)?.rolename ??
-      (profile as any)?.role?.name ??
-      (profile as any)?.users?.rolename
+    (profile as any)?.rolename ??
+    (profile as any)?.role?.name ??
+    (profile as any)?.users?.rolename
   );
   const authClientId = extractAuthClientId(user, profile);
   const isClientUser = authRole.includes("cliente");
@@ -221,7 +221,7 @@ export default function SalesIndex() {
 
   const exportToExcel = () => {
     const rows = sales.map((sale) => ({
-      "#": sale.id,
+      "ID": sale.id,
       "Código": sale.codigo,
       Cliente: sale.cliente,
       Fecha: sale.fecha,
@@ -275,7 +275,7 @@ export default function SalesIndex() {
   const columns: Column<SaleRow>[] = [
     {
       key: "id",
-      header: "#",
+      header: "ID",
       render: (row) => row.id.toString(),
     },
     { key: "codigo", header: "Código Venta" },
@@ -365,8 +365,8 @@ export default function SalesIndex() {
           renderExtraActions={(row) =>
             <>
               {canOpenPaymentFlow &&
-              row.estado !== "Anulada" &&
-              !isGatewayPaymentMethod(row.paymentMethod) ? (
+                row.estado !== "Anulada" &&
+                !isGatewayPaymentMethod(row.paymentMethod) ? (
                 <button
                   onClick={() => setPaymentSaleId(row.id)}
                   className="p-1 rounded-full cursor-pointer text-black transition-all duration-300 hover:scale-110 hover:bg-[#06a646]/30"
@@ -400,13 +400,14 @@ export default function SalesIndex() {
               {hasSalesExport ? (
                 <button
                   onClick={exportToExcel}
-                  className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-green-700 bg-green-50 hover:bg-green-100 border border-green-300 rounded-lg transition-colors"
+                  className="cursor-pointer inline-flex h-9 items-center rounded-md px-3 text-sm font-semibold text-white shadow-sm hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
+                  style={{ background: Colors.buttons.primary }}
                   title="Exportar a Excel"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                   </svg>
-                  Excel
+                  Descargar Reporte
                 </button>
               ) : null}
             </div>
