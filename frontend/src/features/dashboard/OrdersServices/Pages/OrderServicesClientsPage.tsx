@@ -18,6 +18,7 @@ import {
   reportOrderServiceWarranty,
 } from "@/features/dashboard/OrdersServices/api/ordersServices.api";
 import type { OrderServiceDTO } from "@/features/dashboard/OrdersServices/types/ordersServices.types";
+import type { PaginatedResponse } from "@/features/dashboard/OrdersServices/api/ordersServices.api";
 
 const ICONS = {
   edit: "/icons/Edit.svg",
@@ -128,9 +129,6 @@ function formatTimeES(input?: string | null) {
   return s;
 }
 
-const norm = (s: string) =>
-  s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-
 function pageList(totalPages: number, current: number) {
   if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
   const pages: (number | "...")[] = [1];
@@ -171,25 +169,6 @@ function extractAuthClientId(user: any, profile: any): number | null {
     if (id) return id;
   }
   return null;
-}
-
-function extractOrderClientIds(o: any): number[] {
-  const client = o?.client ?? o?.customer ?? o?.cliente ?? null;
-  const ids = [
-    o?.clientId,
-    o?.clientid,
-    o?.customerid,
-    client?.customerid,
-    client?.clientid,
-    client?.id,
-    client?.userid,
-    client?.users?.userid,
-    client?.users?.id,
-  ];
-
-  return Array.from(
-    new Set(ids.map((id) => toPositiveId(id)).filter((id): id is number => id != null))
-  );
 }
 
 function mapEstadoKey(name?: string | null): Row["estadoKey"] {
@@ -426,6 +405,7 @@ export default function OrderServicesClientsPage() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(6);
   const [reportOpen, setReportOpen] = useState(false);
   const [reportRowId, setReportRowId] = useState<number | null>(null);
   const [motivo, setMotivo] = useState(WARRANTY_DEFAULT_LABEL);
@@ -433,7 +413,12 @@ export default function OrderServicesClientsPage() {
   const [notifyClient, setNotifyClient] = useState(false);
   const [errorDetalle, setErrorDetalle] = useState("");
   const [editingWarranty, setEditingWarranty] = useState(false);
-  const pageSize = 6;
+  const [paginationMeta, setPaginationMeta] = useState({
+    page: 1,
+    limit: 6,
+    total: 0,
+    totalPages: 1,
+  });
 
   const clientIdFromAuth = useMemo(
     () => extractAuthClientId(user, profile),
@@ -448,22 +433,34 @@ export default function OrderServicesClientsPage() {
     (async () => {
       setLoading(true);
       try {
-        const data = await fetchOrdersServices();
-        const list = Array.isArray(data) ? data : [];
-        const filtered = list.filter((o: any) => {
-          if (!clientIdFromAuth) return false;
-          const ids = extractOrderClientIds(o);
-          return ids.includes(clientIdFromAuth);
+        const data = await fetchOrdersServices({
+          page,
+          limit,
+          search: query,
+          ...(clientIdFromAuth ? { clientId: clientIdFromAuth } : {}),
+          sort: "ordersservicesid",
+          order: "DESC",
         });
-        const mapped = filtered
-          .map(toRow)
-          .filter((r) => r.id > 0)
-          .sort((a, b) => b.id - a.id);
+        const paginated = Array.isArray(data) ? null : (data as PaginatedResponse<OrderServiceDTO>);
+        const list = paginated?.data ?? (Array.isArray(data) ? data : []);
+        const mapped = list.map(toRow).filter((r) => r.id > 0);
         if (!mounted) return;
         setRows(mapped);
+        setPaginationMeta({
+          page: paginated?.meta.page ?? page,
+          limit: paginated?.meta.limit ?? limit,
+          total: paginated?.meta.total ?? mapped.length,
+          totalPages: paginated?.meta.totalPages ?? 1,
+        });
       } catch {
         if (!mounted) return;
         setRows([]);
+        setPaginationMeta({
+          page,
+          limit,
+          total: 0,
+          totalPages: 1,
+        });
         showError("No se pudieron cargar las ordenes.");
       } finally {
         if (!mounted) return;
@@ -474,31 +471,12 @@ export default function OrderServicesClientsPage() {
     return () => {
       mounted = false;
     };
-  }, [clientIdFromAuth, ready]);
+  }, [clientIdFromAuth, ready, page, limit, query]);
 
-  const filtered = useMemo(() => {
-    const q = norm(query.trim());
-    return rows.filter((r) => {
-      return (
-        !q ||
-        norm(r.fechaProgramada).includes(q) ||
-        norm(r.tipo).includes(q) ||
-        norm(r.tecnico).includes(q) ||
-        norm(r.cliente).includes(q) ||
-        norm(r.estado).includes(q) ||
-        String(r.id).includes(q)
-      );
-    });
-  }, [rows, query]);
-
-  useEffect(() => setPage(1), [query]);
-
-  const total = filtered.length;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const current = Math.min(page, totalPages);
-  const start = (current - 1) * pageSize;
-  const end = start + pageSize;
-  const paged = filtered.slice(start, end);
+  const total = paginationMeta.total;
+  const totalPages = Math.max(1, paginationMeta.totalPages);
+  const current = Math.min(paginationMeta.page, totalPages);
+  const paged = rows;
   const pages = pageList(totalPages, current);
   const canCreateOrder = canCreate(MODULE_KEY);
   const canViewOrder = canView(MODULE_KEY);
@@ -907,11 +885,27 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
               <div className="flex flex-col gap-2 md:flex-row md:items-center">
                 <input
                   value={query}
-                  onChange={(e) => setQuery(e.target.value)}
+                  onChange={(e) => {
+                    setQuery(e.target.value);
+                    setPage(1);
+                  }}
                   placeholder="Buscar (id, tecnico, cliente, tipo, estado, fecha)"
                   className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-gray-200 md:flex-1"
                 />
                 <div className="flex items-center gap-2">
+                  <select
+                    value={limit}
+                    onChange={(e) => {
+                      setLimit(Number(e.target.value));
+                      setPage(1);
+                    }}
+                    className="h-10 rounded-md border border-gray-300 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-gray-200"
+                    disabled={loading}
+                  >
+                    <option value={6}>6</option>
+                    <option value={12}>12</option>
+                    <option value={18}>18</option>
+                  </select>
                   {canExportOrder && (
                     <div className="hidden md:block">
                       <DownloadXLSXButton
@@ -1103,6 +1097,9 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
           )}
 
           <div className="mt-6 flex flex-col items-center gap-2">
+            <div className="text-sm text-gray-600">
+              Total {paginationMeta.total} registros · {paginationMeta.totalPages} paginas
+            </div>
             <div className="flex items-center gap-2">
               <motion.button
                 whileHover={{ scale: 1.05 }}
@@ -1257,9 +1254,6 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
     </RequireAuth>
   );
 }
-
-
-
 
 
 

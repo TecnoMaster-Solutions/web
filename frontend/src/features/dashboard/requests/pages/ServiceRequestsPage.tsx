@@ -406,6 +406,7 @@ export default function ServiceRequestsPage() {
     });
   }, [data]);
 
+  const total = data?.meta?.total ?? rows.length;
   const totalPages = data?.meta?.totalPages ?? 1;
 
   const xlsxRows = useMemo(() => {
@@ -861,6 +862,7 @@ export default function ServiceRequestsPage() {
             serverPagination={{
               page,
               limit,
+              total,
               totalPages,
               onPageChange: setPage,
               onPageSizeChange: (nextLimit) => {

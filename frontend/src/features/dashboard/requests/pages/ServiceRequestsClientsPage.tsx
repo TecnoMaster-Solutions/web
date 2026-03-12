@@ -23,6 +23,7 @@ import {
   updateServiceRequest,
   type ServiceRequestDTO,
 } from "@/features/dashboard/requests/services/servicerequests.service";
+import type { PaginatedResult } from "@/shared/types/pagination";
 
 type EstadoKey = "Aprobada" | "Anulada" | "Pendiente" | "Finalizado" | "Agendada";
 
@@ -97,23 +98,6 @@ function extractAuthClientId(user: any, profile: any): number | null {
     if (id) return id;
   }
   return null;
-}
-
-function extractRequestClientIds(r: any): number[] {
-  const ids = [
-    r?.clientId,
-    r?.clientid,
-    r?.customer?.customerid,
-    r?.customer?.clientid,
-    r?.customer?.id,
-    r?.customer?.userid,
-    r?.customer?.users?.userid,
-    r?.customer?.users?.id,
-  ];
-
-  return Array.from(
-    new Set(ids.map((id) => toPositiveId(id)).filter((id): id is number => id != null))
-  );
 }
 
 function mapEstadoKey(name?: string | null): EstadoKey {
@@ -206,28 +190,53 @@ export default function ServiceRequestsClientsPage() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(6);
   const [openCreate, setOpenCreate] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
   const [selected, setSelected] = useState<Row | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
-  const pageSize = 6;
+  const [paginationMeta, setPaginationMeta] = useState({
+    page: 1,
+    limit: 6,
+    total: 0,
+    totalPages: 1,
+  });
 
   const clientIdFromAuth = useMemo(() => extractAuthClientId(user, profile), [user, profile]);
 
   async function loadData() {
     setLoading(true);
     try {
-      const data = await listServiceRequests();
-      const list = Array.isArray(data) ? data : [];
-      const filtered = list.filter((r: any) => {
-        if (!clientIdFromAuth) return false;
-        const ids = extractRequestClientIds(r);
-        return ids.includes(clientIdFromAuth);
+      const data = await listServiceRequests({
+        page,
+        limit,
+        search: query,
+        ...(clientIdFromAuth ? { clientId: clientIdFromAuth } : {}),
       });
-      const mapped = filtered.map(toRow).filter((r) => r.id > 0).sort((a, b) => b.id - a.id);
+      const paginated =
+        data &&
+        typeof data === "object" &&
+        "data" in data &&
+        Array.isArray((data as PaginatedResult<ServiceRequestDTO>).data)
+          ? (data as PaginatedResult<ServiceRequestDTO>)
+          : null;
+      const list = paginated?.data ?? (Array.isArray(data) ? data : []);
+      const mapped = list.map(toRow).filter((r) => r.id > 0);
       setRows(mapped);
+      setPaginationMeta({
+        page: paginated?.meta.page ?? page,
+        limit: paginated?.meta.limit ?? limit,
+        total: paginated?.meta.total ?? mapped.length,
+        totalPages: paginated?.meta.totalPages ?? 1,
+      });
     } catch {
       setRows([]);
+      setPaginationMeta({
+        page,
+        limit,
+        total: 0,
+        totalPages: 1,
+      });
       showError("No se pudieron cargar las solicitudes.");
     } finally {
       setLoading(false);
@@ -237,28 +246,11 @@ export default function ServiceRequestsClientsPage() {
   useEffect(() => {
     if (!ready) return;
     void loadData();
-  }, [ready, clientIdFromAuth]);
+  }, [ready, clientIdFromAuth, page, limit, query]);
 
-  const filteredRows = useMemo(() => {
-    const q = normalizeText(query);
-    return rows.filter((r) => {
-      return (
-        !q ||
-        normalizeText(r.id).includes(q) ||
-        normalizeText(r.cliente).includes(q) ||
-        normalizeText(r.servicio).includes(q) ||
-        normalizeText(r.tipo).includes(q) ||
-        normalizeText(r.estado).includes(q) ||
-        normalizeText(r.fecha).includes(q)
-      );
-    });
-  }, [rows, query]);
-
-  useEffect(() => setPage(1), [query]);
-
-  const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
-  const current = Math.min(page, totalPages);
-  const paged = filteredRows.slice((current - 1) * pageSize, current * pageSize);
+  const totalPages = Math.max(1, paginationMeta.totalPages);
+  const current = Math.min(paginationMeta.page, totalPages);
+  const paged = rows;
   const pages = pageList(totalPages, current);
   const busy = loading || actionLoading;
   const canCreateRequests = canCreate(MODULE_KEY);
@@ -394,11 +386,27 @@ export default function ServiceRequestsClientsPage() {
               <div className="flex flex-col gap-2 md:flex-row md:items-center">
               <input
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setPage(1);
+                }}
                 placeholder="Buscar (id, cliente, servicio, tipo, estado, fecha)"
                 className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-gray-200"
                 disabled={busy}
               />
+              <select
+                value={limit}
+                onChange={(e) => {
+                  setLimit(Number(e.target.value));
+                  setPage(1);
+                }}
+                className="h-10 rounded-md border border-gray-300 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-gray-200"
+                disabled={busy}
+              >
+                <option value={6}>6</option>
+                <option value={12}>12</option>
+                <option value={18}>18</option>
+              </select>
                 {canCreateRequests && (
                   <button
                     onClick={() => setOpenCreate(true)}
@@ -532,6 +540,9 @@ export default function ServiceRequestsClientsPage() {
           )}
 
           <div className="mt-6 flex flex-col items-center gap-2">
+            <div className="text-sm text-gray-600">
+              Total {paginationMeta.total} registros · {paginationMeta.totalPages} paginas
+            </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
