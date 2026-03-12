@@ -190,7 +190,37 @@ export default function RegisterQuoteForm({ onSave }: Props) {
           api.get("/products?status=all"),
           api.get("/services"),
         ]);
-        setProducts(productsResponse.data);
+        const productsData = Array.isArray(productsResponse?.data)
+          ? productsResponse.data
+          : Array.isArray(productsResponse?.data?.data)
+            ? productsResponse.data.data
+            : [];
+        const mappedProducts = productsData
+          .map((productRaw: unknown) => {
+            const p =
+              typeof productRaw === "object" && productRaw !== null
+                ? (productRaw as Record<string, unknown>)
+                : {};
+            return {
+              productid: Number(p.productid ?? p.id),
+              productname: String(p.productname ?? p.name ?? "").trim(),
+              productdescription:
+                p.productdescription == null
+                  ? null
+                  : String(p.productdescription),
+              productpriceofsale: Number(p.productpriceofsale ?? p.saleprice ?? 0),
+              productstock: Number(p.productstock ?? p.stock ?? 0),
+              isactive:
+                typeof p.isactive === "boolean"
+                  ? p.isactive
+                  : String(p.state ?? "").toLowerCase() !== "inactivo",
+            };
+          })
+          .filter(
+            (p: ProductFromApi) =>
+              Number.isFinite(p.productid) && p.productid > 0 && !!p.productname,
+          );
+        setProducts(mappedProducts);
 
         const servicesData = Array.isArray(servicesResponse?.data)
           ? servicesResponse.data
@@ -1385,6 +1415,5 @@ export default function RegisterQuoteForm({ onSave }: Props) {
     </form>
   );
 }
-
 
 

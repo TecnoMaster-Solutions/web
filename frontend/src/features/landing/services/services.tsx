@@ -61,7 +61,7 @@ export default function ServicesLanding({ className = "" }: ServicesProps) {
     const load = async () => {
       try {
         const [list, types] = await Promise.all([
-          fetchLandingServices({ page: 1, limit: 200, stateid: 1 }),
+          fetchLandingServices({ page: 1, limit: 100, stateid: 1 }),
           fetchLandingServiceTypes(),
         ]);
 
