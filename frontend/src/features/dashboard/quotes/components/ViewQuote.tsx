@@ -140,6 +140,7 @@ export default function ViewQuote({
             <h3 className="mb-3 text-sm font-semibold text-slate-900">Resumen</h3>
             <div className="space-y-2">
               <Row label="Subtotal" value={formatCOP(quote.subtotal)} />
+              <Row label="Viaticos" value={formatCOP(quote.viaticos)} />
               <Row label="IVA (19%)" value={formatCOP(quote.tax)} />
               <Row label="Total" value={formatCOP(quote.total)} bold />
               <Row label="Creada" value={createdAt} />

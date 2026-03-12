@@ -93,6 +93,18 @@ const normalizeText = (value: string) =>
     .toLowerCase()
     .trim();
 
+const unwrapArray = (value: unknown): unknown[] => {
+  if (Array.isArray(value)) return value;
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    if (Array.isArray(record.data)) return record.data;
+    if (Array.isArray(record.items)) return record.items;
+    if (Array.isArray(record.rows)) return record.rows;
+    if (Array.isArray(record.products)) return record.products;
+  }
+  return [];
+};
+
 const toPayloadServiceType = (rawType: string) => {
   const normalized = normalizeText(rawType);
   if (normalized.includes("manten")) return "MANTENIMIENTO";
@@ -108,6 +120,7 @@ interface QuoteFormState {
   statesid: number;
   servicetype: string;
   observation: string;
+  viaticos: string;
   details: QuoteDetailPayload[];
 }
 
@@ -143,6 +156,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
     statesid: 5, // Estado por defecto: Pendiente
     servicetype: "",
     observation: "",
+    viaticos: "0",
     details: [],
   });
 
@@ -190,13 +204,41 @@ export default function RegisterQuoteForm({ onSave }: Props) {
           api.get("/products?status=all"),
           api.get("/services"),
         ]);
-        setProducts(productsResponse.data);
+        const productsData = unwrapArray(productsResponse?.data)
+          .map((productRaw: unknown) => {
+            const product =
+              typeof productRaw === "object" && productRaw !== null
+                ? (productRaw as Record<string, unknown>)
+                : {};
 
-        const servicesData = Array.isArray(servicesResponse?.data)
-          ? servicesResponse.data
-          : Array.isArray(servicesResponse?.data?.data)
-            ? servicesResponse.data.data
-            : [];
+            return {
+              productid: Number(product.productid ?? product.id),
+              productname: String(
+                product.productname ?? product.name ?? "",
+              ).trim(),
+              productdescription:
+                product.productdescription == null
+                  ? null
+                  : String(product.productdescription),
+              productpriceofsale: Number(
+                product.productpriceofsale ?? product.priceofsale ?? 0,
+              ),
+              productstock: Number(product.productstock ?? product.stock ?? 0),
+              isactive:
+                typeof product.isactive === "boolean"
+                  ? product.isactive
+                  : true,
+            } as ProductFromApi;
+          })
+          .filter(
+            (product) =>
+              Number.isFinite(product.productid) &&
+              product.productid > 0 &&
+              !!product.productname,
+          );
+        setProducts(productsData);
+
+        const servicesData = unwrapArray(servicesResponse?.data);
         const mappedServices = servicesData
           .map((serviceRaw: unknown) => {
             const s =
@@ -262,6 +304,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
         ...prev,
         serviceRequestId: "",
         servicetype: "",
+        viaticos: "0",
       }));
       setSelectedServiceTypeId(null);
       setServiceLines([]);
@@ -342,7 +385,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
    * FILTROS DE PRODUCTOS
    * ================================ */
   const activeProducts = useMemo(
-    () => products.filter((p) => p.isactive !== false),
+    () => (Array.isArray(products) ? products : []).filter((p) => p.isactive !== false),
     [products],
   );
   const inStockProducts = useMemo(
@@ -463,9 +506,15 @@ export default function RegisterQuoteForm({ onSave }: Props) {
       ),
     [serviceLines],
   );
+  const viaticos = useMemo(() => {
+    const parsed = Number(form.viaticos || 0);
+    if (!Number.isFinite(parsed)) return 0;
+    return Math.max(0, Math.round(parsed));
+  }, [form.viaticos]);
   const subtotalWithServices = subtotal + servicesSubtotal;
-  const tax = Math.round(subtotalWithServices * 0.19);
-  const total = subtotalWithServices + tax;
+  const subtotalBase = subtotalWithServices + viaticos;
+  const tax = Math.round(subtotalBase * 0.19);
+  const total = subtotalBase + tax;
 
   const mapProductToDetail = (product: ProductFromApi, quantity = 1): QuoteDetailPayload => {
     const unitprice = Number(product.productpriceofsale) || 0;
@@ -753,6 +802,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
       statesid: form.statesid,
       servicetype: form.servicetype,
       observation: form.observation,
+      viaticos,
       details: [
         ...form.details.map((detail) => ({
           productid: detail.productid ?? null,
@@ -787,6 +837,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
         statesid: 5,
         servicetype: "",
         observation: "",
+        viaticos: "0",
         details: [],
       });
       setSelectedServiceRequest(null);
@@ -1137,6 +1188,18 @@ export default function RegisterQuoteForm({ onSave }: Props) {
           </div>
 
           <div className="md:col-span-12">
+            <label className="block text-xs text-gray-700 mb-1">Viaticos</label>
+            <input
+              type="number"
+              min={0}
+              step={1000}
+              value={form.viaticos}
+              onChange={(e) => setForm((prev) => ({ ...prev, viaticos: e.target.value }))}
+              className="h-9 w-full rounded-md border border-gray-300 bg-white px-2.5 text-right text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+            />
+          </div>
+
+          <div className="md:col-span-12">
             <div className="flex items-center justify-between gap-2 mb-2">
               <div className="text-xs text-gray-500">
                 Cantidad fija 1 por servicio, editable en precio y sin duplicados.
@@ -1357,6 +1420,14 @@ export default function RegisterQuoteForm({ onSave }: Props) {
               <span>${subtotalWithServices.toLocaleString("es-CO")}</span>
             </div>
             <div className="flex justify-between">
+              <span>Viaticos:</span>
+              <span>${viaticos.toLocaleString("es-CO")}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Base gravable:</span>
+              <span>${subtotalBase.toLocaleString("es-CO")}</span>
+            </div>
+            <div className="flex justify-between">
               <span>IVA (19%):</span>
               <span>${tax.toLocaleString("es-CO")}</span>
             </div>
@@ -1385,6 +1456,3 @@ export default function RegisterQuoteForm({ onSave }: Props) {
     </form>
   );
 }
-
-
-
