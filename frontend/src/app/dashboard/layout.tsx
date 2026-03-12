@@ -35,7 +35,6 @@ export default function DashboardLayout({
     routes.dashboard.purchases,
     routes.dashboard.purchasesGraph,
     routes.dashboard.purchasesOrders,
-    routes.dashboard.quotes,
     routes.dashboard.roles,
     routes.dashboard.sales,
     routes.dashboard.services,

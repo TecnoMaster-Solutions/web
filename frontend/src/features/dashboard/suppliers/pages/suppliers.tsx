@@ -101,6 +101,7 @@ export default function SuppliersPage() {
     }));
   }, [paginatedData]);
 
+  const total = paginatedData?.meta?.total ?? rows.length;
   const totalPages = paginatedData?.meta?.totalPages ?? 1;
 
   const columns: Column<Row>[] = [
@@ -309,6 +310,7 @@ export default function SuppliersPage() {
             serverPagination={{
               page,
               limit,
+              total,
               totalPages,
               onPageChange: setPage,
               onPageSizeChange: (nextLimit) => {

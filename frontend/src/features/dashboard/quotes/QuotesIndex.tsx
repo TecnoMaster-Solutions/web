@@ -268,6 +268,7 @@ export default function QuotesIndex() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(5);
   const [search, setSearch] = useState("");
+  const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [quotesData, setQuotesData] = useState<QuoteTableRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -451,6 +452,7 @@ export default function QuotesIndex() {
   const fetchQuotes = useCallback(async () => {
     if (!canViewQuotes) {
       setQuotesData([]);
+      setTotal(0);
       setTotalPages(1);
       setLoading(false);
       return;
@@ -499,9 +501,11 @@ export default function QuotesIndex() {
       });
 
       setQuotesData(mapped);
+      setTotal(Array.isArray(response) ? mapped.length : response.meta?.total ?? mapped.length);
       setTotalPages(Array.isArray(response) ? 1 : response.meta?.totalPages ?? 1);
     } catch {
       setQuotesData([]);
+      setTotal(0);
       setTotalPages(1);
     } finally {
       setLoading(false);
@@ -696,6 +700,7 @@ export default function QuotesIndex() {
             serverPagination={{
               page,
               limit,
+              total,
               totalPages,
               onPageChange: setPage,
               onPageSizeChange: (nextLimit) => {
