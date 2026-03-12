@@ -385,7 +385,7 @@ export default function SalesIndex() {
   const columns: Column<SaleRow>[] = [
     {
       key: "id",
-      header: "#",
+      header: "ID",
       render: (row) => row.id.toString(),
     },
     { key: "codigo", header: "Codigo Venta" },

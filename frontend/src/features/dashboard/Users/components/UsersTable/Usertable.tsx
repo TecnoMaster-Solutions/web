@@ -64,7 +64,7 @@ export const UsersTable: React.FC<UsersTableProps> = ({
 
   //Columnas del DataTable
   const columns: Column<UserForTable>[] = [
-    { key: "rowNumber", header: "#" },
+    { key: "rowNumber", header: "ID" },
     {
       key: "typeofdocuments",
       header: "Tipo Doc.",
