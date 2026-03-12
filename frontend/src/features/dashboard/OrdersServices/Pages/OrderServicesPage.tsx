@@ -563,6 +563,7 @@ export default function OrdersServicesIndexPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [busy, setBusy] = useState(false);
 
   const [reportOpen, setReportOpen] = useState(false);
@@ -702,6 +703,7 @@ export default function OrdersServicesIndexPage() {
       showError("No se pudieron cargar las órdenes desde el backend.");
     } finally {
       setLoading(false);
+      setInitialLoading(false);
     }
   }, [fetchParams]);
 
@@ -726,6 +728,7 @@ export default function OrdersServicesIndexPage() {
       } finally {
         if (!mounted) return;
         setLoading(false);
+        setInitialLoading(false);
       }
     })();
     return () => {
@@ -1299,7 +1302,7 @@ const extraActions = useCallback(
 
   return (
     <RequireAuth>
-      {loading || busy ? <Loader /> : null}
+      {initialLoading || busy ? <Loader /> : null}
 
       <div className="flex">
         <div className="flex-1 flex flex-col">

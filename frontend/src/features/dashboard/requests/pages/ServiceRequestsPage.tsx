@@ -325,7 +325,7 @@ export default function ServiceRequestsPage() {
     [clientIdFromAuth, isClientRole, isTechnicianRole, limit, page, search, technicianIdFromAuth]
   );
 
-  const { data, isLoading, error } = useServiceRequests(requestQuery);
+  const { data, isLoading, isFetching, error } = useServiceRequests(requestQuery);
   const createMut = useCreateServiceRequest();
   const updateMut = useUpdateServiceRequest();
 
@@ -450,7 +450,9 @@ export default function ServiceRequestsPage() {
   const updatePending =
     (updateMut as any).isPending ?? (updateMut as any).isLoading ?? false;
 
-  const busy = isLoading || actionLoading || createPending || updatePending;
+  const initialLoading = isLoading;
+  const tableLoading = isFetching && !isLoading;
+  const busy = actionLoading || createPending || updatePending;
   const canViewRequests = canView(MODULE_KEY);
   const canCreateRequests = canCreate(MODULE_KEY);
   const canUpdateRequests = canUpdate(MODULE_KEY);
@@ -847,7 +849,7 @@ export default function ServiceRequestsPage() {
     <RequireAuth>
       <div className="relative" style={{ paddingLeft: isDesktop ? sidebarW : 0 }}>
         <main className="min-h-[100dvh] bg-gray-100 relative">
-        {busy && <Loader />}
+        {(initialLoading || busy) && <Loader />}
 
         {error ? (
           <div className="flex-1 flex items-center justify-center p-8">
@@ -859,6 +861,7 @@ export default function ServiceRequestsPage() {
             data={rows}
             columns={columns}
             pageSize={5}
+            loading={tableLoading}
             serverPagination={{
               page,
               limit,

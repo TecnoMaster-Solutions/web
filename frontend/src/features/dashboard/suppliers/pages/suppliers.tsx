@@ -75,7 +75,7 @@ export default function SuppliersPage() {
 
   const queryClient = useQueryClient();
 
-  const { data, isLoading, error } = useSuppliers({ page, limit, search });
+  const { data, isLoading, isFetching, error } = useSuppliers({ page, limit, search });
   const createMut = useCreateSupplier();
   const updateMut = useUpdateSupplier(selected?.id ?? 0);
   const paginatedData = Array.isArray(data) ? null : data;
@@ -143,7 +143,9 @@ export default function SuppliersPage() {
   const updatePending =
     (updateMut as any).isPending ?? (updateMut as any).isLoading ?? false;
 
-  const busy = isLoading || actionLoading || createPending || updatePending;
+  const initialLoading = isLoading;
+  const tableLoading = isFetching && !isLoading;
+  const busy = actionLoading || createPending || updatePending;
 
   const onView = (row: Row) => {
     setSelected(row);
@@ -294,7 +296,7 @@ export default function SuppliersPage() {
   return (
     <RequireAuth>
       <main className="flex-1 flex flex-col bg-gray-100 relative">
-        {busy && <Loader />}
+        {(initialLoading || busy) && <Loader />}
 
         {error ? (
           <div className="flex-1 flex items-center justify-center p-8">
@@ -306,6 +308,7 @@ export default function SuppliersPage() {
             data={rows}
             columns={columns}
             pageSize={5}
+            loading={tableLoading}
             disableInternalScroll
             serverPagination={{
               page,

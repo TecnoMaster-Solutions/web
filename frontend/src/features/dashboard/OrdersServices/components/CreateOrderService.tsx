@@ -534,6 +534,7 @@ const {
   const [createClientInlineEnabled, setCreateClientInlineEnabled] = useState(false);
   const [clientIdBeforeInlineCreate, setClientIdBeforeInlineCreate] = useState<number | "">("");
   const clientLockedByQuote = !!quoteAppliedKey && !!clientId && !createClientInlineEnabled;
+  const itemsLockedByQuote = !!quoteAppliedKey;
   const [createClientLoading, setCreateClientLoading] = useState(false);
   const [createClientBootstrapping, setCreateClientBootstrapping] = useState(false);
   const [createClientRoleId, setCreateClientRoleId] = useState<number | null>(null);
@@ -782,6 +783,7 @@ const {
   }
 
   function removeItem<T extends { id: string }>(id: string, setList: React.Dispatch<React.SetStateAction<T[]>>) {
+    if (itemsLockedByQuote) return;
     setList((prev) => prev.filter((x) => x.id !== id));
   }
 
@@ -799,6 +801,7 @@ const {
   }
 
   function addServiceRow() {
+    if (itemsLockedByQuote) return;
     if (!tipoId) return;
     const opts = serviceOptionsForRow(tipoId, "");
     const first = opts[0];
@@ -964,6 +967,7 @@ const {
   }
 
   function selectMaterialForRow(rowId: string, product: ProductOption) {
+    if (itemsLockedByQuote) return;
     if (isProductAlreadyAdded(rowId, product.productname)) {
       showWarning(`El producto "${product.productname}" ya esta agregado.`);
       return;
@@ -978,6 +982,7 @@ const {
   }
 
   function addMaterialRow() {
+    if (itemsLockedByQuote) return;
     const first = availableProducts[0];
     if (!first) {
       showWarning("Ya agregaste todos los productos disponibles.");
@@ -1425,7 +1430,9 @@ const {
               sr?.subtotal
             ) ?? 0;
 
-          if (srvId && name) {
+          const resolvedTipoId = typeof srvTypeId === "number" ? srvTypeId : typeId;
+
+          if (srvId && name && typeof resolvedTipoId === "number") {
             setServicios((prev) => {
               const exists = prev.some(
                 (x: any) =>
@@ -1436,7 +1443,7 @@ const {
               if (exists) return prev;
               return [
                 ...prev,
-                { id: `sr-${srvId}`, serviceid: srvId, nombre: name, precio: price, tipoId: srvTypeId ?? typeId },
+                { id: `sr-${srvId}`, serviceid: srvId, nombre: name, precio: price, tipoId: resolvedTipoId },
               ];
             });
           }
@@ -1887,7 +1894,7 @@ const {
         }
         if (cancelled) return;
 
-        applyNormalizedQuote(nq, keyFromUrl);
+        applyNormalizedQuote(nq, keyFromUrl!);
         if (quotesIdFromUrl) setSelectedQuotesId(quotesIdFromUrl);
       } catch (e: any) {
         const msg = e?.response?.data?.message || e?.message || "Error cargando venta.";
@@ -2912,7 +2919,11 @@ setNavigating(true);
                           serviceTypes.map((t) => (
                             <label
                               key={t.typeofserviceid}
-                              className={`flex items-center gap-2 rounded-lg border bg-white px-3 py-2 cursor-pointer hover:bg-gray-50 ${
+                              className={`flex items-center gap-2 rounded-lg border bg-white px-3 py-2 ${
+                                itemsLockedByQuote
+                                  ? "cursor-not-allowed opacity-80"
+                                  : "cursor-pointer hover:bg-gray-50"
+                              } ${
                                 tipoId === t.typeofserviceid ? "ring-2 ring-green-200 border-green-200" : ""
                               }`}
                             >
@@ -2928,13 +2939,18 @@ setNavigating(true);
                                 }}
                                 onBlur={() => runBlurValidation("tipo")}
                                 className="h-4 w-4"
-                                disabled={saving || navigating || lookupsLoading}
+                                disabled={itemsLockedByQuote || saving || navigating || lookupsLoading}
                               />
                               <span className="text-sm font-medium text-gray-900">{t.label}</span>
                             </label>
                           ))
                         )}
                       </div>
+                      {itemsLockedByQuote && (
+                        <p className="mt-2 text-xs text-gray-500">
+                          El tipo de servicio queda bloqueado mientras la orden esté precargada desde una venta.
+                        </p>
+                      )}
                       {showFieldError("tipo") && errors.tipo && <p className={errorText}>{errors.tipo}</p>}
                     </div>
 
@@ -2948,7 +2964,7 @@ setNavigating(true);
                           type="button"
                           onClick={addServiceRow}
                           className="h-8 rounded-md border bg-white px-3 text-xs hover:bg-gray-50 disabled:opacity-60"
-                          disabled={!tipoId || lookupsLoading || saving || navigating || serviceOptionsForRow(tipoId, "").length === 0}
+                          disabled={itemsLockedByQuote || !tipoId || lookupsLoading || saving || navigating || serviceOptionsForRow(tipoId, "").length === 0}
                         >
                           Anadir servicio
                         </button>
@@ -2975,6 +2991,7 @@ setNavigating(true);
                                     <select
                                       value={it.nombre}
                                       onChange={(e) => {
+                                        if (itemsLockedByQuote) return;
                                         const n = e.target.value;
                                         const selected = getServicesForTipo(it.tipoId).find((s) => s.name === n) ?? null;
                                         const selectedPrice = selected ? servicePriceFromOption(selected) : null;
@@ -2992,7 +3009,7 @@ setNavigating(true);
                                       }}
                                       onBlur={() => runBlurValidation("servicios")}
                                       className="w-full h-9 rounded-md border px-2"
-                                      disabled={lookupsLoading || saving || navigating || safeOpts.length === 0}
+                                      disabled={itemsLockedByQuote || lookupsLoading || saving || navigating || safeOpts.length === 0}
                                     >
                                       {safeOpts.map((opt: any, idx: number) => (
                                         <option key={`${it.id}-${opt.serviceid}-${idx}`} value={opt.name}>
@@ -3009,6 +3026,7 @@ setNavigating(true);
                                       step={1000}
                                       value={it.precio}
                                       onChange={(e) => {
+                                        if (itemsLockedByQuote) return;
                                         const n = Number(e.target.value || 0);
                                         patchItem<ServiceLineItem>(
                                           it.id,
@@ -3019,7 +3037,7 @@ setNavigating(true);
                                       }}
                                       onBlur={() => runBlurValidation("servicios")}
                                       className="h-9 w-32 rounded-md border px-2 text-right"
-                                      disabled={lookupsLoading || saving || navigating}
+                                      disabled={itemsLockedByQuote || lookupsLoading || saving || navigating}
                                     />
                                   </td>
 
@@ -3031,7 +3049,7 @@ setNavigating(true);
                                         setErrors((p) => ({ ...p, servicios: undefined }));
                                       }}
                                       className="h-9 w-9 rounded-md hover:bg-gray-100"
-                                      disabled={lookupsLoading || saving || navigating}
+                                      disabled={itemsLockedByQuote || lookupsLoading || saving || navigating}
                                       aria-label="Quitar servicio"
                                       title="Quitar"
                                     >
@@ -3222,6 +3240,7 @@ setNavigating(true);
                                   value={m.nombre}
                                   onFocus={() => setMaterialOpenId(m.id)}
                                   onChange={(e) => {
+                                    if (itemsLockedByQuote) return;
                                     const n = e.target.value;
                                     patchItem<MaterialLineItem>(m.id, { nombre: n }, setMateriales);
                                     setMaterialOpenId(m.id);
@@ -3229,7 +3248,7 @@ setNavigating(true);
                                   }}
                                   className="w-full h-9 rounded-md border bg-white px-2.5 pr-8 text-xs"
                                   placeholder="Buscar producto por nombre"
-                                  disabled={!productsCatalog.length || lookupsLoading || saving || navigating}
+                                  disabled={itemsLockedByQuote || !productsCatalog.length || lookupsLoading || saving || navigating}
                                 />
                                 <button
                                   type="button"
@@ -3237,7 +3256,7 @@ setNavigating(true);
                                   className="absolute inset-y-0 right-0 px-2 text-gray-500"
                                   title="Mostrar productos"
                                   aria-label="Mostrar productos"
-                                  disabled={!productsCatalog.length || lookupsLoading || saving || navigating}
+                                  disabled={itemsLockedByQuote || !productsCatalog.length || lookupsLoading || saving || navigating}
                                 >
                                   v
                                 </button>
@@ -3253,7 +3272,8 @@ setNavigating(true);
                                           type="button"
                                           onMouseDown={(e) => e.preventDefault()}
                                           onClick={() => selectMaterialForRow(m.id, opt)}
-                                          className="w-full border-b border-gray-100 px-2.5 py-1.5 text-left last:border-b-0 hover:bg-gray-50"
+                                          className="w-full border-b border-gray-100 px-2.5 py-1.5 text-left last:border-b-0 hover:bg-gray-50 disabled:opacity-60"
+                                          disabled={itemsLockedByQuote}
                                         >
                                           <span className="block truncate text-xs text-gray-900">{opt.productname}</span>
                                           <span className="block text-[11px] text-gray-500">{formatCOP(opt.productpriceofsale)}</span>
@@ -3273,6 +3293,7 @@ setNavigating(true);
                                     step={1}
                                     value={m.cantidad}
                                     onChange={(e) => {
+                                      if (itemsLockedByQuote) return;
                                       const n = Number(e.target.value || 1);
                                       patchItem<MaterialLineItem>(
                                         m.id,
@@ -3283,7 +3304,7 @@ setNavigating(true);
                                     }}
                                     onBlur={() => runBlurValidation("materiales")}
                                     className="h-9 w-full rounded-md border bg-white px-2 text-xs text-center"
-                                    disabled={lookupsLoading || saving || navigating}
+                                    disabled={itemsLockedByQuote || lookupsLoading || saving || navigating}
                                   />
                                 </div>
 
@@ -3301,7 +3322,7 @@ setNavigating(true);
                                     setErrors((p) => ({ ...p, materiales: undefined }));
                                   }}
                                   className="h-9 w-9 shrink-0 rounded-md border bg-white hover:bg-gray-100"
-                                  disabled={lookupsLoading || saving || navigating}
+                                  disabled={itemsLockedByQuote || lookupsLoading || saving || navigating}
                                   aria-label="Quitar producto"
                                   title="Quitar"
                                 >
@@ -3327,7 +3348,7 @@ setNavigating(true);
                         type="button"
                         onClick={addMaterialRow}
                         className="w-full h-9 rounded-md bg-gray-100 border hover:bg-gray-50 text-xs disabled:opacity-60"
-                        disabled={!availableProducts.length || lookupsLoading || saving || navigating}
+                        disabled={itemsLockedByQuote || !availableProducts.length || lookupsLoading || saving || navigating}
                         title={!availableProducts.length ? "Ya agregaste todos los productos disponibles." : undefined}
                       >
                         {!availableProducts.length ? "No hay mas productos disponibles" : "Anadir producto"}
@@ -3359,7 +3380,7 @@ setNavigating(true);
                       }}
                       onBlur={() => runBlurValidation("viaticos")}
                       className={`${inputBase} text-right ${showFieldError("viaticos") ? errorRing : ""}`}
-                      disabled={lookupsLoading || saving || navigating}
+                      disabled={itemsLockedByQuote || lookupsLoading || saving || navigating}
                       aria-invalid={showFieldError("viaticos")}
                       placeholder="0"
                     />
@@ -3368,6 +3389,11 @@ setNavigating(true);
                       <span className="text-gray-600">Total viaticos</span>
                       <span className="font-medium">{formatCOP(Number.isFinite(viaticosValue) ? viaticosValue : 0)}</span>
                     </div>
+                    {itemsLockedByQuote && (
+                      <p className="text-xs text-gray-500">
+                        Con una venta seleccionada no se pueden agregar ni modificar servicios o materiales.
+                      </p>
+                    )}
                   </div>
                 </section>
 
@@ -3442,4 +3468,3 @@ setNavigating(true);
     </RequireAuth>
   );
 }
-
