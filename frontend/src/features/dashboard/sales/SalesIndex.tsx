@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import { DataTable } from "@/features/dashboard/components/datatable/DataTable";
 import { Column } from "@/features/dashboard/components/datatable/types/column.types";
 import Modal from "@/features/dashboard/components/Modal";
@@ -260,20 +260,54 @@ export default function SalesIndex() {
     void load();
   }, [hasSalesRead, loadSalesPage, permissionsLoaded]);
 
-  const exportToExcel = () => {
-    const rows = sales.map((sale) => ({
-      "ID": sale.id,
-      "Código": sale.codigo,
-      Cliente: sale.cliente,
-      Fecha: sale.fecha,
-      Total: sale.total,
-      Estado: sale.estado,
-      "Estado Pago": sale.estadoPago,
-    }));
-    const ws = XLSX.utils.json_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Ventas");
-    XLSX.writeFile(wb, `ventas_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  const exportToExcel = async () => {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Ventas");
+
+    worksheet.columns = [
+      { header: "ID", key: "id", width: 12 },
+      { header: "Codigo", key: "codigo", width: 20 },
+      { header: "Cliente", key: "cliente", width: 32 },
+      { header: "Fecha", key: "fecha", width: 16 },
+      { header: "Total", key: "total", width: 18 },
+      { header: "Estado", key: "estado", width: 18 },
+      { header: "Estado Pago", key: "estadoPago", width: 18 },
+    ];
+
+    worksheet.getRow(1).eachCell((cell) => {
+      cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FFDC2626" },
+      };
+      cell.font = { color: { argb: "FFFFFFFF" }, bold: true };
+      cell.alignment = { horizontal: "center" };
+    });
+
+    sales.forEach((sale) => {
+      worksheet.addRow({
+        id: sale.id,
+        codigo: sale.codigo,
+        cliente: sale.cliente,
+        fecha: sale.fecha,
+        total: sale.total,
+        estado: sale.estado,
+        estadoPago: sale.estadoPago,
+      });
+    });
+
+    worksheet.getColumn("total").numFmt = '"$"#,##0.00';
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `ventas_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    link.click();
+    window.URL.revokeObjectURL(url);
   };
 
   const handleOpenAnnul = (row: SaleRow) => {
