@@ -16,6 +16,15 @@ export default function ServiciosIndex() {
   const {
     services,
     loading,
+    tableLoading,
+
+    page,
+    limit,
+    totalPages,
+    search,
+    setPage,
+    setSearch,
+
     isCreateModalOpen,
     setIsCreateModalOpen,
     isEditModalOpen,
@@ -64,6 +73,13 @@ export default function ServiciosIndex() {
 
             <ServicesTable
               services={services}
+              page={page}
+              limit={limit}
+              totalPages={totalPages}
+              search={search}
+              tableLoading={tableLoading}
+              onPageChange={setPage}
+              onSearchChange={setSearch}
               onView={(s) => setViewingService(s)}
               onEdit={(s) => setEditingService(s)}
               onDelete={handleDeleteService}
@@ -75,4 +91,3 @@ export default function ServiciosIndex() {
     </div>
   );
 }
-

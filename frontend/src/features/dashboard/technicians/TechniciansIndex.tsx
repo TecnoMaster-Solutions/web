@@ -10,7 +10,6 @@ import ViewTechnicianModal from "./components/viewTechniciansModal/viewTechnicia
 
 import { Technician, CreateTechnicianData } from "./types/typesTechnicians";
 import { useTechnicians } from "./hooks/useTechnicians";
-import { useState } from "react";
 
 function Loader({ show }: { show: boolean }) {
   if (!show) return null;
@@ -25,17 +24,30 @@ export default function TechniciansIndex() {
   const {
     technicians,
     typeOptions,
+
+    loading,
+    tableLoading,
+
+    page,
+    limit,
+    totalPages,
+    search,
+    setPage,
+    setSearch,
+
     isCreateModalOpen,
     setIsCreateModalOpen,
+    isEditModalOpen,
+    isViewModalOpen,
     editingTechnician,
+    viewingTechnician,
     setEditingTechnician,
+    setViewingTechnician,
+
     handleCreateTechnician,
     handleEditTechnician,
     handleDeleteTechnician,
-    loading,
   } = useTechnicians();
-
-  const [viewingTechnician, setViewingTechnician] = useState<Technician | null>(null);
 
   return (
     <div className="min-h-screen flex">
@@ -54,7 +66,7 @@ export default function TechniciansIndex() {
 
             {editingTechnician && (
               <EditTechnicianModal
-                isOpen={true}
+                isOpen={isEditModalOpen}
                 technician={editingTechnician}
                 onClose={() => setEditingTechnician(null)}
                 onUpdate={(data) => handleEditTechnician(data.id, data)}
@@ -64,13 +76,20 @@ export default function TechniciansIndex() {
             )}
 
             <ViewTechnicianModal
-              isOpen={!!viewingTechnician}
+              isOpen={isViewModalOpen}
               technician={viewingTechnician}
               onClose={() => setViewingTechnician(null)}
             />
 
             <TableTechnicians
               technicians={technicians}
+              page={page}
+              limit={limit}
+              totalPages={totalPages}
+              search={search}
+              tableLoading={tableLoading}
+              onPageChange={setPage}
+              onSearchChange={setSearch}
               onView={(t) => setViewingTechnician(t)}
               onEdit={(t) => setEditingTechnician(t)}
               onDelete={handleDeleteTechnician}
@@ -84,4 +103,3 @@ export default function TechniciansIndex() {
     </div>
   );
 }
-
