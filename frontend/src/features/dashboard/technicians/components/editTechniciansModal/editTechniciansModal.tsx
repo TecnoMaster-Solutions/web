@@ -303,7 +303,7 @@ const EditTechnicianModal: React.FC<EditTechnicianModalProps> = ({
         
         <div>
           <label className="block text-sm font-medium mb-1">
-            Tipo de Documento <span className="text-green-500">*</span>
+            Tipo de Documento <span className="text-red-500">*</span>
           </label>
 
           <select
@@ -317,12 +317,12 @@ const EditTechnicianModal: React.FC<EditTechnicianModalProps> = ({
           </select>
 
           {errors.documentType && (
-            <p className="text-xs text-green-600 mt-1">{errors.documentType}</p>
+            <p className="text-xs text-red-600 mt-1">{errors.documentType}</p>
           )}
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">Número de Documento *</label>
+          <label className="block text-sm font-medium mb-1">Número de Documento <span className="text-red-500">*</span></label>
           <input
             type="text"
             value={documentNumber}
@@ -330,12 +330,12 @@ const EditTechnicianModal: React.FC<EditTechnicianModalProps> = ({
             className="w-full px-2 py-1 border rounded-md"
           />
           {errors.documentNumber && (
-            <p className="text-xs text-green-600 mt-1">{errors.documentNumber}</p>
+            <p className="text-xs text-red-600 mt-1">{errors.documentNumber}</p>
           )}
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">Nombre *</label>
+          <label className="block text-sm font-medium mb-1">Nombre <span className="text-red-500">*</span></label>
           <input
             type="text"
             value={name}
@@ -343,12 +343,12 @@ const EditTechnicianModal: React.FC<EditTechnicianModalProps> = ({
             className="w-full px-2 py-1 border rounded-md"
           />
           {errors.name && (
-            <p className="text-xs text-green-600 mt-1">{errors.name}</p>
+            <p className="text-xs text-red-600 mt-1">{errors.name}</p>
           )}
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">Apellido *</label>
+          <label className="block text-sm font-medium mb-1">Apellido <span className="text-red-500">*</span></label>
           <input
             type="text"
             value={lastName}
@@ -356,12 +356,12 @@ const EditTechnicianModal: React.FC<EditTechnicianModalProps> = ({
             className="w-full px-2 py-1 border rounded-md"
           />
           {errors.lastName && (
-            <p className="text-xs text-green-600 mt-1">{errors.lastName}</p>
+            <p className="text-xs text-red-600 mt-1">{errors.lastName}</p>
           )}
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">Teléfono *</label>
+          <label className="block text-sm font-medium mb-1">Teléfono <span className="text-red-500">*</span></label>
           <input
             type="text"
             value={phone}
@@ -369,12 +369,12 @@ const EditTechnicianModal: React.FC<EditTechnicianModalProps> = ({
             className="w-full px-2 py-1 border rounded-md"
           />
           {errors.phone && (
-            <p className="text-xs text-green-600 mt-1">{errors.phone}</p>
+            <p className="text-xs text-red-600 mt-1">{errors.phone}</p>
           )}
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">Correo *</label>
+          <label className="block text-sm font-medium mb-1">Correo <span className="text-red-500">*</span></label>
           <input
             type="email"
             value={email}
@@ -382,12 +382,12 @@ const EditTechnicianModal: React.FC<EditTechnicianModalProps> = ({
             className="w-full px-2 py-1 border rounded-md"
           />
           {errors.email && (
-            <p className="text-xs text-green-600 mt-1">{errors.email}</p>
+            <p className="text-xs text-red-600 mt-1">{errors.email}</p>
           )}
         </div>
 
         <div className="col-span-2">
-          <label className="block text-sm font-medium mb-1">Estado</label>
+          <label className="block text-sm font-medium mb-1">Estado <span className="text-red-500">*</span></label>
           <select
             value={state}
             onChange={(e) => setState(e.target.value as TechnicianState)}
@@ -403,7 +403,7 @@ const EditTechnicianModal: React.FC<EditTechnicianModalProps> = ({
 
         <div className="col-span-2">
           <label className="block text-sm font-medium mb-1">
-            Tipos de técnico *
+            Tipos de técnico <span className="text-red-500">*</span>
           </label>
 
           <div className="flex flex-wrap gap-2">
@@ -428,13 +428,13 @@ const EditTechnicianModal: React.FC<EditTechnicianModalProps> = ({
           </div>
 
           {errors.types && (
-            <p className="text-xs text-green-600 mt-1">{errors.types}</p>
+            <p className="text-xs text-red-600 mt-1">{errors.types}</p>
           )}
         </div>
 
         <div>
           <label className="block text-sm font-medium mb-1">
-            Hoja de vida (PDF)
+            Hoja de vida (PDF) <span className="text-red-500">*</span>
           </label>
           <div className="flex items-center gap-3">
             <div
@@ -457,7 +457,7 @@ const EditTechnicianModal: React.FC<EditTechnicianModalProps> = ({
             />
           </div>
 
-          {pdfError && <p className="text-xs text-green-600 mt-1">{pdfError}</p>}
+          {pdfError && <p className="text-xs text-red-600 mt-1">{pdfError}</p>}
         </div>
 
         <div>
@@ -483,7 +483,7 @@ const EditTechnicianModal: React.FC<EditTechnicianModalProps> = ({
             />
           </div>
 
-          {imageError && <p className="text-xs text-green-600 mt-1">{imageError}</p>}
+          {imageError && <p className="text-xs text-red-600 mt-1">{imageError}</p>}
         </div>
       </form>
     </Modal>

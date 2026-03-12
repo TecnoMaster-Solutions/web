@@ -4,38 +4,86 @@ import { showError } from "@/shared/utils/notifications";
 
 const RETRY_LIMIT = 2;
 
-export const getPurchases = async (
-  signal?: AbortSignal
-): Promise<IPurchase[]> => {
+export type GetPurchasesParams = {
+  page?: number;
+  limit?: number;
+  search?: string;
+  signal?: AbortSignal;
+};
+
+type PaginatedPurchasesResponse = {
+  data: any[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+};
+
+export const getPurchases = async ({
+  page = 1,
+  limit = 8,
+  search = "",
+  signal,
+}: GetPurchasesParams = {}): Promise<{
+  data: IPurchase[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}> => {
   let attempt = 0;
 
   while (attempt <= RETRY_LIMIT) {
     try {
-      const { data } = await api.get("/purchasesmanagement", {
-        signal,
-        timeout: 5000,
-        validateStatus: (status) => status >= 200 && status < 500,
-      });
+      const { data } = await api.get<PaginatedPurchasesResponse>(
+        "/purchasesmanagement",
+        {
+          params: {
+            page,
+            limit,
+            search: search.trim() || undefined,
+          },
+          signal,
+          timeout: 5000,
+          validateStatus: (status) => status >= 200 && status < 500,
+        }
+      );
 
-      if (!Array.isArray(data)) {
-        throw new Error(
-          `Respuesta invalida del servidor. Se esperaba un arreglo, se recibio: ${typeof data}`
-        );
-      }
+      const rows = Array.isArray(data?.data) ? data.data : [];
 
-      return data.map((p: any) => ({
-        ...p,
-        amount: Number(p.amount ?? 0),
-      }));
+      return {
+        data: rows.map((p: any) => ({
+          ...p,
+          amount: Number(p.amount ?? 0),
+        })),
+        meta: {
+          total: Number(data?.meta?.total ?? 0),
+          page: Number(data?.meta?.page ?? page),
+          limit: Number(data?.meta?.limit ?? limit),
+          totalPages: Number(data?.meta?.totalPages ?? 1),
+        },
+      };
     } catch (error: any) {
       if (error?.name === "CanceledError" || error?.code === "ERR_CANCELED") {
-        return [];
+        return {
+          data: [],
+          meta: {
+            total: 0,
+            page,
+            limit,
+            totalPages: 1,
+          },
+        };
       }
 
       if (error?.code === "ECONNABORTED") {
         attempt++;
         if (attempt > RETRY_LIMIT) {
-          throw new Error("La peticion expiro. Intente nuevamente.");
+          throw new Error("La petición expiró. Intente nuevamente.");
         }
         continue;
       }
@@ -44,7 +92,7 @@ export const getPurchases = async (
         attempt++;
         if (attempt > RETRY_LIMIT) {
           throw new Error(
-            "Error de red al intentar cargar compras. Verifique su conexion."
+            "Error de red al intentar cargar compras. Verifique su conexión."
           );
         }
         continue;
@@ -53,11 +101,19 @@ export const getPurchases = async (
       const status = error.response.status;
 
       if (status >= 500) {
-        throw new Error("El servidor tuvo un problema (500). Intente mas tarde.");
+        throw new Error("El servidor tuvo un problema (500). Intente más tarde.");
       }
 
       if (status === 404) {
-        return [];
+        return {
+          data: [],
+          meta: {
+            total: 0,
+            page,
+            limit,
+            totalPages: 1,
+          },
+        };
       }
 
       if (status === 401 || status === 403) {
@@ -67,12 +123,20 @@ export const getPurchases = async (
       console.error("Error cargando compras:", error);
       throw new Error(
         error?.response?.data?.message ??
-        "No se pudo cargar el listado de compras."
+          "No se pudo cargar el listado de compras."
       );
     }
   }
 
-  return [];
+  return {
+    data: [],
+    meta: {
+      total: 0,
+      page,
+      limit,
+      totalPages: 1,
+    },
+  };
 };
 
 export const getPurchaseById = async (id: number): Promise<IPurchase> => {
@@ -81,7 +145,7 @@ export const getPurchaseById = async (id: number): Promise<IPurchase> => {
     return { ...data, amount: parseFloat(data.amount) };
   } catch (error) {
     console.error("Error al obtener la compra:", error);
-    showError("Error al obtener la compra. Por favor, intentalo de nuevo.");
+    showError("Error al obtener la compra. Por favor, inténtalo de nuevo.");
     throw error;
   }
 };
@@ -116,7 +180,7 @@ export const cancelPurchase = async (id: number, observation?: string) => {
     const message = Array.isArray(backendMessage)
       ? backendMessage.join(", ")
       : backendMessage ||
-      "Error al anular la compra. Por favor, intentalo de nuevo.";
+        "Error al anular la compra. Por favor, inténtalo de nuevo.";
 
     showError(message);
     error.message = message;

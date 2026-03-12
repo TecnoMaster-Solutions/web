@@ -10,83 +10,57 @@ import Image from "next/image";
 
 interface ServicesTableProps {
   services: Service[];
+  page: number;
+  limit: number;
+  totalPages: number;
+  search: string;
+  tableLoading?: boolean;
+  onPageChange: (page: number) => void;
+  onSearchChange: (value: string) => void;
   onView: (service: Service) => void;
   onEdit: (service: Service) => void;
   onDelete: (service: Service) => void;
   onCreate: () => void;
 }
 
-type ServiceRow = Service & {
-  rowNumber: number;
-  searchText: string;
-  stateSearch: "activo" | "inactivo";
-};
+type ServiceRow = Service;
 
-const normalizeForSearch = (value: string): string => {
-  const lower = value.toLowerCase();
-  const withoutAccents = lower.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  return `${lower} ${withoutAccents}`;
-};
-
-const toStateSearch = (state: unknown): "activo" | "inactivo" => {
-  const s = String(state ?? "")
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim();
-
-  return s === "activo" ? "activo" : "inactivo";
-};
-
-const buildSearchText = (s: Service): string => {
-  const parts: string[] = [];
-
-  const add = (val?: string | number | null) => {
-    if (val === undefined || val === null) return;
-    const str = String(val).trim();
-    if (!str) return;
-    parts.push(normalizeForSearch(str));
-  };
-
-  add(s.id);
-  add(s.name);
-  add(s.category);
-
-  return parts.join(" ");
+const cleanText = (v: unknown) => {
+  const s = String(v ?? "").trim();
+  if (!s) return "—";
+  const lower = s.toLowerCase();
+  if (lower === "null" || lower === "undefined") return "—";
+  return s;
 };
 
 export const ServicesTable: React.FC<ServicesTableProps> = ({
   services,
+  page,
+  limit,
+  totalPages,
+  search,
+  tableLoading = false,
+  onPageChange,
+  onSearchChange,
   onView,
   onEdit,
   onDelete,
   onCreate,
 }) => {
-  const sortedServices = useMemo(
-    () =>
-      [...services].sort(
-        (a, b) => Number(b.id ?? 0) - Number(a.id ?? 0) // DESC
-      ),
-    [services]
-  );
-
   const rows: ServiceRow[] = useMemo(() => {
-    const total = sortedServices.length;
-
-    return sortedServices.map((s, index) => ({
-      ...s,
-      rowNumber: total - index,
-      searchText: buildSearchText(s),
-      stateSearch: toStateSearch(s.state),
-    }));
-  }, [sortedServices]);
+    return [...services].sort((a, b) => Number(b.id ?? 0) - Number(a.id ?? 0));
+  }, [services]);
 
   const columns: Column<ServiceRow>[] = [
-    { key: "rowNumber", header: "#" },
+    {
+      key: "id",
+      header: "ID",
+      render: (s) => <span className="tabular-nums whitespace-nowrap">{s.id}</span>,
+    },
     {
       key: "name",
       header: "Nombre",
-      render: (s: ServiceRow) => (
+      render: (s) => (
         <div className="max-w-[220px] whitespace-normal break-words [overflow-wrap:anywhere] leading-5">
           {s.name ?? ""}
         </div>
@@ -96,15 +70,16 @@ export const ServicesTable: React.FC<ServicesTableProps> = ({
     {
       key: "image",
       header: "Imagen",
-      render: (s: ServiceRow) => {
+      render: (s) => {
         const image =
           typeof s.image === "string"
             ? s.image.trim()
             : s.image instanceof File
-              ? URL.createObjectURL(s.image)
-              : "";
+            ? URL.createObjectURL(s.image)
+            : "";
 
-        const isBase64 = typeof image === "string" && image.startsWith("data:image");
+        const isBase64 =
+          typeof image === "string" && image.startsWith("data:image");
         const isBlob = typeof image === "string" && image.startsWith("blob:");
 
         if (!image) {
@@ -124,13 +99,6 @@ export const ServicesTable: React.FC<ServicesTableProps> = ({
               width={40}
               height={40}
               unoptimized={isBase64 || isBlob}
-              onError={(e) => {
-                (e.currentTarget as HTMLImageElement).style.display = "none";
-                e.currentTarget.insertAdjacentHTML(
-                  "afterend",
-                  `<span class="text-gray-400 text-xs italic">Sin imagen</span>`
-                );
-              }}
             />
           </div>
         );
@@ -139,12 +107,14 @@ export const ServicesTable: React.FC<ServicesTableProps> = ({
     {
       key: "state",
       header: "Estado",
-      render: (s: ServiceRow) => (
+      render: (s) => (
         <span
           className="rounded-full px-2 py-0.5 text-xs font-medium"
           style={{
             color:
-              s.state === "Activo" ? Colors.states.success : Colors.states.inactive,
+              s.state === "Activo"
+                ? Colors.states.success
+                : Colors.states.inactive,
           }}
         >
           {s.state}
@@ -158,8 +128,18 @@ export const ServicesTable: React.FC<ServicesTableProps> = ({
       module="services"
       data={rows}
       columns={columns}
-      pageSize={6}
-      searchableKeys={["searchText", "stateSearch"]}
+      pageSize={limit}
+      searchableKeys={["name"]}
+      serverPagination={{
+        page,
+        totalPages,
+        onPageChange,
+      }}
+      serverSearch={{
+        value: search,
+        onChange: onSearchChange,
+      }}
+      loading={tableLoading}
       onView={onView as (s: ServiceRow) => void}
       onEdit={onEdit as (s: ServiceRow) => void}
       onDelete={onDelete as (s: ServiceRow) => void}
@@ -171,9 +151,9 @@ export const ServicesTable: React.FC<ServicesTableProps> = ({
           <div className="hidden md:block">
             <DownloadXLSXButton
               id="download-excel-btn-services"
-              data={sortedServices as unknown as Record<string, unknown>[]}
+              data={rows as unknown as Record<string, unknown>[]}
               fileName="reporte_servicios.xlsx"
-              headers={["#", "Nombre", "Categoría", "Estado"]}
+              headers={["ID", "Nombre", "Categoría", "Estado"]}
             />
           </div>
 
@@ -185,6 +165,7 @@ export const ServicesTable: React.FC<ServicesTableProps> = ({
             }
             className="fixed bottom-20 right-6 z-50 flex md:hidden items-center justify-center w-12 h-12 rounded-full shadow-lg text-white transition-transform hover:scale-105"
             style={{ background: "#04652c" }}
+            type="button"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -208,4 +189,3 @@ export const ServicesTable: React.FC<ServicesTableProps> = ({
 };
 
 export default ServicesTable;
-

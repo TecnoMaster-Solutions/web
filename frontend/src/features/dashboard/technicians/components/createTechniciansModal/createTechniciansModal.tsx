@@ -38,7 +38,7 @@ interface CreateTechnicianModalProps {
 const TECH_TYPES = ["Cableado estructurado", "Electricista", "Redes"];
 
 const removeBtnClass =
-  "text-xs text-green-500 border border-green-300 rounded-md px-2 py-1 hover:bg-green-50 hover:text-green-700 flex items-center gap-1";
+  "text-xs text-red-500 border border-red-300 rounded-md px-2 py-1 hover:bg-red-50 hover:text-red-700 flex items-center gap-1";
 
 const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
   isOpen,
@@ -312,7 +312,7 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
               className="block text-sm font-medium mb-1"
               style={{ color: Colors.texts.primary }}
             >
-              Tipo de Documento <span className="text-green-500">*</span>
+              Tipo de Documento <span className="text-red-500">*</span>
             </label>
 
             <select
@@ -336,7 +336,7 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
             </select>
 
             {errors.documentType && (
-              <p className="mt-1 text-xs text-green-600">
+              <p className="mt-1 text-xs text-red-600">
                 {errors.documentType}
               </p>
             )}
@@ -347,7 +347,7 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
               className="block text-sm font-medium mb-1"
               style={{ color: Colors.texts.primary }}
             >
-              Número de Documento <span className="text-green-500">*</span>
+              Número de Documento <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -367,7 +367,7 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
               }}
             />
             {errors.documentNumber && (
-              <p className="mt-1 text-xs text-green-600">
+              <p className="mt-1 text-xs text-red-600">
                 {errors.documentNumber}
               </p>
             )}
@@ -378,7 +378,7 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
               className="block text-sm font-medium mb-1"
               style={{ color: Colors.texts.primary }}
             >
-              Nombre <span className="text-green-500">*</span>
+              Nombre <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -390,7 +390,7 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
               style={{ borderColor: errors.name ? "red" : Colors.table.lines }}
             />
             {errors.name && (
-              <p className="mt-1 text-xs text-green-600">{errors.name}</p>
+              <p className="mt-1 text-xs text-red-600">{errors.name}</p>
             )}
           </div>
 
@@ -399,7 +399,7 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
               className="block text-sm font-medium mb-1"
               style={{ color: Colors.texts.primary }}
             >
-              Apellido <span className="text-green-500">*</span>
+              Apellido <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -413,7 +413,7 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
               }}
             />
             {errors.lastName && (
-              <p className="mt-1 text-xs text-green-600">
+              <p className="mt-1 text-xs text-red-600">
                 {errors.lastName}
               </p>
             )}
@@ -424,7 +424,7 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
               className="block text-sm font-medium mb-1"
               style={{ color: Colors.texts.primary }}
             >
-              Teléfono <span className="text-green-500">*</span>
+              Teléfono <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -438,7 +438,7 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
               }}
             />
             {errors.phone && (
-              <p className="mt-1 text-xs text-green-600">{errors.phone}</p>
+              <p className="mt-1 text-xs text-red-600">{errors.phone}</p>
             )}
           </div>
 
@@ -447,7 +447,7 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
               className="block text-sm font-medium mb-1"
               style={{ color: Colors.texts.primary }}
             >
-              Correo electrónico <span className="text-green-500">*</span>
+              Correo electrónico <span className="text-red-500">*</span>
             </label>
             <input
               type="email"
@@ -461,7 +461,7 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
               }}
             />
             {errors.email && (
-              <p className="mt-1 text-xs text-green-600">{errors.email}</p>
+              <p className="mt-1 text-xs text-red-600">{errors.email}</p>
             )}
           </div>
 
@@ -470,7 +470,7 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
               className="block text-sm font-medium mb-1"
               style={{ color: Colors.texts.primary }}
             >
-              Tipos de técnico <span className="text-green-500">*</span>
+              Tipos de técnico <span className="text-red-500">*</span>
             </label>
             <div className="flex flex-wrap gap-2">
               {(typeOptions ?? TECH_TYPES).map((opt) => {
@@ -503,7 +503,7 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
               })}
             </div>
             {errors.types && (
-              <p className="mt-1 text-xs text-green-600">{errors.types}</p>
+              <p className="mt-1 text-xs text-red-600">{errors.types}</p>
             )}
           </div>
 
@@ -512,7 +512,7 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
               className="block text-sm font-medium mb-1"
               style={{ color: Colors.texts.primary }}
             >
-              Hoja de vida (PDF) <span className="text-green-500">*</span>
+              Hoja de vida (PDF) <span className="text-red-500">*</span>
             </label>
             <div className="flex items-center gap-3">
               <div
@@ -548,7 +548,7 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
               />
             </div>
             {(pdfError || errors.resumePdf) && (
-              <p className="mt-1 text-xs text-green-600">
+              <p className="mt-1 text-xs text-red-600">
                 {pdfError || errors.resumePdf}
               </p>
             )}
@@ -597,7 +597,7 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
               />
             </div>
             {imageError && (
-              <p className="mt-1 text-xs text-green-600">{imageError}</p>
+              <p className="mt-1 text-xs text-red-600">{imageError}</p>
             )}
           </div>
         </div>

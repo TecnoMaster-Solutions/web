@@ -20,9 +20,7 @@ export interface PurchaseFormState {
   amount: number;
   status: string;
   description: string;
-
   purchaseOrderId: string;
-
   purchaseOrderFinalStateId: string;
 }
 
@@ -60,11 +58,7 @@ const hasDigits = (s: string) => onlyDigits(s).length > 0;
 const autoSalePrice = (purchaseUnitPrice: number): number => {
   const p = Number(purchaseUnitPrice) || 0;
   if (p <= 0) return 0;
-
-  if (p <= 500000) {
-    return p * 2;
-  }
-
+  if (p <= 500000) return p * 2;
   return p + 100000;
 };
 
@@ -76,29 +70,36 @@ const toLocalNoonISO = (ymd: string) => {
 let CACHE: IPurchase[] | null = null;
 
 const PO_PENDING_STATE_ID = 5;
-
 const OC_APROBADA_ID = 6;
 const OC_ANULADA_ID = 8;
-
 const COMPRA_APROBADA_ID = 3;
 const COMPRA_ANULADA_ID = 8;
 
 export function usePurchases() {
   const [purchases, setPurchases] = useState<IPurchase[]>([]);
-  const [loading, setLoading] = useState(true);
+
+  const [loadingCount, setLoadingCount] = useState(0);
+  const loading = loadingCount > 0;
+  const startLoading = () => setLoadingCount((c) => c + 1);
+  const stopLoading = () => setLoadingCount((c) => Math.max(0, c - 1));
+
+  const [tableLoading, setTableLoading] = useState(false);
 
   const [products, setProducts] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
-
   const [purchaseOrders, setPurchaseOrders] = useState<IPurchaseOrder[]>([]);
   const [poLoading, setPoLoading] = useState(false);
-
   const [poDetailLoading, setPoDetailLoading] = useState(false);
-
   const [cancelLoading, setCancelLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-
   const [error, setError] = useState<string>("");
+
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(5);
+  const [total, setTotal] = useState(0);
+
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
 
   const [form, setForm] = useState<PurchaseFormState>({
     orderNumber: "",
@@ -114,20 +115,19 @@ export function usePurchases() {
 
   const [selectedProduct, setSelectedProduct] = useState<string>("");
   const [quantity, setQuantity] = useState<number>(1);
-
   const [purchasePrice, setPurchasePrice] = useState<string>("");
   const [salePrice, setSalePrice] = useState<string>("");
-
   const [cart, setCart] = useState<CartItem[]>([]);
 
   const isUsingPurchaseOrder = !!form.purchaseOrderId;
 
-  const total = useMemo(
+  const totalAmount = useMemo(
     () => cart.reduce((sum, item) => sum + item.quantity * item.unitprice, 0),
     [cart]
   );
 
   const abortRef = useRef<AbortController | null>(null);
+  const firstLoadRef = useRef(true);
 
   const generateNextOrderNumber = (data: IPurchase[]) => {
     const year = new Date().getFullYear();
@@ -144,28 +144,67 @@ export function usePurchases() {
     return `ORD-${year}-${nextConsecutive}`;
   };
 
-  const fetchPurchases = useCallback(async () => {
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search.trim());
+    }, 400);
 
-    setLoading(true);
+    return () => clearTimeout(timer);
+  }, [search]);
 
-    try {
-      const data = await getPurchases(controller.signal);
-      CACHE = data;
-      setPurchases(data);
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch]);
 
-      const nextOrder = generateNextOrderNumber(data);
-      setForm((prev) => ({ ...prev, orderNumber: nextOrder }));
-    } catch (error: any) {
-      if (error?.name !== "AbortError") {
-        console.error("Error fetching purchases:", error);
+  const fetchPurchases = useCallback(
+    async (customPage: number, customLimit: number, customSearch: string) => {
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      if (firstLoadRef.current) {
+        startLoading();
+      } else {
+        setTableLoading(true);
       }
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+
+      try {
+        const response = await getPurchases({
+          page: customPage,
+          limit: customLimit,
+          search: customSearch,
+          signal: controller.signal,
+        });
+
+        CACHE = response.data;
+        setPurchases(response.data);
+        setTotal(Number(response.meta.total ?? 0));
+
+        const nextOrder = generateNextOrderNumber(response.data);
+        setForm((prev) =>
+          prev.orderNumber === nextOrder
+            ? prev
+            : { ...prev, orderNumber: nextOrder }
+        );
+      } catch (error: any) {
+        if (
+          error?.name !== "AbortError" &&
+          error?.code !== "ERR_CANCELED" &&
+          error?.name !== "CanceledError"
+        ) {
+          console.error("Error fetching purchases:", error);
+        }
+      } finally {
+        if (firstLoadRef.current) {
+          stopLoading();
+          firstLoadRef.current = false;
+        } else {
+          setTableLoading(false);
+        }
+      }
+    },
+    []
+  );
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -176,6 +215,7 @@ export function usePurchases() {
         console.error("Error cargando productos", err);
       }
     };
+
     fetchProducts();
   }, []);
 
@@ -189,29 +229,44 @@ export function usePurchases() {
         console.error("Error cargando proveedores", err);
       }
     };
+
     fetchSuppliers();
   }, []);
 
   useEffect(() => {
-    fetchPurchases();
-    return () => abortRef.current?.abort();
-  }, [fetchPurchases]);
+    fetchPurchases(page, limit, debouncedSearch);
+
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, [page, limit, debouncedSearch, fetchPurchases]);
 
   useEffect(() => {
     const supplierId = Number(form.supplier);
+
     if (!supplierId) {
       setPurchaseOrders([]);
-      setForm((prev) => ({
-        ...prev,
-        purchaseOrderId: "",
-        purchaseOrderFinalStateId: "",
-      }));
+      setForm((prev) => {
+        if (
+          prev.purchaseOrderId === "" &&
+          prev.purchaseOrderFinalStateId === ""
+        ) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          purchaseOrderId: "",
+          purchaseOrderFinalStateId: "",
+        };
+      });
       return;
     }
 
     (async () => {
       try {
         setPoLoading(true);
+
         const data = await getPurchaseOrdersForSupplier(
           supplierId,
           PO_PENDING_STATE_ID
@@ -224,12 +279,22 @@ export function usePurchases() {
             (po: any) => String(po.id) === prev.purchaseOrderId
           );
 
+          const nextPurchaseOrderId = stillExists ? prev.purchaseOrderId : "";
+          const nextPurchaseOrderFinalStateId = stillExists
+            ? prev.purchaseOrderFinalStateId
+            : "";
+
+          if (
+            prev.purchaseOrderId === nextPurchaseOrderId &&
+            prev.purchaseOrderFinalStateId === nextPurchaseOrderFinalStateId
+          ) {
+            return prev;
+          }
+
           return {
             ...prev,
-            purchaseOrderId: stillExists ? prev.purchaseOrderId : "",
-            purchaseOrderFinalStateId: stillExists
-              ? prev.purchaseOrderFinalStateId
-              : "",
+            purchaseOrderId: nextPurchaseOrderId,
+            purchaseOrderFinalStateId: nextPurchaseOrderFinalStateId,
           };
         });
       } catch (err) {
@@ -243,16 +308,13 @@ export function usePurchases() {
 
   useEffect(() => {
     const poId = Number(form.purchaseOrderId);
-    if (!poId) {
-      return;
-    }
+    if (!poId) return;
 
     (async () => {
       try {
         setPoDetailLoading(true);
 
         const po = await getPurchaseOrderById(poId);
-
         const detalles = Array.isArray(po?.detalles) ? po.detalles : [];
 
         if (detalles.length === 0) {
@@ -276,7 +338,6 @@ export function usePurchases() {
         });
 
         setCart(newCart);
-
         setSelectedProduct("");
         setQuantity(1);
         setPurchasePrice("");
@@ -346,7 +407,9 @@ export function usePurchases() {
 
   const addToCart = () => {
     if (isUsingPurchaseOrder) {
-      setError("No puedes agregar productos manualmente cuando hay una OC seleccionada.");
+      setError(
+        "No puedes agregar productos manualmente cuando hay una OC seleccionada."
+      );
       return;
     }
 
@@ -362,18 +425,24 @@ export function usePurchases() {
     }
 
     const price = parseCOP(purchasePrice);
-    const sPrice = hasDigits(salePrice) ? parseCOP(salePrice) : autoSalePrice(price);
+    const sPrice = hasDigits(salePrice)
+      ? parseCOP(salePrice)
+      : autoSalePrice(price);
 
     if (price <= 0) {
       setError("Ingresa un precio de compra válido.");
       return;
     }
+
     if (quantity <= 0) {
       setError("La cantidad debe ser mayor que 0.");
       return;
     }
+
     if (sPrice !== undefined && sPrice < price) {
-      setError("El precio de venta no puede ser menor que el precio de compra.");
+      setError(
+        "El precio de venta no puede ser menor que el precio de compra."
+      );
       return;
     }
 
@@ -405,10 +474,12 @@ export function usePurchases() {
     setCart((prev) => {
       const next = [...prev];
       const current = next[index];
+
       if (!current) return prev;
 
       if (isUsingPurchaseOrder) {
         const onlySalePricePatch: Partial<CartItem> = {};
+
         if (patch.saleprice !== undefined) {
           onlySalePricePatch.saleprice = patch.saleprice;
         } else if ("saleprice" in patch) {
@@ -423,8 +494,13 @@ export function usePurchases() {
 
       const merged = { ...current, ...patch };
 
-      if (!Number.isFinite(merged.quantity) || merged.quantity <= 0) return prev;
-      if (!Number.isFinite(merged.unitprice) || merged.unitprice < 0) return prev;
+      if (!Number.isFinite(merged.quantity) || merged.quantity <= 0) {
+        return prev;
+      }
+
+      if (!Number.isFinite(merged.unitprice) || merged.unitprice < 0) {
+        return prev;
+      }
 
       next[index] = merged;
       return next;
@@ -436,6 +512,7 @@ export function usePurchases() {
       setError("Los productos vienen de la OC y no se pueden eliminar aquí.");
       return;
     }
+
     setCart((prev) => prev.filter((_, i) => i !== index));
   };
 
@@ -463,6 +540,7 @@ export function usePurchases() {
 
     if (isUsingPurchaseOrder) {
       const fs = Number(form.purchaseOrderFinalStateId);
+
       if (![OC_APROBADA_ID, OC_ANULADA_ID].includes(fs)) {
         setError("Selecciona el estado final de la OC (Aprobada o Anulada).");
         return;
@@ -493,27 +571,26 @@ export function usePurchases() {
 
     const payload = isUsingPurchaseOrder
       ? {
-        ...payloadBase,
-        purchaseOrderId: Number(form.purchaseOrderId),
-        purchaseOrderFinalStateId: Number(form.purchaseOrderFinalStateId),
-
-        // ✅ IMPORTANTE: mandar saleprice por producto (aunque venga 0)
-        // El backend aplicará la regla: si saleprice es 0 -> unitprice * 2
-        products: cart.map((item) => ({
-          productid: item.productid,
-          saleprice: Number(item.saleprice ?? 0),
-        })),
-      }
+          ...payloadBase,
+          purchaseOrderId: Number(form.purchaseOrderId),
+          purchaseOrderFinalStateId: Number(form.purchaseOrderFinalStateId),
+          products: cart.map((item) => ({
+            productid: item.productid,
+            saleprice: Number(item.saleprice ?? 0),
+          })),
+        }
       : {
-        ...payloadBase,
-        products: cart.map((item) => ({
-          productid: item.productid,
-          quantity: item.quantity,
-          unitprice: item.unitprice,
-          productpriceofsupplier: item.unitprice,
-          ...(item.saleprice !== undefined ? { saleprice: item.saleprice } : {}),
-        })),
-      };
+          ...payloadBase,
+          products: cart.map((item) => ({
+            productid: item.productid,
+            quantity: item.quantity,
+            unitprice: item.unitprice,
+            productpriceofsupplier: item.unitprice,
+            ...(item.saleprice !== undefined
+              ? { saleprice: item.saleprice }
+              : {}),
+          })),
+        };
 
     try {
       return await createPurchase(payload as any);
@@ -529,7 +606,7 @@ export function usePurchases() {
 
       CACHE = null;
       await cancelPurchase(id, observation);
-      await fetchPurchases();
+      await fetchPurchases(page, limit, debouncedSearch);
     } catch (error) {
       throw error;
     } finally {
@@ -539,8 +616,11 @@ export function usePurchases() {
   };
 
   const resetForm = () => {
+    const nextOrder =
+      purchases.length > 0 ? generateNextOrderNumber(purchases) : "";
+
     setForm({
-      orderNumber: "",
+      orderNumber: nextOrder,
       invoiceNumber: "",
       supplier: "",
       registerDate: "",
@@ -557,17 +637,21 @@ export function usePurchases() {
     setSalePrice("");
     setCart([]);
     setError("");
-
-    if (purchases.length > 0) {
-      const nextOrder = generateNextOrderNumber(purchases);
-      setForm((prev) => ({ ...prev, orderNumber: nextOrder }));
-    }
   };
 
   return {
     purchases,
     loading,
+    tableLoading,
     saving,
+
+    page,
+    limit,
+    total,
+    search,
+    setPage,
+    setLimit,
+    setSearch,
 
     form,
     setForm,
@@ -587,7 +671,7 @@ export function usePurchases() {
 
     cart,
     setCart,
-    total,
+    totalAmount,
     removeFromCart,
     updateCartItem,
 

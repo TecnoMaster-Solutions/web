@@ -22,17 +22,20 @@ type ProductRowForXlsx = {
 
 interface ProductsTableProps {
   products: Product[];
+  page: number;
+  limit: number;
+  totalPages: number;
+  search: string;
+  tableLoading?: boolean;
+  onPageChange: (page: number) => void;
+  onSearchChange: (value: string) => void;
   onView: (product: Product) => void;
   onEdit: (product: Product) => void;
   onDelete: (product: Product) => void;
   onCreate: () => void;
 }
 
-type ProductForTable = Product & {
-  rowNumber: number;
-  stateSearch: "activo" | "inactivo";
-  fullSearch: string;
-};
+type ProductForTable = Product;
 
 const cleanText = (v: unknown) => {
   const s = String(v ?? "").trim();
@@ -42,19 +45,8 @@ const cleanText = (v: unknown) => {
   return s;
 };
 
-const normalizeText = (v: unknown) => {
-  return String(v ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/\s+/g, " ")
-    .trim();
-};
-
-const digitsOnly = (v: unknown) => String(v ?? "").replace(/[^\d]/g, "");
-
-const isActiveState = (v: unknown) => normalizeText(v) === "activo";
-const isInactiveState = (v: unknown) => normalizeText(v) === "inactivo";
+const isInactiveState = (v: unknown) =>
+  String(v ?? "").trim().toLowerCase() === "inactivo";
 
 const Trunc: React.FC<{
   value: unknown;
@@ -86,58 +78,27 @@ const Trunc: React.FC<{
 
 export const ProductsTable: React.FC<ProductsTableProps> = ({
   products,
+  page,
+  limit,
+  totalPages,
+  search,
+  tableLoading = false,
+  onPageChange,
+  onSearchChange,
   onView,
   onEdit,
   onDelete,
   onCreate,
 }) => {
   const productsForTable: ProductForTable[] = useMemo(() => {
-    const sortedProducts = [...products].sort(
-      (a, b) => Number(b.id ?? 0) - Number(a.id ?? 0)
-    );
-
-    const total = sortedProducts.length; // <-- ÚNICO EXTRA
-
-    return sortedProducts.map((p, index) => {
-      const stateSearch: "activo" | "inactivo" = isActiveState(p.state)
-        ? "activo"
-        : "inactivo";
-
-      const fullSearchText = [
-        p.id,
-        p.name,
-        p.description,
-        p.categoryName,
-        p.supplierCategory,
-        p.code,
-      ]
-        .map(normalizeText)
-        .join(" ");
-
-      const fullSearchNums = [
-        digitsOnly(p.id),
-        digitsOnly(p.stock),
-        digitsOnly(p.salePrice),
-        digitsOnly(p.supplierPrice),
-        digitsOnly(p.code),
-      ]
-        .filter(Boolean)
-        .join(" ");
-
-      return {
-        ...p,
-        rowNumber: total - index, // <-- ÚNICO CAMBIO (antes era index + 1)
-        stateSearch,
-        fullSearch: `${fullSearchText} ${fullSearchNums}`.trim(),
-      };
-    });
+    return [...products].sort((a, b) => Number(b.id ?? 0) - Number(a.id ?? 0));
   }, [products]);
 
   const columns: Column<ProductForTable>[] = [
     {
-      key: "rowNumber",
-      header: "#",
-      render: (p) => <span className="tabular-nums whitespace-nowrap">{p.rowNumber}</span>,
+      key: "id",
+      header: "ID",
+      render: (p) => <span className="tabular-nums whitespace-nowrap">{p.id}</span>,
     },
     {
       key: "name",
@@ -229,17 +190,18 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
         module="products"
         data={productsForTable}
         columns={columns}
-        pageSize={10}
-        searchableKeys={[
-          "name",
-          "categoryName",
-          "supplierCategory",
-          "code",
-          "salePrice",
-          "stock",
-          "fullSearch",
-          "stateSearch",
-        ]}
+        pageSize={limit}
+        searchableKeys={["name"]} 
+        serverPagination={{
+          page,
+          totalPages,
+          onPageChange,
+        }}
+        serverSearch={{
+          value: search,
+          onChange: onSearchChange,
+        }}
+        loading={tableLoading}
         onView={(p) => onView(p)}
         onEdit={(p) => onEdit(p)}
         onDelete={(p) => onDelete(p)}
@@ -247,9 +209,9 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
         actionGuard={(row) =>
           isInactiveState(row.state)
             ? {
-              disableDelete: true,
-              deleteTitle: "No se puede eliminar un producto inactivo",
-            }
+                disableDelete: true,
+                deleteTitle: "No se puede eliminar un producto inactivo",
+              }
             : {}
         }
         searchPlaceholder="Buscar productos..."

@@ -87,13 +87,21 @@ export const useCategories = () => {
 
   const refreshCategoryProductCounts = useCallback(async () => {
     try {
-      const products = await getProducts("all");
+      const response = await getProducts({
+        status: "all",
+        page: 1,
+        limit: 1000,
+        search: "",
+      });
+
       const counts: Record<number, number> = {};
-      products.forEach((product) => {
+
+      response.data.forEach((product) => {
         const categoryId = product.categoryId;
         if (!categoryId) return;
         counts[categoryId] = (counts[categoryId] ?? 0) + 1;
       });
+
       setCategoryProductCounts(counts);
     } catch (error) {
       console.error("Error al cargar productos para verificar las categorias:", error);

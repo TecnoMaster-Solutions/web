@@ -6,20 +6,25 @@ export type RoleRow = {
   state: "Activo" | "Inactivo";
 };
 
-type RolesListResponse = {
-  success: boolean;
+export type GetRolesParams = {
+  page?: number;
+  limit?: number;
+  search?: string;
+  signal?: AbortSignal;
+};
+
+type PaginatedRolesResponse = {
   data: Array<{
     roleid: number;
     name: string;
-    status: string; 
+    status: string;
   }>;
-};
-
-type RoleConfigResponse = {
-  roleconfigurationid: number;
-  role: { id: number; name: string; status: string };
-  permission: { id: number; module: string };
-  privilege: { id: number; name: string };
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
 };
 
 const toUiStatus = (s?: string) =>
@@ -35,15 +40,36 @@ const toBackendStatus = (
   return "active";
 };
 
-export const getRoles = async (): Promise<RoleRow[]> => {
-  const { data } = await api.get<RolesListResponse>("/roles/list");
+export const getRoles = async ({
+  page = 1,
+  limit = 6,
+  search = "",
+  signal,
+}: GetRolesParams = {}) => {
+  const { data } = await api.get<PaginatedRolesResponse>("/roles", {
+    params: {
+      page,
+      limit,
+      search: search.trim() || undefined,
+    },
+    signal,
+  });
+
   const rows = Array.isArray(data?.data) ? data.data : [];
 
-  return rows.map((r) => ({
-    id: Number(r.roleid),
-    name: r.name,
-    state: toUiStatus(r.status),
-  }));
+  return {
+    data: rows.map((r) => ({
+      id: Number(r.roleid),
+      name: r.name,
+      state: toUiStatus(r.status),
+    })) as RoleRow[],
+    meta: {
+      page: Number(data?.meta?.page ?? page),
+      limit: Number(data?.meta?.limit ?? limit),
+      total: Number(data?.meta?.total ?? 0),
+      totalPages: Number(data?.meta?.totalPages ?? 1),
+    },
+  };
 };
 
 export const getRoleDetail = async (id: number) => {

@@ -35,14 +35,13 @@ const formatDateOnly = (value: any) => {
   if (!value) return "";
 
   if (typeof value === "string") {
-    const ymd = value.split("T")[0]; // YYYY-MM-DD
+    const ymd = value.split("T")[0];
     if (/^\d{4}-\d{2}-\d{2}$/.test(ymd)) {
       const [y, m, d] = ymd.split("-").map(Number);
       return `${d}/${m}/${y}`;
     }
   }
 
-  // fallback si viene Date o formato raro
   const dt = new Date(value);
   if (Number.isNaN(dt.getTime())) return "";
   return dt.toLocaleDateString("es-CO");
@@ -53,9 +52,20 @@ export default function PurchasesIndex() {
   const searchParams = useSearchParams();
 
   const purchasesHook = usePurchases();
-  const { fetchPurchases } = purchasesHook;
 
-  const { purchases, loading, saving, handleCancelPurchase } = purchasesHook;
+  const {
+    purchases,
+    loading,
+    tableLoading,
+    saving,
+    handleCancelPurchase,
+    page,
+    limit,
+    total,
+    search,
+    setPage,
+    setSearch,
+  } = purchasesHook;
 
   const [isCancelling, setIsCancelling] = useState<number | null>(null);
 
@@ -72,7 +82,7 @@ export default function PurchasesIndex() {
     if (created === "1" && !createdToastShown.current) {
       createdToastShown.current = true;
 
-      showSuccess("Compra registrada con exito.", { autoClose: 5000 });
+      showSuccess("Compra registrada con éxito.", { autoClose: 5000 });
 
       const params = new URLSearchParams(window.location.search);
       params.delete("created");
@@ -106,81 +116,58 @@ export default function PurchasesIndex() {
     }
   }, [searchParams]);
 
-  const initialLoadDone = useRef(false);
-  useEffect(() => {
-    if (!initialLoadDone.current) {
-      initialLoadDone.current = true;
-      fetchPurchases();
-    }
-  }, [fetchPurchases]);
+const columns: Column<IPurchase>[] = useMemo(
+  () => [
+    { key: "numberoforder", header: "N. Orden" },
+    { key: "reference", header: "N. Factura" },
+    {
+      key: "supplier",
+      header: "Proveedor",
+      render: (row) => row.supplier?.name ?? "N/A",
+    },
+    {
+      key: "createdat",
+      header: "Fecha de Registro",
+      render: (row) => formatDateOnly(row.createdat),
+    },
+    {
+      key: "amount",
+      header: "Monto",
+      render: (row) =>
+        Number(row.amount || 0).toLocaleString("es-CO", {
+          style: "currency",
+          currency: "COP",
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        }),
+    },
+    {
+      key: "state",
+      header: "Estado",
+      render: (row) => {
+        const s = normalizePurchaseState(row.state?.name);
 
-  const columns: Column<IPurchase & { createdAtLabel?: string }>[] = useMemo(
-    () => [
-      { key: "numberoforder", header: "N. Orden" },
-      { key: "reference", header: "N. Factura" },
-      {
-        key: "supplier",
-        header: "Proveedor",
-        render: (row) => row.supplier?.name ?? "N/A",
+        const isApproved = s === "approved";
+        const isRevoked = s === "revoke";
+
+        const label = isApproved
+          ? "Aprobado"
+          : isRevoked
+          ? "Anulado"
+          : row.state?.name ?? "Desconocido";
+
+        const cls = isApproved
+          ? "text-green-600 font-medium"
+          : isRevoked
+          ? "text-red-600 font-medium"
+          : "text-gray-500 font-medium";
+
+        return <span className={cls}>{label}</span>;
       },
-      {
-        key: "createdat",
-        header: "Fecha de Registro",
-        // ✅ CORREGIDO: no usar new Date(...).toLocaleDateString()
-        render: (row) => formatDateOnly(row.createdat),
-      },
-      {
-        key: "amount",
-        header: "Monto",
-        render: (row) =>
-          Number(row.amount || 0).toLocaleString("es-CO", {
-            style: "currency",
-            currency: "COP",
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0,
-          }),
-      },
-      {
-        key: "state",
-        header: "Estado",
-        render: (row) => {
-          const s = normalizePurchaseState(row.state?.name);
-
-          const isApproved = s === "approved";
-          const isRevoked = s === "revoke";
-
-          const label = isApproved
-            ? "Aprobado"
-            : isRevoked
-              ? "Anulado"
-              : row.state?.name ?? "Desconocido";
-
-          const cls = isApproved
-            ? "text-green-600 font-medium"
-            : isRevoked
-              ? "text-red-600 font-medium"
-              : "text-gray-500 font-medium";
-
-          return <span className={cls}>{label}</span>;
-        },
-      },
-    ],
-    []
-  );
-
-  const buildSearchablePurchases = (items: IPurchase[]) => {
-    return items.map((purchase) => ({
-      ...purchase,
-      supplierName: purchase.supplier?.name ?? "",
-      // ✅ recomendado para buscar por fecha visible en tabla
-      createdAtLabel: formatDateOnly(purchase.createdat),
-    }));
-  };
-
-  const purchasesForSearch = useMemo(
-    () => buildSearchablePurchases(purchases),
-    [purchases]
-  );
+    },
+  ],
+  []
+);
 
   const handleCreate = useCallback(() => {
     router.push("/dashboard/purchases/create");
@@ -193,19 +180,6 @@ export default function PurchasesIndex() {
     [router]
   );
 
-  const searchableKeys = useMemo(
-    () => [
-      "numberoforder",
-      "reference",
-      "supplierName",
-      // ✅ mejor buscar por la etiqueta formateada
-      "createdAtLabel",
-      "amount",
-      "state",
-    ],
-    []
-  );
-
   const confirmCancelPurchase = useCallback(
     async (purchase: IPurchase) => {
       const normalizedState = normalizePurchaseState(purchase.state?.name);
@@ -214,7 +188,7 @@ export default function PurchasesIndex() {
         Swal.fire({
           icon: "info",
           title: "Compra ya anulada",
-          text: `La compra #${purchase.numberoforder} ya esta anulada.`,
+          text: `La compra #${purchase.numberoforder} ya está anulada.`,
           confirmButtonText: "Aceptar",
           confirmButtonColor: "#3085d6",
         });
@@ -225,7 +199,7 @@ export default function PurchasesIndex() {
         Swal.fire({
           icon: "info",
           title: "Compra no anulable",
-          text: `La compra #${purchase.numberoforder} solo se puede anular cuando esta aprobada.`,
+          text: `La compra #${purchase.numberoforder} solo se puede anular cuando está aprobada.`,
           confirmButtonText: "Aceptar",
           confirmButtonColor: "#3085d6",
         });
@@ -245,18 +219,18 @@ export default function PurchasesIndex() {
               </svg>
             </div>
 
-            <h2 class="text-xl font-semibold mb-2">Esta seguro?</h2>
+            <h2 class="text-xl font-semibold mb-2">¿Estás seguro?</h2>
 
             <p class="text-gray-700 mb-1">
-              Desea anular la compra #${purchase.numberoforder}?
+              ¿Desea anular la compra #${purchase.numberoforder}?
             </p>
 
             <p class="text-gray-500 text-sm mb-3">
-              Puedes agregar una observacion (opcional)
+              Puedes agregar una observación (opcional)
             </p>
 
             <textarea id="obs" class="w-full p-2 border rounded resize-none" 
-              rows="3" placeholder="Escribe una observacion (opcional)..."></textarea>
+              rows="3" placeholder="Escribe una observación (opcional)..."></textarea>
           </div>
         `,
         showCancelButton: true,
@@ -322,32 +296,6 @@ export default function PurchasesIndex() {
     };
   }, []);
 
-  const memoizedDataTable = useMemo(() => {
-    return (
-      <DataTable
-        module="purchases"
-        data={purchasesForSearch}
-        columns={columns}
-        searchableKeys={searchableKeys}
-        pageSize={8}
-        onCancel={confirmCancelPurchase}
-        onCreate={handleCreate}
-        onView={handleView}
-        createButtonText="Registrar compra"
-        actionGuard={purchaseActionGuard}
-        freeze={false}
-      />
-    );
-  }, [
-    purchasesForSearch,
-    columns,
-    searchableKeys,
-    confirmCancelPurchase,
-    handleCreate,
-    handleView,
-    purchaseActionGuard,
-  ]);
-
   return (
     <RequireAuth>
       <ToastContainer position="bottom-right" />
@@ -355,7 +303,37 @@ export default function PurchasesIndex() {
       <div className="p-6">
         <FullScreenLoader show={overlayLoading} />
 
-        {!loading && memoizedDataTable}
+        <DataTable
+          module="purchases"
+          data={purchases}
+          columns={columns}
+          pageSize={limit}
+          searchableKeys={[
+            "numberoforder",
+            "reference",
+            "supplier",
+            "createdat",
+            "amount",
+            "state",
+          ]}
+          serverPagination={{
+            page,
+            totalPages: Math.max(1, Math.ceil(total / limit)),
+            onPageChange: setPage,
+          }}
+          serverSearch={{
+            value: search,
+            onChange: setSearch,
+          }}
+          onCancel={confirmCancelPurchase}
+          onCreate={handleCreate}
+          onView={handleView}
+          createButtonText="Registrar compra"
+          actionGuard={purchaseActionGuard}
+          freeze={false}
+          loading={tableLoading}
+          searchPlaceholder="Buscar compras..."
+        />
       </div>
     </RequireAuth>
   );

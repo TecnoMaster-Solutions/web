@@ -16,21 +16,49 @@ import {
   updateService,
 } from "../api/services.api";
 
+type ApiErrorShape = {
+  response?: { data?: { message?: string } };
+  message?: string;
+};
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  const e = error as ApiErrorShape | null;
+  return e?.response?.data?.message ?? e?.message ?? fallback;
+};
+
 export const useServices = () => {
   const [services, setServices] = useState<Service[]>([]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [viewingService, setViewingService] = useState<Service | null>(null);
-  const [loading, setLoading] = useState(true);
+
+  const [loadingCount, setLoadingCount] = useState(0);
+  const loading = loadingCount > 0;
+  const startLoading = () => setLoadingCount((c) => c + 1);
+  const stopLoading = () => setLoadingCount((c) => Math.max(0, c - 1));
+
+  const [tableLoading, setTableLoading] = useState(false);
+
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(5);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
 
   const isEditModalOpen = useMemo(
     () => editingService !== null,
     [editingService]
   );
+
   const isViewModalOpen = useMemo(
     () => viewingService !== null,
     [viewingService]
   );
+
+  const firstLoadRef = useRef(true);
+  const abortRef = useRef<AbortController | null>(null);
 
   const waitForRender = useCallback(async () => {
     await new Promise<void>((resolve) => {
@@ -38,72 +66,108 @@ export const useServices = () => {
     });
   }, []);
 
-  const applyServicesResponse = useCallback(
-    async (list: Service[]) => {
-      const sorted = [...list].sort((a, b) =>
-        (a.name ?? "").localeCompare(b.name ?? "", "es", {
-          sensitivity: "base",
-        })
-      );
-      setServices(sorted);
-      await waitForRender();
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search.trim());
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch]);
+
+  const fetchAllServices = useCallback(
+    async (customPage: number, customLimit: number, customSearch: string) => {
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      if (firstLoadRef.current) {
+        startLoading();
+      } else {
+        setTableLoading(true);
+      }
+
+      try {
+        const response = await fetchServices({
+          page: customPage,
+          limit: customLimit,
+          search: customSearch,
+          signal: controller.signal,
+        });
+
+        setServices(response.data);
+        setTotal(Number(response.meta.total ?? 0));
+        setTotalPages(Number(response.meta.totalPages ?? 1));
+        await waitForRender();
+      } catch (error: any) {
+        if (
+          error?.name !== "AbortError" &&
+          error?.code !== "ERR_CANCELED" &&
+          error?.name !== "CanceledError"
+        ) {
+          console.error("Error al cargar servicios:", error);
+          showWarning("Error al cargar servicios desde el servidor");
+        }
+      } finally {
+        if (firstLoadRef.current) {
+          stopLoading();
+          firstLoadRef.current = false;
+        } else {
+          setTableLoading(false);
+        }
+      }
     },
     [waitForRender]
   );
 
-  const refreshServices = useCallback(async () => {
-    const list = await fetchServices({ page: 1, limit: 100 });
-    await applyServicesResponse(list);
-    return 200;
-  }, [applyServicesResponse]);
-
-  const hasFetchedRef = useRef(false);
-
   useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        const status = await refreshServices();
-        if (status !== 200)
-          throw new Error(`Refresh servicios devolvió ${status}`);
-      } catch (error) {
-        console.error("Error al cargar servicios:", error);
-        showWarning("Error al cargar servicios desde el servidor");
-      } finally {
-        setLoading(false);
-      }
-    };
+    fetchAllServices(page, limit, debouncedSearch);
 
-    if (!hasFetchedRef.current) {
-      hasFetchedRef.current = true;
-      load();
-    }
-  }, [refreshServices]);
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, [page, limit, debouncedSearch, fetchAllServices]);
+
+  const refreshServices = useCallback(async () => {
+    await fetchAllServices(page, limit, debouncedSearch);
+    return 200 as const;
+  }, [fetchAllServices, page, limit, debouncedSearch]);
 
   const requireImageUrl = async (image: string | File | null) => {
     const val = image;
     if (!val) throw new Error("Debe agregar una imagen para el servicio.");
+
     if (typeof val === "string") {
       const trimmed = val.trim();
-      if (!trimmed)
+      if (!trimmed) {
         throw new Error("Debe agregar una imagen para el servicio.");
+      }
       return trimmed;
     }
+
     const url = await uploadImageToCloudinary(val);
-    if (!url?.trim())
+    if (!url?.trim()) {
       throw new Error("No se pudo subir la imagen a Cloudinary.");
+    }
+
     return url.trim();
   };
 
   const handleCreateService = async (payload: CreateServicePayload) => {
-    setLoading(true);
+    startLoading();
     try {
       setIsCreateModalOpen(false);
 
-      if (!payload.name?.trim())
+      if (!payload.name?.trim()) {
         throw new Error("El nombre del servicio es obligatorio.");
-      if (!payload.typeofserviceid)
+      }
+
+      if (!payload.typeofserviceid) {
         throw new Error("Debe seleccionar un tipo de servicio.");
+      }
 
       const imageUrl = await requireImageUrl(payload.image);
 
@@ -114,35 +178,35 @@ export const useServices = () => {
         typeofserviceid: payload.typeofserviceid,
       });
 
-      const status = await refreshServices();
-      if (status !== 200)
-        throw new Error(`Refresh servicios devolvió ${status}`);
+      await refreshServices();
 
       showSuccess("Servicio creado exitosamente");
       await waitForRender();
     } catch (error: any) {
-      const msg =
-        error?.response?.data?.message ??
-        error?.message ??
-        "Error al crear servicio";
+      const msg = getErrorMessage(error, "Error al crear servicio");
       console.error(error);
       showWarning(msg);
     } finally {
-      setLoading(false);
+      stopLoading();
     }
   };
 
   const handleEditService = async (id: number, payload: EditServicePayload) => {
-    setLoading(true);
+    startLoading();
     try {
       if (!id) return;
 
-      if (!payload.name?.trim())
+      if (!payload.name?.trim()) {
         throw new Error("El nombre del servicio es obligatorio.");
-      if (!payload.typeofserviceid)
+      }
+
+      if (!payload.typeofserviceid) {
         throw new Error("Debe seleccionar un tipo de servicio.");
-      if (![1, 2].includes(payload.stateid))
+      }
+
+      if (![1, 2].includes(payload.stateid)) {
         throw new Error("Estado inválido.");
+      }
 
       const body: any = {
         name: payload.name.trim(),
@@ -155,31 +219,26 @@ export const useServices = () => {
         body.image = await requireImageUrl(payload.image);
       } else if (typeof payload.image === "string") {
         const trimmed = payload.image.trim();
-        if (!trimmed)
+        if (!trimmed) {
           throw new Error("No se puede guardar un servicio sin imagen.");
+        }
         body.image = trimmed;
       } else if (payload.image === null) {
         throw new Error("No se puede guardar un servicio sin imagen.");
       }
 
       await updateService(id, body);
-
-      const status = await refreshServices();
-      if (status !== 200)
-        throw new Error(`Refresh servicios devolvió ${status}`);
+      await refreshServices();
 
       showSuccess("Servicio actualizado exitosamente");
       await waitForRender();
       setEditingService(null);
     } catch (error: any) {
-      const msg =
-        error?.response?.data?.message ??
-        error?.message ??
-        "Error al actualizar servicio";
+      const msg = getErrorMessage(error, "Error al actualizar servicio");
       console.error(error);
       showWarning(msg);
     } finally {
-      setLoading(false);
+      stopLoading();
     }
   };
 
@@ -193,32 +252,27 @@ export const useServices = () => {
         skipSuccessToast: true,
       },
       async () => {
-        setLoading(true);
+        startLoading();
         try {
           await deleteService(service.id);
-
-          const status = await refreshServices();
-          if (status !== 200)
-            throw new Error(`Refresh servicios devolvió ${status}`);
-
+          await refreshServices();
           await waitForRender();
 
           showSuccess(
             `El servicio "${service.name}" ha sido eliminado correctamente.`
           );
         } catch (error: any) {
-          const msg =
-            error?.response?.data?.message ??
-            error?.message ??
-            "No se pudo eliminar el servicio.";
+          const msg = getErrorMessage(
+            error,
+            "No se pudo eliminar el servicio."
+          );
 
           console.warn("Error al eliminar servicio:", error);
-
           showWarning(msg);
 
           await refreshServices();
         } finally {
-          setLoading(false);
+          stopLoading();
         }
       }
     );
@@ -227,6 +281,17 @@ export const useServices = () => {
   return {
     services,
     loading,
+    tableLoading,
+
+    page,
+    limit,
+    total,
+    totalPages,
+    search,
+    setPage,
+    setLimit,
+    setSearch,
+
     isCreateModalOpen,
     setIsCreateModalOpen,
     isEditModalOpen,
@@ -235,6 +300,7 @@ export const useServices = () => {
     viewingService,
     setEditingService,
     setViewingService,
+
     handleCreateService,
     handleEditService,
     handleDeleteService,

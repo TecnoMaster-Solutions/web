@@ -5,7 +5,11 @@ import { showSuccess, showWarning } from "@/shared/utils/notifications";
 import { confirmDelete } from "@/shared/utils/Delete/confirmDelete";
 import { uploadImageToCloudinary } from "@/shared/utils/cloudinary";
 
-import type { Product, CreateProductData, EditProductData } from "../types/typesProducts";
+import type {
+  Product,
+  CreateProductData,
+  EditProductData,
+} from "../types/typesProducts";
 import type { UpdateProductPayload, StatusQuery } from "../api/products.api";
 import {
   createProduct,
@@ -33,12 +37,30 @@ export const useProducts = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [viewingProduct, setViewingProduct] = useState<Product | null>(null);
-  const [loading, setLoading] = useState(true);
+
+  const [loadingCount, setLoadingCount] = useState(0);
+  const loading = loadingCount > 0;
+  const startLoading = () => setLoadingCount((c) => c + 1);
+  const stopLoading = () => setLoadingCount((c) => Math.max(0, c - 1));
+
+  const [tableLoading, setTableLoading] = useState(false);
+
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(5);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  const status: StatusQuery = "all";
 
   const isEditModalOpen = useMemo(() => editingProduct !== null, [editingProduct]);
   const isViewModalOpen = useMemo(() => viewingProduct !== null, [viewingProduct]);
-
   const selectedProduct = editingProduct ?? viewingProduct ?? null;
+
+  const firstLoadRef = useRef(true);
+  const abortRef = useRef<AbortController | null>(null);
 
   const waitForRender = useCallback(async () => {
     await new Promise<void>((resolve) => {
@@ -46,45 +68,80 @@ export const useProducts = () => {
     });
   }, []);
 
-  const applyProductsResponse = useCallback(
-    async (list: Product[]) => {
-      const sorted = [...list].sort((a, b) => Number(b.id ?? 0) - Number(a.id ?? 0));
-      setProducts(sorted);
-      await waitForRender();
-    },
-    [waitForRender]
-  );
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search.trim());
+    }, 400);
 
-  const refreshProducts = useCallback(
-    async (nextStatus: StatusQuery = "all") => {
-      const list = await getProducts(nextStatus);
-      await applyProductsResponse(list);
-      return 200 as const;
-    },
-    [applyProductsResponse]
-  );
-
-  const hasFetchedRef = useRef(false);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        const code = await refreshProducts("all");
-        if (code !== 200) throw new Error(`Refresh products devolvió ${code}`);
-      } catch (error: unknown) {
-        console.error("Error al cargar productos:", error);
-        showWarning("Error al cargar productos desde el servidor");
-      } finally {
-        setLoading(false);
-      }
-    };
+    setPage(1);
+  }, [debouncedSearch]);
 
-    if (!hasFetchedRef.current) {
-      hasFetchedRef.current = true;
-      load();
-    }
-  }, [refreshProducts]);
+  const fetchProducts = useCallback(
+    async (customPage: number, customLimit: number, customSearch: string) => {
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      if (firstLoadRef.current) {
+        startLoading();
+      } else {
+        setTableLoading(true);
+      }
+
+      try {
+        const response = await getProducts({
+          page: customPage,
+          limit: customLimit,
+          search: customSearch,
+          status,
+          signal: controller.signal,
+        });
+
+        const sorted = [...response.data].sort(
+          (a, b) => Number(b.id ?? 0) - Number(a.id ?? 0)
+        );
+
+        setProducts(sorted);
+        setTotal(Number(response.meta.total ?? 0));
+        setTotalPages(Number(response.meta.totalPages ?? 1));
+        await waitForRender();
+      } catch (error: any) {
+        if (
+          error?.name !== "AbortError" &&
+          error?.code !== "ERR_CANCELED" &&
+          error?.name !== "CanceledError"
+        ) {
+          console.error("Error al cargar productos:", error);
+          showWarning("Error al cargar productos desde el servidor");
+        }
+      } finally {
+        if (firstLoadRef.current) {
+          stopLoading();
+          firstLoadRef.current = false;
+        } else {
+          setTableLoading(false);
+        }
+      }
+    },
+    [status, waitForRender]
+  );
+
+  useEffect(() => {
+    fetchProducts(page, limit, debouncedSearch);
+
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, [page, limit, debouncedSearch, fetchProducts]);
+
+  const refreshProducts = useCallback(async () => {
+    await fetchProducts(page, limit, debouncedSearch);
+    return 200 as const;
+  }, [fetchProducts, page, limit, debouncedSearch]);
 
   const normalizeToUrl = async (item: File | string) => {
     if (typeof item === "string") {
@@ -98,31 +155,44 @@ export const useProducts = () => {
     return url.trim();
   };
 
-  const requireImagesUrls = async (images: Array<File | string> | null | undefined) => {
+  const requireImagesUrls = async (
+    images: Array<File | string> | null | undefined
+  ) => {
     const list = (images ?? []).filter(Boolean);
 
-    if (list.length === 0) throw new Error("Debe agregar al menos una imagen para el producto.");
-    if (list.length > MAX_IMAGES) throw new Error(`Máximo ${MAX_IMAGES} imágenes por producto.`);
+    if (list.length === 0) {
+      throw new Error("Debe agregar al menos una imagen para el producto.");
+    }
+
+    if (list.length > MAX_IMAGES) {
+      throw new Error(`Máximo ${MAX_IMAGES} imágenes por producto.`);
+    }
 
     const urls: string[] = [];
     for (const img of list) {
       urls.push(await normalizeToUrl(img));
     }
 
-    // dedupe manteniendo orden + cap
     return Array.from(new Set(urls)).slice(0, MAX_IMAGES);
   };
 
   const handleCreateProduct = async (payload: CreateProductData) => {
-    setLoading(true);
+    startLoading();
     try {
       setIsCreateModalOpen(false);
 
-      if (!payload.name?.trim()) throw new Error("El nombre del producto es obligatorio.");
-      if (!payload.categoryId) throw new Error("Debe seleccionar una categoría.");
-      if (!payload.supplierCategory?.trim())
+      if (!payload.name?.trim()) {
+        throw new Error("El nombre del producto es obligatorio.");
+      }
+      if (!payload.categoryId) {
+        throw new Error("Debe seleccionar una categoría.");
+      }
+      if (!payload.supplierCategory?.trim()) {
         throw new Error("La categoría del proveedor es obligatoria.");
-      if (!payload.code?.trim()) throw new Error("El código es obligatorio.");
+      }
+      if (!payload.code?.trim()) {
+        throw new Error("El código es obligatorio.");
+      }
 
       const imagesUrls = await requireImagesUrls(payload.images);
 
@@ -136,9 +206,7 @@ export const useProducts = () => {
         isactive: true,
       });
 
-      const code = await refreshProducts("all");
-      if (code !== 200) throw new Error(`Refresh products devolvió ${code}`);
-
+      await refreshProducts();
       showSuccess("Producto creado exitosamente");
       await waitForRender();
     } catch (error: unknown) {
@@ -146,20 +214,27 @@ export const useProducts = () => {
       console.error(error);
       showWarning(msg);
     } finally {
-      setLoading(false);
+      stopLoading();
     }
   };
 
   const handleEditProduct = async (id: number, payload: EditProductData) => {
-    setLoading(true);
+    startLoading();
     try {
       if (!id) return;
 
-      if (!payload.name?.trim()) throw new Error("El nombre del producto es obligatorio.");
-      if (!payload.categoryId) throw new Error("Debe seleccionar una categoría.");
-      if (!payload.supplierCategory?.trim())
+      if (!payload.name?.trim()) {
+        throw new Error("El nombre del producto es obligatorio.");
+      }
+      if (!payload.categoryId) {
+        throw new Error("Debe seleccionar una categoría.");
+      }
+      if (!payload.supplierCategory?.trim()) {
         throw new Error("La categoría del proveedor es obligatoria.");
-      if (!payload.code?.trim()) throw new Error("El código es obligatorio.");
+      }
+      if (!payload.code?.trim()) {
+        throw new Error("El código es obligatorio.");
+      }
 
       const body: UpdateProductPayload = {
         productname: payload.name.trim(),
@@ -174,9 +249,7 @@ export const useProducts = () => {
       body.images = imagesUrls;
 
       await updateProduct(id, body);
-
-      const code = await refreshProducts("all");
-      if (code !== 200) throw new Error(`Refresh products devolvió ${code}`);
+      await refreshProducts();
 
       showSuccess("Producto actualizado exitosamente");
       await waitForRender();
@@ -186,21 +259,21 @@ export const useProducts = () => {
       console.error(error);
       showWarning(msg);
     } finally {
-      setLoading(false);
+      stopLoading();
     }
   };
 
   const handleDeleteProduct = async (product: Product): Promise<boolean> => {
     let info: ProductDeletionInfo | null = null;
 
-    setLoading(true);
+    startLoading();
     try {
       info = await getProductDeletionInfo(product.id);
     } catch (error: unknown) {
       console.error(error);
       info = null;
     } finally {
-      setLoading(false);
+      stopLoading();
     }
 
     if (info?.canDelete === true) {
@@ -216,17 +289,14 @@ export const useProducts = () => {
           errorMessage: "No se pudo eliminar el producto. Intenta nuevamente.",
         },
         async () => {
-          setLoading(true);
+          startLoading();
           try {
             await deleteProduct(product.id);
-
-            const code = await refreshProducts("all");
-            if (code !== 200) throw new Error(`Refresh products devolvió ${code}`);
+            await refreshProducts();
             await waitForRender();
-
             showSuccess(`El producto "${product.name}" se eliminó correctamente.`);
           } finally {
-            setLoading(false);
+            stopLoading();
           }
         }
       );
@@ -271,17 +341,14 @@ export const useProducts = () => {
           errorMessage: "No se pudo desactivar el producto. Intenta nuevamente.",
         },
         async () => {
-          setLoading(true);
+          startLoading();
           try {
             await updateProduct(product.id, { isactive: false });
-
-            const code = await refreshProducts("all");
-            if (code !== 200) throw new Error(`Refresh products devolvió ${code}`);
+            await refreshProducts();
             await waitForRender();
-
             showSuccess(`El producto "${product.name}" se desactivó correctamente.`);
           } finally {
-            setLoading(false);
+            stopLoading();
           }
         }
       );
@@ -301,17 +368,14 @@ export const useProducts = () => {
         errorMessage: "No se pudo eliminar/desactivar el producto. Intenta nuevamente.",
       },
       async () => {
-        setLoading(true);
+        startLoading();
         try {
           await deleteProduct(product.id);
-
-          const code = await refreshProducts("all");
-          if (code !== 200) throw new Error(`Refresh products devolvió ${code}`);
+          await refreshProducts();
           await waitForRender();
-
           showSuccess(`Acción aplicada sobre "${product.name}".`);
         } finally {
-          setLoading(false);
+          stopLoading();
         }
       }
     );
@@ -320,6 +384,16 @@ export const useProducts = () => {
   return {
     products,
     loading,
+    tableLoading,
+
+    page,
+    limit,
+    total,
+    totalPages,
+    search,
+    setPage,
+    setLimit,
+    setSearch,
 
     isCreateModalOpen,
     setIsCreateModalOpen,

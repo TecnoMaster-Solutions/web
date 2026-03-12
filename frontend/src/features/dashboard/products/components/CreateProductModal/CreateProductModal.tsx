@@ -196,7 +196,7 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2">
                 <label className="block text-sm font-medium mb-1" style={{ color: Colors.texts.primary }}>
-                  Nombre <span className="text-green-500">*</span>
+                  Nombre <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -210,12 +210,12 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
                   className="w-full px-3 py-2 border rounded-md"
                   style={{ borderColor: (errors as any).name ? "red" : Colors.table.lines }}
                 />
-                {(errors as any).name && <span className="text-xs text-green-500">{(errors as any).name}</span>}
+                {(errors as any).name && <span className="text-xs text-red-500">{(errors as any).name}</span>}
               </div>
 
               <div className="col-span-2">
                 <label className="block text-sm font-medium mb-1" style={{ color: Colors.texts.primary }}>
-                  Categoría del proveedor <span className="text-green-500">*</span>
+                  Categoría del proveedor <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -230,13 +230,13 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
                   style={{ borderColor: (errors as any).supplierCategory ? "red" : Colors.table.lines }}
                 />
                 {(errors as any).supplierCategory && (
-                  <span className="text-xs text-green-500">{(errors as any).supplierCategory}</span>
+                  <span className="text-xs text-red-500">{(errors as any).supplierCategory}</span>
                 )}
               </div>
 
               <div>
                 <label className="block text-sm font-medium mb-1" style={{ color: Colors.texts.primary }}>
-                  Categoría <span className="text-green-500">*</span>
+                  Categoría <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={categoryId}
@@ -257,12 +257,12 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
                     </option>
                   ))}
                 </select>
-                {(errors as any).categoryId && <span className="text-xs text-green-500">{(errors as any).categoryId}</span>}
+                {(errors as any).categoryId && <span className="text-xs text-red-500">{(errors as any).categoryId}</span>}
               </div>
 
               <div>
                 <label className="block text-sm font-medium mb-1" style={{ color: Colors.texts.primary }}>
-                  Código <span className="text-green-500">*</span>
+                  Código <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -276,7 +276,7 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
                   className="w-full px-3 py-2 border rounded-md"
                   style={{ borderColor: (errors as any).code ? "red" : Colors.table.lines }}
                 />
-                {(errors as any).code && <span className="text-xs text-green-500">{(errors as any).code}</span>}
+                {(errors as any).code && <span className="text-xs text-red-500">{(errors as any).code}</span>}
               </div>
 
               <div className="col-span-2">
@@ -298,7 +298,7 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
           <div className="min-h-0 flex flex-col">
             <div className="flex items-end justify-between mb-2">
               <label className="block text-sm font-medium" style={{ color: Colors.texts.primary }}>
-                Imágenes <span className="text-green-500">*</span>
+                Imágenes <span className="text-red-500">*</span>
               </label>
 
               <div className="flex items-center gap-3">
@@ -429,7 +429,7 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
                 )}
 
                 {(errors as any).images && (
-                  <p className="mt-2 text-xs text-green-600">{(errors as any).images}</p>
+                  <p className="mt-2 text-xs text-red-600">{(errors as any).images}</p>
                 )}
               </div>
             </div>

@@ -25,9 +25,15 @@ type ServiceFromApi = {
   statename: string | null;
 };
 
-type ServicesListFromApi =
-  | ServiceFromApi[]
-  | { data: ServiceFromApi[]; meta?: any };
+type ServicesPaginatedResponse = {
+  data: ServiceFromApi[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+};
 
 const toUiState = (s?: string | null): "Activo" | "Inactivo" => {
   const v = (s ?? "").toLowerCase();
@@ -59,15 +65,49 @@ export type FetchServicesParams = {
   search?: string;
   typeofserviceid?: number;
   stateid?: number;
+  signal?: AbortSignal;
 };
 
 export const fetchServices = async (
-  params: FetchServicesParams = { page: 1, limit: 100 }
-): Promise<Service[]> => {
-  const { data } = await api.get<ServicesListFromApi>("/services", { params });
-  const payload: any = (data as any)?.data ?? data;
-  if (!Array.isArray(payload)) return [];
-  return payload.map(mapService);
+  params: FetchServicesParams = {}
+): Promise<{
+  data: Service[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}> => {
+  const {
+    page = 1,
+    limit = 5,
+    search = "",
+    typeofserviceid,
+    stateid,
+    signal,
+  } = params;
+
+  const { data } = await api.get<ServicesPaginatedResponse>("/services", {
+    params: {
+      page,
+      limit,
+      search,
+      typeofserviceid,
+      stateid,
+    },
+    signal,
+  });
+
+  return {
+    data: Array.isArray(data?.data) ? data.data.map(mapService) : [],
+    meta: {
+      total: Number(data?.meta?.total ?? 0),
+      page: Number(data?.meta?.page ?? page),
+      limit: Number(data?.meta?.limit ?? limit),
+      totalPages: Number(data?.meta?.totalPages ?? 1),
+    },
+  };
 };
 
 export const getServiceTypes = async (): Promise<ServiceTypeApi[]> => {
@@ -86,7 +126,7 @@ export type CreateServiceApiBody = {
   image: string;
   typeofserviceid: number;
   stateid?: number;
-};  
+};
 
 export const createService = async (
   body: CreateServiceApiBody
