@@ -35,6 +35,10 @@ export const useAppointmentResponsive = () => {
     []
   );
 
+  const goToDate = useCallback((date: Date) => {
+    setCurrentDate(date);
+  }, []);
+
   const toggleFullscreen = useCallback(() => {
     setIsFullscreen((prev) => !prev);
   }, []);
@@ -45,6 +49,7 @@ export const useAppointmentResponsive = () => {
     availableViews,
     currentDate,
     handleNavigate,
+    goToDate,
     isFullscreen,
     toggleFullscreen,
   };

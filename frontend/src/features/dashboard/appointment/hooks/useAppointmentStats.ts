@@ -13,17 +13,17 @@ export type AppointmentStat = {
 type UseAppointmentStatsArgs = {
   events: AppointmentEvent[];
   filteredEvents: AppointmentEvent[];
-  tokenRole: string | null;
   tokenRoleNormalized: string | null;
   hasActiveFilters: boolean;
+  upcomingCountOverride?: number;
 };
 
 export const useAppointmentStats = ({
   events,
   filteredEvents,
-  tokenRole,
   tokenRoleNormalized,
   hasActiveFilters,
+  upcomingCountOverride,
 }: UseAppointmentStatsArgs) =>
   useMemo(() => {
     const isClient = tokenRoleNormalized === "cliente";
@@ -33,14 +33,14 @@ export const useAppointmentStats = ({
 
     const visibleHelper = isClient
       ? hasActiveFilters
-        ? "Filtradas según los filtros"
+        ? "Filtradas segun los filtros"
         : "Eventos del cliente"
       : isTechnician
       ? hasActiveFilters
-        ? "Filtradas según los filtros"
-        : "Eventos del técnico"
+        ? "Filtradas segun los filtros"
+        : "Eventos del tecnico"
       : hasActiveFilters
-      ? "Filtradas según los filtros"
+      ? "Filtradas segun los filtros"
       : "Eventos sincronizados";
 
     const technicianIds = new Set(
@@ -51,6 +51,15 @@ export const useAppointmentStats = ({
       )
     );
 
+    const now = Date.now();
+    const defaultUpcomingCount = statsSource.filter(
+      (event) => event.start.getTime() >= now
+    ).length;
+    const upcomingCount =
+      typeof upcomingCountOverride === "number"
+        ? upcomingCountOverride
+        : defaultUpcomingCount;
+
     return [
       {
         label: "Citas visibles",
@@ -58,14 +67,14 @@ export const useAppointmentStats = ({
         helper: visibleHelper,
       },
       {
-        label: "Citas próximas",
-        value: statsSource.filter((event) => event.start.getTime() >= Date.now()).length,
+        label: "Citas proximas",
+        value: upcomingCount,
         helper: "Ordenadas por fecha",
       },
       {
-        label: "Técnicos en agenda",
+        label: "Tecnicos en agenda",
         value: technicianIds.size,
-        helper: "Asignaciones únicas",
+        helper: "Asignaciones unicas",
       },
     ];
-  }, [events, filteredEvents, hasActiveFilters, tokenRoleNormalized]);
+  }, [events, filteredEvents, hasActiveFilters, tokenRoleNormalized, upcomingCountOverride]);

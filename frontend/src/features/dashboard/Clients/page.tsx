@@ -25,7 +25,13 @@ function Loader() {
 export default function ClientsPage() {
   const {
     clients,
+    pagedClients,
+    initialLoading,
     loading,
+    currentPage,
+    totalPages,
+    pageSize,
+    search,
     isCreateModalOpen,
     setIsCreateModalOpen,
     editingClient,
@@ -33,6 +39,8 @@ export default function ClientsPage() {
     handleCreateClient,
     handleEditClient,
     handleDeleteClient,
+    handlePageChange,
+    handleSearchChange,
     handleView,
     handleEdit,
     closeModals,
@@ -108,14 +116,24 @@ export default function ClientsPage() {
             onClose={closeModals}
           />
 
-          {loading ? (
+          {initialLoading ? (
             <Loader />
           ) : (
             <DataTable<Client>
               module="customers"
-              data={clients}
+              data={pagedClients}
               columns={columns}
-              pageSize={10}
+              pageSize={pageSize}
+              showPageSizeSelector={false}
+              serverPagination={{
+                page: currentPage,
+                totalPages,
+                onPageChange: handlePageChange,
+              }}
+              serverSearch={{
+                value: search,
+                onChange: handleSearchChange,
+              }}
               searchableKeys={[
                 "nombre",
                 "apellido",
@@ -133,6 +151,7 @@ export default function ClientsPage() {
               onEdit={handleEdit}
               onDelete={(client) => handleDeleteClient(client.id)}
               actionGuard={clientActionGuard}
+              loading={loading}
             />
           )}
         </div>

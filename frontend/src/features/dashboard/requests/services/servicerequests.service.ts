@@ -77,6 +77,7 @@ export type CreateServiceRequestInput = {
 
 export type UpdateServiceRequestInput = Partial<CreateServiceRequestInput>;
 const IN_PROCESS_STATE_ID = 7;
+type RequestOptions = { signal?: AbortSignal };
 
 function getServiceRequestId(row: ServiceRequestDTO): number | null {
   const rawId = row.serviceRequestId ?? row.servicerequestid ?? row.id;
@@ -155,8 +156,55 @@ async function readAxiosErrorBody(e: AxiosError<any>) {
   return data;
 }
 
-export async function listServiceRequests(): Promise<ServiceRequestDTO[]> {
-  const res = await api.get<any>("/service-requests");
+export async function listServiceRequests(
+  search?: string,
+  options?: RequestOptions
+): Promise<ServiceRequestDTO[]> {
+  const trimmedSearch = search?.trim();
+  const res = await api.get<any>("/service-requests", {
+    params: trimmedSearch ? { search: trimmedSearch } : undefined,
+    signal: options?.signal,
+  });
+  const rows = unwrapList<ServiceRequestDTO>(res.data);
+  const dueRows = rows.filter((row) => shouldAutoMoveRequestToInProcess(row));
+  if (!dueRows.length) return rows;
+
+  const updates = await Promise.allSettled(
+    dueRows.map((row) => {
+      const id = getServiceRequestId(row);
+      if (!id) return Promise.resolve(null);
+      return updateServiceRequest(id, { stateId: IN_PROCESS_STATE_ID });
+    })
+  );
+
+  const updatedById = new Map<number, ServiceRequestDTO>();
+  updates.forEach((resUpdate) => {
+    if (resUpdate.status !== "fulfilled" || !resUpdate.value) return;
+    const updatedId = getServiceRequestId(resUpdate.value);
+    if (updatedId) updatedById.set(updatedId, resUpdate.value);
+  });
+
+  return rows.map((row) => {
+    const id = getServiceRequestId(row);
+    return id ? updatedById.get(id) ?? row : row;
+  });
+}
+
+export async function listServiceRequestsByDateRange(
+  from: string,
+  to: string,
+  search?: string,
+  options?: RequestOptions
+): Promise<ServiceRequestDTO[]> {
+  const trimmedSearch = search?.trim();
+  const res = await api.get<any>("/service-requests/by-date-range", {
+    params: {
+      from,
+      to,
+      ...(trimmedSearch ? { search: trimmedSearch } : {}),
+    },
+    signal: options?.signal,
+  });
   const rows = unwrapList<ServiceRequestDTO>(res.data);
   const dueRows = rows.filter((row) => shouldAutoMoveRequestToInProcess(row));
   if (!dueRows.length) return rows;

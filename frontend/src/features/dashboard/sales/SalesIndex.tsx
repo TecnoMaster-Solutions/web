@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import * as XLSX from "xlsx";
 import { DataTable } from "@/features/dashboard/components/datatable/DataTable";
@@ -10,7 +10,7 @@ import { showSuccess, showError } from "@/shared/utils/notifications";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Colors from "@/shared/theme/colors";
-import { ISale } from "./types/sales.type";
+import { ISale, ISalesPaginatedResult } from "./types/sales.type";
 import { getSales, annulSale } from "./services/sales.service";
 import CreateSaleForm from "./components/CreateSaleForm";
 import SalePaymentsModal from "./components/SalePaymentsModal";
@@ -110,12 +110,19 @@ function isGatewayPaymentMethod(method?: string | null) {
 }
 
 export default function SalesIndex() {
+  const PAGE_SIZE = 5;
+  const SEARCH_DEBOUNCE_MS = 350;
+
   const router = useRouter();
   const { user, profile } = useAuth();
   const [permissionsLoaded, setPermissionsLoaded] = useState(false);
   const [tokenPermissions, setTokenPermissions] = useState<string[]>([]);
   const [sales, setSales] = useState<SaleRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [search, setSearch] = useState("");
   const [isCreateModalOpen, setCreateModalOpen] = useState(false);
   const [paymentSaleId, setPaymentSaleId] = useState<number | null>(null);
 
@@ -123,6 +130,10 @@ export default function SalesIndex() {
   const [saleToAnnul, setSaleToAnnul] = useState<SaleRow | null>(null);
   const [annulReason, setAnnulReason] = useState("");
   const [annulling, setAnnulling] = useState(false);
+
+  const pageAbortRef = useRef<AbortController | null>(null);
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchAbortRef = useRef<AbortController | null>(null);
 
   const authRole = normalizeRoleName(
     (user as any)?.rolename ??
@@ -165,15 +176,14 @@ export default function SalesIndex() {
     tokenPermissions.includes("sales.cancel") || hasSalesDeactivate || hasSalesDelete;
   const canOpenPaymentFlow = hasSalesManagePayment || isClientUser;
 
-  const loadSales = useCallback(async () => {
-    try {
-      const data = await getSales();
+  const mapSalesToRows = useCallback(
+    (data: ISale[]): SaleRow[] => {
       const visibleSales =
         isClientUser && authClientId
           ? data.filter((sale) => Number(sale.customerid) === authClientId)
           : data;
 
-      const mapped: SaleRow[] = visibleSales.map((sale) => ({
+      return visibleSales.map((sale) => ({
         id: sale.saleid,
         codigo: sale.salecode,
         cliente: sale.customer?.users
@@ -196,15 +206,30 @@ export default function SalesIndex() {
         paidAmount: Number(sale.paidamount ?? 0),
         paymentMethod: sale.paymentmethod ?? "",
       }));
+    },
+    [authClientId, isClientUser]
+  );
 
-      setSales(mapped);
-    } catch (error) {
-      console.error(error);
-      showError("Error al cargar las ventas.");
-    } finally {
-      setLoading(false);
-    }
-  }, [authClientId, isClientUser]);
+  const loadSalesPage = useCallback(
+    async (targetPage: number, searchText: string, signal?: AbortSignal) => {
+      const response = (await getSales({
+        page: targetPage,
+        limit: PAGE_SIZE,
+        search: searchText,
+        signal,
+      })) as ISalesPaginatedResult;
+
+      const list = Array.isArray(response?.data) ? response.data : [];
+      const meta = response?.meta;
+
+      setSales(mapSalesToRows(list));
+      setCurrentPage(Number(meta?.page ?? targetPage));
+      setTotalPages(Math.max(1, Number(meta?.totalPages ?? 1)));
+
+      return { list, meta };
+    },
+    [PAGE_SIZE, mapSalesToRows]
+  );
 
   const closePaymentModal = useCallback(() => {
     setPaymentSaleId(null);
@@ -212,12 +237,28 @@ export default function SalesIndex() {
 
   useEffect(() => {
     if (!permissionsLoaded) return;
+
     if (!hasSalesRead) {
-      setLoading(false);
+      setInitialLoading(false);
       return;
     }
-    loadSales();
-  }, [hasSalesRead, loadSales, permissionsLoaded]);
+
+    const load = async () => {
+      setInitialLoading(true);
+      setLoading(true);
+      try {
+        await loadSalesPage(1, "");
+      } catch (error) {
+        console.error(error);
+        showError("Error al cargar las ventas.");
+      } finally {
+        setLoading(false);
+        setInitialLoading(false);
+      }
+    };
+
+    void load();
+  }, [hasSalesRead, loadSalesPage, permissionsLoaded]);
 
   const exportToExcel = () => {
     const rows = sales.map((sale) => ({
@@ -254,7 +295,7 @@ export default function SalesIndex() {
   const handleConfirmAnnul = async () => {
     if (!saleToAnnul) return;
     if (!annulReason.trim()) {
-      showError("Debe ingresar un motivo para la anulación.");
+      showError("Debe ingresar un motivo para la anulacion.");
       return;
     }
 
@@ -263,7 +304,7 @@ export default function SalesIndex() {
       await annulSale(saleToAnnul.id, annulReason, "Admin");
       showSuccess(`Venta ${saleToAnnul.codigo} anulada correctamente.`);
       setAnnulModalOpen(false);
-      loadSales();
+      await loadSalesPage(currentPage, search);
     } catch (error) {
       console.error(error);
       showError("Error al anular la venta.");
@@ -276,9 +317,10 @@ export default function SalesIndex() {
     {
       key: "id",
       header: "ID",
+      header: "ID",
       render: (row) => row.id.toString(),
     },
-    { key: "codigo", header: "Código Venta" },
+    { key: "codigo", header: "Codigo Venta" },
     { key: "cliente", header: "Cliente" },
     { key: "fecha", header: "Fecha" },
     {
@@ -330,7 +372,7 @@ export default function SalesIndex() {
     },
   ];
 
-  if (!permissionsLoaded || (loading && hasSalesRead)) {
+  if (!permissionsLoaded || (initialLoading && hasSalesRead)) {
     return <Loader />;
   }
 
@@ -350,8 +392,8 @@ export default function SalesIndex() {
         <div className="w-full max-h-[calc(100vh-120px)] overflow-y-auto pr-2">
           <CreateSaleForm
             onClose={() => setCreateModalOpen(false)}
-            onSaved={() => {
-              loadSales();
+            onSaved={async () => {
+              await loadSalesPage(currentPage, search);
             }}
           />
         </div>
@@ -360,7 +402,17 @@ export default function SalesIndex() {
           data={sales}
           columns={columns}
           searchableKeys={["codigo", "cliente", "estado", "estadoPago"]}
-          pageSize={10}
+          pageSize={PAGE_SIZE}
+          showPageSizeSelector={false}
+          serverPagination={{
+            page: currentPage,
+            totalPages,
+            onPageChange: handlePageChange,
+          }}
+          serverSearch={{
+            value: search,
+            onChange: handleSearchChange,
+          }}
           onView={(row) => router.push(`/dashboard/sales/${row.id}`)}
           renderExtraActions={(row) =>
             <>
@@ -415,13 +467,16 @@ export default function SalesIndex() {
           onCreate={hasSalesCreate ? () => setCreateModalOpen(true) : undefined}
           createButtonText="Nueva Venta"
           module={"Sales"}
+          loading={loading}
         />
       )}
 
       <SalePaymentsModal
         saleId={paymentSaleId}
         onClose={closePaymentModal}
-        onSaved={loadSales}
+        onSaved={async () => {
+          await loadSalesPage(currentPage, search);
+        }}
       />
 
       <Modal
@@ -432,7 +487,7 @@ export default function SalesIndex() {
         <div className="bg-white p-4 rounded-md">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             <div>
-              <div className="text-xs text-gray-500">Código Venta</div>
+              <div className="text-xs text-gray-500">Codigo Venta</div>
               <div className="font-medium text-gray-800">{saleToAnnul?.codigo || "-"}</div>
             </div>
             <div>
@@ -449,12 +504,12 @@ export default function SalesIndex() {
 
           <div className="mb-4">
             <label className="block text-sm font-medium mb-2 text-gray-700">
-              Motivo de anulación
+              Motivo de anulacion
             </label>
             <textarea
               rows={5}
               className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-green-500 outline-none resize-none"
-              placeholder="Especifique la razón..."
+              placeholder="Especifique la razon..."
               value={annulReason}
               onChange={(e) => setAnnulReason(e.target.value)}
             />
@@ -463,10 +518,10 @@ export default function SalesIndex() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center mb-4">
             <div>
               <div className="text-xs text-gray-500">Usuario que anula</div>
-              <div className="font-medium text-gray-800">Automático</div>
+              <div className="font-medium text-gray-800">Automatico</div>
             </div>
             <div>
-              <div className="text-xs text-gray-500">Fecha Anulación</div>
+              <div className="text-xs text-gray-500">Fecha Anulacion</div>
               <div className="font-medium text-gray-800">{new Date().toLocaleDateString("es-CO")}</div>
             </div>
           </div>

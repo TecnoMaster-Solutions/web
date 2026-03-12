@@ -44,13 +44,20 @@ import {
   calendarMinTime,
 } from "./types/calendar.constants";
 
-import { useAppointmentsQuery } from "./hooks/useAppointmentsQuery";
+import {
+  useAppointmentsQuery,
+  useAppointmentsUpcomingTotalQuery,
+} from "./hooks/useAppointmentsQuery";
 import { useAppointmentFilters } from "./hooks/useAppointmentFilters";
 import { useAppointmentStats } from "./hooks/useAppointmentStats";
 import { useAppointmentResponsive } from "./hooks/useAppointmentResponsive";
 import { useRoleScope } from "./hooks/useRoleScope";
 
-import { getOrderServiceRequestId } from "./helpers/appointment.helpers";
+import {
+  getEventCustomerIds,
+  getEventTechnicianUserIds,
+  getOrderServiceRequestId,
+} from "./helpers/appointment.helpers";
 import { getStatePalette } from "./helpers/appointmentState.helpers";
 import { parseMaybeNumber, toPositiveNumber } from "./helpers/string.helpers";
 
@@ -128,18 +135,23 @@ const TECH_COMPLETE_CONFIRM_TAG = "[TECH_COMPLETE_CONFIRM]";
 
 export default function IndexAppointment() {
   const { tokenRole, tokenRoleNormalized, clientProfileId, technicianProfileUserId } = useRoleScope();
-  const { data, isLoading, isError, refetch } = useAppointmentsQuery();
-  const { serviceOptions, customerOptions } = useLookups();
-  const updateRequestMutation = useUpdateServiceRequest();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  const [searchHighlightActive, setSearchHighlightActive] = useState(false);
   const {
     calendarView,
     setCalendarView,
     availableViews,
     handleNavigate,
+    goToDate,
     currentDate,
     isFullscreen,
     toggleFullscreen,
   } = useAppointmentResponsive();
+  const { data, isLoading, isError, refetch } = useAppointmentsQuery(currentDate, debouncedSearchTerm);
+  const { data: upcomingTotalData } = useAppointmentsUpcomingTotalQuery();
+  const { serviceOptions, customerOptions } = useLookups();
+  const updateRequestMutation = useUpdateServiceRequest();
 
   const resolveTechnicianIdFromOrder = useCallback(
     (event: AppointmentEvent): number | null => {
@@ -181,6 +193,31 @@ export default function IndexAppointment() {
   );
 
   const events = useMemo(() => buildAppointmentEvents(data ?? {}), [data]);
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 350);
+
+    return () => clearTimeout(timeout);
+  }, [searchTerm]);
+
+  const scopedAllEvents = useMemo(() => {
+    const allEvents = buildAppointmentEvents(upcomingTotalData ?? {});
+    return allEvents.filter((event) => {
+      if (tokenRoleNormalized === "cliente" && clientProfileId) {
+        return getEventCustomerIds(event).includes(clientProfileId);
+      }
+      if (tokenRoleNormalized === "tecnico" && technicianProfileUserId) {
+        return getEventTechnicianUserIds(event).includes(technicianProfileUserId);
+      }
+      return true;
+    });
+  }, [upcomingTotalData, tokenRoleNormalized, clientProfileId, technicianProfileUserId]);
+
+  const globalUpcomingCount = useMemo(() => {
+    const now = Date.now();
+    return scopedAllEvents.filter((event) => event.start.getTime() >= now).length;
+  }, [scopedAllEvents]);
 
   const {
     filteredEvents,
@@ -196,12 +233,12 @@ export default function IndexAppointment() {
     events,
     clientProfileId,
     technicianProfileUserId,
+    searchTerm,
   });
 
   const {
     sourceFilter,
     stateFilter,
-    searchTerm,
     serviceTypeFilter,
     technicianFilter,
     clientFilter,
@@ -210,7 +247,6 @@ export default function IndexAppointment() {
   const {
     setSourceFilter,
     setStateFilter,
-    setSearchTerm,
     setServiceTypeFilter,
     setTechnicianFilter,
     setClientFilter,
@@ -219,10 +255,20 @@ export default function IndexAppointment() {
   const stats = useAppointmentStats({
     events,
     filteredEvents,
-    tokenRole,
     tokenRoleNormalized,
     hasActiveFilters,
+    upcomingCountOverride: globalUpcomingCount,
   });
+
+  const searchMatches = useMemo(() => {
+    if (!searchTerm.trim()) return [];
+    return filteredEvents.slice(0, 30);
+  }, [searchTerm, filteredEvents]);
+
+  const handleClearFilters = useCallback(() => {
+    clearFilters();
+    setSearchTerm("");
+  }, [clearFilters]);
 
   const handleDownloadCalendar = useCallback(() => {
     if (!filteredEvents.length) {
@@ -306,6 +352,7 @@ export default function IndexAppointment() {
   );
 
   const periodLabel = useMemo(() => periodFormatter.format(currentDate), [currentDate]);
+  const showInitialLoader = isLoading && !data;
 
   const [editingRequest, setEditingRequest] = useState<ServiceRequestDTO | null>(null);
   const [showLegend, setShowLegend] = useState(false);
@@ -313,6 +360,15 @@ export default function IndexAppointment() {
   const [modalEvent, setModalEvent] = useState<AppointmentEvent | null>(null);
   const [finalizingEventId, setFinalizingEventId] = useState<number | null>(null);
   const finalizeToastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchJumpRef = useRef("");
+
+  const handleSelectSearchMatch = useCallback(
+    (event: AppointmentEvent) => {
+      goToDate(event.start);
+      setSelectedEvent(event);
+    },
+    [goToDate]
+  );
 
   useEffect(() => {
     return () => {
@@ -332,10 +388,37 @@ export default function IndexAppointment() {
     setSelectedEvent(filteredEvents[0]);
   }, [filteredEvents, selectedEvent]);
 
+  useEffect(() => {
+    const hasSearch = debouncedSearchTerm.trim().length > 0;
+    if (!hasSearch || isLoading || filteredEvents.length === 0) {
+      if (!hasSearch) searchJumpRef.current = "";
+      setSearchHighlightActive(false);
+      return;
+    }
+
+    const firstFound = filteredEvents[0];
+    const jumpKey = `${debouncedSearchTerm.trim().toLowerCase()}::${firstFound.source}-${firstFound.id}`;
+
+    if (searchJumpRef.current !== jumpKey) {
+      goToDate(firstFound.start);
+      searchJumpRef.current = jumpKey;
+    }
+
+    setSelectedEvent(firstFound);
+    setSearchHighlightActive(true);
+
+    const timeout = setTimeout(() => {
+      setSearchHighlightActive(false);
+    }, 1800);
+
+    return () => clearTimeout(timeout);
+  }, [debouncedSearchTerm, filteredEvents, isLoading, goToDate]);
+
   const upcomingEvents = useMemo(() => {
-    const now = Date.now();
-    return filteredEvents.filter((e) => e.start.getTime() >= now).slice(0, 4);
-  }, [filteredEvents]);
+    return scopedAllEvents
+      .filter((event) => event.start.getTime() >= Date.now())
+      .sort((a, b) => a.start.getTime() - b.start.getTime());
+  }, [scopedAllEvents]);
 
   const requestEditInitial = useMemo<EditRequestPayload | null>(() => {
     if (!editingRequest) return null;
@@ -566,6 +649,8 @@ export default function IndexAppointment() {
         padding: "4px 8px",
         fontSize: "12px",
         lineHeight: 1.2,
+        boxShadow: searchHighlightActive ? "0 0 0 2px rgba(34,197,94,0.65)" : "none",
+        animation: searchHighlightActive ? "appointment-search-pulse 0.9s ease-in-out 2" : "none",
       },
     };
   };
@@ -630,6 +715,20 @@ export default function IndexAppointment() {
           .app-calendar .rbc-calendar > * {
             border-radius: inherit;
           }
+          @keyframes appointment-search-pulse {
+            0% {
+              transform: scale(1);
+              box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+            }
+            50% {
+              transform: scale(1.03);
+              box-shadow: 0 0 0 8px rgba(34, 197, 94, 0);
+            }
+            100% {
+              transform: scale(1);
+              box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+            }
+          }
         `}</style>
 
         <AppointmentDetailModal
@@ -658,13 +757,16 @@ export default function IndexAppointment() {
           serviceTypeFilter={serviceTypeFilter}
           technicianFilter={technicianFilter}
           clientFilter={clientFilter}
+          searchMatches={searchMatches}
+          selectedEventKey={selectedEvent ? `${selectedEvent.source}-${selectedEvent.id}` : null}
           onSourceChange={setSourceFilter}
           onStateChange={setStateFilter}
           onSearchChange={setSearchTerm}
           onServiceTypeChange={setServiceTypeFilter}
           onTechnicianChange={setTechnicianFilter}
           onClientChange={setClientFilter}
-          onClearFilters={clearFilters}
+          onSelectSearchMatch={handleSelectSearchMatch}
+          onClearFilters={handleClearFilters}
         />
 
         <div className="rounded-3xl border bg-white p-5 shadow-sm">
@@ -674,7 +776,7 @@ export default function IndexAppointment() {
             </div>
           )}
 
-          {isLoading ? (
+          {showInitialLoader ? (
             <Loader />
           ) : (
             <div

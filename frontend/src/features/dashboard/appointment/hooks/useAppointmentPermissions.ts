@@ -16,13 +16,22 @@ export const useAppointmentPermissions = (event?: AppointmentEvent | null) => {
 
   const normalizedState =
     event && typeof event.stateLabel === "string" ? normalizeStateKey(event.stateLabel) : "";
-  const isFinishedLabel = normalizedState === "finished";
-  const isFinishedStateId = event
+  const isClosedLabel = [
+    "finalizado",
+    "finished",
+    "finalized",
+    "finish",
+    "cancelado",
+    "canceled",
+    "cancelled",
+    "cancel",
+  ].includes(normalizedState);
+  const isClosedStateId = event
     ? [event.order?.state?.stateid, event.request?.state?.stateid].some(
-        (value) => Number.isFinite(Number(value)) && Number(value) === 6
+        (value) => Number.isFinite(Number(value)) && [4, 6].includes(Number(value))
       )
     : false;
-  const shouldHideFinalizeButton = isFinishedLabel || isFinishedStateId;
+  const shouldHideFinalizeButton = isClosedLabel || isClosedStateId;
 
   const canEditOrder =
     Boolean(event && event.source === "order") &&
