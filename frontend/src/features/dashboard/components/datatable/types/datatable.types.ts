@@ -7,10 +7,10 @@ export type DataTableProps<T> = {
   showPageSizeSelector?: boolean;
   serverPagination?: {
     page: number;
-    limit: number;
+    limit?: number;
     totalPages: number;
     onPageChange: (page: number) => void;
-    onPageSizeChange: (limit: number) => void;
+    onPageSizeChange?: (limit: number) => void;
   };
   serverSearch?: {
     value: string;

@@ -2,7 +2,29 @@ import { useState } from "react";
 import { ChevronDownIcon } from "../icons/ChevronDownIcon";
 import { ActionButton } from "../DataTable";
 
-export function ActionButtonsComponent({
+type ActionGuardResult = {
+  disableEdit?: boolean;
+  disableDelete?: boolean;
+  disableCancel?: boolean;
+  editTitle?: string;
+  deleteTitle?: string;
+  cancelTitle?: string;
+};
+
+type ActionButtonsProps<T> = {
+  row: T;
+  onView?: (row: T) => void;
+  onEdit?: (row: T) => void;
+  onDelete?: (row: T) => void;
+  onCancel?: (row: T) => void;
+  onApprove?: (row: T) => void;
+  onCheck?: (row: T) => void;
+  renderExtraActions?: (row: T) => React.ReactNode;
+  compact?: boolean;
+  actionGuard?: (row: T) => ActionGuardResult;
+};
+
+export function ActionButtonsComponent<T>({
   row,
   onView,
   onEdit,
@@ -13,26 +35,7 @@ export function ActionButtonsComponent({
   renderExtraActions,
   compact = false,
   actionGuard,
-}: {
-  row: any;
-  onView?: (row: any) => void;
-  onEdit?: (row: any) => void;
-  onDelete?: (row: any) => void;
-  onCancel?: (row: any) => void;
-  onApprove?: (row: any) => void;
-
-  onCheck?: (row: any) => void;
-  renderExtraActions?: (row: any) => React.ReactNode;
-  compact?: boolean;
-  actionGuard?: (row: any) => {
-    disableEdit?: boolean;
-    disableDelete?: boolean;
-    disableCancel?: boolean;
-    editTitle?: string;
-    deleteTitle?: string;
-    cancelTitle?: string;
-  };
-}) {
+}: ActionButtonsProps<T>) {
   const [showDropdown, setShowDropdown] = useState(false);
   const guard = actionGuard?.(row) ?? {};
   const editDisabled = guard.disableEdit ?? false;

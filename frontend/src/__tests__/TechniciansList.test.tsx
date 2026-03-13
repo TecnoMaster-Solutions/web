@@ -1,8 +1,14 @@
 import { render, screen } from '@testing-library/react';
 import TechniciansTable from '@/features/dashboard/technicians/components/tableTechnicians/tableTechnicians';
+import { Technician } from '@/features/dashboard/technicians/types/typesTechnicians';
 
+type DataTableMockProps = {
+  data: Technician[];
+  createButtonText?: string;
+  searchPlaceholder?: string;
+};
 
-const DataTableMock = jest.fn((props) => {
+const DataTableMock = jest.fn((props: DataTableMockProps) => {
   return (
     <div>
       <div data-testid="rows-count">{props.data.length}</div>
@@ -14,7 +20,7 @@ const DataTableMock = jest.fn((props) => {
 });
 
 jest.mock('@/features/dashboard/components/datatable/DataTable', () => ({
-  DataTable: (props: any) => DataTableMock(props),
+  DataTable: (props: DataTableMockProps) => DataTableMock(props),
 }));
 
 jest.mock('@/shared/theme/colors', () => ({
@@ -29,7 +35,7 @@ jest.mock('@/shared/theme/colors', () => ({
 
 describe('TechniciansList', () => {
   it('renderiza correctamente la lista de técnicos', () => {
-    const technicians = [
+    const technicians: Technician[] = [
       {
         id: 2,
         name: 'Carlos',
@@ -56,7 +62,7 @@ describe('TechniciansList', () => {
 
     render(
       <TechniciansTable
-        technicians={technicians as any}
+        technicians={technicians}
         page={1}
         limit={5}
         totalPages={1}

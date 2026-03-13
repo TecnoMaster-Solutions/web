@@ -16,8 +16,8 @@ interface IRoutes {
     resetPassword: string;
   };
   dashboard: {
-    newClient: any;
-    newService: any;
+    newClient?: string;
+    newService?: string;
     main: string;
     users: string;
     products: string;
@@ -40,9 +40,9 @@ interface IRoutes {
     orders: string;
   };
 
-  quotes:{
-    register: string
-  }
+  quotes: {
+    register: string;
+  };
   notFound: string;
 }
 export const routes: IRoutes = {
@@ -84,10 +84,10 @@ export const routes: IRoutes = {
     settings: "/dashboard/settings",
     profile: "/dashboard/profile",
     newClient: undefined,
-    newService: undefined
+    newService: undefined,
   },
   quotes: {
-    register: "/quotes/register"
+    register: "/quotes/register",
   },
   notFound: "/404",
 };
