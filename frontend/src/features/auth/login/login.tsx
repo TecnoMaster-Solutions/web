@@ -130,8 +130,9 @@ export default function LoginPage() {
 
           <form noValidate onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="font-semibold text-sm">Email</label>
+              <label htmlFor="email" className="font-semibold text-sm">Email</label>
               <input
+                id="email"
                 type="text"
                 inputMode="email"
                 className={`w-full h-11 mt-1 px-4 rounded-lg border bg-white outline-none ${
@@ -155,13 +156,14 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="font-semibold text-sm">Contraseña</label>
+              <label htmlFor="password" className="font-semibold text-sm">Contraseña</label>
               <div
                 className={`flex items-center mt-1 w-full rounded-lg border bg-white overflow-hidden ${
                   passHasError ? "border-red-500" : ""
                 }`}
               >
                 <input
+                  id="password"
                   type={show ? "text" : "password"}
                   className="flex-1 h-11 px-4 outline-none bg-white"
                   value={form.password}
