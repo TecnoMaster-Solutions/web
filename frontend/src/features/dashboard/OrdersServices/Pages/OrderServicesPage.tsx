@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Swal from "sweetalert2";
+import { ToastContainer } from "react-toastify";
 import RequireAuth from "@/features/auth/requireauth";
 import Modal from "@/features/dashboard/components/Modal";
 import Colors from "@/shared/theme/colors";
@@ -1302,6 +1303,7 @@ const extraActions = useCallback(
 
   return (
     <RequireAuth>
+      <ToastContainer position="bottom-right" newestOnTop limit={3} style={{ zIndex: 1000000 }} />
       {initialLoading || busy ? <Loader /> : null}
 
       <div className="flex">
