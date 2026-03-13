@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/features/auth/authcontext";
 import Nav from "@/features/landing/layout/Nav";
-import { showError, showSuccess } from "@/shared/utils/notifications";
+import { showError } from "@/shared/utils/notifications";
 import { routes } from "@/shared/routes";
 
 type FormState = {
@@ -107,7 +107,15 @@ export default function LoginPage() {
       return;
     }
 
-    showSuccess("Inicio de sesión exitoso.");
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem(
+        "__pending_toast__",
+        JSON.stringify({
+          type: "success",
+          message: "Inicio de sesión exitoso.",
+        })
+      );
+    }
     router.replace(result.redirectTo);
   };
 
@@ -239,5 +247,4 @@ export default function LoginPage() {
     </div>
   );
 }
-
 
