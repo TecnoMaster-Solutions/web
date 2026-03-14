@@ -14,7 +14,15 @@ type ServiceFromApi = {
   statename: string | null;
 };
 
-type ServicesListFromApi = ServiceFromApi[] | { data: ServiceFromApi[]; meta?: any };
+type ServicesResponseFromApi = {
+  data?: ServiceFromApi[];
+  meta?: {
+    total?: number;
+    page?: number;
+    limit?: number;
+    totalPages?: number;
+  };
+};
 
 export type ServiceTypeFromApi = {
   typeofserviceid: number;
@@ -29,6 +37,16 @@ export type FetchServicesParams = {
   stateid?: number;
 };
 
+export type LandingServicesResponse = {
+  data: LandingService[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+};
+
 const toTitleCase = (s: string) =>
   (s ?? "")
     .trim()
@@ -37,26 +55,37 @@ const toTitleCase = (s: string) =>
     .join(" ");
 
 export const fetchLandingServices = async (
-  params: FetchServicesParams = { page: 1, limit: 100, stateid: 1 }
-): Promise<LandingService[]> => {
-  const { data } = await api.get<ServicesListFromApi>("/services", { params });
-  const payload: any = (data as any)?.data ?? data;
-  if (!Array.isArray(payload)) return [];
+  params: FetchServicesParams = { page: 1, limit: 9, stateid: 1 }
+): Promise<LandingServicesResponse> => {
+  const { data } = await api.get<ServicesResponseFromApi>("/services", {
+    params: {
+      ...params,
+      stateid: 1,
+    },
+  });
 
-  return payload.map((s: ServiceFromApi) => ({
-    id: Number(s.serviceid),
-    title: (s.name ?? "").trim(),
-    description: (s.description ?? "").trim(),
-    category: toTitleCase((s.typeofservicename ?? "").trim()),
-    image: (s.image ?? "").trim() || undefined,
-  }));
+  const payload = Array.isArray(data?.data) ? data.data : [];
+
+  return {
+    data: payload.map((s: ServiceFromApi) => ({
+      id: Number(s.serviceid),
+      title: (s.name ?? "").trim(),
+      description: (s.description ?? "").trim(),
+      category: toTitleCase((s.typeofservicename ?? "").trim()),
+      image: (s.image ?? "").trim() || undefined,
+    })),
+    meta: {
+      total: Number(data?.meta?.total ?? 0),
+      page: Number(data?.meta?.page ?? params.page ?? 1),
+      limit: Number(data?.meta?.limit ?? params.limit ?? 9),
+      totalPages: Number(data?.meta?.totalPages ?? 1),
+    },
+  };
 };
 
-export const fetchLandingServiceTypes = async (): Promise<string[]> => {
+export const fetchLandingServiceTypes = async (): Promise<ServiceTypeFromApi[]> => {
   const { data } = await api.get<ServiceTypeFromApi[]>("/services/types");
   if (!Array.isArray(data)) return [];
 
-  return data
-    .map((t) => toTitleCase((t?.name ?? "").trim()))
-    .filter(Boolean);
+  return data.filter((t) => Number(t?.typeofserviceid) > 0 && (t?.name ?? "").trim());
 };
