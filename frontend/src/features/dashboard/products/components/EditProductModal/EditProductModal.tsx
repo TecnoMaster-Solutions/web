@@ -42,7 +42,15 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
   onSave,
   products,
 }) => {
-  const { categories } = useCategories() as { categories: CategoryOption[] };
+  const { categories } = useCategories({
+    onlyActive: true,
+    includeCurrentCategory: product
+      ? {
+        id: Number(product.categoryId),
+        name: String(product.categoryName ?? ""),
+      }
+      : null,
+  }) as { categories: CategoryOption[] };
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");

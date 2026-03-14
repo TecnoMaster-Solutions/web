@@ -36,7 +36,9 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
   onSave,
   products,
 }) => {
-  const { categories } = useCategories() as { categories: CategoryOption[] };
+  const { categories } = useCategories({
+    onlyActive: true,
+  }) as { categories: CategoryOption[] };
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -310,7 +312,7 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
                       setImages([]);
                       validateField("images" as any, []);
                     }}
-                    className="text-xs text-green-600 hover:text-green-700"
+                    className="text-xs text-red-600 hover:text-red-700"
                   >
                     Limpiar
                   </button>

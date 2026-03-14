@@ -16,6 +16,15 @@ type GetCategoriesParams = {
   search?: string;
 };
 
+const normalizeCategory = (c: any): Category => ({
+  ...c,
+  id: Number(c?.id ?? c?.categoryid ?? 0),
+  name: String(c?.name ?? c?.categoryname ?? ""),
+  description: c?.description ?? c?.categorydescription ?? "",
+  status: Boolean(c?.status ?? c?.isactive),
+  icon: c?.icon ?? null,
+});
+
 // Obtener categorias (paginado opcional)
 export function getCategories(): Promise<Category[]>;
 export function getCategories(
@@ -46,10 +55,7 @@ export async function getCategories({
       });
 
       if (Array.isArray(data)) {
-        return data.map((c: any) => ({
-          ...c,
-          status: Boolean(c.status),
-        }));
+        return data.map(normalizeCategory);
       }
 
       if (
@@ -60,10 +66,7 @@ export async function getCategories({
         typeof data.meta === "object"
       ) {
         return {
-          data: data.data.map((c: any) => ({
-            ...c,
-            status: Boolean(c.status),
-          })),
+          data: data.data.map(normalizeCategory),
           meta: {
             page: Number(data.meta.page ?? 1),
             limit: Number(data.meta.limit ?? limit ?? 5),
@@ -154,11 +157,78 @@ export async function getCategories({
     : [];
 }
 
+// Obtener solo categorias activas
+export const getActiveCategories = async (
+  signal?: AbortSignal,
+): Promise<Category[]> => {
+  let attempt = 0;
+
+  while (attempt <= RETRY_LIMIT) {
+    try {
+      const { data } = await api.get("/products-categories/active", {
+        signal,
+        timeout: 5000,
+        validateStatus: (s) => s >= 200 && s < 500,
+      });
+
+      if (Array.isArray(data)) {
+        return data.map(normalizeCategory);
+      }
+
+      if (data && typeof data === "object" && Array.isArray(data.data)) {
+        return data.data.map(normalizeCategory);
+      }
+
+      return [];
+    } catch (error: any) {
+      if (error?.name === "CanceledError" || error?.code === "ERR_CANCELED") {
+        return [];
+      }
+
+      if (error?.code === "ECONNABORTED") {
+        attempt++;
+        if (attempt > RETRY_LIMIT) {
+          throw new Error("La peticion expiro. Intente nuevamente.");
+        }
+        continue;
+      }
+
+      if (!error?.response) {
+        attempt++;
+        if (attempt > RETRY_LIMIT) {
+          throw new Error("Error de red al cargar categorias activas.");
+        }
+        continue;
+      }
+
+      const status = error.response.status;
+
+      if (status === 404) {
+        return [];
+      }
+
+      if (status === 401 || status === 403) {
+        throw new Error("No autorizado para consultar categorias activas.");
+      }
+
+      if (status >= 500) {
+        throw new Error("El servidor tuvo un problema al cargar categorias activas.");
+      }
+
+      throw new Error(
+        error?.response?.data?.message ?? "No se pudieron cargar las categorias activas.",
+      );
+    }
+  }
+
+  return [];
+};
+
 // Obtener categoria por ID
 export const getCategoryById = async (id: number): Promise<Category> => {
   try {
     const { data } = await api.get(`/products-categories/${id}`);
-    return data;
+    return normalizeCategory(data);
   } catch (error) {
     console.error("Error al obtener categoria:", error);
     showError("No se pudo obtener la categoria.");
