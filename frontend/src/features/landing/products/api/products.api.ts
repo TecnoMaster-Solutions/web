@@ -24,15 +24,14 @@ type ProductFromApi = {
   isactive: boolean;
 };
 
-type ProductsResponse = {
-  data: ProductFromApi[];
-  meta: {
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
-  };
+type ProductsMeta = {
+  total?: number;
+  page?: number;
+  limit?: number;
+  totalPages?: number;
 };
+
+type ProductsResponse = ProductFromApi[] | { data?: ProductFromApi[] | null; meta?: ProductsMeta };
 
 type ProductCategoryApi = {
   id?: number;
@@ -60,9 +59,7 @@ const toNumber = (v: unknown): number => {
   return Number.isNaN(n) ? 0 : n;
 };
 
-const getCategoryName = (
-  cat: ProductCategoryFromApi | null | undefined
-): string => {
+const getCategoryName = (cat: ProductCategoryFromApi | null | undefined): string => {
   if (!cat) return "";
   if (typeof cat.name === "string" && cat.name.trim()) return cat.name.trim();
   if (typeof cat.categoryname === "string" && cat.categoryname.trim()) {
@@ -80,17 +77,14 @@ const toLanding = (p: ProductFromApi): Product => ({
   images: Array.isArray(p.images)
     ? p.images.filter((x) => typeof x === "string" && x.trim())
     : undefined,
-  price:
-    p.productpriceofsale === null
-      ? undefined
-      : toNumber(p.productpriceofsale),
+  price: p.productpriceofsale === null ? undefined : toNumber(p.productpriceofsale),
   stock: toNumber(p.productstock),
 });
 
 export const fetchLandingProducts = async (
-  params: FetchProductsParams = { page: 1, limit: 9 }
+  params: FetchProductsParams = { page: 1, limit: 9 },
 ) => {
-  const safeParams: Record<string, any> = {
+  const safeParams: Record<string, unknown> = {
     page: params.page ?? 1,
     limit: params.limit ?? 9,
     status: "active",
@@ -112,21 +106,22 @@ export const fetchLandingProducts = async (
     params: safeParams,
   });
 
+  const payload = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
+  const meta = Array.isArray(data) ? null : data?.meta;
+
   return {
-    data: (data?.data ?? [])
-      .filter((product) => product.isactive !== false)
-      .map(toLanding),
+    data: payload.filter((product) => product.isactive !== false).map(toLanding),
     meta: {
-      total: Number(data?.meta?.total ?? 0),
-      page: Number(data?.meta?.page ?? safeParams.page),
-      limit: Number(data?.meta?.limit ?? safeParams.limit),
-      totalPages: Number(data?.meta?.totalPages ?? 1),
+      total: Number(meta?.total ?? payload.length),
+      page: Number(meta?.page ?? safeParams.page),
+      limit: Number(meta?.limit ?? safeParams.limit),
+      totalPages: Number(meta?.totalPages ?? 1),
     },
   };
 };
 
 export const getLandingProductById = async (
-  id: string | number
+  id: string | number,
 ): Promise<Product> => {
   const { data } = await api.get<ProductFromApi>(`/products/${id}`);
   return toLanding(data);
@@ -150,4 +145,3 @@ export const fetchLandingProductCategories = async (): Promise<ProductFilterItem
     .filter((item) => Number(item.id) > 0 && item.label)
     .sort((a, b) => a.label.localeCompare(b.label, "es", { sensitivity: "base" }));
 };
-

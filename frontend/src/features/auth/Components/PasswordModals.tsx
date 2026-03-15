@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { getApiErrorMessage } from "@/features/auth/utils/authUser";
 
 type ModalProps = {
   open: boolean;
@@ -228,8 +229,12 @@ export function ChangePasswordModal({ open, onClose, onSave, requireCurrent = fa
       setCurrent("");
       setPwd("");
       setConfirm("");
-    } catch (e: any) {
-      setErr(e?.message || "No se pudo actualizar la contrasena");
+    } catch (e: unknown) {
+      setErr(
+        e instanceof Error
+          ? e.message
+          : getApiErrorMessage(e, "No se pudo actualizar la contrasena")
+      );
     } finally {
       setLoading(false);
     }

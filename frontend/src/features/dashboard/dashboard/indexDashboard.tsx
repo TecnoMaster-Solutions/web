@@ -20,6 +20,11 @@ type CategoryProductsResponse = {
   value: number | string | null;
 };
 
+type StateMetricItem = {
+  state?: string | null;
+  value?: number | string | null;
+};
+
 const normalizeStateKey = (value: string) =>
   value
     .trim()
@@ -111,7 +116,7 @@ export const IndexDashboard = () => {
         // ÓRDENES
         const rawOrdersState = await dashboardApi.getOrdersByState(selectedYear);
         setOrdersState(
-          (rawOrdersState ?? []).map((item: any) => ({
+          (rawOrdersState ?? []).map((item: StateMetricItem) => ({
             ...item,
             state: typeof item?.state === "string" ? translateDashboardState(item.state) : item?.state,
           }))
@@ -121,7 +126,7 @@ export const IndexDashboard = () => {
         // SOLICITUDES
         const rawServiceRequestsState = await dashboardApi.getServiceRequestsByState(selectedYear);
         setServiceRequestsState(
-          (rawServiceRequestsState ?? []).map((item: any) => ({
+          (rawServiceRequestsState ?? []).map((item: StateMetricItem) => ({
             ...item,
             state: typeof item?.state === "string" ? translateDashboardState(item.state) : item?.state,
           }))
@@ -356,6 +361,5 @@ export const IndexDashboard = () => {
     </div>
   );
 };
-
 
 

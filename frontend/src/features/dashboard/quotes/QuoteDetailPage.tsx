@@ -10,23 +10,57 @@ import { updateOrderService } from "@/features/dashboard/OrdersServices/api/orde
 import { updateServiceRequest } from "@/features/dashboard/requests/services/servicerequests.service";
 import { usePermissions } from "@/features/auth/hooks/usePermissions";
 import { showError, showSuccess, showWarning } from "@/shared/utils/notifications";
+import { IQuote } from "./types/Quote.type";
 
 type Props = {
   quoteId: number;
 };
 
-const toPositiveInteger = (value: any): number | null => {
+type QuoteWithRelations = IQuote & {
+  id?: number;
+  servicerequestid?: number | null;
+  servicerequestId?: number | null;
+  ordersservicesid?: number | null;
+  ordersservicesId?: number | null;
+  order?: {
+    ordersservicesid?: number | null;
+    ordersservicesId?: number | null;
+    id?: number | null;
+  };
+  ordersservices?: {
+    ordersservicesid?: number | null;
+    id?: number | null;
+  } | null;
+};
+
+type ApiErrorShape = {
+  message?: string;
+  response?: {
+    data?: {
+      message?: string;
+    };
+  };
+};
+
+const getErrorMessage = (error: unknown, fallback: string): string => {
+  const apiError = error as ApiErrorShape;
+  return apiError.response?.data?.message || apiError.message || fallback;
+};
+
+const toPositiveInteger = (value: unknown): number | null => {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return null;
   const integer = Math.trunc(numeric);
   return integer > 0 ? integer : null;
 };
 
-const getQuoteServiceRequestId = (quote?: any): number | null => {
+const getQuoteServiceRequestId = (
+  quote?: QuoteWithRelations | null,
+): number | null => {
   if (!quote) return null;
   const candidates = [
     quote.serviceRequest?.serviceRequestId,
-    quote.serviceRequest?.id,
+    (quote.serviceRequest as { id?: number } | undefined)?.id,
     quote.serviceRequestId,
     quote.servicerequestid,
     quote.servicerequestId,
@@ -38,7 +72,9 @@ const getQuoteServiceRequestId = (quote?: any): number | null => {
   return null;
 };
 
-const getQuoteOrderServiceId = (quote?: any): number | null => {
+const getQuoteOrderServiceId = (
+  quote?: QuoteWithRelations | null,
+): number | null => {
   if (!quote) return null;
   const candidates = [
     quote.ordersservices?.ordersservicesid,
@@ -63,7 +99,7 @@ export default function QuoteDetailPage({ quoteId }: Props) {
   const canUpdateQuotes = canUpdate("quotes");
   const canCompleteQuotes = has("quotes", "complete");
 
-  const [quote, setQuote] = useState<any>(null);
+  const [quote, setQuote] = useState<QuoteWithRelations | null>(null);
   const [loading, setLoading] = useState(true);
   const [isCompletingQuote, setCompletingQuote] = useState(false);
   const [isFinalizingQuote, setFinalizingQuote] = useState(false);
@@ -78,7 +114,7 @@ export default function QuoteDetailPage({ quoteId }: Props) {
     setLoading(true);
     try {
       const data = await getQuoteById(quoteId);
-      setQuote(data);
+      setQuote(data as QuoteWithRelations);
     } finally {
       setLoading(false);
     }
@@ -97,13 +133,13 @@ export default function QuoteDetailPage({ quoteId }: Props) {
 
     const id = Number(quote.quotesid ?? quote.id ?? quoteId);
     if (!id) {
-      showError("ID de cotización inválido.");
+      showError("ID de cotizacion invalido.");
       return;
     }
 
     const confirm = await Swal.fire({
-      title: "¿Completar cotización?",
-      text: "Se generará la venta correspondiente y la cotización pasará a estado completado.",
+      title: "Completar cotizacion?",
+      text: "Se generara la venta correspondiente y la cotizacion pasara a estado completado.",
       icon: "question",
       showCancelButton: true,
       confirmButtonText: "Completar",
@@ -116,9 +152,9 @@ export default function QuoteDetailPage({ quoteId }: Props) {
       setCompletingQuote(true);
       await completeQuote(id);
       await fetchQuote();
-      showSuccess("Se creó la venta asociada y la cotización se actualizó.");
-    } catch (error: any) {
-      showError(error?.response?.data?.message ?? error?.message ?? "No se pudo completar la cotización.");
+      showSuccess("Se creo la venta asociada y la cotizacion se actualizo.");
+    } catch (error: unknown) {
+      showError(getErrorMessage(error, "No se pudo completar la cotizacion."));
     } finally {
       setCompletingQuote(false);
     }
@@ -135,7 +171,7 @@ export default function QuoteDetailPage({ quoteId }: Props) {
     const orderServiceId = getQuoteOrderServiceId(quote);
 
     if (!serviceRequestId && !orderServiceId) {
-      showWarning("La cotización no tiene orden ni solicitud asociada.");
+      showWarning("La cotizacion no tiene orden ni solicitud asociada.");
       return;
     }
 
@@ -144,11 +180,11 @@ export default function QuoteDetailPage({ quoteId }: Props) {
       orderServiceId ? "orden de servicio" : null,
     ].filter(Boolean) as string[];
     const targetText = targets.join(" y ");
-    const verb = targets.length > 1 ? "marcarán" : "marcará";
+    const verb = targets.length > 1 ? "marcaran" : "marcara";
     const suffix = targets.length > 1 ? "finalizados" : "finalizado";
 
     const confirm = await Swal.fire({
-      title: "¿Finalizar cotización?",
+      title: "Finalizar cotizacion?",
       text: `Se ${verb} ${targetText} como ${suffix} (estado 6).`,
       icon: "question",
       showCancelButton: true,
@@ -159,14 +195,20 @@ export default function QuoteDetailPage({ quoteId }: Props) {
 
     try {
       setFinalizingQuote(true);
-      const requests: Promise<any>[] = [];
-      if (serviceRequestId) requests.push(updateServiceRequest(serviceRequestId, { stateId: 6 }));
-      if (orderServiceId) requests.push(updateOrderService(orderServiceId, { stateid: 6 }));
+      const requests: Promise<unknown>[] = [];
+      if (serviceRequestId) {
+        requests.push(updateServiceRequest(serviceRequestId, { stateId: 6 }));
+      }
+      if (orderServiceId) {
+        requests.push(updateOrderService(orderServiceId, { stateid: 6 }));
+      }
       if (requests.length) await Promise.all(requests);
       await fetchQuote();
       showSuccess(`Se ${verb} ${targetText} como ${suffix} (estado 6).`);
-    } catch (error: any) {
-      showError(error?.response?.data?.message ?? error?.message ?? "No se pudieron actualizar los registros.");
+    } catch (error: unknown) {
+      showError(
+        getErrorMessage(error, "No se pudieron actualizar los registros."),
+      );
     } finally {
       setFinalizingQuote(false);
     }
@@ -179,7 +221,9 @@ export default function QuoteDetailPage({ quoteId }: Props) {
       quoteStateName.toLowerCase().includes("finaliz")
     : false;
 
-  const canFinalize = Boolean(getQuoteServiceRequestId(quote) || getQuoteOrderServiceId(quote));
+  const canFinalize = Boolean(
+    getQuoteServiceRequestId(quote) || getQuoteOrderServiceId(quote),
+  );
   const canComplete = canCompleteQuotes && !isQuoteCompleted;
   const canFinalizeQuote = canUpdateQuotes && canFinalize;
 
@@ -188,8 +232,12 @@ export default function QuoteDetailPage({ quoteId }: Props) {
       <div className="mx-auto w-full max-w-6xl p-4 md:p-6">
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
-            <p className="text-xs uppercase tracking-wide text-slate-500">Cotizaciones</p>
-            <h1 className="text-xl font-semibold text-slate-900">Detalle #{quoteId}</h1>
+            <p className="text-xs uppercase tracking-wide text-slate-500">
+              Cotizaciones
+            </p>
+            <h1 className="text-xl font-semibold text-slate-900">
+              Detalle #{quoteId}
+            </h1>
           </div>
           <button
             type="button"
@@ -202,11 +250,13 @@ export default function QuoteDetailPage({ quoteId }: Props) {
 
         {!canViewQuotes ? (
           <div className="flex items-center justify-center rounded-xl border border-slate-200 bg-white py-20">
-            <span className="text-gray-500">No tienes permisos para visualizar cotizaciones.</span>
+            <span className="text-gray-500">
+              No tienes permisos para visualizar cotizaciones.
+            </span>
           </div>
         ) : loading ? (
           <div className="rounded-xl border border-slate-200 bg-white px-4 py-8 text-sm text-gray-500">
-            Cargando cotización...
+            Cargando cotizacion...
           </div>
         ) : quote ? (
           <ViewQuote
@@ -220,11 +270,10 @@ export default function QuoteDetailPage({ quoteId }: Props) {
           />
         ) : (
           <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-8 text-sm text-red-600">
-            No se pudo cargar la cotización.
+            No se pudo cargar la cotizacion.
           </div>
         )}
       </div>
     </RequireAuth>
   );
 }
-

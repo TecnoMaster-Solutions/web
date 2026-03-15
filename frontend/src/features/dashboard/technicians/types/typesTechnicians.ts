@@ -21,6 +21,8 @@ export interface Technician {
   state?: TechnicianState;
   types: string[];
   resumeUrl?: string;
+  typeid?: number;
+  stateid?: number;
 }
 
 export interface CreateTechnicianData {

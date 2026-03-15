@@ -1,7 +1,12 @@
 import { render, screen } from '@testing-library/react';
 import TechniciansTable from '@/features/dashboard/technicians/components/tableTechnicians/tableTechnicians';
 
-const DataTableMock = jest.fn((props) => {
+type DataTableMockProps = {
+  module: string;
+  createButtonText?: string;
+};
+
+const DataTableMock = jest.fn((props: DataTableMockProps) => {
   return (
     <div>
       <div data-testid="datatable-module">{props.module}</div>
@@ -11,7 +16,7 @@ const DataTableMock = jest.fn((props) => {
 });
 
 jest.mock('@/features/dashboard/components/datatable/DataTable', () => ({
-  DataTable: (props: any) => DataTableMock(props),
+  DataTable: (props: DataTableMockProps) => DataTableMock(props),
 }));
 
 jest.mock('@/shared/theme/colors', () => ({

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import Modal from "@/features/dashboard/components/Modal";
 import Colors from "@/shared/theme/colors";
 
@@ -56,12 +57,14 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
   const validateField = (field: ProductFormField, value: unknown) => {
     const error = validateProductField(field, value, products);
     setErrors((prev) => {
-      const next = { ...prev } as any;
+      const next: ProductErrors = { ...prev };
       if (error) next[field] = error;
       else delete next[field];
       return next;
     });
   };
+
+  const getFieldError = (field: ProductFormField) => errors[field];
 
   const resetForm = () => {
     setName("");
@@ -94,13 +97,13 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
 
     const next = [...images, ...deduped].slice(0, MAX_IMAGES);
     setImages(next);
-    validateField("images" as any, next);
+    validateField("images", next);
   };
 
   const removeAt = (idx: number) => {
     setImages((prev) => {
       const next = prev.filter((_, i) => i !== idx);
-      validateField("images" as any, next);
+      validateField("images", next);
       return next;
     });
   };
@@ -110,7 +113,7 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
     setImages((prev) => {
       const picked = prev[idx];
       const next = [picked, ...prev.filter((_, i) => i !== idx)];
-      validateField("images" as any, next);
+      validateField("images", next);
       return next;
     });
   };
@@ -128,7 +131,7 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
       categoryId,
       code,
       images,
-    } as any;
+    };
 
     const formErrors = validateProductForm(draft, products);
     setErrors(formErrors);
@@ -139,7 +142,10 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
     }
 
     if (images.length === 0) {
-      setErrors((prev) => ({ ...(prev as any), images: "Debe seleccionar al menos una imagen" }));
+      setErrors((prev) => ({
+        ...prev,
+        images: "Debe seleccionar al menos una imagen",
+      }));
       showWarning("Debe seleccionar al menos una imagen", { autoClose: 5000 });
       return;
     }
@@ -151,7 +157,7 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
       code: code.trim(),
       categoryId: Number(categoryId),
       images,
-    } as any;
+    };
 
     await onSave(payload);
     resetForm();
@@ -210,9 +216,11 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
                   }}
                   onBlur={() => validateField("name", name)}
                   className="w-full px-3 py-2 border rounded-md"
-                  style={{ borderColor: (errors as any).name ? "red" : Colors.table.lines }}
+                  style={{ borderColor: getFieldError("name") ? "red" : Colors.table.lines }}
                 />
-                {(errors as any).name && <span className="text-xs text-red-500">{(errors as any).name}</span>}
+                {getFieldError("name") && (
+                  <span className="text-xs text-red-500">{getFieldError("name")}</span>
+                )}
               </div>
 
               <div className="col-span-2">
@@ -229,10 +237,10 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
                   }}
                   onBlur={() => validateField("supplierCategory", supplierCategory)}
                   className="w-full px-3 py-2 border rounded-md"
-                  style={{ borderColor: (errors as any).supplierCategory ? "red" : Colors.table.lines }}
+                  style={{ borderColor: getFieldError("supplierCategory") ? "red" : Colors.table.lines }}
                 />
-                {(errors as any).supplierCategory && (
-                  <span className="text-xs text-red-500">{(errors as any).supplierCategory}</span>
+                {getFieldError("supplierCategory") && (
+                  <span className="text-xs text-red-500">{getFieldError("supplierCategory")}</span>
                 )}
               </div>
 
@@ -248,7 +256,7 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
                   }}
                   onBlur={() => validateField("categoryId", categoryId)}
                   className="w-full px-3 py-2 border rounded-md"
-                  style={{ borderColor: (errors as any).categoryId ? "red" : Colors.table.lines }}
+                  style={{ borderColor: getFieldError("categoryId") ? "red" : Colors.table.lines }}
                 >
                   <option value="" disabled>
                     Seleccione una categoría...
@@ -259,7 +267,9 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
                     </option>
                   ))}
                 </select>
-                {(errors as any).categoryId && <span className="text-xs text-red-500">{(errors as any).categoryId}</span>}
+                {getFieldError("categoryId") && (
+                  <span className="text-xs text-red-500">{getFieldError("categoryId")}</span>
+                )}
               </div>
 
               <div>
@@ -276,9 +286,11 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
                   }}
                   onBlur={() => validateField("code", code)}
                   className="w-full px-3 py-2 border rounded-md"
-                  style={{ borderColor: (errors as any).code ? "red" : Colors.table.lines }}
+                  style={{ borderColor: getFieldError("code") ? "red" : Colors.table.lines }}
                 />
-                {(errors as any).code && <span className="text-xs text-red-500">{(errors as any).code}</span>}
+                {getFieldError("code") && (
+                  <span className="text-xs text-red-500">{getFieldError("code")}</span>
+                )}
               </div>
 
               <div className="col-span-2">
@@ -310,7 +322,7 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
                     type="button"
                     onClick={() => {
                       setImages([]);
-                      validateField("images" as any, []);
+                      validateField("images", []);
                     }}
                     className="text-xs text-red-600 hover:text-red-700"
                   >
@@ -322,7 +334,7 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
 
             <div
               className="rounded-md border bg-white flex flex-col min-h-0"
-              style={{ borderColor: (errors as any).images ? "red" : Colors.table.lines }}
+              style={{ borderColor: getFieldError("images") ? "red" : Colors.table.lines }}
             >
               <div className="px-3 py-3 border-b bg-gray-50" style={{ borderColor: Colors.table.lines }}>
 
@@ -386,7 +398,14 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
                         style={{ borderColor: Colors.table.lines }}
                         title={idx === 0 ? "Imagen principal" : "Clic para marcar como principal"}
                       >
-                        <img src={p.url} alt={`img-${idx}`} className="w-full h-24 object-cover" />
+                        <Image
+                          src={p.url}
+                          alt={`img-${idx}`}
+                          width={160}
+                          height={96}
+                          unoptimized
+                          className="w-full h-24 object-cover"
+                        />
 
                         {idx === 0 ? (
                           <span className="absolute bottom-1 left-1 text-[10px] bg-black/70 text-white px-2 py-[2px] rounded inline-flex items-center gap-1">
@@ -430,8 +449,8 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
                   </div>
                 )}
 
-                {(errors as any).images && (
-                  <p className="mt-2 text-xs text-red-600">{(errors as any).images}</p>
+                {getFieldError("images") && (
+                  <p className="mt-2 text-xs text-red-600">{getFieldError("images")}</p>
                 )}
               </div>
             </div>
@@ -443,4 +462,3 @@ const CreateProductModal: React.FC<CreateProductModalProps> = ({
 };
 
 export default CreateProductModal;
-

@@ -1,10 +1,30 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 import LoginPage from '@/app/auth/login/page';
 
-jest.mock('next/image', () => (props: any) => <img {...props} />);
+type MockImageProps = ComponentPropsWithoutRef<'img'>;
+type MockLinkProps = {
+  children: ReactNode;
+  href: string;
+};
+
+jest.mock('next/image', () => {
+  function MockNextImage(props: MockImageProps) {
+    return <img alt={props.alt ?? ''} {...props} />;
+  }
+
+  MockNextImage.displayName = 'MockNextImage';
+  return MockNextImage;
+});
+
 jest.mock('next/link', () => {
-  return ({ children, href }: any) => <a href={href}>{children}</a>;
+  function MockNextLink({ children, href }: MockLinkProps) {
+    return <a href={href}>{children}</a>;
+  }
+
+  MockNextLink.displayName = 'MockNextLink';
+  return MockNextLink;
 });
 jest.mock('next/navigation', () => ({
   useRouter: () => ({

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import Image from "next/image";
 import RequireAuth from "@/features/auth/requireauth";
@@ -62,6 +62,11 @@ type TechnicianOption = {
   label: string;
 };
 
+type TechnicianUserLike = {
+  name?: string | null;
+  lastname?: string | null;
+};
+
 type ProductOption = {
   productid: number;
   productname: string;
@@ -91,6 +96,64 @@ type ServiceOption = {
   salePrice?: number | null;
   unitprice?: number | null;
   unitPrice?: number | null;
+};
+
+type ServiceLinePriceLike = {
+  unitPrice?: number;
+  price?: number;
+  precio?: number;
+  subtotal?: number;
+};
+
+type ApiRecord = Record<string, unknown>;
+type ApiEnvelope<T> = { data?: T } & ApiRecord;
+type CustomerRecord = ApiRecord & {
+  customer?: ApiRecord;
+  client?: ApiRecord;
+  users?: ApiRecord;
+  user?: ApiRecord;
+  email?: string;
+  documentnumber?: string;
+};
+type QuoteDetailLike = ApiRecord & {
+  productid?: number;
+  quantity?: number;
+  cantidad?: number;
+  serviceid?: number;
+  serviceId?: number;
+  service?: ApiRecord;
+  product?: ApiRecord;
+  products?: ApiRecord;
+  description?: string;
+  name?: string;
+  qty?: number;
+  unitprice?: number;
+  unitPrice?: number;
+  price?: number;
+  precio?: number;
+  valor?: number;
+  subtotal?: number;
+  servicerequestid?: number;
+  serviceRequestId?: number;
+  serviceRequest?: ApiRecord;
+};
+
+type ApiErrorLike = {
+  response?: { data?: { message?: string | string[] } };
+  message?: string;
+};
+
+function getApiErrorMessage(error: unknown, fallback: string) {
+  const err = error as ApiErrorLike | null;
+  const message = err?.response?.data?.message;
+  if (Array.isArray(message)) return message[0] || fallback;
+  if (typeof message === "string" && message.trim()) return message;
+  if (typeof err?.message === "string" && err.message.trim()) return err.message;
+  return fallback;
+}
+type QuoteLikeRecord = ApiRecord & {
+  details?: QuoteDetailLike[];
+  salesdetail?: QuoteDetailLike[];
 };
 
 const IVA_PCT = 19;
@@ -206,15 +269,15 @@ export default function OrderCreatePage() {
     return Number.isFinite(n) && n > 0 ? n : null;
   })();
 
-  const [servicesAll, setServicesAll] = useState<any[]>([]);
+  const [servicesAll, setServicesAll] = useState<ApiRecord[]>([]);
 
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
-        const res = await api.get<any>("/services");
+        const res = await api.get<ApiEnvelope<ApiRecord[]>>("/services");
         if (!alive) return;
-        const list = unwrapList((res as any)?.data);
+        const list = unwrapList(res.data);
         setServicesAll(list);
       } catch {
         if (!alive) return;
@@ -241,9 +304,10 @@ const {
 
   const customers = useMemo<CustomerOption[]>(() => {
     return (customersRaw || [])
-      .map((c: any) => {
-        const base = c?.customer || c?.client || c;
-        const u = base?.users || base?.user || base?.Users || c?.users || c?.user || {};
+      .map((c) => {
+        const customer = c as CustomerRecord;
+        const base = (customer.customer || customer.client || customer) as ApiRecord;
+        const u = ((base.users as ApiRecord | undefined) || (base.user as ApiRecord | undefined) || (base.Users as ApiRecord | undefined) || customer.users || customer.user || {}) as ApiRecord;
 
         const id = Number(
           base?.customerid ??
@@ -251,9 +315,9 @@ const {
             base?.customer_id ??
             base?.client_id ??
             base?.id ??
-            c?.customerid ??
-            c?.clientid ??
-            c?.id
+            customer.customerid ??
+            customer.clientid ??
+            customer.id
         );
 
         const nameFromBase = [base?.name, base?.lastname].filter(Boolean).join(" ").trim();
@@ -265,8 +329,8 @@ const {
             base?.customerName ??
             base?.clientname ??
             base?.clientName ??
-            c?.fullname ??
-            c?.customername ??
+            customer.fullname ??
+            customer.customername ??
             ""
         ).trim();
 
@@ -275,10 +339,10 @@ const {
         return {
           customerid: id,
           label,
-          city: base?.customercity ?? base?.city ?? c?.customercity ?? c?.city ?? null,
-          zipcode: base?.customerzipcode ?? base?.zipcode ?? c?.customerzipcode ?? c?.zipcode ?? null,
-          phone: u?.phone ?? base?.phone ?? c?.phone ?? null,
-          email: u?.email ?? base?.email ?? c?.email ?? null,
+          city: (base.customercity ?? base.city ?? customer.customercity ?? customer.city ?? null) as string | null,
+          zipcode: (base.customerzipcode ?? base.zipcode ?? customer.customerzipcode ?? customer.zipcode ?? null) as string | null,
+          phone: (u.phone ?? base.phone ?? customer.phone ?? null) as string | null,
+          email: (u.email ?? base.email ?? customer.email ?? null) as string | null,
         } as CustomerOption;
       })
       .filter((x) => Number.isFinite(x.customerid) && x.customerid > 0);
@@ -286,8 +350,8 @@ const {
 
   const technicians = useMemo<TechnicianOption[]>(() => {
     return (techniciansRaw || [])
-      .map((t: any) => {
-        const u = t?.users || t?.user || t?.Users || {};
+      .map((t) => {
+        const u = (t?.users || t?.user || t?.Users || null) as TechnicianUserLike | null;
         const name = [u?.name, u?.lastname].filter(Boolean).join(" ").trim();
         const label = name || `Tecnico #${t?.technicianid ?? t?.id ?? "?"}`;
         return { technicianid: Number(t?.technicianid ?? t?.id), label } as TechnicianOption;
@@ -297,7 +361,7 @@ const {
 
   const productsCatalog = useMemo<ProductOption[]>(() => {
     return (productsRaw || [])
-      .map((p: any) => {
+      .map((p) => {
         const productid = Number(p?.productid ?? p?.id);
         const productname = (p?.productname ?? p?.name ?? `Producto #${productid}`).toString();
         const productpriceofsale = Number(p?.productpriceofsale ?? p?.priceofsale ?? p?.price ?? 0);
@@ -308,7 +372,7 @@ const {
 
   const serviceTypes = useMemo<ServiceTypeOption[]>(() => {
     return (serviceTypesRaw || [])
-      .map((t: any) => {
+      .map((t) => {
         const id = Number(t?.typeofserviceid ?? t?.id);
         const name = String(t?.name ?? t?.typeofservicename ?? t?.label ?? "").trim();
         return { typeofserviceid: id, name, label: titleCase(name) || `Tipo #${id}` } as ServiceTypeOption;
@@ -318,38 +382,42 @@ const {
 
   
   const servicesCatalog = useMemo<ServiceOption[]>(() => {
-    const merged = dedupeById<any>([...(servicesAll || []), ...(servicesRaw || [])]);
+    const merged = dedupeById<ApiRecord>([...(servicesAll || []), ...(servicesRaw || [])]);
     return merged
-      .map((s: any) => {
+      .map((s) => {
+        const serviceType = (s?.typeofservice as ApiRecord | undefined) ?? undefined;
+        const stateRecord = (s?.state as ApiRecord | undefined) ?? undefined;
+        const serviceRecord = (s?.service as ApiRecord | undefined) ?? undefined;
         const serviceid = Number(s?.serviceid ?? s?.id);
         const name = String(s?.name ?? s?.servicename ?? `Servicio #${serviceid}`).trim();
         const typeofserviceid = Number(
-          s?.typeofserviceid ?? s?.typeOfServiceId ?? s?.typeofservice?.typeofserviceid
+          s?.typeofserviceid ?? s?.typeOfServiceId ?? serviceType?.typeofserviceid
         );
-        const typeofservicename = (s?.typeofservicename ?? s?.typeName ?? s?.typeofservice?.name ?? null) as any;
+        const typeofservicename =
+          String(s?.typeofservicename ?? s?.typeName ?? serviceType?.name ?? "").trim() || null;
         const stateid = s?.stateid != null ? Number(s.stateid) : null;
         const statename =
           s?.statename != null
             ? String(s.statename)
-            : s?.state?.name != null
-              ? String(s.state.name)
+            : stateRecord?.name != null
+              ? String(stateRecord.name)
               : null;
         const servicepriceofsale = pickNumber(
           s?.servicepriceofsale,
           s?.servicePriceOfSale,
-          s?.service?.servicepriceofsale,
-          s?.service?.servicePriceOfSale
+          serviceRecord?.servicepriceofsale,
+          serviceRecord?.servicePriceOfSale
         );
         const serviceprice = pickNumber(
           s?.serviceprice,
           s?.servicePrice,
-          s?.service?.serviceprice,
-          s?.service?.servicePrice
+          serviceRecord?.serviceprice,
+          serviceRecord?.servicePrice
         );
-        const price = pickNumber(s?.price, s?.service?.price);
-        const precio = pickNumber(s?.precio, s?.service?.precio);
-        const saleprice = pickNumber(s?.saleprice, s?.salePrice, s?.service?.saleprice, s?.service?.salePrice);
-        const unitprice = pickNumber(s?.unitprice, s?.unitPrice, s?.service?.unitprice, s?.service?.unitPrice);
+        const price = pickNumber(s?.price, serviceRecord?.price);
+        const precio = pickNumber(s?.precio, serviceRecord?.precio);
+        const saleprice = pickNumber(s?.saleprice, s?.salePrice, serviceRecord?.saleprice, serviceRecord?.salePrice);
+        const unitprice = pickNumber(s?.unitprice, s?.unitPrice, serviceRecord?.unitprice, serviceRecord?.unitPrice);
 
         return {
           serviceid,
@@ -404,7 +472,7 @@ const {
     return Math.max(0, Math.round(Number(price ?? 0)));
   }
 
-  const [quotesRaw, setQuotesRaw] = useState<any[]>([]);
+  const [quotesRaw, setQuotesRaw] = useState<QuoteLikeRecord[]>([]);
   const [quotesLoading, setQuotesLoading] = useState(false);
   const [quotesError, setQuotesError] = useState<string | null>(null);
 
@@ -425,8 +493,8 @@ const {
           ? data.quotes
           : [];
         if (!cancelled) setQuotesRaw(list);
-      } catch (e: any) {
-        const msg = e?.response?.data?.message || e?.message || "Error cargando ventas.";
+      } catch (e: unknown) {
+        const msg = getApiErrorMessage(e, "Error cargando ventas.");
         if (!cancelled) {
           setQuotesError(String(msg));
           setQuotesRaw([]);
@@ -445,6 +513,7 @@ const {
     return (quotesRaw || []).filter((q) => {
       const quoteId = getQuoteIdFromSaleLike(q);
       if (!quoteId) return false;
+      const quoteStateRecord = (q?.state as ApiRecord | undefined) ?? undefined;
 
       const paymentRaw =
         q?.estadoPago ??
@@ -452,24 +521,26 @@ const {
         q?.paymentstatus ??
         q?.paymentStatus ??
         "";
-      const paymentNormalized = normalizeText(paymentRaw || "");
+      const paymentText = typeof paymentRaw === "string" ? paymentRaw : String(paymentRaw ?? "");
+      const paymentNormalized = normalizeText(paymentText);
 
       const statusRaw =
         q?.salestatus ??
         q?.status ??
-        q?.state?.name ??
-        q?.state?.statename ??
+        quoteStateRecord?.name ??
+        quoteStateRecord?.statename ??
         q?.stateName ??
         q?.statename ??
         (typeof q?.state === "string" ? q.state : "");
-      const normalized = normalizeText(statusRaw || "");
+      const statusText = typeof statusRaw === "string" ? statusRaw : String(statusRaw ?? "");
+      const normalized = normalizeText(statusText);
       if (normalized.includes("cancel") || normalized.includes("anulad")) return false;
       return paymentNormalized === "abonada" || paymentNormalized === "pagada" || paymentNormalized === "paid";
     });
   }, [quotesRaw]);
 
   const quoteMapById = useMemo(() => {
-    const m = new Map<number, any>();
+    const m = new Map<number, QuoteLikeRecord>();
     for (const q of eligibleSales || []) {
       const id = pickNumber(q?.saleid, q?.salesid, q?.quotesid, q?.quotationid, q?.cotizacionid, q?.id);
       if (id) m.set(id, q);
@@ -527,7 +598,7 @@ const {
   const [quoteAppliedKey, setQuoteAppliedKey] = useState<string | null>(null);
   const [quoteApplyError, setQuoteApplyError] = useState<string | null>(null);
   const saleToServiceRequestCacheRef = useRef<Map<number, number | null>>(new Map());
-  const quotesForLinkingRef = useRef<any[] | null>(null);
+  const quotesForLinkingRef = useRef<QuoteLikeRecord[] | null>(null);
 
   const [clientId, setClientId] = useState<number | "">("");
   const selectedCustomer = useMemo(() => customers.find((c) => c.customerid === clientId), [customers, clientId]);
@@ -543,11 +614,6 @@ const {
   const [createClientErrors, setCreateClientErrors] = useState<CreateClientErrors>({});
 
   const [tipoId, setTipoId] = useState<number | null>(null);
-  const tipoSeleccionado = useMemo(
-    () => serviceTypes.find((t) => t.typeofserviceid === tipoId) || null,
-    [serviceTypes, tipoId]
-  );
-
   const [descripcion, setDescripcion] = useState("");
   const [direccion, setDireccion] = useState("");
 
@@ -588,8 +654,8 @@ const {
   const [techActiveIndex, setTechActiveIndex] = useState(0);
   const techBoxRef = useRef<HTMLDivElement>(null);
   const techInputRef = useRef<HTMLInputElement>(null);
-  const [scheduledOrdersRaw, setScheduledOrdersRaw] = useState<any[]>([]);
-  const [scheduledRequestsRaw, setScheduledRequestsRaw] = useState<any[]>([]);
+  const [scheduledOrdersRaw, setScheduledOrdersRaw] = useState<ApiRecord[]>([]);
+  const [scheduledRequestsRaw, setScheduledRequestsRaw] = useState<ApiRecord[]>([]);
 
   const [servicios, setServicios] = useState<ServiceLineItem[]>([]);
   const [materiales, setMateriales] = useState<MaterialLineItem[]>([]);
@@ -660,12 +726,12 @@ const {
       if (cancelled) return;
 
       const ordersData =
-        ordersRes.status === "fulfilled" && Array.isArray((ordersRes.value as any)?.data)
-          ? (ordersRes.value as any).data
+        ordersRes.status === "fulfilled" && Array.isArray((ordersRes.value as { data?: unknown[] })?.data)
+          ? (((ordersRes.value as { data?: unknown[] })?.data ?? []) as ApiRecord[])
           : [];
       const requestsData =
-        requestsRes.status === "fulfilled" && Array.isArray((requestsRes.value as any)?.data)
-          ? (requestsRes.value as any).data
+        requestsRes.status === "fulfilled" && Array.isArray((requestsRes.value as { data?: unknown[] })?.data)
+          ? (((requestsRes.value as { data?: unknown[] })?.data ?? []) as ApiRecord[])
           : [];
 
       setScheduledOrdersRaw(ordersData);
@@ -1066,7 +1132,7 @@ const {
 
   function focusFirstError(er: Errors) {
     const order = ["quote", "clientId", "tipo", "schedule", "technicians", "viaticos", "direccion", "description", "materiales", "servicios"] as const;
-    const key = order.find((k) => (er as any)[k]);
+    const key = order.find((k) => er[k]);
     if (!key) return;
     const el = document.getElementById(`field-${key}`);
     if (el) {
@@ -1080,7 +1146,7 @@ const {
   async function uploadFilesToCloudinary(fs: File[]) {
     const urls: string[] = [];
     for (const f of fs) {
-      const res: any = await uploadImageToCloudinary(f);
+      const res = (await uploadImageToCloudinary(f)) as string | { secure_url?: string; url?: string } | null;
       if (typeof res === "string") urls.push(res);
       else if (res?.secure_url) urls.push(res.secure_url);
       else if (res?.url) urls.push(res.url);
@@ -1140,7 +1206,7 @@ const {
 
   function pickQuote(id: number) {
     if (!Number.isFinite(id) || id <= 0) return;
-    setSelectedQuotesId(id as any);
+    setSelectedQuotesId(id);
     setErrors((p) => ({ ...p, quote: undefined }));
     setTouched((t) => ({ ...t, quote: true }));
     setQuoteQuery("");
@@ -1192,7 +1258,7 @@ const {
 
   function pickCustomer(id: number) {
     if (!Number.isFinite(id) || id <= 0) return;
-    setClientId(id as any);
+    setClientId(id);
     setErrors((p) => ({ ...p, clientId: undefined }));
     setCustomerQuery("");
     setCustomerOpen(false);
@@ -1243,13 +1309,13 @@ const {
         api.get("/typeofdocuments"),
       ]);
 
-      const roles = unwrapList((rolesRes as any)?.data);
-      const clienteRole = roles.find((r: any) => normalizeText(r?.name ?? r?.role?.name) === "cliente");
+      const roles = unwrapList(rolesRes.data);
+      const clienteRole = roles.find((r) => normalizeText(String(r?.name ?? (r?.role as ApiRecord | undefined)?.name ?? "")) === "cliente");
       const roleId = Number(clienteRole?.roleid ?? clienteRole?.id ?? clienteRole?.role?.roleid ?? clienteRole?.role?.id);
 
-      const docsRaw = unwrapList((docsRes as any)?.data);
+      const docsRaw = unwrapList(docsRes.data);
       const docs = (docsRaw || [])
-        .map((d: any) => ({
+        .map((d) => ({
           id: Number(d?.typeofdocumentid ?? d?.id),
           name: String(d?.name ?? d?.nombre ?? d?.label ?? "").trim(),
         }))
@@ -1260,8 +1326,8 @@ const {
       if (!createClientForm.typeid && docs.length) {
         setCreateClientForm((prev) => ({ ...prev, typeid: String(docs[0].id) }));
       }
-    } catch (e: any) {
-      showError(e?.response?.data?.message || e?.message || "No se pudieron cargar roles y tipos de documento.");
+    } catch (e: unknown) {
+      showError(getApiErrorMessage(e, "No se pudieron cargar roles y tipos de documento."));
     } finally {
       setCreateClientBootstrapping(false);
     }
@@ -1290,7 +1356,7 @@ const {
         customerzipcode: String(createClientForm.customerzipcode || "").trim() || null,
       };
 
-      const userRes: any = await api.post("/users", payload);
+      const userRes = await api.post<ApiEnvelope<{ userid?: number; id?: number }>>("/users", payload);
       const newUserId = pickNumber(
         userRes?.data?.userid,
         userRes?.data?.id,
@@ -1301,7 +1367,7 @@ const {
       let createdCustomerId = 0;
       if (newUserId) {
         try {
-          const customerByUserRes: any = await api.get(`/customers/user/${newUserId}`, {
+          const customerByUserRes = await api.get<ApiEnvelope<{ customerid?: number; id?: number }>>(`/customers/user/${newUserId}`, {
             params: { includeRelations: true },
           });
           const byUser = customerByUserRes?.data;
@@ -1310,16 +1376,17 @@ const {
       }
 
       if (!createdCustomerId) {
-        const customerListRes: any = await api.get("/customers", { params: { includeRelations: true } });
+        const customerListRes = await api.get<ApiEnvelope<CustomerRecord[]>>("/customers", { params: { includeRelations: true } });
         const list = unwrapList(customerListRes?.data);
         const emailNeedle = normalizeText(payload.email);
         const docNeedle = normalizeText(payload.documentnumber);
 
-        const found = (list || []).find((c: any) => {
-          const base = c?.customer || c?.client || c;
-          const u = base?.users || base?.user || c?.users || c?.user || {};
-          const mail = normalizeText(u?.email ?? base?.email ?? c?.email ?? "");
-          const doc = normalizeText(u?.documentnumber ?? base?.documentnumber ?? c?.documentnumber ?? "");
+        const found = (list || []).find((c) => {
+          const customer = c as CustomerRecord;
+          const base = (customer.customer || customer.client || customer) as ApiRecord;
+          const u = ((base.users as ApiRecord | undefined) || (base.user as ApiRecord | undefined) || customer.users || customer.user || {}) as ApiRecord;
+          const mail = normalizeText(String(u.email ?? base.email ?? customer.email ?? ""));
+          const doc = normalizeText(String(u.documentnumber ?? base.documentnumber ?? customer.documentnumber ?? ""));
           return (emailNeedle && mail === emailNeedle) || (docNeedle && doc === docNeedle);
         });
 
@@ -1373,9 +1440,9 @@ const {
     setCustomerOpen(false);
   }
 
-  function applyNormalizedQuote(nq: QuoteNormalized, key: string) {
+  const applyNormalizedQuote = useCallback((nq: QuoteNormalized, key: string) => {
     const nextClient = nq.clientid && customers.some((c) => c.customerid === nq.clientid) ? nq.clientid : "";
-    setClientId(nextClient as any);
+    setClientId(nextClient);
 
     const typeMatchByName =
       nq.typeofservicename && serviceTypes.length
@@ -1398,10 +1465,10 @@ const {
     // Si la venta/cotizacion viene asociada a una solicitud, precarga el servicio de esa solicitud
     if (nq?.serviceRequestId) {
       api
-        .get<any>(`/service-requests/${nq.serviceRequestId}`)
+        .get<ApiRecord>(`/service-requests/${nq.serviceRequestId}`)
         .then((srRes) => {
-          const sr = (srRes as any)?.data ?? null;
-          const srv = sr?.service ?? null;
+          const sr = srRes.data ?? null;
+          const srv = (sr?.service as ApiRecord | undefined) ?? null;
           const srvId = pickNumber(sr?.serviceId, sr?.serviceid, srv?.serviceid);
           const srvCatalog = srvId ? servicesCatalog.find((x) => x.serviceid === srvId) ?? null : null;
           const srvTypeId = pickNumber(
@@ -1435,7 +1502,7 @@ const {
           if (srvId && name && typeof resolvedTipoId === "number") {
             setServicios((prev) => {
               const exists = prev.some(
-                (x: any) =>
+                (x) =>
                   pickNumber(x?.serviceid) === srvId ||
                   (typeof x?.id === "string" && x.id === `sr-${srvId}`) ||
                   normalizeText(String(x?.nombre || "")) === normalizeText(name)
@@ -1507,6 +1574,7 @@ const {
     }
     if (Array.isArray(nq.services) && nq.services.length) {
       for (const s of nq.services) {
+        const servicePriceLike = s as ServiceLinePriceLike;
         const rec = servicesCatalog.find((x) => x.serviceid === s.serviceid) || null;
         const nombre = rec?.name || `Servicio #${s.serviceid}`;
         const precio = Math.max(
@@ -1514,11 +1582,11 @@ const {
           Math.round(
             Number(
               pickNumber(
-                (s as any)?.unitprice,
-                (s as any)?.unitPrice,
-                (s as any)?.price,
-                (s as any)?.precio,
-                (s as any)?.subtotal
+                s.unitprice,
+                servicePriceLike.unitPrice,
+                servicePriceLike.price,
+                servicePriceLike.precio,
+                servicePriceLike.subtotal
               ) || 0
             )
           )
@@ -1565,26 +1633,36 @@ const {
     setQuoteAppliedKey(key);
     setCustomerQuery("");
     setCustomerOpen(false);
-  }
+  }, [customers, productsCatalog, serviceTypes, servicesCatalog, technicians]);
 
-  function getServiceRequestIdFromQuoteLike(q: any): number | null {
+  function getServiceRequestIdFromQuoteLike(q: QuoteLikeRecord | null | undefined): number | null {
     if (!q) return null;
-    const base = q?.quote ?? q?.data?.quote ?? q?.data ?? q;
+    const dataRecord = (q?.data as ApiRecord | undefined) ?? undefined;
+    const base =
+      ((q?.quote as ApiRecord | undefined) ??
+        (dataRecord?.quote as ApiRecord | undefined) ??
+        dataRecord ??
+        q) as ApiRecord;
+    const serviceRequestRecord = (base?.serviceRequest as ApiRecord | undefined) ?? undefined;
+    const quotesRecord = (base?.quotes as ApiRecord | undefined) ?? undefined;
     return (
       pickNumber(
-        base?.serviceRequest?.serviceRequestId,
-        base?.serviceRequest?.id,
+        serviceRequestRecord?.serviceRequestId,
+        serviceRequestRecord?.id,
         base?.serviceRequestId,
         base?.servicerequestid,
         base?.servicerequestId,
-        base?.quotes?.serviceRequestId,
-        base?.quotes?.servicerequestid
+        quotesRecord?.serviceRequestId,
+        quotesRecord?.servicerequestid
       ) ?? null
     );
   }
 
-  function getQuoteIdFromSaleLike(sale: any): number | null {
+  function getQuoteIdFromSaleLike(sale: QuoteLikeRecord | null | undefined): number | null {
     if (!sale) return null;
+    const quotesRecord = (sale?.quotes as ApiRecord | undefined) ?? undefined;
+    const quoteRecord = (sale?.quote as ApiRecord | undefined) ?? undefined;
+    const quotationRecord = (sale?.quotation as ApiRecord | undefined) ?? undefined;
     const direct =
       pickNumber(
         sale?.quoteid,
@@ -1592,12 +1670,12 @@ const {
         sale?.quotesid,
         sale?.quotationid,
         sale?.cotizacionid,
-        sale?.quotes?.quotesid,
-        sale?.quotes?.quoteid,
-        sale?.quote?.quotesid,
-        sale?.quote?.id,
-        sale?.quote?.quoteid,
-        sale?.quotation?.quotesid
+        quotesRecord?.quotesid,
+        quotesRecord?.quoteid,
+        quoteRecord?.quotesid,
+        quoteRecord?.id,
+        quoteRecord?.quoteid,
+        quotationRecord?.quotesid
       ) ?? null;
     if (direct) return direct;
 
@@ -1621,7 +1699,9 @@ const {
     return Number.isFinite(n) && n > 0 ? n : null;
   }
 
-  function productsSignatureFromNormalized(products: Array<{ productid: number; cantidad: number }> = []) {
+  const productsSignatureFromNormalized = useCallback((
+    products: Array<{ productid: number; cantidad: number }> = []
+  ) => {
     const normalized = products
       .map((p) => ({
         productid: Number(p.productid),
@@ -1630,20 +1710,20 @@ const {
       .filter((p) => Number.isFinite(p.productid) && p.productid > 0)
       .sort((a, b) => a.productid - b.productid || a.cantidad - b.cantidad);
     return normalized.map((p) => `${p.productid}:${p.cantidad}`).join("|");
-  }
+  }, []);
 
-  function productsSignatureFromQuoteLike(quote: any) {
+  const productsSignatureFromQuoteLike = useCallback((quote: QuoteLikeRecord) => {
     const details = Array.isArray(quote?.details) ? quote.details : [];
     const items = details
-      .map((d: any) => ({
+      .map((d) => ({
         productid: Number(d?.productid),
         cantidad: Math.max(1, Math.round(Number(d?.quantity ?? d?.cantidad ?? 1))),
       }))
-      .filter((p: any) => Number.isFinite(p.productid) && p.productid > 0);
-    return productsSignatureFromNormalized(items as any);
-  }
+      .filter((p) => Number.isFinite(p.productid) && p.productid > 0);
+    return productsSignatureFromNormalized(items);
+  }, [productsSignatureFromNormalized]);
 
-  async function getQuotesForLinking(): Promise<any[]> {
+  const getQuotesForLinking = useCallback(async (): Promise<QuoteLikeRecord[]> => {
     if (quotesForLinkingRef.current) return quotesForLinkingRef.current;
     const { data } = await api.get("quotes");
     const list = Array.isArray(data)
@@ -1655,41 +1735,53 @@ const {
       : [];
     quotesForLinkingRef.current = list;
     return list;
-  }
+  }, []);
 
-  async function resolveServiceRequestIdFromSale(rawSale: any, nq: QuoteNormalized): Promise<number | null> {
+  const resolveServiceRequestIdFromSale = useCallback(async (
+    rawSale: QuoteLikeRecord,
+    nq: QuoteNormalized
+  ): Promise<number | null> => {
     const details = Array.isArray(rawSale?.salesdetail) ? rawSale.salesdetail : [];
     const detailWithRequest =
       details.find(
-        (d: any) =>
-          pickNumber(
-            d?.servicerequestid,
-            d?.serviceRequestId,
-            d?.serviceRequest?.serviceRequestId,
-            d?.serviceRequest?.id
-          ) != null
+        (d) => {
+          const detailServiceRequest = (d?.serviceRequest as ApiRecord | undefined) ?? undefined;
+          return (
+            pickNumber(
+              d?.servicerequestid,
+              d?.serviceRequestId,
+              detailServiceRequest?.serviceRequestId,
+              detailServiceRequest?.id
+            ) != null
+          );
+        }
       ) ?? null;
+    const rawSaleServiceRequest = (rawSale?.serviceRequest as ApiRecord | undefined) ?? undefined;
+    const detailWithRequestServiceRequest = (detailWithRequest?.serviceRequest as ApiRecord | undefined) ?? undefined;
+    const detailWithRequestService = (detailWithRequest?.service as ApiRecord | undefined) ?? undefined;
+    const detailWithRequestServiceRequestService =
+      (detailWithRequestServiceRequest?.service as ApiRecord | undefined) ?? undefined;
     const current = pickNumber(
       nq?.serviceRequestId,
       nq?.servicerequestid,
-      rawSale?.serviceRequest?.serviceRequestId,
-      rawSale?.serviceRequest?.id,
+      rawSaleServiceRequest?.serviceRequestId,
+      rawSaleServiceRequest?.id,
       rawSale?.serviceRequestId,
       rawSale?.servicerequestid,
       detailWithRequest?.servicerequestid,
       detailWithRequest?.serviceRequestId,
-      detailWithRequest?.serviceRequest?.serviceRequestId,
-      detailWithRequest?.serviceRequest?.id
+      detailWithRequestServiceRequest?.serviceRequestId,
+      detailWithRequestServiceRequest?.id
     );
     const detailServiceId = pickNumber(
       detailWithRequest?.serviceid,
       detailWithRequest?.serviceId,
-      detailWithRequest?.service?.serviceid,
-      detailWithRequest?.service?.id,
-      detailWithRequest?.serviceRequest?.serviceId,
-      detailWithRequest?.serviceRequest?.serviceid,
-      detailWithRequest?.serviceRequest?.service?.serviceid,
-      detailWithRequest?.serviceRequest?.service?.id
+      detailWithRequestService?.serviceid,
+      detailWithRequestService?.id,
+      detailWithRequestServiceRequest?.serviceId,
+      detailWithRequestServiceRequest?.serviceid,
+      detailWithRequestServiceRequestService?.serviceid,
+      detailWithRequestServiceRequestService?.id
     );
     if (detailServiceId && !nq.serviceid) nq.serviceid = detailServiceId;
     if (current) return current;
@@ -1709,9 +1801,11 @@ const {
         if (quoteServiceType && !nq.typeofservicename) nq.typeofservicename = quoteServiceType;
 
         if ((!nq.services || nq.services.length === 0) && quotePayload) {
-          const details = Array.isArray(quotePayload?.details) ? quotePayload.details : [];
-          const serviceLikeDetails = details.filter((d: any) => {
-            const pid = pickNumber(d?.productid, d?.product?.productid, d?.products?.productid);
+          const details: ApiRecord[] = Array.isArray(quotePayload?.details) ? (quotePayload.details as ApiRecord[]) : [];
+          const serviceLikeDetails = details.filter((d: ApiRecord) => {
+            const productRecord = (d?.product as ApiRecord | undefined) ?? undefined;
+            const productsRecord = (d?.products as ApiRecord | undefined) ?? undefined;
+            const pid = pickNumber(d?.productid, productRecord?.productid, productsRecord?.productid);
             if (pid) return false;
             const desc = normalizeText(String(d?.description ?? d?.name ?? ""));
             return desc.includes("servicio") || desc.includes("instalacion") || desc.includes("mantenimiento");
@@ -1723,8 +1817,9 @@ const {
               : servicesCatalog;
 
             const inferred = serviceLikeDetails
-              .map((d: any) => {
-                const serviceId = pickNumber(d?.serviceid, d?.serviceId, d?.service?.serviceid, d?.service?.id);
+              .map((d: ApiRecord) => {
+                const serviceRecord = (d?.service as ApiRecord | undefined) ?? undefined;
+                const serviceId = pickNumber(d?.serviceid, d?.serviceId, serviceRecord?.serviceid, serviceRecord?.id);
                 const rawQty = pickNumber(d?.quantity, d?.cantidad, d?.qty) ?? 1;
                 const cantidad = Math.max(1, Math.round(Number(rawQty)));
                 const unitpriceRaw = pickNumber(
@@ -1785,10 +1880,11 @@ const {
             try {
               const { data: orderData } = await api.get(`orders-services/${orderId}`);
               const order = orderData?.data ?? orderData;
-              const orderServices = Array.isArray(order?.services) ? order.services : [];
+              const orderServices: ApiRecord[] = Array.isArray(order?.services) ? (order.services as ApiRecord[]) : [];
               const mapped = orderServices
-                .map((line: any) => {
-                  const sid = pickNumber(line?.serviceid, line?.service?.serviceid, line?.service?.id);
+                .map((line: ApiRecord) => {
+                  const serviceRecord = (line?.service as ApiRecord | undefined) ?? undefined;
+                  const sid = pickNumber(line?.serviceid, serviceRecord?.serviceid, serviceRecord?.id);
                   const cantidad = pickNumber(line?.cantidad, line?.quantity, line?.qty) ?? 1;
                   const unitprice =
                     pickNumber(line?.unitprice, line?.unitPrice, line?.precio, line?.subtotal, line?.price) ?? 0;
@@ -1826,14 +1922,16 @@ const {
 
       const saleClientId = pickNumber(rawSale?.customerid, rawSale?.clientid, nq?.clientid);
       const saleTotal = pickNumber(rawSale?.totalamount, rawSale?.total, rawSale?.grandtotal);
-      const saleProductsSig = productsSignatureFromNormalized((nq?.products || []) as any);
+      const saleProductsSig = productsSignatureFromNormalized(nq?.products || []);
 
-      let best: any = null;
+      let best: QuoteLikeRecord | null = null;
       let bestScore = -1;
 
       for (const q of quotes) {
         let score = 0;
-        const qClientId = pickNumber(q?.customerid, q?.clientid, q?.customer?.customerid, q?.client?.clientid);
+        const customerRecord = (q?.customer as ApiRecord | undefined) ?? undefined;
+        const clientRecord = (q?.client as ApiRecord | undefined) ?? undefined;
+        const qClientId = pickNumber(q?.customerid, q?.clientid, customerRecord?.customerid, clientRecord?.clientid);
         if (saleClientId && qClientId && saleClientId === qClientId) score += 3;
 
         const qTotal = pickNumber(q?.total, q?.totalamount, q?.grandtotal);
@@ -1856,7 +1954,7 @@ const {
       if (saleId) saleToServiceRequestCacheRef.current.set(saleId, null);
       return null;
     }
-  }
+  }, [getQuotesForLinking, productsSignatureFromNormalized, productsSignatureFromQuoteLike, servicesCatalog]);
 
   useEffect(() => {
     if (lookupsLoading) return;
@@ -1876,7 +1974,7 @@ const {
       setQuoteApplyError(null);
       setQuoteLoadingApply(true);
       try {
-        let raw: any = null;
+        let raw: QuoteLikeRecord | null = null;
 
         if (quotesIdFromUrl) {
           raw = quoteMapById.get(quotesIdFromUrl) ?? null;
@@ -1886,8 +1984,9 @@ const {
           if (!raw) throw new Error("No se pudo leer la venta desde la URL.");
         }
 
-        const nq = normalizeQuote(raw);
-        const srId = await resolveServiceRequestIdFromSale(raw, nq);
+        const rawQuote = raw as QuoteLikeRecord;
+        const nq = normalizeQuote(rawQuote);
+        const srId = await resolveServiceRequestIdFromSale(rawQuote, nq);
         if (srId) {
           nq.serviceRequestId = srId;
           nq.servicerequestid = srId;
@@ -1896,8 +1995,8 @@ const {
 
         applyNormalizedQuote(nq, keyFromUrl!);
         if (quotesIdFromUrl) setSelectedQuotesId(quotesIdFromUrl);
-      } catch (e: any) {
-        const msg = e?.response?.data?.message || e?.message || "Error cargando venta.";
+      } catch (e: unknown) {
+        const msg = getApiErrorMessage(e, "Error cargando venta.");
         setQuoteApplyError(String(msg));
         showError(String(msg));
       } finally {
@@ -1921,6 +2020,8 @@ const {
     quoteDataParam,
     quoteAppliedKey,
     quoteMapById,
+    applyNormalizedQuote,
+    resolveServiceRequestIdFromSale,
   ]);
 
   useEffect(() => {
@@ -1947,17 +2048,18 @@ const {
       setQuoteApplyError(null);
       setQuoteLoadingApply(true);
       try {
-        const nq = normalizeQuote(raw);
-        const srId = await resolveServiceRequestIdFromSale(raw, nq);
+        const rawQuote = raw as QuoteLikeRecord;
+        const nq = normalizeQuote(rawQuote);
+        const srId = await resolveServiceRequestIdFromSale(rawQuote, nq);
         if (srId) {
           nq.serviceRequestId = srId;
           nq.servicerequestid = srId;
         }
         if (cancelled) return;
         applyNormalizedQuote(nq, key);
-      } catch (e: any) {
+      } catch (e: unknown) {
         if (cancelled) return;
-        const msg = e?.response?.data?.message || e?.message || "Error aplicando venta.";
+        const msg = getApiErrorMessage(e, "Error aplicando venta.");
         setQuoteApplyError(String(msg));
         showError(String(msg));
       } finally {
@@ -1978,6 +2080,8 @@ const {
     servicesCatalog,
     quoteAppliedKey,
     quoteMapById,
+    applyNormalizedQuote,
+    resolveServiceRequestIdFromSale,
   ]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -2028,8 +2132,8 @@ const {
 
       try {
         finalClientId = await createClientFromInlineForm();
-      } catch (e: any) {
-        showError(e?.response?.data?.message || e?.message || "No se pudo crear el cliente.");
+      } catch (e: unknown) {
+        showError(getApiErrorMessage(e, "No se pudo crear el cliente."));
         submitLockRef.current = false;
         return;
       }
@@ -2118,15 +2222,16 @@ const {
         viaticos: Number.isFinite(viaticosValue) ? viaticosValue : 0,
       };
 
-      const created: any = await createOrderService(dto);
+      const created = await createOrderService(dto);
+      const createdRecord = created as ApiRecord;
 
       try {
         if (typeof window !== "undefined") {
           const createdId = Number(
-            created?.ordersservicesid ??
-              created?.id ??
-              created?.data?.ordersservicesid ??
-              created?.data?.id
+            createdRecord?.ordersservicesid ??
+              createdRecord?.id ??
+              (createdRecord?.data as ApiRecord | undefined)?.ordersservicesid ??
+              (createdRecord?.data as ApiRecord | undefined)?.id
           );
           const message = Number.isFinite(createdId) && createdId > 0 ? `Orden #${createdId} creada correctamente.` : "Orden creada correctamente.";
           sessionStorage.setItem("flash_toast", JSON.stringify({ type: "success", message }));
@@ -2144,11 +2249,14 @@ setNavigating(true);
 
       router.push(returnTo);
       return;
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.log("ERROR COMPLETO", e);
-      console.log("response.data", e?.response?.data);
-      console.log("response.status", e?.response?.status);
-      showError(e?.response?.data?.message || e?.message || "Error inesperado.");
+      if (typeof e === "object" && e !== null && "response" in e) {
+        const errorWithResponse = e as { response?: { data?: unknown; status?: unknown } };
+        console.log("response.data", errorWithResponse.response?.data);
+        console.log("response.status", errorWithResponse.response?.status);
+      }
+      showError(getApiErrorMessage(e, "Error inesperado."));
       setNavigating(false);
       setSaving(false);
       submitLockRef.current = false;
@@ -2288,7 +2396,6 @@ setNavigating(true);
                       className={`${inputBase} ${showFieldError("quote") ? errorRing : ""}`}
                       disabled={quotesLoading || lookupsLoading || quoteOptions.length === 0 || saving || navigating}
                       aria-invalid={showFieldError("quote")}
-                      aria-expanded={quoteOpen}
                       aria-controls="quote-suggest"
                       aria-autocomplete="list"
                     />
@@ -2385,7 +2492,7 @@ setNavigating(true);
                                   previousId > 0 &&
                                   customers.some((c) => c.customerid === previousId)
                                 ) {
-                                  setClientId(previousId as any);
+                                  setClientId(previousId);
                                   setErrors((p) => ({ ...p, clientId: undefined }));
                                 }
                                 setClientIdBeforeInlineCreate("");
@@ -2479,7 +2586,6 @@ setNavigating(true);
                           placeholder="Nombre, apellido o ID..."
                           className={`${inputBase} ${showFieldError("clientId") ? errorRing : ""}`}
                           disabled={lookupsLoading || saving || navigating || createClientLoading || clientLockedByQuote}
-                          aria-expanded={customerOpen}
                           aria-controls="customer-suggest"
                           aria-autocomplete="list"
                         />
@@ -2845,7 +2951,6 @@ setNavigating(true);
                         placeholder="Nombre, apellido o ID..."
                         className={`${inputBase} ${showFieldError("technicians") ? errorRing : ""}`}
                         disabled={lookupsLoading || saving || navigating}
-                        aria-expanded={techOpen}
                         aria-controls="tech-suggest"
                         aria-autocomplete="list"
                       />
@@ -2983,7 +3088,7 @@ setNavigating(true);
                             {servicios.map((it) => {
                               const opts = serviceOptionsForRow(it.tipoId, it.nombre);
                               const hasCurrent = it.nombre && getServicesForTipo(it.tipoId).some((o) => o.name === it.nombre);
-                              const safeOpts = hasCurrent ? [{ serviceid: -1, name: it.nombre, typeofserviceid: it.tipoId } as any, ...opts] : opts;
+                              const safeOpts = hasCurrent ? [{ serviceid: -1, name: it.nombre, typeofserviceid: it.tipoId } as ServiceOption, ...opts] : opts;
 
                               return (
                                 <tr key={it.id} className="border-t">
@@ -3011,7 +3116,7 @@ setNavigating(true);
                                       className="w-full h-9 rounded-md border px-2"
                                       disabled={itemsLockedByQuote || lookupsLoading || saving || navigating || safeOpts.length === 0}
                                     >
-                                      {safeOpts.map((opt: any, idx: number) => (
+                                      {safeOpts.map((opt, idx: number) => (
                                         <option key={`${it.id}-${opt.serviceid}-${idx}`} value={opt.name}>
                                           {opt.name}
                                         </option>
@@ -3468,3 +3573,4 @@ setNavigating(true);
     </RequireAuth>
   );
 }
+

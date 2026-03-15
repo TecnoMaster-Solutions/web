@@ -103,11 +103,14 @@ export const useCreateUserForm = ({
   // --------------------------------------------------------
   // Obtener nombre del rol
   // --------------------------------------------------------
-  const getRoleName = (roleId: number): string => {
-    return normalizeRoleName(
-      roles.find((r) => r.roleid === roleId)?.name ?? ""
-    );
-  };
+  const getRoleName = useCallback(
+    (roleId: number): string => {
+      return normalizeRoleName(
+        roles.find((r) => r.roleid === roleId)?.name ?? ""
+      );
+    },
+    [roles]
+  );
 
   // --------------------------------------------------------
   // Efecto A: detectar si es NIT
@@ -134,26 +137,9 @@ export const useCreateUserForm = ({
   }, [isNit, roles]);
 
   // =========================================================
-  // C — Función unificada para actualizar campos
-  // =========================================================
-  const updateField = useCallback(
-    (field: keyof CreateUserData, value: any) => {
-      setFormData((prev) => ({ ...prev, [field]: value }));
-
-      if (touched[field]) {
-        validateFieldOnChange(field, String(value ?? ""));
-      }
-    },
-    [touched]
-  );
-
-  // Compatibilidad con el modal actual
-  const handleInputChange = updateField;
-
-  // =========================================================
   // Validación
   // =========================================================
-  const validateFieldOnChange = (
+  const validateFieldOnChange = useCallback((
     field: keyof FormErrors,
     value: string
   ) => {
@@ -169,7 +155,24 @@ export const useCreateUserForm = ({
     );
 
     setErrors((prev) => ({ ...prev, [field]: error }));
-  };
+  }, [formData, getRoleName, users]);
+
+  // =========================================================
+  // C — Función unificada para actualizar campos
+  // =========================================================
+  const updateField = useCallback(
+    (field: keyof CreateUserData, value: CreateUserData[keyof CreateUserData]) => {
+      setFormData((prev) => ({ ...prev, [field]: value }));
+
+      if (touched[field]) {
+        validateFieldOnChange(field, String(value ?? ""));
+      }
+    },
+    [touched, validateFieldOnChange]
+  );
+
+  // Compatibilidad con el modal actual
+  const handleInputChange = updateField;
 
   const handleBlur = (field: keyof FormTouched) => {
     setTouched((prev) => ({ ...prev, [field]: true }));

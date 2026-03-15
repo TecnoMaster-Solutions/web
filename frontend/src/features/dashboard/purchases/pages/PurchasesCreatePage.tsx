@@ -6,8 +6,12 @@ import "react-toastify/dist/ReactToastify.css";
 
 import RequireAuth from "@/features/auth/requireauth";
 import RegisterPurchaseForm from "../components/RegisterPurchase";
-import { usePurchases } from "../hooks/usePurchases";
+import { type PurchaseFormState, usePurchases } from "../hooks/usePurchases";
 import FullScreenLoader from "@/shared/components/FullScreenLoader";
+
+type PurchasesHookReturn = ReturnType<typeof usePurchases> & {
+  form: PurchaseFormState;
+};
 
 export default function PurchasesCreatePage() {
   const router = useRouter();
@@ -50,7 +54,9 @@ const {
 
   poDetailLoading,
   isUsingPurchaseOrder,
-} = purchasesHook as any;
+} = purchasesHook as PurchasesHookReturn;
+
+  const refetchPurchases = () => fetchPurchases(1, 5, "");
 
   const handleBack = () => {
     try {
@@ -113,7 +119,7 @@ const {
             );
           }}
           purchases={purchases}
-          fetchPurchases={fetchPurchases}
+          fetchPurchases={refetchPurchases}
           form={form}
           selectedProduct={selectedProduct}
           setSelectedProduct={setSelectedProduct}

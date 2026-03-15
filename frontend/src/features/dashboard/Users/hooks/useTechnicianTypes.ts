@@ -1,15 +1,23 @@
 import { useState, useEffect, useRef } from "react";
 import { api } from "@/shared/utils/apiClient";
 import { showError } from "@/shared/utils/notifications";
+import { TechnicianType } from "../types/typesUser";
 
 const RETRY_LIMIT = 2;
 
-// Cache en memoria a nivel de módulo para evitar múltiples requests
-let technicianTypesCache: any[] | null = null;
-let inFlightRequest: Promise<any[]> | null = null;
+let technicianTypesCache: TechnicianType[] | null = null;
+let inFlightRequest: Promise<TechnicianType[]> | null = null;
+
+type TechnicianTypePayload = {
+  data?: unknown[];
+};
+
+type ApiErrorShape = {
+  message?: string;
+};
 
 export const useTechnicianTypes = () => {
-  const [technicianTypes, setTechnicianTypes] = useState<any[]>([]);
+  const [technicianTypes, setTechnicianTypes] = useState<TechnicianType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,14 +31,12 @@ export const useTechnicianTypes = () => {
 
   useEffect(() => {
     const fetchTypes = async () => {
-      // Si ya existe cache, úsala inmediatamente
       if (technicianTypesCache) {
         setTechnicianTypes(technicianTypesCache);
         setLoading(false);
         return;
       }
 
-      // Evitar solicitudes duplicadas simultáneas
       if (inFlightRequest) {
         const cached = await inFlightRequest;
         if (isMountedRef.current) {
@@ -52,19 +58,22 @@ export const useTechnicianTypes = () => {
 
             const list = Array.isArray(data)
               ? data
-              : Array.isArray(data?.data)
-              ? data.data
+              : Array.isArray((data as TechnicianTypePayload | undefined)?.data)
+              ? (data as TechnicianTypePayload).data ?? []
               : [];
 
-            const normalized = list.map((t: any) => ({
-              techniciantypeid: t.techniciantypeid,
-              name: t.name,
-            }));
+            const normalized = list.map((item) => {
+              const typed = (item ?? {}) as Record<string, unknown>;
+              return {
+                techniciantypeid: Number(typed.techniciantypeid),
+                name: String(typed.name ?? ""),
+              };
+            });
 
             technicianTypesCache = normalized;
             resolve(normalized);
             return;
-          } catch (err: any) {
+          } catch (err: unknown) {
             attempt++;
 
             if (attempt > RETRY_LIMIT) {
@@ -80,11 +89,14 @@ export const useTechnicianTypes = () => {
         if (isMountedRef.current) {
           setTechnicianTypes(result);
         }
-      } catch (err) {
-        console.error("Error al cargar tipos de técnico:", err);
+      } catch (err: unknown) {
+        console.error("Error al cargar tipos de tecnico:", err);
         if (isMountedRef.current) {
-          setError("No se pudieron cargar los tipos de técnico.");
-          showError("No se pudieron cargar los tipos de técnico.");
+          setError(
+            (err as ApiErrorShape)?.message ||
+              "No se pudieron cargar los tipos de tecnico.",
+          );
+          showError("No se pudieron cargar los tipos de tecnico.");
         }
       } finally {
         if (isMountedRef.current) setLoading(false);

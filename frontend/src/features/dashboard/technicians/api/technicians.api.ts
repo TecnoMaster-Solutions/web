@@ -13,6 +13,19 @@ type TechnicianTypesEnvelope =
   | { data?: TechnicianTypeApi[] }
   | { success?: boolean; data?: TechnicianTypeApi[] };
 
+type TechnicianCreateBody = {
+  name: string;
+  lastname: string;
+  email: string;
+  documentnumber: string;
+  phone: string;
+  techniciantypeids: number[];
+  CV: string | null;
+  typeid: number;
+  image?: string | null;
+  roleid?: number;
+};
+
 type TechnicianFromApi = {
   technicianid: number;
   CV: string | null;
@@ -76,6 +89,15 @@ const mapTechnician = (t: TechnicianFromApi): Technician => {
   };
 };
 
+const unwrapTechnicianTypes = (
+  payload: TechnicianTypesEnvelope
+): TechnicianTypeApi[] => {
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+  return Array.isArray(payload.data) ? payload.data : [];
+};
+
 export type GetTechniciansParams = {
   page?: number;
   limit?: number;
@@ -132,14 +154,7 @@ export const getTechnicians = async (
 
 export const getTechnicianTypes = async (): Promise<TechnicianTypeApi[]> => {
   const { data } = await api.get<TechnicianTypesEnvelope>("/techniciantypes");
-
-  const list = Array.isArray(data)
-    ? data
-    : Array.isArray((data as any)?.data)
-    ? (data as any).data
-    : [];
-
-  return list;
+  return unwrapTechnicianTypes(data);
 };
 
 export type CreateTechnicianPayload = {
@@ -158,7 +173,7 @@ export type CreateTechnicianPayload = {
 export const createTechnician = async (
   payload: CreateTechnicianPayload
 ): Promise<TechnicianFromApi> => {
-  const body: any = {
+  const body: TechnicianCreateBody = {
     name: payload.name,
     lastname: payload.lastname,
     email: payload.email,

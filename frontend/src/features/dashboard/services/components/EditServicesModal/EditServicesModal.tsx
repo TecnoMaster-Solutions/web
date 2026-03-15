@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Modal from "@/features/dashboard/components/Modal";
 import Colors from "@/shared/theme/colors";
 import { Service, EditServicePayload } from "../../types/typesServices";
@@ -35,9 +35,7 @@ const EditServiceModal: React.FC<EditServiceModalProps> = ({
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [typeofserviceid, setTypeofserviceid] = useState<number>(0);
-  const [category, setCategory] = useState("");
   const [image, setImage] = useState<File | string | null>(null);
-  const [state, setState] = useState<"Activo" | "Inactivo">("Activo");
   const [stateid, setStateid] = useState<number>(1);
   const [errors, setErrors] = useState<Errors>({});
   const [isImageRemoved, setIsImageRemoved] = useState(false);
@@ -45,11 +43,6 @@ const EditServiceModal: React.FC<EditServiceModalProps> = ({
 
   const [types, setTypes] = useState<ServiceTypeApi[]>([]);
   const [loadingTypes, setLoadingTypes] = useState(false);
-
-  const selectedTypeName = useMemo(() => {
-    const t = types.find((x) => x.typeofserviceid === typeofserviceid);
-    return t?.name ?? "";
-  }, [types, typeofserviceid]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -65,14 +58,12 @@ const EditServiceModal: React.FC<EditServiceModalProps> = ({
       setName(service.name ?? "");
       setDescription(service.description ?? "");
       setTypeofserviceid(Number(service.typeofserviceid ?? 0));
-      setCategory(service.category ?? "");
       setImage(
         typeof service.image === "string" && service.image.trim()
           ? service.image
           : null
       );
       setIsImageRemoved(false);
-      setState(service.state ?? "Activo");
       setStateid(Number(service.stateid ?? (service.state === "Inactivo" ? 2 : 1)));
       setErrors({});
     }
@@ -112,8 +103,6 @@ const EditServiceModal: React.FC<EditServiceModalProps> = ({
       showWarning("Por favor completa todos los campos obligatorios y corrige los errores");
       return;
     }
-
-    const finalCategory = toTitleCase(selectedTypeName || category);
 
     const payload: EditServicePayload = {
       id: service.id,
@@ -275,9 +264,6 @@ const EditServiceModal: React.FC<EditServiceModalProps> = ({
             onChange={(e) => {
               const id = Number(e.target.value || 0);
               setTypeofserviceid(id);
-              setCategory(
-                toTitleCase(types.find((t) => t.typeofserviceid === id)?.name ?? "")
-              );
               setErrors((p) => ({
                 ...p,
                 typeofserviceid: id ? undefined : "Debe seleccionar un tipo de servicio",
@@ -329,7 +315,6 @@ const EditServiceModal: React.FC<EditServiceModalProps> = ({
             onChange={(e) => {
               const sid = Number(e.target.value);
               setStateid(sid);
-              setState(sid === 2 ? "Inactivo" : "Activo");
             }}
             className="w-full px-2 py-1 border rounded-md"
             style={{ borderColor: Colors.table.lines }}
@@ -344,5 +329,3 @@ const EditServiceModal: React.FC<EditServiceModalProps> = ({
 };
 
 export default EditServiceModal;
-
-

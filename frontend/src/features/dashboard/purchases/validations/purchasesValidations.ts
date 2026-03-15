@@ -27,6 +27,11 @@ type Draft = {
 };
 
 const normalize = (v: unknown) => String(v ?? "").trim();
+const getPurchaseId = (purchase: IPurchase) => purchase.purchaseorderid;
+const getPurchaseOrderNumber = (purchase: IPurchase) =>
+  normalize(purchase.numberoforder);
+const getPurchaseInvoiceNumber = (purchase: IPurchase) =>
+  normalize(purchase.reference);
 
 export const validatePurchaseField = (
   field: PurchaseFormField,
@@ -41,10 +46,8 @@ export const validatePurchaseField = (
       if (!order) return "El número de orden es obligatorio";
 
       const duplicated = (purchases ?? []).some((p) => {
-        const currentOrder = normalize(
-          (p as any).orderNumber || p.numberoforder || ""
-        );
-        const pid = (p as any).id ?? p.purchaseorderid;
+        const currentOrder = getPurchaseOrderNumber(p);
+        const pid = getPurchaseId(p);
         return (
           currentOrder.toLowerCase() === order.toLowerCase() && pid !== currentId
         );
@@ -59,10 +62,8 @@ export const validatePurchaseField = (
       if (!invoice) return "El número de factura es obligatorio";
 
       const duplicated = (purchases ?? []).some((p) => {
-        const currentInvoice = normalize(
-          (p as any).invoiceNumber || p.reference || ""
-        );
-        const pid = (p as any).id ?? p.purchaseorderid;
+        const currentInvoice = getPurchaseInvoiceNumber(p);
+        const pid = getPurchaseId(p);
         return (
           currentInvoice.toLowerCase() === invoice.toLowerCase() &&
           pid !== currentId
@@ -158,7 +159,8 @@ export const validatePurchaseForm = (
   ];
 
   for (const f of fields) {
-    const value = f === "products" ? data.productsCount : (data as any)[f];
+    const value =
+      f === "products" ? data.productsCount : data[f as keyof Draft];
     const err = validatePurchaseField(f, value, purchases, currentId, data);
     if (err) errors[f] = err;
   }

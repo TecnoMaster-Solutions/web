@@ -5,8 +5,11 @@ import Image from "next/image";
 import Nav from "@/features/landing/layout/Nav";
 import { useAuth } from "@/features/auth/authcontext";
 import { showError, showSuccess } from "@/shared/utils/notifications";
-import { useDocumentTypes } from "@/features/dashboard/Users/hooks/useDocumentTypes";
-import { useRoles } from "@/features/dashboard/Users/hooks/useRoles";
+import {
+  type DocumentType,
+  useDocumentTypes,
+} from "@/features/dashboard/Users/hooks/useDocumentTypes";
+import { type Role, useRoles } from "@/features/dashboard/Users/hooks/useRoles";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 
@@ -162,6 +165,14 @@ function hasErrors(errors: FormErrors): boolean {
   return Object.values(errors).some((e) => e !== "");
 }
 
+type UserCheckPayload = Partial<
+  Record<"documentnumber" | "phone" | "email", boolean>
+>;
+
+type UserCheckResponse = {
+  data?: UserCheckPayload;
+} & UserCheckPayload;
+
 export default function RegisterPage() {
   const router = useRouter();
   const { register } = useAuth();
@@ -196,7 +207,7 @@ export default function RegisterPage() {
   });
 
   const clientRole = useMemo(
-    () => roles.find((r: any) => String(r?.name ?? "").toLowerCase() === "cliente"),
+    () => roles.find((r: Role) => String(r.name).toLowerCase() === "cliente"),
     [roles]
   );
 
@@ -265,7 +276,7 @@ export default function RegisterPage() {
     try {
       const params: Record<string, string> = { [field]: cleanValue };
       const res = await api.get("/users/check", { params });
-      const payload = (res.data?.data ?? res.data) as any;
+      const payload = (res.data?.data ?? res.data) as UserCheckResponse;
       const exists = Boolean(payload?.[field]);
 
       const currentError = validateField(field, form[field], form);
@@ -415,7 +426,7 @@ export default function RegisterPage() {
                       aria-invalid={!!(touched.typeid && errors.typeid)}
                     >
                       <option value="">Seleccionar...</option>
-                      {documentTypes.map((t: any) => (
+                      {documentTypes.map((t: DocumentType) => (
                         <option key={t.typeofdocumentid} value={t.typeofdocumentid}>
                           {t.name}
                         </option>

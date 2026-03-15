@@ -18,11 +18,9 @@ export default function ProductsIndex() {
 
     page,
     limit,
-    total,
     totalPages,
     search,
     setPage,
-    setLimit,
     setSearch,
 
     isCreateModalOpen,

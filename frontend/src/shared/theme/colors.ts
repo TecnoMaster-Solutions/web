@@ -26,9 +26,9 @@ interface IColors {
     primary: string;
   };
   states: {
-    info?: any;
-    error?: any;
-    warning?: any;
+    info?: string;
+    error?: string;
+    warning?: string;
     success: string;
     completed: string;
     pending: string;
@@ -166,4 +166,3 @@ const Colors: IColors = {
 };
 
 export default Colors;
-

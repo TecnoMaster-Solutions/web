@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import RequireAuth from "@/features/auth/requireauth";
-import { OrderServiceDTO, useOrderServiceDetail } from "../hooks/useOrderServices";
+import { OrderServiceDTO, OrderServiceHistoryEntry, useOrderServiceDetail } from "../hooks/useOrderServices";
 
 const IVA_RATE = 0.19;
 const IVA_LABEL = `${Math.round(IVA_RATE * 100)}%`;
@@ -68,7 +69,7 @@ const formatDateTime = (value?: Date | null) =>
 
 const isImageFile = (value: string) => /\.(jpe?g|png|gif|webp|bmp)$/i.test(value);
 
-const safeNumber = (v: any) => {
+const safeNumber = (v: unknown) => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
@@ -100,7 +101,7 @@ const FilesGrid: React.FC<{ files: string[] }> = ({ files }) => {
           <div key={`${file}-${index}`} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
             <div className="bg-slate-50 p-2">
               {isImg ? (
-                <img src={file} alt={`Archivo ${index + 1}`} className="h-44 w-full rounded-lg object-cover" />
+                <Image src={file} alt={`Archivo ${index + 1}`} width={704} height={176} className="h-44 w-full rounded-lg object-cover" unoptimized />
               ) : (
                 <div className="flex h-44 items-center justify-center rounded-lg border border-dashed border-slate-200 bg-white px-3 text-center">
                   <p className="text-xs font-semibold text-slate-700">Archivo #{index + 1}</p>
@@ -125,7 +126,9 @@ const FilesGrid: React.FC<{ files: string[] }> = ({ files }) => {
   );
 };
 
-const TechnicianCard: React.FC<{ tech: OrderServiceDTO["technicians"][0] }> = ({ tech }) => {
+type OrderTechnician = NonNullable<OrderServiceDTO["technicians"]>[number];
+
+const TechnicianCard: React.FC<{ tech: OrderTechnician }> = ({ tech }) => {
   const name = tech?.users
     ? [tech.users.name ?? "", tech.users.lastname ?? ""].filter(Boolean).join(" ").trim()
     : `Técnico ${tech?.technicianid ?? "N/A"}`;
@@ -133,9 +136,9 @@ const TechnicianCard: React.FC<{ tech: OrderServiceDTO["technicians"][0] }> = ({
   return (
     <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
       <p className="min-w-0 truncate text-sm font-semibold text-slate-900">{name || "Técnico"}</p>
-      {(tech as any)?.CV ? (
+      {tech?.CV ? (
         <a
-          href={(tech as any).CV}
+          href={tech.CV}
           target="_blank"
           rel="noreferrer"
           className="shrink-0 text-xs font-semibold uppercase text-amber-700 hover:underline"
@@ -158,24 +161,16 @@ type ServiceLine = {
   };
 };
 
-type HistoryEntry = {
-  ordersserviceshistoryid: number;
-  actionlabel?: string;
-  description?: string | null;
-  createdat?: string;
-  message?: string;
-  action?: string;
-  type?: string;
-  actoruserid?: number | null;
-  technician?: any;
-  user?: any;
-  users?: any;
-  actor?: any;
-  createdby?: any;
-  [key: string]: any;
+type PersonLike = {
+  name?: string | null;
+  lastname?: string | null;
+  users?: PersonLike | null;
+  user?: PersonLike | null;
 };
 
-const getFullName = (u: any) => {
+type HistoryEntry = OrderServiceHistoryEntry;
+
+const getFullName = (u?: PersonLike | null) => {
   const name = [u?.name ?? "", u?.lastname ?? ""].filter(Boolean).join(" ").trim();
   return name || "";
 };
@@ -194,10 +189,11 @@ const pickActorLabel = (entry: HistoryEntry) => {
   ];
 
   for (const c of candidates) {
-    const fromUsers = getFullName(c?.users);
+    const person = (c as PersonLike | null | undefined) ?? undefined;
+    const fromUsers = getFullName(person?.users);
     if (fromUsers) return fromUsers;
 
-    const direct = getFullName(c);
+    const direct = getFullName(person);
     if (direct) return direct;
   }
 
@@ -296,11 +292,16 @@ const OrderServiceDetailContent: React.FC<{ order: OrderServiceDTO; embedded?: b
   const files = (order.files ?? []).filter(Boolean);
 
   const clientLabel = useMemo(() => {
-    const client = (order as any)?.client;
+    const client = order.client;
     if (!client) return "Cliente no asignado";
 
-    const base = client?.customer || client?.client || client;
-    const u = base?.users || base?.user || base?.Users || {};
+    const base = ((client as Record<string, unknown>)?.customer ||
+      (client as Record<string, unknown>)?.client ||
+      client) as Record<string, unknown>;
+    const u = ((base?.users as Record<string, unknown> | undefined) ??
+      (base?.user as Record<string, unknown> | undefined) ??
+      (base?.Users as Record<string, unknown> | undefined) ??
+      undefined) as Record<string, unknown> | undefined;
 
     const nameParts = [base?.name ?? u?.name ?? "", base?.lastname ?? u?.lastname ?? ""]
       .filter(Boolean)
@@ -334,16 +335,16 @@ const OrderServiceDetailContent: React.FC<{ order: OrderServiceDTO; embedded?: b
   }, [order.client]);
 
   const serviceItems: ServiceLine[] = useMemo(() => {
-    const v = (order as any)?.services;
+    const v = order.services;
     return Array.isArray(v) ? (v as ServiceLine[]) : [];
-  }, [order]);
+  }, [order.services]);
 
   const historyEntries: HistoryEntry[] = useMemo(() => {
-    const v = (order as any)?.history;
+    const v = order.history;
     return Array.isArray(v) ? (v as HistoryEntry[]) : [];
-  }, [order]);
+  }, [order.history]);
 
-  const viaticos = useMemo(() => safeNumber((order as any)?.viaticos ?? 0), [order]);
+  const viaticos = useMemo(() => safeNumber(order.viaticos ?? 0), [order.viaticos]);
 
   const totalProducts = useMemo(
     () => order.products?.reduce((sum, item) => sum + safeNumber(item.subtotal), 0) ?? 0,
@@ -559,7 +560,7 @@ const OrderServiceDetailContent: React.FC<{ order: OrderServiceDTO; embedded?: b
             {(order.technicians ?? []).length > 0 ? (
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
                 {(order.technicians ?? []).map((tech) => (
-                  <TechnicianCard key={tech.technicianid ?? `${(tech as any).userid ?? ""}`} tech={tech} />
+                  <TechnicianCard key={tech.technicianid ?? `${tech.userid ?? ""}`} tech={tech} />
                 ))}
               </div>
             ) : (

@@ -1,5 +1,7 @@
 "use client";
+
 import React from "react";
+import Image from "next/image";
 import Modal from "../../../components/Modal";
 import Colors from "@/shared/theme/colors";
 import { useViewCategory } from "../../hooks/useViewCategory";
@@ -14,17 +16,8 @@ const ViewCategoryModal: React.FC<ViewCategoryModalProps> = ({
 
   if (!isOpen || !category) return null;
 
-  //  Obtener URL del icono
-  const getIconUrl = () => {
-    if (!currentIcon) return null;
-    if (currentIcon instanceof File) return URL.createObjectURL(currentIcon);
-    if (typeof currentIcon === "string") return currentIcon;
-    return null;
-  };
+  const iconUrl = currentIcon || null;
 
-  const iconUrl = getIconUrl();
-
-  // Footer del modal
   const footer = (
     <div className="flex justify-end w-full">
       <button
@@ -37,24 +30,25 @@ const ViewCategoryModal: React.FC<ViewCategoryModalProps> = ({
     </div>
   );
 
-
   return (
     <Modal
-      title="Ver Categoría de Producto"
+      title="Ver CategorÃ­a de Producto"
       isOpen={isOpen}
       onClose={onClose}
       widthClass="max-w-md"
       footer={footer}
     >
       <div className="space-y-4">
-        {/* Icono */}
         <div className="flex flex-col items-center">
           {iconUrl ? (
             <div className="w-24 h-24 rounded-full border-2 border-gray-300 flex items-center justify-center bg-gray-50 mb-2">
               <div className="w-24 h-24 rounded-full overflow-hidden flex items-center justify-center bg-white">
-                <img
+                <Image
                   src={iconUrl}
-                  alt="Icono de categoría"
+                  alt="Icono de categorÃ­a"
+                  width={96}
+                  height={96}
+                  unoptimized
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -80,14 +74,11 @@ const ViewCategoryModal: React.FC<ViewCategoryModalProps> = ({
 
           <div className="text-center">
             <div className="text-xs text-gray-500 mb-1">
-              {iconUrl
-                ? "Icono de la categoría"
-                : "No hay icono seleccionado"}
+              {iconUrl ? "Icono de la categorÃ­a" : "No hay icono seleccionado"}
             </div>
           </div>
         </div>
 
-        {/* Nombre */}
         <div>
           <label
             className="block text-sm font-medium mb-1"
@@ -100,24 +91,20 @@ const ViewCategoryModal: React.FC<ViewCategoryModalProps> = ({
           </div>
         </div>
 
-        {/* Descripción */}
         <div>
           <label
             className="block text-sm font-medium mb-1"
             style={{ color: Colors.texts.primary }}
           >
-            Descripción
+            DescripciÃ³n
           </label>
           <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 min-h-[80px]">
             <span className="text-gray-700 whitespace-pre-wrap">
-              {category.description?.trim()
-                ? category.description
-                : "No hay descripción"}
+              {category.description?.trim() ? category.description : "No hay descripciÃ³n"}
             </span>
           </div>
         </div>
 
-        {/* Estado */}
         <div>
           <label
             className="block text-sm font-medium mb-1"
@@ -127,10 +114,9 @@ const ViewCategoryModal: React.FC<ViewCategoryModalProps> = ({
           </label>
           <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50">
             <span
-              className={`rounded-full px-2 py-1 text-xs font-semibold ${category.status
-                ? "text-green-600 bg-green-100"
-                : "text-gray-500 bg-gray-100"
-                }`}
+              className={`rounded-full px-2 py-1 text-xs font-semibold ${
+                category.status ? "text-green-600 bg-green-100" : "text-gray-500 bg-gray-100"
+              }`}
             >
               {category.status ? "Activo" : "Inactivo"}
             </span>

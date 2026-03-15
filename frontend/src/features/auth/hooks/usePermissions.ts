@@ -1,4 +1,11 @@
 import { useAuth } from "../authcontext";
+import { getAuthPermissions } from "../utils/authUser";
+
+type TokenPayload = {
+  permissions?: unknown;
+  permisos?: unknown;
+  privileges?: unknown;
+};
 
 const MODULE_ALIASES: Record<string, string> = {
   purchases: "purcharse",
@@ -123,10 +130,12 @@ function getTokenPermissions(): string[] {
     const parts = token.split(".");
     if (parts.length !== 3) return [];
     const payloadRaw = atob(parts[1].replace(/-/g, "+").replace(/_/g, "/"));
-    const payload = JSON.parse(payloadRaw);
+    const payload = JSON.parse(payloadRaw) as TokenPayload;
     const raw = payload?.permissions ?? payload?.permisos ?? payload?.privileges ?? [];
     if (!Array.isArray(raw)) return [];
-    return raw.map((entry: any) => String(entry ?? "").trim()).filter(Boolean);
+    return raw
+      .map((entry: unknown) => String(entry ?? "").trim())
+      .filter(Boolean);
   } catch {
     return [];
   }
@@ -134,7 +143,7 @@ function getTokenPermissions(): string[] {
 
 export function usePermissions() {
   const { user } = useAuth();
-  const userPerms = (user as any)?.permissions || [];
+  const userPerms = getAuthPermissions(user);
   const perms = Array.isArray(userPerms) && userPerms.length ? userPerms : getTokenPermissions();
 
   function has(module: string, privilege: string) {

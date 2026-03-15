@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { NavigateAction, View } from "react-big-calendar";
+import type { View } from "react-big-calendar";
 
 export const useAppointmentResponsive = () => {
   const [calendarView, setCalendarView] = useState<View>("month");
@@ -28,12 +28,9 @@ export const useAppointmentResponsive = () => {
     return () => mql.removeEventListener("change", apply);
   }, []);
 
-  const handleNavigate = useCallback(
-    (date: Date, _action: NavigateAction) => {
-      setCurrentDate(date);
-    },
-    []
-  );
+  const handleNavigate = useCallback((date: Date) => {
+    setCurrentDate(date);
+  }, []);
 
   const goToDate = useCallback((date: Date) => {
     setCurrentDate(date);

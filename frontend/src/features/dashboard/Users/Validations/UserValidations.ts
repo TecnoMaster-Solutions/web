@@ -7,9 +7,23 @@ const normalizeRoleName = (name: string) =>
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
 
+type UserWithDraftFields = User & {
+  CV?: string | File | null;
+  techniciantypeids?: number[];
+  customercity?: string;
+  customerzipcode?: string;
+};
+
+const getDraftValue = <K extends keyof UserWithDraftFields>(
+  formData: User,
+  key: K,
+): UserWithDraftFields[K] => {
+  return (formData as UserWithDraftFields)[key];
+};
+
 export const validateField = (
   fieldName: string,
-  value: string,
+  value: string | File | null | undefined,
   formData: User,
   users: User[],
   isEditMode: boolean = false
@@ -19,6 +33,7 @@ export const validateField = (
 
   const roleName = normalizeRoleName(formData.roles?.name || "");
   const trimmedValue = String(value).trim().toLowerCase();
+  const textValue = typeof value === "string" ? value : String(value ?? "");
 
   const isNit = Number(formData.typeid) === 4;
 
@@ -28,36 +43,36 @@ export const validateField = (
       break;
 
     case "documentnumber":
-      if (!value.trim()) {
+      if (!textValue.trim()) {
         error = "El número de documento es obligatorio";
       } else if (isNit) {
-        if (!/^\d{5,12}-\d{1}$/.test(value)) {
+        if (!/^\d{5,12}-\d{1}$/.test(textValue)) {
           error = "El NIT debe tener formato válido (Ejemplo: 900123456-7)";
-        } else if (!value.includes("-")) {
+        } else if (!textValue.includes("-")) {
           error = "El NIT debe incluir un guion (-)";
         }
       } else if (Number(formData.typeid) === 2) {
-        if (!/^\d{7}$/.test(value)) {
+        if (!/^\d{7}$/.test(textValue)) {
           error = "El número de PPT debe tener exactamente 7 dígitos numéricos";
         }
       } else if (Number(formData.typeid) === 3) {
-        if (!/^[A-Za-z]{2}\d{6}$/.test(value)) {
+        if (!/^[A-Za-z]{2}\d{6}$/.test(textValue)) {
           error =
             "El pasaporte debe tener 2 letras seguidas de 6 números (Ejemplo: AB123456)";
         }
       } else if (Number(formData.typeid) === 5) {
-        if (!/^\d{9}$/.test(value)) {
+        if (!/^\d{9}$/.test(textValue)) {
           error =
             "La Cédula de Extranjería debe tener exactamente 9 dígitos numéricos";
         }
       } else if (Number(formData.typeid) === 6) {
-        if (!/^\d{12}$/.test(value)) {
+        if (!/^\d{12}$/.test(textValue)) {
           error = "El número de Visa (VI) debe tener exactamente 12 dígitos numéricos";
         }
       } else {
-        if (!/^\d+$/.test(value)) {
+        if (!/^\d+$/.test(textValue)) {
           error = "El documento solo puede contener números";
-        } else if (value.length > 10) {
+        } else if (textValue.length > 10) {
           error = "El número de documento no puede tener más de 10 caracteres";
         }
       }
@@ -74,40 +89,40 @@ export const validateField = (
       break;
 
     case "name":
-      if (!value.trim()) {
+      if (!textValue.trim()) {
         error = isNit
           ? "El nombre de la empresa es obligatorio"
           : "El nombre es obligatorio";
-      } else if (/[0-9]/.test(value) && !isNit) {
+      } else if (/[0-9]/.test(textValue) && !isNit) {
         error = "El nombre no puede contener números";
-      } else if (specialChars.test(value)) {
+      } else if (specialChars.test(textValue)) {
         error = "El nombre no puede contener caracteres especiales";
       }
       break;
 
     case "lastname":
       if (isNit) break;
-      if (!value.trim()) {
+      if (!textValue.trim()) {
         error = "El apellido es obligatorio";
-      } else if (/[0-9]/.test(value)) {
+      } else if (/[0-9]/.test(textValue)) {
         error = "El apellido no puede contener números";
-      } else if (specialChars.test(value)) {
+      } else if (specialChars.test(textValue)) {
         error = "El apellido no puede contener caracteres especiales";
       }
       break;
 
     case "phone":
-      if (!value.trim()) {
+      if (!textValue.trim()) {
         error = isNit
           ? "El teléfono de la empresa es obligatorio"
           : "El teléfono es obligatorio";
-      } else if (!/^\d+$/.test(value)) {
+      } else if (!/^\d+$/.test(textValue)) {
         error = "El teléfono solo puede contener números";
-      } else if (value.length !== 10) {
+      } else if (textValue.length !== 10) {
         error = "El teléfono debe tener exactamente 10 dígitos";
       } else {
         const duplicate = users.find(
-          (u) => u.phone === value && (!isEditMode || u.userid !== formData.userid)
+          (u) => u.phone === textValue && (!isEditMode || u.userid !== formData.userid)
         );
         if (duplicate)
           error = "Ya existe un usuario con este número de teléfono";
@@ -115,11 +130,11 @@ export const validateField = (
       break;
 
     case "email":
-      if (!value.trim()) {
+      if (!textValue.trim()) {
         error = isNit
           ? "El correo de la empresa es obligatorio"
           : "El correo electrónico es obligatorio";
-      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(textValue)) {
         error = "El formato del correo no es válido";
       } else {
         const duplicate = users.find(
@@ -134,13 +149,13 @@ export const validateField = (
 
     case "password":
     case "confirmPassword":
-      if (isEditMode && value.trim()) {
-        if (value.length < 6) {
+      if (isEditMode && textValue.trim()) {
+        if (textValue.length < 6) {
           error = "La contraseña debe tener al menos 6 caracteres";
         } else if (
-          value &&
+          textValue &&
           formData.confirmPassword &&
-          value !== formData.confirmPassword
+          textValue !== formData.confirmPassword
         ) {
           error = "Las contraseñas no coinciden";
         }
@@ -152,7 +167,7 @@ export const validateField = (
       break;
 
     case "roleid":
-      if (!String(value).trim() || value === "0") {
+      if (!String(value).trim() || textValue === "0") {
         error = "El rol es obligatorio";
       }
       break;
@@ -160,7 +175,7 @@ export const validateField = (
     case "CV":
       if (roleName === "tecnico") {
         const cvValue =
-          (formData as any).CV || formData.technicians?.[0]?.CV || "";
+          getDraftValue(formData, "CV") || formData.technicians?.[0]?.CV || "";
         const hasFile =
           cvValue instanceof File ||
           (typeof cvValue === "string" && cvValue.trim() !== "");
@@ -173,7 +188,7 @@ export const validateField = (
     case "techniciantypeids":
       if (roleName === "tecnico") {
         const typeIds =
-          (formData as any).techniciantypeids ||
+          getDraftValue(formData, "techniciantypeids") ||
           formData.technicians?.[0]?.technicianTypeMaps?.map(
             (tm) => tm.techniciantypeid
           ) ||
@@ -188,7 +203,7 @@ export const validateField = (
       if (roleName === "cliente") {
         const city =
           formData.customers?.[0]?.customercity ??
-          (formData as any).customercity ??
+          getDraftValue(formData, "customercity") ??
           "";
         if (!city.trim()) {
           error = "La ciudad es obligatoria para clientes";
@@ -200,7 +215,7 @@ export const validateField = (
       if (roleName === "cliente") {
         const zip =
           formData.customers?.[0]?.customerzipcode ??
-          (formData as any).customerzipcode ??
+          getDraftValue(formData, "customerzipcode") ??
           "";
         if (!zip.trim()) {
           error = "El código postal es obligatorio para clientes";
@@ -227,13 +242,13 @@ export const validateAllFields = (
     lastname: formData.lastname || "",
     password: formData.password || "",
     confirmPassword: formData.confirmPassword || "",
-    CV: (formData as any).CV || formData.technicians?.[0]?.CV || "",
+    CV: getDraftValue(formData, "CV") || formData.technicians?.[0]?.CV || "",
     customercity:
-      (formData as any).customercity ||
+      getDraftValue(formData, "customercity") ||
       formData.customers?.[0]?.customercity ||
       "",
     customerzipcode:
-      (formData as any).customerzipcode ||
+      getDraftValue(formData, "customerzipcode") ||
       formData.customers?.[0]?.customerzipcode ||
       "",
   };
@@ -284,3 +299,4 @@ export const validateFormWithNotification = (
 
   return true;
 };
+

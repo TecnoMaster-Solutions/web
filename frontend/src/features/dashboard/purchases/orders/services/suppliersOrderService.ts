@@ -66,6 +66,8 @@ export interface PurchaseOrderAPIResponse {
     }>;
 }
 
+type PurchaseOrderDetail = NonNullable<PurchaseOrderAPIResponse["detalles"]>[number];
+
 // ─── Obtener productos de un proveedor existente ───────────────────────────────
 export async function getProductsBySupplier(
     supplierId: number
@@ -92,7 +94,7 @@ export async function getPurchaseOrdersFromAPI(): Promise<purchaseOrder[]> {
             
             // Si hay detalles desde el backend, usarlos
             if (po.detalles && Array.isArray(po.detalles) && po.detalles.length > 0) {
-                items = po.detalles.map((detalle: any) => ({
+                items = po.detalles.map((detalle: PurchaseOrderDetail) => ({
                     producto: detalle.producto?.productname ?? detalle.productoNombre ?? "(sin nombre)",
                     productoId: detalle.productoId,
                     cantidad: Number(detalle.cantidad),
@@ -200,8 +202,6 @@ export async function sendPurchaseOrderNotification(
     // Determinar si usamos el API route de Next.js o el backend externo
     // Si la URL base contiene :3000, estamos en el frontend de Next.js y usamos el API route interno
     // Si la URL base contiene :3001, usamos el backend externo
-    const isNextJS = baseURL.includes(":3000");
-    
     // Intentar primero con el endpoint del API route de Next.js
     let url = `${baseURL}/api/purchase-orders/send-notification`;
     

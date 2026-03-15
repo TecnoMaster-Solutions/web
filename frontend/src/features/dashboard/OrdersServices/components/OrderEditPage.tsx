@@ -65,6 +65,9 @@ type ServiceOption = {
   statename?: string | null;
 };
 
+type ApiRecord = Record<string, unknown>;
+type ApiEnvelope<T> = { data?: T } & ApiRecord;
+
 type OrderStateOption = {
   stateid: number;
   name: string;
@@ -237,6 +240,16 @@ function pickString(...vals: unknown[]) {
   return "";
 }
 
+function getApiErrorMessage(error: unknown, fallback: string) {
+  if (typeof error === "object" && error !== null) {
+    const record = error as { message?: unknown; response?: { data?: { message?: unknown } } };
+    const apiMessage = record.response?.data?.message;
+    if (typeof apiMessage === "string" && apiMessage.trim()) return apiMessage;
+    if (typeof record.message === "string" && record.message.trim()) return record.message;
+  }
+  return fallback;
+}
+
 function coerceAllowedDateOrNext(ymd: string) {
   if (isAllowedDate(ymd)) return ymd;
   const d = parseYMD(ymd);
@@ -272,12 +285,14 @@ type OrderNormalized = {
   stateid?: number;
 };
 
-function normalizeOrder(order: any): OrderNormalized {
+function normalizeOrder(order: ApiRecord): OrderNormalized {
   const root = order || {};
+  const clientRecord = (root?.client as ApiRecord | undefined) ?? undefined;
+  const stateRecord = (root?.state as ApiRecord | undefined) ?? undefined;
 
   const clientid = pickNumber(
-    root?.client?.customerid,
-    root?.client?.customer_id,
+    clientRecord?.customerid,
+    clientRecord?.customer_id,
     root?.clientid,
     root?.customerid
   );
@@ -289,16 +304,19 @@ function normalizeOrder(order: any): OrderNormalized {
   const viaticos = pickNumber(root?.viaticos) ?? 0;
   const direccion = pickString(root?.direccion);
   const description = pickString(root?.description);
-  const files = Array.isArray(root?.files) ? root.files.map((x: any) => String(x || "")).filter(Boolean) : [];
-  const stateid = pickNumber(root?.state?.stateid, root?.stateid);
+  const files = Array.isArray(root?.files) ? root.files.map((x) => String(x || "")).filter(Boolean) : [];
+  const stateid = pickNumber(stateRecord?.stateid, root?.stateid);
 
   const servicesArr = Array.isArray(root?.services) ? root.services : [];
   const productsArr = Array.isArray(root?.products) ? root.products : [];
   const techniciansArr = Array.isArray(root?.technicians) ? root.technicians : [];
+  const firstServiceRecord = (servicesArr[0] as ApiRecord | undefined) ?? undefined;
+  const firstServiceNestedRecord = (firstServiceRecord?.service as ApiRecord | undefined) ?? undefined;
 
   const services = servicesArr
-    .map((s: any) => {
-      const serviceid = pickNumber(s?.service?.serviceid, s?.serviceid, s?.id);
+    .map((s) => {
+      const serviceRecord = (s?.service as ApiRecord | undefined) ?? undefined;
+      const serviceid = pickNumber(serviceRecord?.serviceid, s?.serviceid, s?.id);
       const cantidad = pickNumber(s?.cantidad, s?.quantity, s?.qty) ?? 1;
       const unitprice = pickNumber(s?.unitprice, s?.price, s?.unitPrice) ?? 0;
       if (!serviceid) return null;
@@ -311,8 +329,9 @@ function normalizeOrder(order: any): OrderNormalized {
     .filter(Boolean) as Array<{ serviceid: number; cantidad: number; unitprice: number }>;
 
   const products = productsArr
-    .map((p: any) => {
-      const productid = pickNumber(p?.product?.productid, p?.productid, p?.id);
+    .map((p) => {
+      const productRecord = (p?.product as ApiRecord | undefined) ?? undefined;
+      const productid = pickNumber(productRecord?.productid, p?.productid, p?.id);
       const cantidad = pickNumber(p?.cantidad, p?.quantity, p?.qty) ?? 1;
       if (!productid) return null;
       return { productid, cantidad: Math.max(1, Math.round(cantidad)) };
@@ -320,14 +339,14 @@ function normalizeOrder(order: any): OrderNormalized {
     .filter(Boolean) as Array<{ productid: number; cantidad: number }>;
 
   const technicians = techniciansArr
-    .map((t: any) => pickNumber(t?.technicianid, t?.id))
-    .filter((id): id is number => typeof id === "number" && Number.isFinite(id) && id > 0);
+    .map((t) => pickNumber(t?.technicianid, t?.id))
+    .filter((id: number | undefined): id is number => typeof id === "number" && Number.isFinite(id) && id > 0);
 
   const typeofserviceid =
     pickNumber(
       root?.typeofserviceid,
-      root?.services?.[0]?.service?.typeofserviceid,
-      root?.services?.[0]?.service?.typeofservice?.typeofserviceid
+      firstServiceNestedRecord?.typeofserviceid,
+      (firstServiceNestedRecord?.typeofservice as ApiRecord | undefined)?.typeofserviceid
     ) ?? null;
 
   return {
@@ -379,9 +398,14 @@ const {
 
   const customers = useMemo<CustomerOption[]>(() => {
     return (customersRaw || [])
-      .map((c: any) => {
-        const base = c?.customer || c?.client || c;
-        const u = base?.users || base?.user || base?.Users || c?.users || c?.user || {};
+      .map((c) => {
+        const base = ((c?.customer as ApiRecord | undefined) ?? (c?.client as ApiRecord | undefined) ?? (c as ApiRecord)) as ApiRecord;
+        const u = ((base?.users as ApiRecord | undefined) ??
+          (base?.user as ApiRecord | undefined) ??
+          (base?.Users as ApiRecord | undefined) ??
+          (c?.users as ApiRecord | undefined) ??
+          (c?.user as ApiRecord | undefined) ??
+          undefined) as ApiRecord | undefined;
 
         const id = Number(
           base?.customerid ??
@@ -424,8 +448,11 @@ const {
 
   const technicians = useMemo<TechnicianOption[]>(() => {
     return (techniciansRaw || [])
-      .map((t: any) => {
-        const u = t?.users || t?.user || t?.Users || {};
+      .map((t) => {
+        const u = ((t?.users as ApiRecord | undefined) ??
+          (t?.user as ApiRecord | undefined) ??
+          (t?.Users as ApiRecord | undefined) ??
+          undefined) as ApiRecord | undefined;
         const name = [u?.name, u?.lastname].filter(Boolean).join(" ").trim();
         const label = name || `Técnico #${t?.technicianid ?? t?.id ?? "?"}`;
         return { technicianid: Number(t?.technicianid ?? t?.id), label } as TechnicianOption;
@@ -435,7 +462,7 @@ const {
 
   const productsCatalog = useMemo<ProductOption[]>(() => {
     return (productsRaw || [])
-      .map((p: any) => {
+      .map((p) => {
         const productid = Number(p?.productid ?? p?.id);
         const productname = (p?.productname ?? p?.name ?? `Producto #${productid}`).toString();
         const productpriceofsale = Number(p?.productpriceofsale ?? p?.priceofsale ?? p?.price ?? 0);
@@ -446,7 +473,7 @@ const {
 
   const serviceTypes = useMemo<ServiceTypeOption[]>(() => {
     return (serviceTypesRaw || [])
-      .map((t: any) => {
+      .map((t) => {
         const id = Number(t?.typeofserviceid ?? t?.id);
         const name = String(t?.name ?? t?.typeofservicename ?? t?.label ?? "").trim();
         return { typeofserviceid: id, name, label: titleCase(name) || `Tipo #${id}` } as ServiceTypeOption;
@@ -456,7 +483,7 @@ const {
 
   const orderStates = useMemo<OrderStateOption[]>(() => {
     return (statesRaw || [])
-      .map((s: any) => {
+      .map((s) => {
         const stateid = Number(s?.stateid ?? s?.id);
         const name = String(s?.name ?? s?.state ?? s?.label ?? s?.statename ?? "").trim();
         return { stateid, name, label: name || `Estado #${stateid}` } as OrderStateOption;
@@ -467,11 +494,12 @@ const {
 
   const servicesCatalog = useMemo<ServiceOption[]>(() => {
     return (servicesRaw || [])
-      .map((s: any) => {
+      .map((s) => {
+        const typeOfServiceRecord = (s?.typeofservice as ApiRecord | undefined) ?? undefined;
         const serviceid = Number(s?.serviceid ?? s?.id);
         const name = String(s?.name ?? s?.servicename ?? `Servicio #${serviceid}`).trim();
-        const typeofserviceid = Number(s?.typeofserviceid ?? s?.typeOfServiceId ?? s?.typeofservice?.typeofserviceid);
-        const typeofservicename = (s?.typeofservicename ?? s?.typeofservicename ?? s?.typeName ?? null) as any;
+        const typeofserviceid = Number(s?.typeofserviceid ?? s?.typeOfServiceId ?? typeOfServiceRecord?.typeofserviceid);
+        const typeofservicename = String(s?.typeofservicename ?? s?.typeName ?? "").trim() || null;
         const stateid = s?.stateid != null ? Number(s.stateid) : null;
         const statename = s?.statename != null ? String(s.statename) : null;
         return { serviceid, name, typeofserviceid, typeofservicename, stateid, statename } as ServiceOption;
@@ -503,9 +531,9 @@ const {
         if (cancelled) return;
         const n = normalizeOrder(data);
         setOrderNormalized(n);
-      } catch (e: any) {
+      } catch (e: unknown) {
         if (!cancelled) {
-          const msg = e?.response?.data?.message || e?.message || "Error cargando la orden.";
+          const msg = getApiErrorMessage(e, "Error cargando la orden.");
           setOrderError(String(msg));
           showError(String(msg));
         }
@@ -568,7 +596,7 @@ const {
 
   function pickClient(id: number) {
     if (!Number.isFinite(id) || id <= 0) return;
-    setClientId(id as any);
+    setClientId(id);
     setErrors((p) => ({ ...p, clientId: undefined }));
     setClientQuery("");
     setClientOpen(false);
@@ -624,8 +652,8 @@ const {
   const [techActiveIndex, setTechActiveIndex] = useState(0);
   const techBoxRef = useRef<HTMLDivElement>(null);
   const techInputRef = useRef<HTMLInputElement>(null);
-  const [scheduledOrdersRaw, setScheduledOrdersRaw] = useState<any[]>([]);
-  const [scheduledRequestsRaw, setScheduledRequestsRaw] = useState<any[]>([]);
+  const [scheduledOrdersRaw, setScheduledOrdersRaw] = useState<ApiRecord[]>([]);
+  const [scheduledRequestsRaw, setScheduledRequestsRaw] = useState<ApiRecord[]>([]);
 
   const [servicios, setServicios] = useState<ServiceLineItem[]>([]);
   const [materiales, setMateriales] = useState<MaterialLineItem[]>([]);
@@ -681,13 +709,18 @@ const {
       ]);
       if (cancelled) return;
 
+      const ordersPayload =
+        ordersRes.status === "fulfilled" ? ((ordersRes.value.data as ApiEnvelope<ApiRecord[]>)?.data ?? ordersRes.value.data) : [];
+      const requestsPayload =
+        requestsRes.status === "fulfilled" ? ((requestsRes.value.data as ApiEnvelope<ApiRecord[]>)?.data ?? requestsRes.value.data) : [];
+
       const ordersData =
-        ordersRes.status === "fulfilled" && Array.isArray((ordersRes.value as any)?.data)
-          ? (ordersRes.value as any).data
+        ordersRes.status === "fulfilled" && Array.isArray(ordersPayload)
+          ? ordersPayload
           : [];
       const requestsData =
-        requestsRes.status === "fulfilled" && Array.isArray((requestsRes.value as any)?.data)
-          ? (requestsRes.value as any).data
+        requestsRes.status === "fulfilled" && Array.isArray(requestsPayload)
+          ? requestsPayload
           : [];
 
       setScheduledOrdersRaw(ordersData);
@@ -1059,7 +1092,7 @@ const {
 
   function focusFirstError(er: Errors) {
     const order = ["clientId", "tipo", "schedule", "technicians", "viaticos", "direccion", "description", "materiales", "servicios"] as const;
-    const key = order.find((k) => (er as any)[k]);
+    const key = order.find((k) => er[k]);
     if (!key) return;
     const el = document.getElementById(`field-${key}`);
     if (el) {
@@ -1073,10 +1106,15 @@ const {
   async function uploadFilesToCloudinary(fs: File[]) {
     const urls: string[] = [];
     for (const f of fs) {
-      const res: any = await uploadImageToCloudinary(f);
+      const res: unknown = await uploadImageToCloudinary(f);
       if (typeof res === "string") urls.push(res);
-      else if (res?.secure_url) urls.push(res.secure_url);
-      else if (res?.url) urls.push(res.url);
+      else {
+        const uploadRecord = (res as ApiRecord | null) ?? null;
+        const secureUrl = typeof uploadRecord?.secure_url === "string" ? uploadRecord.secure_url : "";
+        const url = typeof uploadRecord?.url === "string" ? uploadRecord.url : "";
+        if (secureUrl) urls.push(secureUrl);
+        else if (url) urls.push(url);
+      }
     }
     return urls;
   }
@@ -1098,7 +1136,7 @@ const {
 
     let nextClient: number | "" = "";
     if (n.clientid && customers.some((c) => c.customerid === n.clientid)) nextClient = n.clientid;
-    setClientId(nextClient as any);
+    setClientId(nextClient);
 
     const inferredTypeFromServices =
       n.services && n.services.length
@@ -1314,9 +1352,9 @@ const {
 
       const desiredServiceMap = new Map<number, { cantidad: number; unitprice: number }>();
       for (const sLine of services) {
-        const sid = Number((sLine as any).serviceid);
-        const cantidad = Number((sLine as any).cantidad);
-        const unitprice = Number((sLine as any).unitprice ?? 0);
+        const sid = Number(sLine.serviceid);
+        const cantidad = Number(sLine.cantidad);
+        const unitprice = Number(sLine.unitprice ?? 0);
         desiredServiceMap.set(sid, { cantidad, unitprice });
       }
 
@@ -1352,8 +1390,8 @@ const {
 
       showSuccess("Orden actualizada");
       router.push(returnTo);
-    } catch (e: any) {
-      showError(e?.response?.data?.message || e?.message || "Error inesperado.");
+    } catch (e: unknown) {
+      showError(getApiErrorMessage(e, "Error inesperado."));
     } finally {
       setSaving(false);
     }
@@ -1559,7 +1597,6 @@ const {
                         placeholder={lookupsLoading ? "Cargando..." : "Nombre, apellido o ID..."}
                         className={`${inputBase} ${errors.clientId ? errorRing : ""}`}
                         disabled={lookupsLoading}
-                        aria-expanded={clientOpen}
                         aria-controls="client-suggest"
                         aria-autocomplete="list"
                       />
@@ -1794,7 +1831,6 @@ const {
                         placeholder="Nombre, apellido o ID..."
                         className={`${inputBase} ${errors.technicians ? errorRing : ""}`}
                         disabled={lookupsLoading}
-                        aria-expanded={techOpen}
                         aria-controls="tech-suggest"
                         aria-autocomplete="list"
                       />
@@ -1923,7 +1959,7 @@ const {
                               const tipoLabel = tipoLabelById.get(it.tipoId) || `Tipo #${it.tipoId}`;
                               const fallbackCurrent =
                                 !options.some((o) => o.name === it.nombre) && it.nombre
-                                  ? [{ serviceid: -1, name: it.nombre, typeofserviceid: it.tipoId } as any, ...options]
+                                  ? [{ serviceid: -1, name: it.nombre, typeofserviceid: it.tipoId } as ServiceOption, ...options]
                                   : options;
 
                               return (
@@ -2213,7 +2249,7 @@ const {
                           const opts = availableProducts(m.nombre);
                           const fallbackCurrent =
                             !opts.some((o) => o.productname === m.nombre) && m.nombre
-                              ? [{ productid: -1, productname: m.nombre, productpriceofsale: m.precio } as any, ...opts]
+                              ? [{ productid: -1, productname: m.nombre, productpriceofsale: m.precio } as ProductOption, ...opts]
                               : opts;
 
                           return (
@@ -2439,6 +2475,4 @@ const {
     </RequireAuth>
   );
 }
-
-
 

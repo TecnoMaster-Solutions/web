@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
+import Image from "next/image";
 import { UserCircle, LogOut, Pencil } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { routes } from "@/shared/routes";
@@ -171,9 +172,12 @@ export default function TopNav({
             </span>
 
             {display.image ? (
-              <img
+              <Image
                 src={display.image}
                 alt="avatar"
+                width={40}
+                height={40}
+                unoptimized
                 className={[
                   "w-9 h-9 md:w-10 md:h-10 rounded-full object-cover transition",
                   menuProfileOpen
@@ -233,4 +237,3 @@ export default function TopNav({
     </>
   );
 }
-

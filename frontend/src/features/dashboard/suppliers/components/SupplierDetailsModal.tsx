@@ -124,7 +124,6 @@ export default function SupplierDetailsModal({
   onClose,
   supplier,
   onEdit,
-  onToggleStatus,
   title = "Detalles del Proveedor",
 }: Props) {
   const [products, setProducts] = useState<SupplierProduct[]>([]);
@@ -314,4 +313,3 @@ export default function SupplierDetailsModal({
     </Modal>
   );
 }
-

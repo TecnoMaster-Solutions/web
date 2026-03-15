@@ -35,20 +35,26 @@ type CustomerApi = {
   } | null;
 };
 
-function unwrap<T>(payload: any): T {
-  if (payload && typeof payload === "object" && "data" in payload) return (payload as any).data as T;
+type PayloadWithData<T> = {
+  data?: T;
+};
+
+function unwrap<T>(payload: unknown): T {
+  if (payload && typeof payload === "object" && "data" in payload) {
+    return (payload as PayloadWithData<T>).data as T;
+  }
   return payload as T;
 }
 
-function unwrapList<T>(payload: any): T[] {
-  const data = unwrap<any>(payload);
+function unwrapList<T>(payload: unknown): T[] {
+  const data = unwrap<unknown>(payload);
   return Array.isArray(data) ? (data as T[]) : [];
 }
 
 export async function getServiceOptions(): Promise<
   (Option & { typeofserviceid?: number | null; typeofservicename?: string | null; serviceTypeCode?: string | null })[]
 > {
-  const res = await api.get<any>("/services");
+  const res = await api.get<PayloadWithData<ServiceApi[]>>("/services");
   const list = unwrapList<ServiceApi>(res.data);
 
   return list
@@ -102,7 +108,7 @@ export async function getServiceOptions(): Promise<
 }
 
 export async function getCustomerOptions(): Promise<Option[]> {
-  const res = await api.get<any>("/customers", {
+  const res = await api.get<PayloadWithData<CustomerApi[]>>("/customers", {
     params: { includeRelations: true },
   });
   const list = unwrapList<CustomerApi>(res.data);

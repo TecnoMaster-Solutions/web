@@ -95,6 +95,26 @@ type RoleApi = {
   name: string;
 };
 
+type AuthEntity = {
+  customerid?: number | null;
+  customer?: {
+    customerid?: number | null;
+  } | null;
+  customers?: Array<{
+    customerid?: number | null;
+  }> | null;
+  technicianid?: number | null;
+  technician?: {
+    technicianid?: number | null;
+  } | null;
+  technicians?: Array<{
+    technicianid?: number | null;
+  }> | null;
+  role?: unknown;
+  rolename?: unknown;
+  roles?: unknown;
+};
+
 const getErrorMessage = (error: unknown, fallback: string): string => {
   if (typeof error === "object" && error !== null) {
     const maybeResponse = (error as { response?: { data?: { message?: string } } }).response;
@@ -268,12 +288,12 @@ export default function QuotesIndex() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(5);
   const [search, setSearch] = useState("");
-  const [total, setTotal] = useState(0);
+  const [, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [quotesData, setQuotesData] = useState<QuoteTableRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const authUser = user as any;
-  const authProfile = profile as any;
+  const authUser = useMemo(() => (user ?? {}) as AuthEntity, [user]);
+  const authProfile = useMemo(() => (profile ?? {}) as AuthEntity, [profile]);
 
   const roleName = useMemo(() => extractRoleName(user, profile), [user, profile]);
   const isClientRole = useMemo(
@@ -700,7 +720,6 @@ export default function QuotesIndex() {
             serverPagination={{
               page,
               limit,
-              total,
               totalPages,
               onPageChange: setPage,
               onPageSizeChange: (nextLimit) => {

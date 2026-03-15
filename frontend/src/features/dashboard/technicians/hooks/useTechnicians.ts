@@ -27,6 +27,13 @@ type MinimalTechForValidate = Pick<
   "name" | "lastName" | "documentType" | "documentNumber" | "phone" | "email"
 >;
 
+type ApiErrorShape = {
+  response?: { data?: { message?: string } };
+  message?: string;
+  name?: string;
+  code?: string;
+};
+
 const TECH_TYPE_MAP: Record<string, number> = {
   "Cableado estructurado": 1,
   Electricista: 2,
@@ -34,6 +41,20 @@ const TECH_TYPE_MAP: Record<string, number> = {
 };
 
 const normalizeTypeName = (name: string) => name.trim().toLowerCase();
+
+const getApiErrorMessage = (error: unknown) => {
+  const apiError = error as ApiErrorShape | null;
+  return apiError?.response?.data?.message ?? apiError?.message ?? "";
+};
+
+const isCanceledError = (error: unknown) => {
+  const apiError = error as ApiErrorShape | null;
+  return (
+    apiError?.name === "AbortError" ||
+    apiError?.code === "ERR_CANCELED" ||
+    apiError?.name === "CanceledError"
+  );
+};
 
 const validateTechnician = (data: MinimalTechForValidate) => {
   if (!data.name.trim()) return toast.warning("El nombre es obligatorio"), false;
@@ -121,12 +142,8 @@ export const useTechnicians = () => {
         setTotal(Number(response.meta.total ?? 0));
         setTotalPages(Number(response.meta.totalPages ?? 1));
         await waitForRender();
-      } catch (error: any) {
-        if (
-          error?.name !== "AbortError" &&
-          error?.code !== "ERR_CANCELED" &&
-          error?.name !== "CanceledError"
-        ) {
+      } catch (error: unknown) {
+        if (!isCanceledError(error)) {
           console.error(error);
           toast.error("No se pudieron cargar los técnicos.");
         }
@@ -224,10 +241,7 @@ export const useTechnicians = () => {
       toast.success("Técnico creado exitosamente");
     } catch (error) {
       console.error(error);
-      const apiMessage =
-        (error as any)?.response?.data?.message ||
-        (error as any)?.message ||
-        "";
+      const apiMessage = getApiErrorMessage(error);
       toast.error(
         apiMessage
           ? `No se pudo crear el técnico: ${apiMessage}`
@@ -322,11 +336,10 @@ export const useTechnicians = () => {
           toast.success(
             `El técnico "${tech.name} ${tech.lastName}" ha sido eliminado correctamente.`
           );
-        } catch (error: any) {
+        } catch (error: unknown) {
           console.warn("Error al eliminar técnico:", error);
 
-          const apiMessage =
-            error?.response?.data?.message ?? error?.message ?? "";
+          const apiMessage = getApiErrorMessage(error);
 
           toast.warning(
             apiMessage || "No se pudo eliminar el técnico. Intenta nuevamente."

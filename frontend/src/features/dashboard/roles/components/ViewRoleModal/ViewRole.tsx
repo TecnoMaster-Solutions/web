@@ -22,7 +22,7 @@ interface ViewRoleModalProps {
 export default function ViewRoleModal({ open, onClose, role }: ViewRoleModalProps) {
   if (!open || !role) return null;
 
-  const isAdmin = Number((role as any)?.id) === 1; // admin por id=1
+  const isAdmin = Number(role.id) === 1;
 
   // 1) Parsear tokens "Modulo-Accion" y construir Set por módulo con acciones asignadas
   const assignedByModule = new Map<RoleUiModule, Set<string>>();

@@ -13,20 +13,28 @@ let cachedRoles: Role[] | null = null;
 let inFlightRequest: Promise<Role[]> | null = null;
 
 // Normalizador consistente
-const normalizeRoleData = (raw: any): Role[] => {
+type RolePayload = {
+  data?: unknown[];
+  roles?: unknown[];
+};
+
+const normalizeRoleData = (raw: unknown): Role[] => {
   const list = Array.isArray(raw)
     ? raw
-    : Array.isArray(raw?.data)
-    ? raw.data
-    : Array.isArray(raw?.roles)
-    ? raw.roles
+    : Array.isArray((raw as RolePayload | undefined)?.data)
+    ? (raw as RolePayload).data ?? []
+    : Array.isArray((raw as RolePayload | undefined)?.roles)
+    ? (raw as RolePayload).roles ?? []
     : [];
 
-  return list.map((item: any) => ({
-    roleid: item.roleid,
-    name: item.name,
-    status: item.status,
-  })) as Role[];
+  return list.map((item) => {
+    const typed = (item ?? {}) as Record<string, unknown>;
+    return {
+      roleid: Number(typed.roleid),
+      name: String(typed.name ?? ""),
+      status: typed.status == null ? undefined : String(typed.status),
+    };
+  }) as Role[];
 };
 
 export const useRoles = () => {

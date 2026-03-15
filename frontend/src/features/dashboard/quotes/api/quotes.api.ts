@@ -1,5 +1,10 @@
 import { api } from "@/shared/utils/apiClient";
 import { showError } from "@/shared/utils/notifications";
+import {
+  IQuote,
+  QuoteCreatePayload,
+  ServiceRequest,
+} from "../types/Quote.type";
 
 export type PaginationMeta = {
   page: number;
@@ -24,39 +29,126 @@ export type GetQuotesParams = {
   technicianid?: number;
 };
 
-export const createQuote = async (payload: any) => {
+export type QuoteCompletionResponse = {
+  sale?: {
+    salecode?: string;
+    saleid?: number;
+  };
+};
+
+export type QuoteCustomerApi = {
+  customerid?: number;
+  id?: number;
+  users?: {
+    name?: string;
+    lastname?: string;
+    documentnumber?: string;
+    documentNumber?: string;
+  };
+  user?: {
+    name?: string;
+    lastname?: string;
+    documentnumber?: string;
+    documentNumber?: string;
+  };
+  name?: string;
+  lastname?: string;
+  documentnumber?: string;
+  documentNumber?: string;
+};
+
+export type QuoteTechnicianApi = {
+  technicianid?: number;
+  id?: number;
+  users?: {
+    name?: string;
+    lastname?: string;
+  };
+};
+
+export type QuoteProductApi = {
+  productid?: number;
+  id?: number;
+  productname?: string;
+  name?: string;
+  productdescription?: string | null;
+  productpriceofsale?: number;
+  priceofsale?: number;
+  productstock?: number;
+  stock?: number;
+  isactive?: boolean;
+};
+
+export type QuoteServiceRequestApi = ServiceRequest & {
+  stateId?: number;
+};
+
+type ApiErrorShape = {
+  message?: string;
+  response?: {
+    status?: number;
+    data?: {
+      message?: string | string[];
+    };
+  };
+};
+
+const getErrorDetails = (
+  error: unknown,
+  fallback: string,
+): { message: string; status?: number; data?: unknown } => {
+  const apiError = error as ApiErrorShape;
+  const backendMessage = apiError.response?.data?.message;
+  const message = Array.isArray(backendMessage)
+    ? backendMessage.join(", ")
+    : backendMessage || apiError.message || fallback;
+
+  return {
+    message,
+    status: apiError.response?.status,
+    data: apiError.response?.data,
+  };
+};
+
+export const createQuote = async (
+  payload: QuoteCreatePayload,
+): Promise<IQuote> => {
   try {
-    const { data } = await api.post("/quotes", payload);
+    const { data } = await api.post<IQuote>("/quotes", payload);
     return data;
-  } catch (error: any) {
-    const backendMessage = error?.response?.data?.message;
-    const message = Array.isArray(backendMessage)
-      ? backendMessage.join(", ")
-      : backendMessage;
-    console.error("Error al crear la cotización:", {
-      status: error?.response?.status,
-      message: message ?? error?.message,
-      data: error?.response?.data,
+  } catch (error: unknown) {
+    const { message, status, data } = getErrorDetails(
+      error,
+      "Error al crear la cotizacion.",
+    );
+    console.error("Error al crear la cotizacion:", {
+      status,
+      message,
+      data,
     });
-    if (message) {
-      error.message = message;
-    }
-    throw error;
+    const finalError = error as ApiErrorShape;
+    finalError.message = message;
+    throw finalError;
   }
 };
 
-export const getQuotes = async (params?: GetQuotesParams) => {
+export const getQuotes = async (
+  params?: GetQuotesParams,
+): Promise<PaginatedResponse<IQuote> | IQuote[]> => {
   try {
-    const { data } = await api.get("/quotes", {
-      params: {
-        page: params?.page,
-        limit: params?.limit,
-        search: params?.search?.trim() || undefined,
-        statesid: params?.statesid,
-        customerid: params?.customerid,
-        technicianid: params?.technicianid,
+    const { data } = await api.get<PaginatedResponse<IQuote> | IQuote[]>(
+      "/quotes",
+      {
+        params: {
+          page: params?.page,
+          limit: params?.limit,
+          search: params?.search?.trim() || undefined,
+          statesid: params?.statesid,
+          customerid: params?.customerid,
+          technicianid: params?.technicianid,
+        },
       },
-    });
+    );
     return data;
   } catch (error) {
     console.error("Error al obtener las cotizaciones:", error);
@@ -65,22 +157,27 @@ export const getQuotes = async (params?: GetQuotesParams) => {
   }
 };
 
-export const getQuoteById = async (id: number) => {
+export const getQuoteById = async (id: number): Promise<IQuote> => {
   try {
-    const { data } = await api.get(`/quotes/${id}`);
+    const { data } = await api.get<IQuote>(`/quotes/${id}`);
     return data;
   } catch (error) {
-    console.error("Error al obtener la cotización:", error);
-    showError("Error al obtener la cotización");
+    console.error("Error al obtener la cotizacion:", error);
+    showError("Error al obtener la cotizacion");
     throw error;
   }
 };
 
-export const getCustomersForQuote = async (): Promise<any> => {
+export const getCustomersForQuote = async (): Promise<
+  QuoteCustomerApi[] | { data?: QuoteCustomerApi[] }
+> => {
   try {
-    const { data } = await api.get("/customers", {
-      params: { includeRelations: true },
-    });
+    const { data } = await api.get<QuoteCustomerApi[] | { data?: QuoteCustomerApi[] }>(
+      "/customers",
+      {
+        params: { includeRelations: true },
+      },
+    );
     return data;
   } catch (error) {
     console.error("Error al obtener los clientes:", error);
@@ -89,20 +186,22 @@ export const getCustomersForQuote = async (): Promise<any> => {
   }
 };
 
-export const getTechniciansForQuote = async (): Promise<any> => {
+export const getTechniciansForQuote = async (): Promise<
+  QuoteTechnicianApi[]
+> => {
   try {
-    const { data } = await api.get("/technicians");
+    const { data } = await api.get<QuoteTechnicianApi[]>("/technicians");
     return data;
   } catch (error) {
-    console.error("Error al obtener los técnicos:", error);
-    showError("Error al obtener los técnicos");
+    console.error("Error al obtener los tecnicos:", error);
+    showError("Error al obtener los tecnicos");
     throw error;
   }
 };
 
-export const getProductsForQuote = async (): Promise<any> => {
+export const getProductsForQuote = async (): Promise<QuoteProductApi[]> => {
   try {
-    const { data } = await api.get("/products");
+    const { data } = await api.get<QuoteProductApi[]>("/products");
     return data;
   } catch (error) {
     console.error("Error al obtener los productos:", error);
@@ -111,15 +210,12 @@ export const getProductsForQuote = async (): Promise<any> => {
   }
 };
 
-export const getServicesRequestsForQuote = async (): Promise<any[]> => {
+export const getServicesRequestsForQuote = async (): Promise<
+  QuoteServiceRequestApi[]
+> => {
   try {
-    const { data } = await api.get("/service-requests");
-
-    const filtered = data.filter(
-      (request: any) => request.stateId === 11 
-    );
-
-    return filtered;
+    const { data } = await api.get<QuoteServiceRequestApi[]>("/service-requests");
+    return data.filter((request) => request.stateId === 11);
   } catch (error) {
     console.error("Error al obtener las solicitudes de servicio:", error);
     showError("Error al obtener las solicitudes de servicio");
@@ -127,74 +223,72 @@ export const getServicesRequestsForQuote = async (): Promise<any[]> => {
   }
 };
 
-/* ================================
- * APROBAR COTIZACIÓN
- * ================================ */
 export const approveQuote = async (quoteId: number): Promise<void> => {
   try {
     await api.patch(`/quotes/${quoteId}/approve`);
   } catch (error) {
-    console.error("Error al aprobar la cotización:", error);
-    showError("Error al aprobar la cotización. Inténtalo nuevamente.");
+    console.error("Error al aprobar la cotizacion:", error);
+    showError("Error al aprobar la cotizacion. Intentalo nuevamente.");
     throw error;
   }
 };
 
-export const completeQuote = async (quoteId: number): Promise<any> => {
+export const completeQuote = async (
+  quoteId: number,
+): Promise<QuoteCompletionResponse> => {
   try {
-    const { data } = await api.patch(`/quotes/${quoteId}/complete`);
+    const { data } = await api.patch<QuoteCompletionResponse>(
+      `/quotes/${quoteId}/complete`,
+    );
     return data;
   } catch (error) {
-    showError("Error al completar la cotización. Inténtalo nuevamente.");
+    showError("Error al completar la cotizacion. Intentalo nuevamente.");
     throw error;
   }
 };
 
 export const assignCustomerToQuote = async (
   quoteId: number,
-  customerid: number
-): Promise<any> => {
+  customerid: number,
+): Promise<IQuote> => {
   try {
-    const { data } = await api.patch(`/quotes/${quoteId}/assign-customer`, {
-      customerid,
-    });
+    const { data } = await api.patch<IQuote>(
+      `/quotes/${quoteId}/assign-customer`,
+      {
+        customerid,
+      },
+    );
     return data;
-  } catch (error: any) {
-    const status = error?.response?.status;
-    const backendMessage = error?.response?.data?.message;
+  } catch (error: unknown) {
     const fallbackMessage =
-      status === 403
+      (error as ApiErrorShape).response?.status === 403
         ? "No tienes permisos para asociar cliente a la cotizacion (quotes.update)."
         : "Error al asignar cliente a la cotizacion.";
-    const message = Array.isArray(backendMessage)
-      ? backendMessage.join(", ")
-      : backendMessage || fallbackMessage;
+    const { message, status, data } = getErrorDetails(error, fallbackMessage);
 
     console.error("Error al asignar cliente a la cotizacion:", {
       status,
       message,
-      data: error?.response?.data,
+      data,
     });
 
-    error.message = message;
-    throw error;
+    const finalError = error as ApiErrorShape;
+    finalError.message = message;
+    throw finalError;
   }
 };
 
-/* ================================
- * ANULAR COTIZACIÓN (ADMIN)
- * ================================ */
 export const revokeQuote = async (
   quoteId: number,
-  observation?: string
+  observation?: string,
 ): Promise<void> => {
   try {
     await api.patch(`/quotes/${quoteId}/cancel`, {
       observation: observation ?? null,
     });
   } catch (error) {
-    console.error("Error al revocar la cotización:", error);
-    showError("Error al revocar la cotización. Inténtalo nuevamente.");
+    console.error("Error al revocar la cotizacion:", error);
+    showError("Error al revocar la cotizacion. Intentalo nuevamente.");
     throw error;
   }
 };
@@ -203,8 +297,8 @@ export const cancelQuote = async (quoteId: number): Promise<void> => {
   try {
     await api.patch(`/quotes/${quoteId}/cancel-client`);
   } catch (error) {
-    console.error("Error al cancelar la cotización:", error);
-    showError("Error al cancelar la cotización. Inténtalo nuevamente.");
+    console.error("Error al cancelar la cotizacion:", error);
+    showError("Error al cancelar la cotizacion. Intentalo nuevamente.");
     throw error;
   }
 };

@@ -11,11 +11,20 @@ import {
   ALL_MODULE_PERMISSIONS,
   MODULE_BACK_TO_UI,
   privilegeNameToUiActions,
+  type RoleUiModule,
 } from "../../constants/roleMatrix.constants";
 
 const permissionGroups: PermissionGroup[] = Object.entries(ALL_MODULE_PERMISSIONS).map(
   ([title, permissions]) => ({ title, permissions })
 );
+
+const resolveRoleUiModule = (rawModule: string): RoleUiModule => {
+  return (
+    MODULE_BACK_TO_UI[rawModule] ??
+    MODULE_BACK_TO_UI[rawModule.toLowerCase()] ??
+    (rawModule as RoleUiModule)
+  );
+};
 
 interface EditRoleModalProps {
   isOpen: boolean;
@@ -52,12 +61,9 @@ export default function EditRoleModal({
       const rawModule = token.slice(0, idx).trim();
       const rawPrivName = token.slice(idx + 1).trim();
 
-      const modUI =
-        MODULE_BACK_TO_UI[rawModule] ??
-        MODULE_BACK_TO_UI[rawModule.toLowerCase()] ??
-        (rawModule as any);
+      const modUI = resolveRoleUiModule(rawModule);
 
-      const actions = privilegeNameToUiActions(modUI as any, rawPrivName);
+      const actions = privilegeNameToUiActions(modUI, rawPrivName);
 
       return actions.map((a) => `${modUI}-${a}`);
     });
@@ -314,4 +320,3 @@ export default function EditRoleModal({
     </AnimatePresence>
   );
 }
-

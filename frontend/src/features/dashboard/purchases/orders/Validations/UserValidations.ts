@@ -9,10 +9,7 @@ import {
 
 export const validateField = (
   fieldName: keyof formErrors,
-  value: string | undefined | null,
-  // extra params ignored for API compatibility
-  _formData?: unknown,
-  _isEditing?: boolean
+  value: string | undefined | null
 ): string => {
   let error = "";
   const stringValue = value ? String(value) : "";

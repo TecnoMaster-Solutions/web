@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 
 import { Monitor, Camera, HardDrive, Cpu, Router } from "lucide-react";
 import { getCategories } from "@/features/dashboard/CategoryProducts/connection/categoryApi";
+import type { Category as DashboardCategory } from "@/features/dashboard/CategoryProducts/types/typeCategoryProducts";
 const iconMap: Record<string, JSX.Element> = {
   monitor: <Monitor className="w-6 h-6 text-[#04652c]" />,
   camera: <Camera className="w-6 h-6 text-[#04652c]" />,
@@ -13,7 +14,7 @@ const iconMap: Record<string, JSX.Element> = {
   router: <Router className="w-6 h-6 text-[#04652c]" />,
 };
 
-interface Category {
+interface CategoryCard {
   id: number;
   name: string;
   icon: string | null;
@@ -24,9 +25,16 @@ const cardsPerView = 3;
 const buffer = cardsPerView;
 const ANIMATION_MS = 400;
 
+const toCategoryCard = (category: DashboardCategory): CategoryCard => ({
+  id: category.id,
+  name: category.name,
+  icon: typeof category.icon === "string" ? category.icon : null,
+  status: category.status,
+});
+
 const CategoryCarousel: React.FC = () => {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [extended, setExtended] = useState<any[]>([]);
+  const [categories, setCategories] = useState<CategoryCard[]>([]);
+  const [extended, setExtended] = useState<CategoryCard[]>([]);
   const [index, setIndex] = useState(buffer);
   const [isTransitioning, setIsTransitioning] = useState(true);
   const viewportRef = useRef<HTMLDivElement | null>(null);
@@ -37,7 +45,7 @@ const CategoryCarousel: React.FC = () => {
       try {
         const data = await getCategories();
         if (Array.isArray(data)) {
-          const active = data.filter((c) => c.status === true);
+          const active = data.filter((c) => c.status === true).map(toCategoryCard);
 
           setCategories(active);
 

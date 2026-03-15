@@ -22,6 +22,7 @@ import {
   MODULE_BACK_TO_UI,
   privilegeNameToUiActions,
   ALL_MODULE_PERMISSIONS,
+  type RoleUiModule,
 } from "../constants/roleMatrix.constants";
 
 function isValidConfig(
@@ -32,6 +33,64 @@ function isValidConfig(
 
 const toUiStatus = (s?: string): "Activo" | "Inactivo" =>
   (s ?? "").toLowerCase() === "active" ? "Activo" : "Inactivo";
+
+type ApiErrorShape = {
+  response?: { data?: { message?: string | string[] }; status?: number };
+  message?: string;
+  name?: string;
+  code?: string;
+};
+
+type RoleDetailResponse = {
+  role: {
+    roleid: number;
+    name: string;
+    status?: string;
+  };
+  configurations: Array<{
+    permission: { module: string };
+    privilege: { name: string };
+  }>;
+};
+
+const resolveRoleUiModule = (moduleName: string): RoleUiModule => {
+  return (
+    MODULE_BACK_TO_UI[moduleName] ??
+    MODULE_BACK_TO_UI[String(moduleName).toLowerCase()] ??
+    (moduleName as RoleUiModule)
+  );
+};
+
+const mapPermissionTokenToConfig = (token: string) => {
+  const idx = token.lastIndexOf("-");
+  if (idx === -1) return null;
+
+  const moduleName = token.slice(0, idx) as RoleUiModule;
+  const action = token.slice(idx + 1);
+
+  const permissionid = MODULE_TO_PERMISSION_ID[moduleName];
+  if (!permissionid) return null;
+
+  const privName = uiActionToPrivilegeName(moduleName, action);
+  if (!privName) return null;
+
+  const privilegeid = PRIVILEGE_NAME_TO_ID[privName];
+  if (!privilegeid) return null;
+
+  return { permissionid, privilegeid };
+};
+
+const mapRoleConfigurationsToPermissions = (
+  configurations: RoleDetailResponse["configurations"]
+) => {
+  return configurations.flatMap((cfg) => {
+    const moduleUi = resolveRoleUiModule(cfg.permission.module);
+    const actions = privilegeNameToUiActions(moduleUi, cfg.privilege.name);
+    const allowed = ALL_MODULE_PERMISSIONS[moduleUi] ?? [];
+    const filtered = actions.filter((a) => allowed.includes(a));
+    return filtered.map((a) => `${moduleUi}-${a}`);
+  });
+};
 
 export const useRoles = () => {
   const [roles, setRoles] = useState<Role[]>([]);
@@ -102,7 +161,7 @@ export const useRoles = () => {
           signal: controller.signal,
         });
 
-        const mapped: Role[] = response.data.map((r: any) => ({
+        const mapped: Role[] = response.data.map((r) => ({
           id: r.id,
           name: r.name,
           state: r.state,
@@ -113,11 +172,12 @@ export const useRoles = () => {
         setPage(Number(response.meta.page ?? customPage));
         setLimit(Number(response.meta.limit ?? customLimit));
         setTotal(Number(response.meta.total ?? 0));
-      } catch (err: any) {
+      } catch (err: unknown) {
+        const error = err as ApiErrorShape | null;
         if (
-          err?.name === "CanceledError" ||
-          err?.code === "ERR_CANCELED" ||
-          err?.message === "canceled"
+          error?.name === "CanceledError" ||
+          error?.code === "ERR_CANCELED" ||
+          error?.message === "canceled"
         ) {
           return;
         }
@@ -150,24 +210,7 @@ export const useRoles = () => {
     if (errors.permissions) return showWarning(errors.permissions);
 
     const roleconfigurations = payload.permissions
-      .map((token) => {
-        const idx = token.lastIndexOf("-");
-        if (idx === -1) return null;
-
-        const moduleName = token.slice(0, idx);
-        const action = token.slice(idx + 1);
-
-        const permissionid = (MODULE_TO_PERMISSION_ID as any)[moduleName];
-        if (!permissionid) return null;
-
-        const privName = uiActionToPrivilegeName(moduleName as any, action);
-        if (!privName) return null;
-
-        const privilegeid = PRIVILEGE_NAME_TO_ID[privName];
-        if (!privilegeid) return null;
-
-        return { permissionid, privilegeid };
-      })
+      .map(mapPermissionTokenToConfig)
       .filter(isValidConfig);
 
     if (roleconfigurations.length === 0) {
@@ -197,20 +240,10 @@ export const useRoles = () => {
     const map = new Map<number, number[]>();
 
     for (const t of tokens) {
-      const idx = t.lastIndexOf("-");
-      if (idx === -1) continue;
+      const config = mapPermissionTokenToConfig(t);
+      if (!config) continue;
 
-      const moduleName = t.slice(0, idx);
-      const action = t.slice(idx + 1);
-
-      const permissionid = (MODULE_TO_PERMISSION_ID as any)[moduleName];
-      if (!permissionid) continue;
-
-      const privName = uiActionToPrivilegeName(moduleName as any, action);
-      if (!privName) continue;
-
-      const privilegeid = PRIVILEGE_NAME_TO_ID[privName];
-      if (!privilegeid) continue;
+      const { permissionid, privilegeid } = config;
 
       const arr = map.get(permissionid) ?? [];
       if (!arr.includes(privilegeid)) arr.push(privilegeid);
@@ -250,10 +283,11 @@ export const useRoles = () => {
       await loadRoles(page, limit, debouncedSearch);
       setEditingRole(null);
       showSuccess("Rol actualizado exitosamente!");
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as ApiErrorShape | null;
       const msg =
-        err?.response?.data?.message ||
-        err?.message ||
+        error?.response?.data?.message ||
+        error?.message ||
         "No se pudo actualizar el rol.";
       showWarning(Array.isArray(msg) ? msg.join(", ") : msg);
       console.error("Error al editar rol:", err);
@@ -265,24 +299,11 @@ export const useRoles = () => {
   const handleView = async (role: Role) => {
     startLoading();
     try {
-      const { role: roleInfo, configurations } = await getRoleDetail(role.id);
+      const { role: roleInfo, configurations } = (await getRoleDetail(
+        role.id
+      )) as RoleDetailResponse;
 
-      const mappedPermissions = configurations.flatMap((cfg: any) => {
-        const moduleUi =
-          MODULE_BACK_TO_UI[cfg.permission.module] ??
-          MODULE_BACK_TO_UI[String(cfg.permission.module).toLowerCase()] ??
-          cfg.permission.module;
-
-        const actions = privilegeNameToUiActions(
-          moduleUi as any,
-          cfg.privilege.name
-        );
-
-        const allowed = (ALL_MODULE_PERMISSIONS as any)[moduleUi] ?? [];
-        const filtered = actions.filter((a: string) => allowed.includes(a));
-
-        return filtered.map((a: string) => `${moduleUi}-${a}`);
-      });
+      const mappedPermissions = mapRoleConfigurationsToPermissions(configurations);
 
       setViewingRole({
         ...role,
@@ -304,24 +325,11 @@ export const useRoles = () => {
 
     startLoading();
     try {
-      const { role: roleInfo, configurations } = await getRoleDetail(role.id);
+      const { role: roleInfo, configurations } = (await getRoleDetail(
+        role.id
+      )) as RoleDetailResponse;
 
-      const mappedPermissions = configurations.flatMap((cfg: any) => {
-        const moduleUi =
-          MODULE_BACK_TO_UI[cfg.permission.module] ??
-          MODULE_BACK_TO_UI[String(cfg.permission.module).toLowerCase()] ??
-          cfg.permission.module;
-
-        const actions = privilegeNameToUiActions(
-          moduleUi as any,
-          cfg.privilege.name
-        );
-
-        const allowed = (ALL_MODULE_PERMISSIONS as any)[moduleUi] ?? [];
-        const filtered = actions.filter((a: string) => allowed.includes(a));
-
-        return filtered.map((a: string) => `${moduleUi}-${a}`);
-      });
+      const mappedPermissions = mapRoleConfigurationsToPermissions(configurations);
 
       setEditingRole({
         id: roleInfo.roleid,
@@ -373,7 +381,7 @@ export const useRoles = () => {
 
           showSuccess(`El rol "${role.name}" ha sido eliminado correctamente.`);
         } catch (err) {
-          const ax = err as AxiosError<any>;
+          const ax = err as AxiosError<{ message?: string }>;
 
           if (ax.response?.status === 404) {
             showWarning("El rol ya no existe.");

@@ -16,10 +16,14 @@ import { showSuccess, showError } from "@/shared/utils/notifications";
 
 const DEFAULT_IMG = "/assets/imgs/default-product.png";
 
+type ParamsLike = { id?: string | string[] };
+type BackendError = { message?: string };
+
 export default function ProductDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const id = (params as any)?.id as string;
+  const rawId = (params as ParamsLike | null)?.id;
+  const id = Array.isArray(rawId) ? rawId[0] : rawId ?? "";
 
   const { addToCart, cart } = useCart();
 
@@ -42,10 +46,13 @@ export default function ProductDetailPage() {
         setProduct(p);
         setActiveIdx(0);
         setQty(1);
-      } catch (e: any) {
+      } catch (e: unknown) {
         console.error(e);
         if (!alive) return;
-        setError(e?.message ?? "Error cargando el producto.");
+        setError(
+          (e as BackendError | null | undefined)?.message ??
+            "Error cargando el producto."
+        );
       }
     };
 
@@ -59,9 +66,7 @@ export default function ProductDetailPage() {
   const allImages = useMemo(() => {
     if (!product) return [];
     const main = product.image ? [product.image] : [];
-    const extra = Array.isArray((product as any).images)
-      ? ((product as any).images as string[])
-      : [];
+    const extra = Array.isArray(product.images) ? product.images : [];
     return Array.from(new Set([...main, ...extra])).filter(Boolean);
   }, [product]);
 

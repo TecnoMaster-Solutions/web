@@ -4,16 +4,25 @@ import { useState, useEffect } from "react";
 import { apiClient } from "@/shared/utils/apiClient";
 import { showSuccess, showError } from "@/shared/utils/notifications";
 import { Loader } from "@/shared/components/loader";
-import Colors from "@/shared/theme/colors";
+import type { IProduct } from "../types/Sales.type";
+
+type ProductCategoryOption = {
+    id: number;
+    name: string;
+};
+
+type ApiErrorLike = {
+    message?: string;
+};
 
 interface CreateProductModalProps {
     onClose: () => void;
-    onSaved: (newProduct: any) => void;
+    onSaved: (newProduct: IProduct) => void;
 }
 
 export default function CreateProductModal({ onClose, onSaved }: CreateProductModalProps) {
     const [loading, setLoading] = useState(false);
-    const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
+    const [categories, setCategories] = useState<ProductCategoryOption[]>([]);
 
     // Form States
     const [name, setName] = useState("");
@@ -22,11 +31,11 @@ export default function CreateProductModal({ onClose, onSaved }: CreateProductMo
     const [stock, setStock] = useState("");
     const [categoryId, setCategoryId] = useState("");
     const [image, setImage] = useState("");
-    const [supplierCategory, setSupplierCategory] = useState("General"); // Default or input?
+    const [supplierCategory] = useState("General");
 
     useEffect(() => {
         // Load categories
-        apiClient.get<any[]>("/products-categories").then(data => {
+        apiClient.get<ProductCategoryOption[]>("/products-categories").then(data => {
             // Assuming data is array of {id, name}
             setCategories(data);
         }).catch(err => console.error("Error loading categories", err));
@@ -70,13 +79,14 @@ export default function CreateProductModal({ onClose, onSaved }: CreateProductMo
                 isactive: true
             };
 
-            const newProduct = await apiClient.post("/products", payload);
+            const newProduct = await apiClient.post<IProduct>("/products", payload);
             showSuccess("Producto creado exitosamente");
             onSaved(newProduct);
             onClose();
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const error = err as ApiErrorLike | null;
             console.error(err);
-            showError(err.message || "Error al crear producto");
+            showError(error?.message || "Error al crear producto");
         } finally {
             setLoading(false);
         }
