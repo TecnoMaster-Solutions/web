@@ -185,7 +185,7 @@ export async function deleteSale(id: number): Promise<void> {
 }
 
 export async function getProducts(): Promise<IProduct[]> {
-    const response = await apiClient.get<any>("/products");
+    const response = await apiClient.get<PayloadWithData<IProduct[]> | IProduct[]>("/products");
     return unwrapList<IProduct>(response);
 }
 
@@ -200,7 +200,7 @@ export async function getCustomers(): Promise<ICustomer[]> {
 }
 
 export async function getServices(): Promise<{ data: IService[] }> {
-    const response = await apiClient.get<any>("/services");
+    const response = await apiClient.get<PayloadWithData<IService[]> | IService[]>("/services");
     const data = unwrapList<IService>(response);
     return { data };
 }
