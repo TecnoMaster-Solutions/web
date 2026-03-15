@@ -23,11 +23,11 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
             docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GHCR_PAT }}
-            docker pull ghcr.io/tecnomaster-solutions/vertecx-frontend:develop
+            docker pull ghcr.io/tecnomaster-solutions/web-frontend:develop
             docker stop vertecx-frontend || true
             docker rm vertecx-frontend || true
             docker run -d --name vertecx-frontend \
               --restart always \
               -p 3000:3000 \
               --env-file /ruta/en/el/servidor/.env \
-              ghcr.io/tecnomaster-solutions/vertecx-frontend:develop
+              ghcr.io/tecnomaster-solutions/web-frontend:develop
