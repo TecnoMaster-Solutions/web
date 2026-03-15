@@ -1,14 +1,19 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React from "react";
 import { Funnel } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+
+type CategoryItem = {
+  id: string;
+  label: string;
+};
 
 interface FilterBarProps {
   className?: string;
   selectedFilters: string[];
   handleToggle: (id: string) => void;
-  categories?: string[];
+  categories?: CategoryItem[];
 }
 
 const FilterBar = ({
@@ -17,21 +22,10 @@ const FilterBar = ({
   handleToggle,
   categories = [],
 }: FilterBarProps) => {
-  const filters = useMemo(() => {
-    const sanitizedCategories = categories
-      .map((category) => category?.trim())
-      .filter(Boolean);
-
-    const uniqueCategories = Array.from(new Set(sanitizedCategories));
-    uniqueCategories.sort((a, b) =>
-      a.localeCompare(b, "es", { sensitivity: "base" })
-    );
-
-    return [
-      { id: "all", label: "Todos" },
-      ...uniqueCategories.map((category) => ({ id: category, label: category })),
-    ];
-  }, [categories]);
+  const filters: CategoryItem[] = [
+    { id: "all", label: "Todos" },
+    ...categories,
+  ];
 
   const isLoadingCategories = categories.length === 0;
 
@@ -51,6 +45,7 @@ const FilterBar = ({
       <div className="space-y-3">
         {filters.map((filter) => {
           const isChecked = selectedFilters.includes(filter.id);
+
           return (
             <label
               key={filter.id}
@@ -58,32 +53,24 @@ const FilterBar = ({
               onClick={() => handleToggle(filter.id)}
             >
               <motion.span
-                className={`w-5 h-5 border-2 rounded-md flex items-center justify-center transition-all ${
-                  isChecked
-                    ? "border-[#04652c] bg-[#04652c] shadow-[0_0_8px_rgba(4,101,44,0.4)]"
-                    : "border-gray-300 group-hover:border-[#04652c] group-hover:shadow-[0_0_6px_rgba(4,101,44,0.3)]"
-                }`}
+                className={`w-5 h-5 border-2 rounded-full flex items-center justify-center transition-all
+                  ${
+                    isChecked
+                      ? "border-[#04652c] shadow-[0_0_8px_rgba(4,101,44,0.4)]"
+                      : "border-gray-300 group-hover:border-[#04652c]"
+                  }`}
                 whileTap={{ scale: 0.9 }}
               >
                 <AnimatePresence>
                   {isChecked && (
-                    <motion.svg
-                      key="check"
-                      className="w-4 h-4 text-white"
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
+                    <motion.span
+                      key="dot"
+                      className="w-2.5 h-2.5 bg-[#04652c] rounded-full"
                       initial={{ scale: 0, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
                       exit={{ scale: 0, opacity: 0 }}
                       transition={{ type: "spring", stiffness: 500, damping: 20 }}
-                    >
-                      <polyline points="20 6 9 17 4 12" />
-                    </motion.svg>
+                    />
                   )}
                 </AnimatePresence>
               </motion.span>

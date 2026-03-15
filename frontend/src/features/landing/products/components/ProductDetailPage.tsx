@@ -99,7 +99,14 @@ export default function ProductDetailPage() {
       return;
     }
 
-    if (qtyInCart + qty > stock) {
+    if (remaining <= 0) {
+      showError(`No puedes agregar más. Stock disponible: ${stock}`, {
+        toastId: `stock-limit-${product.id}`,
+      });
+      return;
+    }
+
+    if (qty > remaining) {
       showError(`No puedes agregar más. Stock disponible: ${stock}`, {
         toastId: `stock-limit-${product.id}`,
       });
@@ -116,8 +123,11 @@ export default function ProductDetailPage() {
       });
     }
 
-    showSuccess("Producto agregado al carrito", { toastId: `add-${product.id}` });
+    showSuccess("Producto agregado al carrito", {
+      toastId: `add-${product.id}`,
+    });
   };
+
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -219,20 +229,20 @@ export default function ProductDetailPage() {
                     </span>
 
                     <span
-                      className={`text-xs font-semibold px-3 py-1 rounded-full ${
-                        inStock
-                          ? "bg-green-100 text-green-700"
-                          : "bg-red-100 text-red-600"
-                      }`}
+                      className={`text-xs font-semibold px-3 py-1 rounded-full ${inStock
+                        ? "bg-green-100 text-green-700"
+                        : "bg-red-100 text-red-600"
+                        }`}
                     >
                       {inStock ? "Disponible" : "Agotado"}
                     </span>
 
                     {inStock && (
                       <span className="text-gray-600 text-sm">
-                        <strong>Unidades disponibles:</strong> {stock}
+                        <strong>Disponibles para agregar:</strong> {remaining}
                       </span>
                     )}
+
                   </div>
 
                   {product.price !== undefined && (

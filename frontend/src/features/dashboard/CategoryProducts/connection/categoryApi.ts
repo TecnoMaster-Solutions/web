@@ -20,10 +20,7 @@ type GetCategoriesParams = {
   search?: string;
 };
 
-const EMPTY_PAGINATED_RESPONSE = (
-  page = 1,
-  limit = 5,
-): CategoriesPaginatedResult => ({
+const EMPTY_PAGINATED_RESPONSE = (page = 1, limit = 5): CategoriesPaginatedResult => ({
   data: [],
   meta: {
     page,
@@ -33,11 +30,22 @@ const EMPTY_PAGINATED_RESPONSE = (
   },
 });
 
+const toBoolean = (value: unknown): boolean => {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value !== 0;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "true" || normalized === "1") return true;
+    if (normalized === "false" || normalized === "0" || normalized === "") return false;
+  }
+  return Boolean(value);
+};
+
 const normalizeCategory = (category: CategoryApiShape): Category => ({
   id: Number(category.id ?? category.categoryid ?? category.category_id ?? 0),
   name: String(category.name ?? category.categoryname ?? ""),
   description: String(category.description ?? category.categorydescription ?? ""),
-  status: Boolean(category.status ?? category.isactive),
+  status: toBoolean(category.status ?? category.isactive),
   icon: category.icon ?? null,
 });
 
@@ -60,16 +68,16 @@ export async function getCategories({
       const { data } = await api.get<CategoryApiShape[] | CategoryApiListResponse>(
         "/products-categories",
         {
-        params: shouldPaginate
-          ? {
-              page,
-              limit,
-              ...(search?.trim() ? { search: search.trim() } : {}),
-            }
-          : undefined,
-        signal,
-        timeout: 5000,
-        validateStatus: (s) => s >= 200 && s < 500,
+          params: shouldPaginate
+            ? {
+                page,
+                limit,
+                ...(search?.trim() ? { search: search.trim() } : {}),
+              }
+            : undefined,
+          signal,
+          timeout: 5000,
+          validateStatus: (s) => s >= 200 && s < 500,
         },
       );
 
@@ -95,9 +103,7 @@ export async function getCategories({
         };
       }
 
-      throw new Error(
-        `Respuesta invalida del servidor. Formato no reconocido: ${typeof data}`,
-      );
+      throw new Error(`Respuesta invalida del servidor. Formato no reconocido: ${typeof data}`);
     } catch (error: unknown) {
       const axiosError = error as AxiosError<{ message?: string }>;
 
@@ -148,6 +154,76 @@ export async function getCategories({
   return shouldPaginate ? EMPTY_PAGINATED_RESPONSE(page, limit) : [];
 }
 
+// Obtener solo categorias activas
+export const getActiveCategories = async (signal?: AbortSignal): Promise<Category[]> => {
+  let attempt = 0;
+
+  while (attempt <= RETRY_LIMIT) {
+    try {
+      const { data } = await api.get<CategoryApiShape[] | CategoryApiListResponse>(
+        "/products-categories/active",
+        {
+          signal,
+          timeout: 5000,
+          validateStatus: (s) => s >= 200 && s < 500,
+        },
+      );
+
+      if (Array.isArray(data)) {
+        return data.map(normalizeCategory);
+      }
+
+      if (data && typeof data === "object" && Array.isArray(data.data)) {
+        return data.data.map(normalizeCategory);
+      }
+
+      return [];
+    } catch (error: unknown) {
+      const axiosError = error as AxiosError<{ message?: string }>;
+
+      if (axiosError.name === "CanceledError" || axiosError.code === "ERR_CANCELED") {
+        return [];
+      }
+
+      if (axiosError.code === "ECONNABORTED") {
+        attempt++;
+        if (attempt > RETRY_LIMIT) {
+          throw new Error("La peticion expiro. Intente nuevamente.");
+        }
+        continue;
+      }
+
+      if (!axiosError.response) {
+        attempt++;
+        if (attempt > RETRY_LIMIT) {
+          throw new Error("Error de red al cargar categorias activas.");
+        }
+        continue;
+      }
+
+      const status = axiosError.response.status;
+
+      if (status === 404) {
+        return [];
+      }
+
+      if (status === 401 || status === 403) {
+        throw new Error("No autorizado para consultar categorias activas.");
+      }
+
+      if (status >= 500) {
+        throw new Error("El servidor tuvo un problema al cargar categorias activas.");
+      }
+
+      throw new Error(
+        axiosError.response.data?.message ?? "No se pudieron cargar las categorias activas.",
+      );
+    }
+  }
+
+  return [];
+};
+
 // Obtener categoria por ID
 export const getCategoryById = async (id: number): Promise<Category> => {
   try {
@@ -177,90 +253,46 @@ export const createCategory = async (category: CreateCategoryData) => {
 
     return normalizeCategory(data);
   } catch (error: unknown) {
-    console.error("Error al crear categoria:", error);
-    showError(getApiErrorMessage(error, "No se pudo crear la categoria."));
+    const message = getApiErrorMessage(error, "No se pudo crear la categoria.");
+    showError(message);
     throw error;
   }
 };
 
 // Actualizar categoria
-export const updateCategory = async (
-  id: number,
-  category: EditCategoryData,
-): Promise<Category> => {
-  let attempt = 0;
+export const updateCategory = async (id: number, category: EditCategoryData) => {
+  try {
+    if (!category.name.trim()) {
+      showError("El nombre de la categoria es obligatorio.");
+      throw new Error("Nombre requerido");
+    }
 
-  while (attempt <= RETRY_LIMIT) {
-    try {
-      const { data } = await api.patch<CategoryApiShape>(`/products-categories/${id}`, {
+    const { data } = await api.patch<CategoryApiShape>(
+        `/products-categories/${id}`,
+      {
         name: category.name.trim(),
         description: category.description?.trim() ?? null,
         icon: category.icon ?? null,
         status: category.status,
-      });
+      },
+    );
 
-      return normalizeCategory(data);
-    } catch (error: unknown) {
-      const axiosError = error as AxiosError<{ message?: string }>;
-
-      if (axiosError.code === "ECONNABORTED") {
-        attempt++;
-        if (attempt > RETRY_LIMIT) {
-          throw new Error("El servidor tardo demasiado. Intente nuevamente.");
-        }
-        continue;
-      }
-
-      console.error("Error al actualizar categoria:", error);
-      showError(getApiErrorMessage(error, "Error al actualizar la categoria."));
-      throw error;
-    }
+    return normalizeCategory(data);
+  } catch (error: unknown) {
+    const message = getApiErrorMessage(error, "No se pudo actualizar la categoria.");
+    showError(message);
+    throw error;
   }
-
-  throw new Error("No se pudo actualizar la categoria.");
 };
 
 // Eliminar categoria
 export const deleteCategory = async (id: number) => {
-  let attempt = 0;
-
-  while (attempt <= RETRY_LIMIT) {
-    try {
-      const { data } = await api.delete<{ success?: boolean; message?: string }>(
-        `/products-categories/${id}`,
-        {
-          timeout: 5000,
-        },
-      );
-      return data;
-    } catch (error: unknown) {
-      const axiosError = error as AxiosError<{ message?: string }>;
-
-      if (!axiosError.response) {
-        attempt++;
-        if (attempt > RETRY_LIMIT) {
-          throw new Error("Error de red eliminando categoria.");
-        }
-        continue;
-      }
-
-      const status = axiosError.response.status;
-
-      if (status === 409 || status === 400) {
-        throw new Error(
-          axiosError.response.data?.message ??
-            "No se puede eliminar la categoria porque tiene productos asociados.",
-        );
-      }
-
-      if (status >= 500) {
-        throw new Error("El servidor tuvo un error al eliminar la categoria.");
-      }
-
-      showError(getApiErrorMessage(error, "Error al eliminar la categoria."));
-      throw error;
-    }
+  try {
+    await api.delete(`/products-categories/${id}`);
+    return true;
+  } catch (error: unknown) {
+    const message = getApiErrorMessage(error, "No se pudo eliminar la categoria.");
+    showError(message);
+    throw error;
   }
-
-  throw new Error("No se pudo eliminar la categoria.");
 };

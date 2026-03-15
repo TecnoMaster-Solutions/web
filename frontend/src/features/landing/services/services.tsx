@@ -10,9 +10,11 @@ import SearchBar from "./components/SearchBar";
 import CardServices from "./components/CardServices";
 import Pagination from "./components/Pagination";
 import { useServices, Service } from "./hooks/useServices";
+import { useDebounce } from "./hooks/useDebounce";
 import {
   fetchLandingServices,
   fetchLandingServiceTypes,
+  ServiceTypeFromApi,
 } from "./api/servicesLanding.api";
 import { useAuth } from "@/features/auth/authcontext";
 
@@ -58,79 +60,90 @@ function extractClientId(user: AuthUserLike, profile: AuthProfileLike): number {
     const n = Number(c);
     if (Number.isFinite(n) && n > 0) return n;
   }
+
   return 0;
 }
 
 function buildClientLabel(user: AuthUserLike, profile: AuthProfileLike): string {
-  const currentUser = user as AuthUserLike;
-  const currentProfile = profile as AuthProfileLike;
-  const name =
-    currentProfile?.users?.name ??
-    currentProfile?.name ??
-    currentUser?.name ??
-    "";
-  const lastname =
-    currentProfile?.users?.lastname ??
-    currentProfile?.lastname ??
-    currentUser?.lastname ??
-    "";
+  const name = profile?.users?.name ?? profile?.name ?? user?.name ?? "";
+  const lastname = profile?.users?.lastname ?? profile?.lastname ?? user?.lastname ?? "";
   return [name, lastname].filter(Boolean).join(" ").trim();
 }
 
 export default function ServicesLanding({ className = "" }: ServicesProps) {
+  const { selectedFilters, handleToggleFilter, searchTerm, setSearchTerm } = useServices();
   const [services, setServices] = useState<Service[]>([]);
-  const [typeNames, setTypeNames] = useState<string[]>([]);
+  const [serviceTypes, setServiceTypes] = useState<ServiceTypeFromApi[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const itemsPerPage = 9;
 
   const { user, profile } = useAuth();
+  const debouncedSearchTerm = useDebounce(searchTerm, 400);
 
   const clientId = useMemo(() => extractClientId(user, profile), [user, profile]);
   const clientLabel = useMemo(() => buildClientLabel(user, profile), [user, profile]);
 
   useEffect(() => {
-    const load = async () => {
-      const [servicesResult, typesResult] = await Promise.allSettled([
-        fetchLandingServices({ page: 1, limit: 100, stateid: 1 }),
-        fetchLandingServiceTypes(),
-      ]);
-
-      setServices(
-        servicesResult.status === "fulfilled" && Array.isArray(servicesResult.value)
-          ? servicesResult.value
-          : []
-      );
-      setTypeNames(
-        typesResult.status === "fulfilled" && Array.isArray(typesResult.value)
-          ? typesResult.value
-          : []
-      );
+    const loadTypes = async () => {
+      try {
+        const types = await fetchLandingServiceTypes();
+        setServiceTypes(Array.isArray(types) ? types : []);
+      } catch {
+        setServiceTypes([]);
+      }
     };
 
-    load();
+    loadTypes();
   }, []);
 
   const filters: FilterItem[] = useMemo(() => {
-    const unique = Array.from(new Set(typeNames)).sort((a, b) =>
-      a.localeCompare(b, "es", { sensitivity: "base" })
-    );
+    const unique = Array.from(
+      new Map(
+        serviceTypes.map((t) => [
+          Number(t.typeofserviceid),
+          {
+            id: String(t.typeofserviceid),
+            label: (t.name ?? "").trim(),
+          },
+        ]),
+      ).values(),
+    ).sort((a, b) => a.label.localeCompare(b.label, "es", { sensitivity: "base" }));
 
-    return [{ id: "all", label: "Todos" }, ...unique.map((n) => ({ id: n, label: n }))];
-  }, [typeNames]);
+    return [{ id: "all", label: "Todos" }, ...unique];
+  }, [serviceTypes]);
 
-  const { selectedFilters, handleToggleFilter, searchTerm, setSearchTerm, filteredServices } =
-    useServices(services);
+  const selectedTypeId = useMemo(() => {
+    const valid = selectedFilters.find((f) => f !== "all");
+    const n = Number(valid);
+    return Number.isFinite(n) && n > 0 ? n : undefined;
+  }, [selectedFilters]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedFilters, services]);
+  }, [debouncedSearchTerm, selectedTypeId]);
 
-  const totalPages = Math.ceil(filteredServices.length / itemsPerPage);
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const response = await fetchLandingServices({
+          page: currentPage,
+          limit: itemsPerPage,
+          search: debouncedSearchTerm.trim() || undefined,
+          typeofserviceid: selectedTypeId,
+          stateid: 1,
+        });
 
-  const displayedServices = filteredServices.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+        setServices(Array.isArray(response.data) ? response.data : []);
+        setTotalPages(Number(response.meta?.totalPages ?? 1));
+      } catch {
+        setServices([]);
+        setTotalPages(1);
+      }
+    };
+
+    load();
+  }, [currentPage, debouncedSearchTerm, selectedTypeId]);
 
   return (
     <div className={className}>
@@ -152,7 +165,7 @@ export default function ServicesLanding({ className = "" }: ServicesProps) {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {displayedServices.map((service) => {
+              {services.map((service) => {
                 const sid = Number(service.id);
                 const safeServiceId = Number.isFinite(sid) && sid > 0 ? sid : 0;
 

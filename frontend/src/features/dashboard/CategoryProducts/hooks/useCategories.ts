@@ -1,9 +1,12 @@
+"use client";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import { confirmDelete } from "@/shared/utils/Delete/confirmDelete";
 import { showSuccess, showError } from "@/shared/utils/notifications";
 import { getProducts } from "@/features/dashboard/products/api/products.api";
 import {
   getCategories,
+  getActiveCategories,
   createCategory,
   updateCategory,
   deleteCategory,
@@ -16,12 +19,20 @@ import {
   EditCategoryData,
 } from "../types/typeCategoryProducts";
 
+type UseCategoriesOptions = {
+  onlyActive?: boolean;
+  includeCurrentCategory?: {
+    id: number;
+    name: string;
+  } | null;
+};
+
 const waitForNextRender = async () => {
   await new Promise<void>((resolve) => {
     requestAnimationFrame(() =>
       requestAnimationFrame(() => {
         resolve();
-      }),
+      })
     );
   });
 };
@@ -71,9 +82,13 @@ const extractPayloadCategory = (response: unknown): Category | null => {
   return parseCategoryPayload(response);
 };
 
-export const useCategories = () => {
+export const useCategories = (options?: UseCategoriesOptions) => {
   const PAGE_SIZE = 5;
   const SEARCH_DEBOUNCE_MS = 350;
+
+  const onlyActive = options?.onlyActive ?? false;
+  const includeCurrentCategory = options?.includeCurrentCategory ?? null;
+
   const [categories, setCategories] = useState<Category[]>([]);
   const [pagedCategories, setPagedCategories] = useState<Category[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -115,16 +130,37 @@ export const useCategories = () => {
   }, []);
 
   const refreshAllCategories = useCallback(async () => {
-    const list = (await getCategories()) as Category[];
+    let list = onlyActive
+      ? ((await getActiveCategories()) as Category[])
+      : ((await getCategories()) as Category[]);
+
+    if (
+      includeCurrentCategory &&
+      Number(includeCurrentCategory.id) > 0 &&
+      String(includeCurrentCategory.name ?? "").trim() &&
+      !list.some((item) => Number(item.id) === Number(includeCurrentCategory.id))
+    ) {
+      list = [
+        ...list,
+        {
+          id: Number(includeCurrentCategory.id),
+          name: `${String(includeCurrentCategory.name).trim()} (Inactiva)`,
+          description: "",
+          status: false,
+          icon: null,
+        },
+      ];
+    }
+
     setCategories(list);
     return list;
-  }, []);
+  }, [onlyActive, includeCurrentCategory]);
 
   const refreshCategories = useCallback(
     async (
       targetPage: number = currentPage,
       searchText: string = search,
-      signal?: AbortSignal,
+      signal?: AbortSignal
     ) => {
       const response = (await getCategories({
         page: targetPage,
@@ -141,7 +177,7 @@ export const useCategories = () => {
       setTotalPages(Math.max(1, Number(meta?.totalPages ?? 1)));
       return { list, meta };
     },
-    [currentPage, search],
+    [currentPage, search]
   );
 
   useEffect(() => {
@@ -189,7 +225,7 @@ export const useCategories = () => {
         setLoading(false);
       }
     },
-    [refreshCategories, search],
+    [refreshCategories, search]
   );
 
   const handleSearchChange = useCallback(
@@ -223,7 +259,7 @@ export const useCategories = () => {
         }
       }, SEARCH_DEBOUNCE_MS);
     },
-    [refreshCategories],
+    [refreshCategories]
   );
 
   const handleCreateCategory = useCallback(
@@ -245,7 +281,7 @@ export const useCategories = () => {
         setLoading(false);
       }
     },
-    [refreshAllCategories, refreshCategories, refreshCategoryProductCounts, search],
+    [refreshAllCategories, refreshCategories, refreshCategoryProductCounts, search]
   );
 
   const handleEditCategory = useCallback(
@@ -257,10 +293,10 @@ export const useCategories = () => {
 
         if (updatedCategory) {
           setPagedCategories((prev) =>
-            prev.map((item) => (item.id === updatedCategory.id ? updatedCategory : item)),
+            prev.map((item) => (item.id === updatedCategory.id ? updatedCategory : item))
           );
           setCategories((prev) =>
-            prev.map((item) => (item.id === updatedCategory.id ? updatedCategory : item)),
+            prev.map((item) => (item.id === updatedCategory.id ? updatedCategory : item))
           );
         } else {
           await Promise.all([
@@ -278,7 +314,7 @@ export const useCategories = () => {
         setEditingCategory(null);
       }
     },
-    [currentPage, refreshAllCategories, refreshCategories, search],
+    [currentPage, refreshAllCategories, refreshCategories, search]
   );
 
   const handleDeleteCategory = useCallback(
@@ -316,10 +352,10 @@ export const useCategories = () => {
           } finally {
             setLoading(false);
           }
-        },
+        }
       );
     },
-    [currentPage, refreshAllCategories, refreshCategories, refreshCategoryProductCounts, search],
+    [currentPage, refreshAllCategories, refreshCategories, refreshCategoryProductCounts, search]
   );
 
   const handleView = useCallback((category: Category) => {
