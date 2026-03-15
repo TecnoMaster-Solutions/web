@@ -14,7 +14,7 @@ export function ActionButtonComponent({
 }) {
   const [showTooltip, setShowTooltip] = useState(false);
   const [pos, setPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
-  const [place, setPlace] = useState<"top" | "bottom">("bottom");
+  const [, setPlace] = useState<"top" | "bottom">("bottom");
   const btnRef = useRef<HTMLButtonElement | null>(null);
 
   const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));

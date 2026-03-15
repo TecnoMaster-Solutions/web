@@ -192,7 +192,13 @@ function sanitizeNITBaseOnly(v: string) {
 
 type ErrorMap = Partial<Record<keyof SupplierForm | "image", string | null>>;
 
-const validators: Record<keyof SupplierForm | "image", (value: any, form: SupplierForm) => string | null> = {
+type SupplierValidationKey = keyof SupplierForm | "image";
+type SupplierValidationValue = SupplierForm[keyof SupplierForm] | File | null;
+
+const validators: Record<
+  SupplierValidationKey,
+  (value: SupplierValidationValue, form: SupplierForm) => string | null
+> = {
   name: (v) => {
     const s = String(v ?? "").trim();
     if (s.length < 3) return "Mínimo 3 caracteres.";
@@ -231,14 +237,14 @@ const validators: Record<keyof SupplierForm | "image", (value: any, form: Suppli
   rating: () => null,
   imageFile: () => null,
   imageUrl: () => null,
-  image: (file: File | null) => {
+  image: (value) => {
+    const file = value instanceof File ? value : null;
     if (!file) return "Imagen requerida.";
     if (!file.type.startsWith("image/")) return "Archivo no es una imagen.";
     if (file.size > MAX_IMG_MB * 1024 * 1024) return `Máx ${MAX_IMG_MB}MB.`;
     return null;
   },
 };
-
 function validateAllFields(form: SupplierForm): ErrorMap {
   const e: ErrorMap = {};
   e.name = validators.name(form.name, form);
@@ -322,19 +328,22 @@ export default function CreateSuppliersModal({ isOpen, onClose, onSave, title = 
     } else {
       // Cargar productos del sistema
       setLoadingProducts(true);
-      getProducts("active")
-        .then((data) => setAllProducts(data))
+      getProducts({ status: "active", page: 1, limit: 1000 })
+        .then((response) => setAllProducts(response.data))
         .catch(() => showError("Error al cargar productos."))
         .finally(() => setLoadingProducts(false));
     }
   }, [isOpen]);
 
-  const validateAndSet = <K extends keyof SupplierForm | "image">(
+  const validateAndSet = <K extends SupplierValidationKey>(
     key: K,
     nextForm: SupplierForm
   ) => {
-    const value = key === "image" ? nextForm.imageFile : nextForm[key as keyof SupplierForm];
-    const msg = validators[key](value as any, nextForm);
+    const value: SupplierValidationValue =
+      key === "image"
+        ? nextForm.imageFile
+        : nextForm[key as keyof SupplierForm];
+    const msg = validators[key](value, nextForm);
     setErrors((er) => ({ ...er, [key]: msg }));
     return msg;
   };
@@ -612,8 +621,8 @@ export default function CreateSuppliersModal({ isOpen, onClose, onSave, title = 
                 // Si no hay productos cargados, recargar
                 if (allProducts.length === 0 && !loadingProducts) {
                   setLoadingProducts(true);
-                  getProducts("active")
-                    .then((data) => setAllProducts(data))
+                  getProducts({ status: "active", page: 1, limit: 1000 })
+                    .then((response) => setAllProducts(response.data))
                     .catch(() => showError("Error al cargar productos."))
                     .finally(() => setLoadingProducts(false));
                 }
@@ -696,6 +705,4 @@ export default function CreateSuppliersModal({ isOpen, onClose, onSave, title = 
     </Modal>
   );
 }
-
-
 

@@ -1,5 +1,3 @@
-import { IQuote } from "@/features/dashboard/quotes/types/Quote.type";
-
 export interface QuoteErrors {
   serviceTypes?: string;
   client?: string;
@@ -9,65 +7,66 @@ export interface QuoteErrors {
   total?: string;
 }
 
-/**
- * ✅ Valida un campo individual del formulario de cotización
- */
+export type QuoteFormData = {
+  serviceTypes: {
+    mantenimiento: boolean;
+    instalacion: boolean;
+  };
+  client: string;
+  status: string;
+  description: string;
+  materials: Array<{ name: string; subtotal: number }>;
+  total: number | string;
+};
+
 export const validateQuoteField = (
-  field: keyof Omit<IQuote, "id">,
-  value: any,
-  quotes: IQuote[],
-  currentId?: number
+  field: keyof QuoteFormData,
+  value: QuoteFormData[keyof QuoteFormData],
 ): string | undefined => {
   switch (field) {
     case "client":
-      if (!value) return "El cliente es obligatorio";
-      return;
+      return String(value ?? "").trim() ? undefined : "El cliente es obligatorio";
 
     case "status":
       if (!value) return "El estado es obligatorio";
-      if (!["Pendiente", "Aprobada", "Rechazada", "Anulada"].includes(value))
-        return "Estado inválido";
-      return;
+      if (!["Pendiente", "Aprobada", "Rechazada", "Anulada"].includes(String(value))) {
+        return "Estado invalido";
+      }
+      return undefined;
 
     case "description":
-      if (value && value.trim().length < 5)
-        return "La descripción debe tener al menos 5 caracteres";
-      return;
+      return String(value ?? "").trim().length >= 5
+        ? undefined
+        : "La descripcion debe tener al menos 5 caracteres";
 
     case "materials":
-      if (!value || (Array.isArray(value) && value.length === 0))
-        return "Debes añadir al menos un material";
-      return;
+      return Array.isArray(value) && value.length > 0
+        ? undefined
+        : "Debes añadir al menos un material";
 
-    case "total":
-      if (value === undefined || value === null || value === "")
-        return "El total es obligatorio";
-      const numericTotal = Number(String(value).replace(/[^\d.-]/g, ""));
-      if (isNaN(numericTotal) || numericTotal <= 0)
+    case "total": {
+      const numericTotal = Number(String(value ?? "").replace(/[^\d.-]/g, ""));
+      if (Number.isNaN(numericTotal) || numericTotal <= 0) {
         return "El total debe ser mayor que 0";
-      return;
+      }
+      return undefined;
+    }
 
-    case "serviceTypes":
-      if (!value || (!value.mantenimiento && !value.instalacion))
-        return "Selecciona al menos un tipo de servicio";
-      return;
+    case "serviceTypes": {
+      const serviceTypes = value as QuoteFormData["serviceTypes"];
+      return serviceTypes?.mantenimiento || serviceTypes?.instalacion
+        ? undefined
+        : "Selecciona al menos un tipo de servicio";
+    }
 
     default:
-      return;
+      return undefined;
   }
 };
 
-/**
- * ✅ Valida todo el formulario de cotización
- */
-export const validateQuoteForm = (
-  data: Omit<IQuote, "id">,
-  quotes: IQuote[],
-  currentId?: number
-): QuoteErrors => {
+export const validateQuoteForm = (data: QuoteFormData): QuoteErrors => {
   const errors: QuoteErrors = {};
-
-  const fields: (keyof Omit<IQuote, "id">)[] = [
+  const fields: Array<keyof QuoteFormData> = [
     "serviceTypes",
     "client",
     "status",
@@ -77,13 +76,10 @@ export const validateQuoteForm = (
   ];
 
   fields.forEach((field) => {
-    const error = validateQuoteField(
-      field,
-      (data as any)[field],
-      quotes,
-      currentId
-    );
-    if (error) errors[field] = error;
+    const error = validateQuoteField(field, data[field]);
+    if (error) {
+      errors[field] = error;
+    }
   });
 
   return errors;

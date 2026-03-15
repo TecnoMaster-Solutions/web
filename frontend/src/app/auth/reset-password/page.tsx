@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { routes } from "@/shared/routes";
 import { showError, showSuccess } from "@/shared/utils/notifications";
+import { getApiErrorMessage } from "@/features/auth/utils/authUser";
 
 function ResetPasswordPageContent() {
   const router = useRouter();
@@ -14,7 +15,6 @@ function ResetPasswordPageContent() {
 
   const tokenFromUrl = useMemo(() => params.get("token") ?? "", [params]);
   const [token, setToken] = useState(tokenFromUrl);
-
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
@@ -24,30 +24,32 @@ function ResetPasswordPageContent() {
 
     const safeToken = (token || tokenFromUrl).trim();
     if (!safeToken) {
-      showError("Token inválido o ausente.");
+      showError("Token invalido o ausente.");
       return;
     }
 
     if (!password.trim() || password.length < 8) {
-      showError("La contraseña debe tener al menos 8 caracteres.");
+      showError("La contrasena debe tener al menos 8 caracteres.");
       return;
     }
 
     if (password !== confirm) {
-      showError("Las contraseñas no coinciden.");
+      showError("Las contrasenas no coinciden.");
       return;
     }
 
     setLoading(true);
     try {
       await api.post("/auth/reset-password", { token: safeToken, password });
-      showSuccess("Contraseña actualizada correctamente. Ahora puedes iniciar sesión.");
+      showSuccess("Contrasena actualizada correctamente. Ahora puedes iniciar sesion.");
       router.push(routes.auth.login);
-    } catch (err: any) {
-      const msg =
-        err?.response?.data?.message ||
-        "El enlace no es válido o ha expirado. Solicita uno nuevo.";
-      showError(msg);
+    } catch (err: unknown) {
+      showError(
+        getApiErrorMessage(
+          err,
+          "El enlace no es valido o ha expirado. Solicita uno nuevo."
+        )
+      );
     } finally {
       setLoading(false);
     }
@@ -72,10 +74,10 @@ function ResetPasswordPageContent() {
           </div>
 
           <h1 className="mt-4 text-2xl font-semibold tracking-tight text-neutral-900">
-            Restablecer contraseña
+            Restablecer contrasena
           </h1>
           <p className="mt-2 text-sm text-neutral-600">
-            Crea una nueva contraseña para tu cuenta.
+            Crea una nueva contrasena para tu cuenta.
           </p>
         </div>
 
@@ -84,45 +86,42 @@ function ResetPasswordPageContent() {
             {showTokenField && (
               <div>
                 <label className="block text-sm font-medium text-neutral-800 mb-2">
-                  Token de recuperación
+                  Token de recuperacion
                 </label>
                 <input
                   type="text"
-                  className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-900 outline-none transition
-                             focus:border-red-500 focus:ring-4 focus:ring-red-500/15"
+                  className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-900 outline-none transition focus:border-red-500 focus:ring-4 focus:ring-red-500/15"
                   value={token}
                   onChange={(e) => setToken(e.target.value)}
-                  placeholder="Pega aquí el token"
+                  placeholder="Pega aqui el token"
                 />
               </div>
             )}
 
             <div>
               <label className="block text-sm font-medium text-neutral-800 mb-2">
-                Nueva contraseña
+                Nueva contrasena
               </label>
               <input
                 type="password"
-                className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-900 outline-none transition
-                           focus:border-red-500 focus:ring-4 focus:ring-red-500/15"
+                className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-900 outline-none transition focus:border-red-500 focus:ring-4 focus:ring-red-500/15"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Mínimo 8 caracteres"
+                placeholder="Minimo 8 caracteres"
                 autoComplete="new-password"
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-neutral-800 mb-2">
-                Confirmar contraseña
+                Confirmar contrasena
               </label>
               <input
                 type="password"
-                className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-900 outline-none transition
-                           focus:border-red-500 focus:ring-4 focus:ring-red-500/15"
+                className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-900 outline-none transition focus:border-red-500 focus:ring-4 focus:ring-red-500/15"
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
-                placeholder="Repite la contraseña"
+                placeholder="Repite la contrasena"
                 autoComplete="new-password"
               />
             </div>
@@ -130,14 +129,13 @@ function ResetPasswordPageContent() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition
-                         hover:bg-red-700 active:bg-red-800 disabled:opacity-60 disabled:hover:bg-red-600"
+              className="w-full rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700 active:bg-red-800 disabled:opacity-60 disabled:hover:bg-red-600"
             >
-              {loading ? "Guardando..." : "Guardar contraseña"}
+              {loading ? "Guardando..." : "Guardar contrasena"}
             </button>
 
             <p className="text-xs text-neutral-500 leading-relaxed">
-              Si el enlace expiró, solicita uno nuevo desde “Recuperar contraseña”.
+              Si el enlace expiro, solicita uno nuevo desde &quot;Recuperar contrasena&quot;.
             </p>
           </form>
 
@@ -146,7 +144,7 @@ function ResetPasswordPageContent() {
               href={routes.auth.login}
               className="text-sm font-medium text-red-700 hover:text-red-800 hover:underline"
             >
-              Volver al inicio de sesión
+              Volver al inicio de sesion
             </Link>
           </div>
         </div>

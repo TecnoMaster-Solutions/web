@@ -24,7 +24,7 @@ type UseAppointmentFiltersArgs = {
   searchTerm: string;
 };
 
-type SourceFilter = "all" | "order" | "request";
+export type SourceFilter = "all" | "order" | "request";
 
 export const useAppointmentFilters = ({
   events,
@@ -73,7 +73,7 @@ export const useAppointmentFilters = ({
       });
     });
 
-    return Array.from(entries.entries()).map(([value, label]) => ({ value, label }));
+    return Array.from(entries.entries()).map(([value, label]) => ({ value: String(value), label }));
   }, [events]);
 
   const clientOptions = useMemo<AppointmentFilterOption[]>(() => {

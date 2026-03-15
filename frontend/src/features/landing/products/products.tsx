@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Nav from "../layout/Nav";
 import Footer from "../layout/Footer";
 import Banner from "./components/Banner";
@@ -10,130 +10,149 @@ import SearchBar from "./components/SearchBar";
 import CardProducts from "./components/CardProducts";
 import Pagination from "./components/Pagination";
 import { useProducts, Product } from "./hooks/useProducts";
-import CategoryCarousel from "./components/CategoryCarousel";
+import {
+  fetchLandingProducts,
+  fetchLandingProductCategories,
+  ProductFilterItem,
+} from "./api/products.api";
+import { useDebounce } from "./hooks/useDebounce";
 import { useCart } from "../contexts/CartContext";
-import { showSuccess, showError} from "@/shared/utils/notifications";
+import { showSuccess, showError } from "@/shared/utils/notifications";
 
+export default function ProductsLanding() {
+  const { selectedFilters, handleToggleFilter, searchTerm, setSearchTerm } =
+    useProducts();
 
-interface ProductsProps {
-  className?: string;
-}
+  const { addToCart, cart } = useCart();
 
-export default function ProductsLanding({ className = "" }: ProductsProps) {
-  const mockProducts: Product[] = [];
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<ProductFilterItem[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
-const { addToCart, cart } = useCart();
-
-  const {
-    loading,
-    selectedFilters,
-    handleToggleFilter,
-    searchTerm,
-    setSearchTerm,
-    filteredProducts,
-    availableCategories,
-  } = useProducts(mockProducts);
-
-  const [currentPage, setCurrentPage] = useState<number>(1);
+  const debouncedSearch = useDebounce(searchTerm, 400);
   const itemsPerPage = 9;
 
-  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
-  const displayedProducts = filteredProducts.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+const selectedCategory = useMemo(() => {
+  const val = selectedFilters.find((f) => f !== "all");
+  const parsed = Number(val);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
+}, [selectedFilters]);
 
-const handleAddToCart = (product: Product) => {
-  if ((product.stock ?? 0) <= 0) {
-    showError("Producto agotado.");
-    return;
-  }
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const result = await fetchLandingProductCategories();
+        setCategories(result);
+      } catch (error) {
+        console.error("Error cargando categorías:", error);
+        setCategories([]);
+      }
+    };
 
-  const itemInCart = cart.find((item) => String(item.id) === String(product.id));
-  const qtyInCart = itemInCart?.quantity ?? 0;
+    loadCategories();
+  }, []);
 
-  if (qtyInCart >= product.stock) {
-    showError(`No puedes agregar más. Stock disponible: ${product.stock}`);
-    return;
-  }
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch, selectedCategory]);
 
-  addToCart({
-    id: product.id,
-    name: product.title,
-    price: product.price ?? 0,
-    stock: product.stock,
-    image: product.image || "/assets/imgs/default-product.png",
-  });
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await fetchLandingProducts({
+          page: currentPage,
+          limit: itemsPerPage,
+          search: debouncedSearch.trim() || undefined,
+          categoryid: selectedCategory,
+        });
 
-  showSuccess("Producto agregado al carrito");
-};
+        setProducts(res.data);
+        setTotalPages(res.meta.totalPages);
+      } catch (error) {
+        console.error("Error cargando productos:", error);
+        setProducts([]);
+        setTotalPages(1);
+      }
+    };
+
+    load();
+  }, [currentPage, debouncedSearch, selectedCategory]);
+
+  const handleAddToCart = (product: Product) => {
+    const stock = Number(product.stock ?? 0);
+
+    if (stock <= 0) {
+      showError("Producto agotado.");
+      return;
+    }
+
+    const itemInCart = cart.find(
+      (item) => String(item.id) === String(product.id)
+    );
+    const qtyInCart = itemInCart?.quantity ?? 0;
+
+    if (qtyInCart >= stock) {
+      showError(`No puedes agregar más. Stock disponible: ${stock}`);
+      return;
+    }
+
+    addToCart({
+      id: product.id,
+      name: product.title,
+      price: product.price ?? 0,
+      stock,
+      image: product.image || "/assets/imgs/default-product.png",
+    });
+
+    showSuccess("Producto agregado al carrito");
+  };
 
   return (
-    <div className={className}>
+    <>
       <Nav />
       <Banner />
 
       <LayoutProductos>
-        <CategoryCarousel />
-
         <div className="flex flex-col lg:flex-row gap-6 items-start">
           <FilterBar
             selectedFilters={selectedFilters}
             handleToggle={handleToggleFilter}
-            categories={availableCategories}
-            className="w-full lg:w-64 flex-shrink-0"
+            categories={categories}
           />
 
           <div className="flex-1 flex flex-col gap-6">
-            <SearchBar searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
+            <SearchBar
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+            />
 
-            {loading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {Array.from({ length: 9 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="bg-white rounded-2xl shadow-md overflow-hidden animate-pulse"
-                  >
-                    <div className="aspect-[4/3] bg-gray-200" />
-                    <div className="p-4 space-y-3">
-                      <div className="h-4 bg-gray-200 rounded w-3/4" />
-                      <div className="h-3 bg-gray-200 rounded w-1/2" />
-                      <div className="h-3 bg-gray-200 rounded w-full" />
-                      <div className="h-10 bg-gray-200 rounded" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {displayedProducts.map((product) => (
-                  <CardProducts
-                    key={product.id}
-                    id={String(product.id)}
-                    title={product.title}
-                    description={product.description}
-                    category={product.category}
-                    image={product.image}
-                    price={product.price}
-                    stock={product.stock}
-                    onAddToCart={() => handleAddToCart(product)}
-                  />
-                ))}
-              </div>
-            )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {products.map((product) => (
+                <CardProducts
+                  key={product.id}
+                  id={String(product.id)}
+                  title={product.title}
+                  description={product.description}
+                  category={product.category}
+                  image={product.image}
+                  price={product.price}
+                  stock={product.stock}
+                  onAddToCart={() => handleAddToCart(product)}
+                />
+              ))}
+            </div>
 
-            {!loading && totalPages > 1 && (
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={(page: number) => setCurrentPage(page)}
-              />
-            )}
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={(p) => setCurrentPage(p)}
+            />
           </div>
         </div>
       </LayoutProductos>
 
       <Footer />
-    </div>
+    </>
   );
 }

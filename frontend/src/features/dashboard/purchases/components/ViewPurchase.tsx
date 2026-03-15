@@ -10,7 +10,7 @@ type ViewPurchaseProps = {
 
 const FALLBACK_IMG = "https://cdn-icons-png.flaticon.com/512/679/679720.png";
 
-const formatCOP = (value: any) =>
+const formatCOP = (value: number | string | null | undefined) =>
   Number(value || 0).toLocaleString("es-CO", {
     style: "currency",
     currency: "COP",
@@ -93,10 +93,10 @@ export default function ViewPurchase({ purchase }: ViewPurchaseProps) {
             />
           </div>
 
-          <Field label="Fecha Registro" value={formatDateOnly(purchase.createdat as any)} />
+          <Field label="Fecha Registro" value={formatDateOnly(purchase.createdat)} />
           <Field
             label="Fecha Actualización"
-            value={formatDateOnly(purchase.updatedat as any)}
+            value={formatDateOnly(purchase.updatedat)}
           />
 
           <Field

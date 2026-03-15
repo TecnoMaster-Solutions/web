@@ -62,12 +62,18 @@ function Th({
 
 const OptimizedTd = React.memo(OptimizedTdComponent);
 export const ActionButton = React.memo(ActionButtonComponent);
-export const ActionButtons = React.memo(ActionButtonsComponent);
+export const ActionButtons = React.memo(
+  ActionButtonsComponent
+) as typeof ActionButtonsComponent;
 const MobileCard = React.memo(MobileCardComponent) as typeof MobileCardComponent;
 const CreateButton = React.memo(CreateButtonComponent);
 const Pagination = React.memo(PaginationComponent);
 
-const DataTableComponent = <T extends { [key: string]: any }>(
+type RowWithOptionalName = {
+  name?: unknown;
+};
+
+const DataTableComponent = <T extends object>(
   props: DataTableProps<T> & { module: string }
 ) => {
   const {
@@ -121,6 +127,14 @@ const DataTableComponent = <T extends { [key: string]: any }>(
   const isMounted = useRef(false);
   const isServerPagination = Boolean(serverPagination);
   const isServerSearch = Boolean(serverSearch);
+  const toRowRecord = useCallback(
+    (row: T): Record<string, unknown> => row as Record<string, unknown>,
+    []
+  );
+  const getRowValue = useCallback(
+    <K extends keyof T>(row: T, key: K): T[K] => toRowRecord(row)[String(key)] as T[K],
+    [toRowRecord]
+  );
 
   useEffect(() => {
     isMounted.current = true;
@@ -191,10 +205,6 @@ const DataTableComponent = <T extends { [key: string]: any }>(
       .trim();
   }, []);
 
-  const toDigits = useCallback((v: unknown) => {
-    return String(v ?? "").replace(/[^\d]/g, "");
-  }, []);
-
   const moneyTokens = useCallback(
     (value: unknown): string[] => {
       const n = Number(value);
@@ -261,7 +271,7 @@ const DataTableComponent = <T extends { [key: string]: any }>(
         const stateName =
           typeof value === "string"
             ? normalizeText(value)
-            : normalizeText((value as any)?.name ?? "");
+            : normalizeText((value as RowWithOptionalName | null)?.name ?? "");
 
         const mapped =
           stateName === "approved"
@@ -313,17 +323,34 @@ const DataTableComponent = <T extends { [key: string]: any }>(
 
     const isExactStatus = term === "activo" || term === "inactivo";
 
-    const hasKey = (k: string) => searchableKeys.includes(k as any);
+    const hasKey = (k: string) =>
+      searchableKeys.some((searchableKey) => String(searchableKey) === k);
 
-    const pickStatusText = (row: any): string => {
-      if (hasKey("status") && row?.status != null) return normalizeText(row.status);
-      if (hasKey("estado") && row?.estado != null) return normalizeText(row.estado);
+    const pickStatusText = (row: T): string => {
+      const status = hasKey("status") ? getRowValue(row, "status" as keyof T) : undefined;
+      if (status != null) return normalizeText(status);
+
+      const estado = hasKey("estado") ? getRowValue(row, "estado" as keyof T) : undefined;
+      if (estado != null) return normalizeText(estado);
+
       if (hasKey("state")) {
-        if (typeof row?.state === "string") return normalizeText(row.state);
-        if (row?.state?.name != null) return normalizeText(row.state.name);
+        const state = getRowValue(row, "state" as keyof T);
+        if (typeof state === "string") return normalizeText(state);
+        if ((state as RowWithOptionalName | null)?.name != null) {
+          return normalizeText((state as RowWithOptionalName).name);
+        }
       }
-      if (hasKey("stateSearch") && row?.stateSearch != null) return normalizeText(row.stateSearch);
-      if (hasKey("statusSearch") && row?.statusSearch != null) return normalizeText(row.statusSearch);
+
+      const stateSearch = hasKey("stateSearch")
+        ? getRowValue(row, "stateSearch" as keyof T)
+        : undefined;
+      if (stateSearch != null) return normalizeText(stateSearch);
+
+      const statusSearch = hasKey("statusSearch")
+        ? getRowValue(row, "statusSearch" as keyof T)
+        : undefined;
+      if (statusSearch != null) return normalizeText(statusSearch);
+
       return "";
     };
 
@@ -336,7 +363,7 @@ const DataTableComponent = <T extends { [key: string]: any }>(
 
       return tokens.every((t) => {
         return searchableKeys.some((key) => {
-          const value = (row as any)[key];
+          const value = getRowValue(row, key);
           if (value == null) return false;
 
           if (String(key) === "stateSearch" || String(key) === "statusSearch") {
@@ -351,7 +378,7 @@ const DataTableComponent = <T extends { [key: string]: any }>(
         });
       });
     });
-  }, [q, data, searchableKeys, normalize, normalizeText, loading, isServerSearch]);
+  }, [q, data, searchableKeys, normalize, normalizeText, loading, isServerSearch, getRowValue]);
 
   const totalPages = useMemo(() => {
     if (isServerPagination) {
@@ -397,10 +424,20 @@ const DataTableComponent = <T extends { [key: string]: any }>(
     return current.slice(startIndex, startIndex + VISIBLE_ROWS);
   }, [current, startIndex, disableInternalScroll]);
 
-  const resolveRowKey = useCallback((row: T, idxFallback: number) => {
-    const anyRow = row as any;
-    return anyRow.id ?? anyRow.purchaseorderid ?? anyRow.numberoforder ?? anyRow.reference ?? idxFallback;
-  }, []);
+  const resolveRowKey = useCallback((row: T, idxFallback: number): React.Key => {
+    const candidates = [
+      getRowValue(row, "id" as keyof T),
+      getRowValue(row, "purchaseorderid" as keyof T),
+      getRowValue(row, "numberoforder" as keyof T),
+      getRowValue(row, "reference" as keyof T),
+    ];
+    const candidate = candidates.find((value) =>
+      typeof value === "string" || typeof value === "number"
+    );
+    return typeof candidate === "string" || typeof candidate === "number"
+      ? candidate
+      : idxFallback;
+  }, [getRowValue]);
 
   const visibleColumns = useMemo(
     () => columns.filter((col) => col.priority === "high" || (!col.priority && columns.indexOf(col) < 3)),
@@ -443,8 +480,8 @@ const DataTableComponent = <T extends { [key: string]: any }>(
               animateOnMount={animateCells}
               className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm"
             >
-              <div className="truncate" title={String((row as any)[c.key])}>
-                {c.render ? c.render(row) : String((row as any)[c.key])}
+              <div className="truncate" title={String(getRowValue(row, c.key))}>
+                {c.render ? c.render(row) : String(getRowValue(row, c.key))}
               </div>
             </OptimizedTd>
           ))}
@@ -511,6 +548,8 @@ const DataTableComponent = <T extends { [key: string]: any }>(
     showActionsColumn,
     disableInternalScroll,
     isDesktop,
+    animateCells,
+    getRowValue,
   ]);
 
   /* ================================
@@ -640,13 +679,13 @@ const DataTableComponent = <T extends { [key: string]: any }>(
                      value={pageSizeOption}
                      onChange={(e) => {
                        const num = Number(e.target.value);
-                       setAnimateCells(true);
-                       setPageSizeOption(num);
-                       setPageSize(num);
-                       if (isServerPagination && serverPagination) {
-                         serverPagination.onPageSizeChange(num);
-                         return;
-                       }
+                        setAnimateCells(true);
+                        setPageSizeOption(num);
+                        setPageSize(num);
+                        if (isServerPagination && serverPagination?.onPageSizeChange) {
+                          serverPagination.onPageSizeChange(num);
+                          return;
+                        }
                        setPage(1);
                      }}
                     className="h-10 w-16 appearance-none rounded-lg bg-white pl-3 pr-7 text-sm text-[#172B4D] border border-gray-200 transition-colors hover:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-500"

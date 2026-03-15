@@ -2,7 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import { listStates  } from "../services/servicerequests.service";
 import { isServiceRequestStateLike } from "../../shared/stateFilters";
 
-function normalizeKey(v: any) {
+type RequestState = {
+  stateid?: number;
+  name?: string;
+};
+
+function normalizeKey(v: unknown) {
   return String(v ?? "")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -10,7 +15,10 @@ function normalizeKey(v: any) {
     .toLowerCase();
 }
 
-function findStateId(states: any[] | undefined, matcher: (name: string) => boolean) {
+function findStateId(
+  states: RequestState[] | undefined,
+  matcher: (name: string) => boolean,
+) {
   const found = (states ?? []).find((s) => matcher(normalizeKey(s?.name)));
   const n = Number(found?.stateid);
   return Number.isFinite(n) ? n : null;

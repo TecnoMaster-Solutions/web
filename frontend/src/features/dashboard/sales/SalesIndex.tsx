@@ -10,11 +10,33 @@ import { showSuccess, showError } from "@/shared/utils/notifications";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Colors from "@/shared/theme/colors";
-import { ISale, ISalesPaginatedResult } from "./types/sales.type";
+import { ISale, ISalesPaginatedResult } from "./types/Sales.type";
 import { getSales, annulSale } from "./services/sales.service";
 import CreateSaleForm from "./components/CreateSaleForm";
 import SalePaymentsModal from "./components/SalePaymentsModal";
 import { useAuth } from "@/features/auth/authcontext";
+
+type AuthRecord = {
+  rolename?: string;
+  role?: { name?: string } | null;
+  users?: { rolename?: string } | null;
+  customerid?: number;
+  clientid?: number;
+  clientId?: number;
+  customer?: { customerid?: number; id?: number } | null;
+  customers?: Array<{ customerid?: number; id?: number }> | null;
+};
+
+type JwtPayload = {
+  permissions?: unknown[];
+};
+
+type ApiErrorLike = {
+  name?: string;
+  code?: string;
+  response?: { data?: { message?: string } };
+  message?: string;
+};
 
 function Loader() {
   return (
@@ -24,7 +46,7 @@ function Loader() {
   );
 }
 
-function normalizeRoleName(role: any) {
+function normalizeRoleName(role: unknown) {
   return String(role ?? "")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -32,12 +54,12 @@ function normalizeRoleName(role: any) {
     .toLowerCase();
 }
 
-function toPositiveId(value: any): number | null {
+function toPositiveId(value: unknown): number | null {
   const n = Number(value);
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
-function extractAuthClientId(user: any, profile: any): number | null {
+function extractAuthClientId(user: AuthRecord | null, profile: AuthRecord | null): number | null {
   const candidates = [
     user?.customerid,
     user?.clientid,
@@ -63,7 +85,7 @@ function extractAuthClientId(user: any, profile: any): number | null {
   return null;
 }
 
-function decodeJwtPayload(token: string): any | null {
+function decodeJwtPayload(token: string): JwtPayload | null {
   try {
     const parts = token.split(".");
     if (parts.length < 2) return null;
@@ -136,12 +158,15 @@ export default function SalesIndex() {
   const searchAbortRef = useRef<AbortController | null>(null);
 
   const authRole = normalizeRoleName(
-    (user as any)?.rolename ??
-    (profile as any)?.rolename ??
-    (profile as any)?.role?.name ??
-    (profile as any)?.users?.rolename
+    (user as AuthRecord | null)?.rolename ??
+    (profile as AuthRecord | null)?.rolename ??
+    (profile as AuthRecord | null)?.role?.name ??
+    (profile as AuthRecord | null)?.users?.rolename
   );
-  const authClientId = extractAuthClientId(user, profile);
+  const authClientId = extractAuthClientId(
+    user as AuthRecord | null,
+    profile as AuthRecord | null
+  );
   const isClientUser = authRole.includes("cliente");
 
   useEffect(() => {
@@ -235,6 +260,33 @@ export default function SalesIndex() {
     setPaymentSaleId(null);
   }, []);
 
+  const handlePageChange = useCallback(
+    async (nextPage: number) => {
+      pageAbortRef.current?.abort();
+      const controller = new AbortController();
+      pageAbortRef.current = controller;
+
+      setLoading(true);
+      try {
+        await loadSalesPage(nextPage, search, controller.signal);
+      } catch (error: unknown) {
+        const apiError = error as ApiErrorLike | null;
+        if (apiError?.name === "CanceledError" || apiError?.code === "ERR_CANCELED") {
+          return;
+        }
+        console.error(error);
+        showError("Error al cargar la página de ventas.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [loadSalesPage, search]
+  );
+
+  const handleSearchChange = useCallback((value: string) => {
+    setSearch(value);
+  }, []);
+
   useEffect(() => {
     if (!permissionsLoaded) return;
 
@@ -261,6 +313,41 @@ export default function SalesIndex() {
   }, [hasSalesRead, loadSalesPage, permissionsLoaded]);
 
   useEffect(() => {
+    if (!permissionsLoaded || !hasSalesRead) return;
+
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+    }
+
+    searchDebounceRef.current = setTimeout(() => {
+      searchAbortRef.current?.abort();
+      const controller = new AbortController();
+      searchAbortRef.current = controller;
+
+      setLoading(true);
+      void loadSalesPage(1, search, controller.signal)
+        .catch((error: unknown) => {
+          const apiError = error as ApiErrorLike | null;
+          if (apiError?.name === "CanceledError" || apiError?.code === "ERR_CANCELED") {
+            return;
+          }
+          console.error(error);
+          showError("Error al buscar ventas.");
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => {
+      if (searchDebounceRef.current) {
+        clearTimeout(searchDebounceRef.current);
+      }
+      searchAbortRef.current?.abort();
+    };
+  }, [SEARCH_DEBOUNCE_MS, hasSalesRead, loadSalesPage, permissionsLoaded, search]);
+
+  useEffect(() => {
     return () => {
       if (searchDebounceRef.current) {
         clearTimeout(searchDebounceRef.current);
@@ -269,64 +356,6 @@ export default function SalesIndex() {
       searchAbortRef.current?.abort();
     };
   }, []);
-
-  const handlePageChange = useCallback(
-    async (nextPage: number) => {
-      pageAbortRef.current?.abort();
-      const controller = new AbortController();
-      pageAbortRef.current = controller;
-
-      setLoading(true);
-      try {
-        await loadSalesPage(nextPage, search, controller.signal);
-      } catch (error: any) {
-        if (
-          error?.name === "CanceledError" ||
-          error?.code === "ERR_CANCELED" ||
-          controller.signal.aborted
-        ) {
-          return;
-        }
-        console.error(error);
-        showError("No se pudo cargar la pagina de ventas.");
-      } finally {
-        if (!controller.signal.aborted) setLoading(false);
-      }
-    },
-    [loadSalesPage, search]
-  );
-
-  const handleSearchChange = useCallback(
-    (value: string) => {
-      setSearch(value);
-      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
-      pageAbortRef.current?.abort();
-      searchAbortRef.current?.abort();
-
-      const controller = new AbortController();
-      searchAbortRef.current = controller;
-
-      searchDebounceRef.current = setTimeout(async () => {
-        setLoading(true);
-        try {
-          await loadSalesPage(1, value, controller.signal);
-        } catch (error: any) {
-          if (
-            error?.name === "CanceledError" ||
-            error?.code === "ERR_CANCELED" ||
-            controller.signal.aborted
-          ) {
-            return;
-          }
-          console.error(error);
-          showError("No se pudieron buscar las ventas.");
-        } finally {
-          if (!controller.signal.aborted) setLoading(false);
-        }
-      }, SEARCH_DEBOUNCE_MS);
-    },
-    [loadSalesPage]
-  );
 
   const exportToExcel = async () => {
     const workbook = new ExcelJS.Workbook();

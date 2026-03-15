@@ -19,6 +19,7 @@ import type {
   SupplierDTO,
   CreateSupplierInput,
   UpdateSupplierInput,
+  PaginatedResponse,
 } from "@/features/dashboard/suppliers/services/suppliers.service";
 import { updateSupplier as updateSupplierSvc } from "@/features/dashboard/suppliers/services/suppliers.service";
 import { useQueryClient } from "@tanstack/react-query";
@@ -47,6 +48,18 @@ type Row = {
   }>;
 };
 
+type ApiErrorShape = {
+  response?: {
+    data?: {
+      message?: string | string[];
+      error?: string | string[];
+    };
+  };
+  message?: string;
+};
+
+type EditSupplierPayload = SupplierSubmitPayload & { statusid: 1 | 2 };
+
 function Loader() {
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-[9998]">
@@ -55,9 +68,12 @@ function Loader() {
   );
 }
 
-function getErrorMessage(err: any) {
+function getErrorMessage(err: unknown) {
+  const apiError = err as ApiErrorShape | null | undefined;
   const msg =
-    err?.response?.data?.message ?? err?.response?.data?.error ?? err?.message;
+    apiError?.response?.data?.message ??
+    apiError?.response?.data?.error ??
+    apiError?.message;
   if (Array.isArray(msg)) return msg.join(" · ");
   if (typeof msg === "string" && msg.trim()) return msg;
   return "Ocurrió un error inesperado.";
@@ -75,10 +91,10 @@ export default function SuppliersPage() {
 
   const queryClient = useQueryClient();
 
-  const { data, isLoading, error } = useSuppliers({ page, limit, search });
+  const { data, isLoading, isFetching, error } = useSuppliers({ page, limit, search });
   const createMut = useCreateSupplier();
   const updateMut = useUpdateSupplier(selected?.id ?? 0);
-  const paginatedData = Array.isArray(data) ? null : data;
+  const paginatedData = (data ?? null) as PaginatedResponse<SupplierDTO> | null;
 
   useEffect(() => {
     if (error) showError(getErrorMessage(error));
@@ -101,7 +117,6 @@ export default function SuppliersPage() {
     }));
   }, [paginatedData]);
 
-  const total = paginatedData?.meta?.total ?? rows.length;
   const totalPages = paginatedData?.meta?.totalPages ?? 1;
 
   const columns: Column<Row>[] = [
@@ -138,12 +153,12 @@ export default function SuppliersPage() {
     "status",
   ];
 
-  const createPending =
-    (createMut as any).isPending ?? (createMut as any).isLoading ?? false;
-  const updatePending =
-    (updateMut as any).isPending ?? (updateMut as any).isLoading ?? false;
+  const createPending = createMut.isPending;
+  const updatePending = updateMut.isPending;
 
-  const busy = isLoading || actionLoading || createPending || updatePending;
+  const initialLoading = isLoading;
+  const tableLoading = isFetching && !isLoading;
+  const busy = actionLoading || createPending || updatePending;
 
   const onView = (row: Row) => {
     setSelected(row);
@@ -185,7 +200,7 @@ export default function SuppliersPage() {
 
       await queryClient.invalidateQueries({ queryKey: ["suppliers"] });
       showSuccess("Proveedor inactivado correctamente.");
-    } catch (e: any) {
+    } catch (e: unknown) {
       showError(getErrorMessage(e));
     } finally {
       setActionLoading(false);
@@ -213,7 +228,7 @@ export default function SuppliersPage() {
 
       setOpenCreate(false);
       showSuccess("Proveedor creado correctamente.");
-    } catch (e: any) {
+    } catch (e: unknown) {
       showError(getErrorMessage(e));
       throw e;
     } finally {
@@ -251,7 +266,7 @@ export default function SuppliersPage() {
 
       setOpenEdit(false);
       showSuccess("Proveedor actualizado correctamente.");
-    } catch (e: any) {
+    } catch (e: unknown) {
       showError(getErrorMessage(e));
       throw e;
     } finally {
@@ -259,22 +274,21 @@ export default function SuppliersPage() {
     }
   };
 
-  const mapRowToEditForm = (row: Row) =>
-    ({
-      name: row.name,
-      nit: row.nit,
-      phone: row.phone ?? "",
-      email: row.email ?? "",
-      address: row.address ?? "",
-      contactName: row.contact ?? "",
-      status: row.status,
-      statusid: row.status === "Activo" ? 1 : 2,
-      rating: Number(row.rating) || 0,
-      imageFile: null,
-      imageUrl: row.imageUrl ?? null,
-      supplierid: row.id, // Incluir el ID del proveedor para cargar productos
-      productos: row.productos,
-    } as unknown as SupplierSubmitPayload & { statusid: 1 | 2 });
+  const mapRowToEditForm = (row: Row): EditSupplierPayload => ({
+    name: row.name,
+    nit: row.nit,
+    phone: row.phone ?? "",
+    email: row.email ?? "",
+    address: row.address ?? "",
+    contactName: row.contact ?? "",
+    status: row.status,
+    statusid: row.status === "Activo" ? 1 : 2,
+    rating: Number(row.rating) || 0,
+    imageFile: null,
+    imageUrl: row.imageUrl ?? null,
+    supplierid: row.id,
+    productos: row.productos,
+  });
 
   const mapRowToDetails = (row: Row) => ({
     id: row.id,
@@ -294,7 +308,7 @@ export default function SuppliersPage() {
   return (
     <RequireAuth>
       <main className="flex-1 flex flex-col bg-gray-100 relative">
-        {busy && <Loader />}
+        {(initialLoading || busy) && <Loader />}
 
         {error ? (
           <div className="flex-1 flex items-center justify-center p-8">
@@ -306,11 +320,11 @@ export default function SuppliersPage() {
             data={rows}
             columns={columns}
             pageSize={5}
+            loading={tableLoading}
             disableInternalScroll
             serverPagination={{
               page,
               limit,
-              total,
               totalPages,
               onPageChange: setPage,
               onPageSizeChange: (nextLimit) => {

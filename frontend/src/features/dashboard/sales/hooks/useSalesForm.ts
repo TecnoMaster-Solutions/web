@@ -13,7 +13,7 @@ import {
     IService,
     ICartItem,
     ICreateSaleDto,
-} from "../types/sales.type";
+} from "../types/Sales.type";
 import { showSuccess, showError, showWarning } from "@/shared/utils/notifications";
 
 export const useSalesForm = () => {

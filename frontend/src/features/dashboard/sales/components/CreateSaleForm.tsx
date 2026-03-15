@@ -5,7 +5,7 @@ import { useSalesForm } from "../hooks/useSalesForm";
 import Colors from "@/shared/theme/colors";
 import { Loader } from "@/shared/components/loader";
 import { showError } from "@/shared/utils/notifications";
-import { ICustomer, IProduct, IService } from "../types/sales.type";
+import { ICustomer, IProduct, IService } from "../types/Sales.type";
 import { motion, AnimatePresence } from "framer-motion";
 import { createPortal } from "react-dom";
 
@@ -416,7 +416,6 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
                                         disabled={loadingData || customers.length === 0}
                                         className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none disabled:opacity-60"
                                         style={{ borderColor: Colors.table.lines }}
-                                        aria-expanded={clientOpen}
                                         aria-controls="sale-client-suggest"
                                         aria-autocomplete="list"
                                     />
@@ -1050,3 +1049,4 @@ export default function CreateSaleForm({ onClose, onSaved }: CreateSaleFormProps
         </>
     );
 }
+

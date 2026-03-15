@@ -60,7 +60,20 @@ export interface OrderServiceDTO {
       image?: string | null;
     };
   }>;
+  services?: Array<{
+    ordersservicesservicesid?: number | string;
+    cantidad?: number;
+    unitprice?: number;
+    subtotal?: number;
+    service?: {
+      serviceid?: number;
+      name?: string;
+      typeofservice?: { name?: string };
+    };
+  }>;
   files?: string[];
+  viaticos?: number;
+  history?: OrderServiceHistoryEntry[];
 }
 
 export interface OrderServiceHistoryEntry {
@@ -68,9 +81,33 @@ export interface OrderServiceHistoryEntry {
   action: string;
   actionlabel: string;
   description: string | null;
-  payload: any;
+  payload: Record<string, unknown>;
   actoruserid: number | null;
   createdat: string;
+  message?: string;
+  type?: string;
+  title?: string;
+  detail?: string | null;
+  details?: string | null;
+  userid?: number | null;
+  userId?: number | null;
+  technician?: {
+    technicianid?: number | null;
+    user?: { name?: string | null; lastname?: string | null } | null;
+    users?: { name?: string | null; lastname?: string | null } | null;
+  } | null;
+  user?: { name?: string | null; lastname?: string | null } | null;
+  users?: { name?: string | null; lastname?: string | null } | null;
+  actor?: {
+    name?: string | null;
+    lastname?: string | null;
+    users?: { name?: string | null; lastname?: string | null } | null;
+  } | null;
+  createdby?: {
+    name?: string | null;
+    lastname?: string | null;
+    users?: { name?: string | null; lastname?: string | null } | null;
+  } | null;
 }
 
 export interface UpdateOrderServicePayload {

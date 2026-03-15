@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Swal from "sweetalert2";
 import { useQueryClient } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -19,7 +19,9 @@ import EditRequestModal, {
   type EditRequestPayload,
 } from "@/features/dashboard/requests/components/EditRequestModal";
 import ViewRequestModal from "@/features/dashboard/requests/components/ViewRequestModal";
-import { useLookups } from "@/features/dashboard/requests/hooks/useLookups";
+import {
+  useLookups,
+} from "@/features/dashboard/requests/hooks/useLookups";
 import {
   buildScheduledAt,
   splitDateTime,
@@ -30,6 +32,14 @@ import DownloadXLSXButton from "@/features/dashboard/components/DownloadXLSXButt
 import { useRequestStates } from "@/features/dashboard/requests/hooks/useRequestStates";
 import { useAuth } from "@/features/auth/authcontext";
 import { usePermissions } from "@/features/auth/hooks/usePermissions";
+import type {
+  CreateServiceRequestInput,
+  PaginatedResponse,
+  ServiceRequestDTO,
+  ServiceRequestTechnicianMapDTO,
+  ServiceTypeApi,
+  UpdateServiceRequestInput,
+} from "@/features/dashboard/requests/services/servicerequests.service";
 
 const ICONS = {
   print: "/icons/printer.svg",
@@ -55,6 +65,59 @@ type Row = {
   technicianNames: string[];
 };
 
+type ApiErrorLike = {
+  response?: { data?: { message?: string | string[] } };
+  message?: string;
+};
+
+type RoleNameContainer = {
+  name?: string;
+};
+
+type AuthRecord = {
+  rolename?: string;
+  role?: string | RoleNameContainer | null;
+  roles?: RoleNameContainer | null;
+  customerid?: number;
+  clientid?: number;
+  clientId?: number;
+  customer?: { customerid?: number; id?: number } | null;
+  customers?: Array<{ customerid?: number; id?: number }> | null;
+  technicianid?: number;
+  technicianId?: number;
+  technician?: { technicianid?: number; id?: number } | null;
+  technicians?: Array<{ technicianid?: number; id?: number }> | null;
+};
+
+type ServiceRequestRowLike = ServiceRequestDTO & {
+  id?: number | string;
+  address?: string | null;
+  clientId?: number | string | null;
+  status?: string | null;
+  serviceType?: string | null;
+  stateId?: number | string | null;
+  customer?: (ServiceRequestDTO["customer"] & {
+    id?: number | string | null;
+    name?: string | null;
+    lastname?: string | null;
+  }) | null;
+  service?: (ServiceRequestDTO["service"] & {
+    id?: number | string | null;
+  }) | null;
+  techniciansMap?: Array<
+    ServiceRequestTechnicianMapDTO & {
+      id?: number | string | null;
+      technician?: (ServiceRequestTechnicianMapDTO["technician"] & {
+        id?: number | string | null;
+        name?: string | null;
+        lastname?: string | null;
+      }) | null;
+    }
+  > | null;
+};
+
+type RequestListCache = PaginatedResponse<ServiceRequestDTO> | ServiceRequestDTO[] | undefined;
+
 function Loader() {
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-[9999]">
@@ -77,22 +140,24 @@ function parseMaybeId(s: string) {
   return Number.isFinite(n) && n > 0 ? n : 0;
 }
 
-function tipoToBackend(t: "Mantenimiento" | "Instalacion" | undefined) {
+function tipoToBackend(t: "Mantenimiento" | "Instalacion" | undefined): ServiceTypeApi {
   if (!t) return "MANTENIMIENTO";
-  return t.toUpperCase();
+  return t.toUpperCase() as ServiceTypeApi;
 }
 
-function getBackendMessage(err: any) {
-  const msg = err?.response?.data?.message ?? err?.message ?? "";
+function getBackendMessage(err: unknown) {
+  const apiErr = err as ApiErrorLike | null;
+  const msg = apiErr?.response?.data?.message ?? apiErr?.message ?? "";
   if (Array.isArray(msg)) return msg.filter(Boolean).join(" | ");
   return String(msg || "");
 }
 
-function extractTechnicianIds(r: any): number[] {
-  const raw = r?.techniciansMap;
+function extractTechnicianIds(r: ServiceRequestDTO): number[] {
+  const row = r as ServiceRequestRowLike;
+  const raw = row?.techniciansMap as NonNullable<ServiceRequestRowLike["techniciansMap"]> | undefined;
   if (!Array.isArray(raw)) return [];
   return raw
-    .map((m: any) =>
+    .map((m: NonNullable<ServiceRequestRowLike["techniciansMap"]>[number]) =>
       Number(
         m?.technicianId ??
           m?.technician?.technicianid ??
@@ -103,11 +168,12 @@ function extractTechnicianIds(r: any): number[] {
     .filter((n) => Number.isFinite(n) && n > 0);
 }
 
-function extractTechnicianNames(r: any): string[] {
-  const raw = r?.techniciansMap;
+function extractTechnicianNames(r: ServiceRequestDTO): string[] {
+  const row = r as ServiceRequestRowLike;
+  const raw = row?.techniciansMap as NonNullable<ServiceRequestRowLike["techniciansMap"]> | undefined;
   if (!Array.isArray(raw)) return [];
   const names = raw
-    .map((m: any) => {
+    .map((m: NonNullable<ServiceRequestRowLike["techniciansMap"]>[number]) => {
       const u = m?.technician?.users ?? m?.users ?? null;
       const name = String(u?.name ?? "").trim();
       const last = String(u?.lastname ?? "").trim();
@@ -125,7 +191,7 @@ function extractTechnicianNames(r: any): string[] {
   return Array.from(new Set(names));
 }
 
-function normalizeRoleName(role: any) {
+function normalizeRoleName(role: unknown) {
   return String(role ?? "")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -133,12 +199,12 @@ function normalizeRoleName(role: any) {
     .toLowerCase();
 }
 
-function toPositiveId(value: any): number | null {
+function toPositiveId(value: unknown): number | null {
   const n = Number(value);
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
-function extractAuthClientId(user: any, profile: any): number | null {
+function extractAuthClientId(user: AuthRecord | null, profile: AuthRecord | null): number | null {
   const candidates = [
     user?.customerid,
     user?.clientid,
@@ -163,7 +229,10 @@ function extractAuthClientId(user: any, profile: any): number | null {
   return null;
 }
 
-function extractAuthTechnicianId(user: any, profile: any): number | null {
+function extractAuthTechnicianId(
+  user: AuthRecord | null,
+  profile: AuthRecord | null
+): number | null {
   const candidates = [
     user?.technicianid,
     user?.technicianId,
@@ -184,27 +253,6 @@ function extractAuthTechnicianId(user: any, profile: any): number | null {
     if (id) return id;
   }
   return null;
-}
-
-function extractRequestClientIds(r: any): number[] {
-  const ids = [
-    r?.clientId,
-    r?.clientid,
-    r?.customer?.customerid,
-    r?.customer?.clientid,
-    r?.customer?.id,
-    r?.customer?.userid,
-    r?.customer?.users?.userid,
-    r?.customer?.users?.id,
-  ];
-
-  return Array.from(
-    new Set(
-      ids
-        .map((id) => toPositiveId(id))
-        .filter((id): id is number => id != null)
-    )
-  );
 }
 
 function useDesktopQuery() {
@@ -273,15 +321,17 @@ export default function ServiceRequestsPage() {
   const sidebarW = useSidebarWidth("#app-sidebar");
 
   const normalizedRole = useMemo(() => {
+    const userRecord = user as AuthRecord | null;
+    const profileRecord = profile as AuthRecord | null;
     const candidates = [
-      user?.rolename,
-      (user as any)?.role,
-      (user as any)?.role?.name,
-      (user as any)?.roles?.name,
-      profile?.rolename,
-      (profile as any)?.role,
-      (profile as any)?.role?.name,
-      (profile as any)?.roles?.name,
+      userRecord?.rolename,
+      userRecord?.role,
+      typeof userRecord?.role === "object" ? userRecord.role?.name : undefined,
+      userRecord?.roles?.name,
+      profileRecord?.rolename,
+      profileRecord?.role,
+      typeof profileRecord?.role === "object" ? profileRecord.role?.name : undefined,
+      profileRecord?.roles?.name,
     ];
 
     const normalized = candidates
@@ -306,12 +356,12 @@ export default function ServiceRequestsPage() {
 
   const clientIdFromAuth = useMemo(() => {
     if (!isClientRole) return null;
-    return extractAuthClientId(user, profile);
+    return extractAuthClientId(user as AuthRecord | null, profile as AuthRecord | null);
   }, [isClientRole, user, profile]);
 
   const technicianIdFromAuth = useMemo(() => {
     if (!isTechnicianRole) return null;
-    return extractAuthTechnicianId(user, profile);
+    return extractAuthTechnicianId(user as AuthRecord | null, profile as AuthRecord | null);
   }, [isTechnicianRole, user, profile]);
 
   const requestQuery = useMemo(
@@ -325,30 +375,31 @@ export default function ServiceRequestsPage() {
     [clientIdFromAuth, isClientRole, isTechnicianRole, limit, page, search, technicianIdFromAuth]
   );
 
-  const { data, isLoading, error } = useServiceRequests(requestQuery);
+  const { data, isLoading, isFetching, error } = useServiceRequests(requestQuery);
   const createMut = useCreateServiceRequest();
   const updateMut = useUpdateServiceRequest();
 
   const rows: Row[] = useMemo(() => {
     const list = Array.isArray(data?.data) ? data.data : [];
-    return list.map((r: any) => {
-      const id = r?.serviceRequestId ?? r?.id ?? "";
-      const servicio = r?.service?.name ?? r?.serviceType ?? "";
+    return list.map((r: ServiceRequestDTO) => {
+      const row = r as ServiceRequestRowLike;
+      const id = row?.serviceRequestId ?? row?.id ?? "";
+      const servicio = row?.service?.name ?? row?.serviceType ?? "";
       const serviceId =
-        r?.service?.serviceid ?? r?.serviceId ?? r?.service?.id ?? undefined;
+        row?.service?.serviceid ?? row?.serviceId ?? row?.service?.id ?? undefined;
 
       const clienteId =
-        r?.clientId ?? r?.customer?.customerid ?? r?.customer?.id ?? "";
-      const nombre = r?.customer?.users?.name ?? r?.customer?.name ?? "";
+        row?.clientId ?? row?.customer?.customerid ?? row?.customer?.id ?? "";
+      const nombre = row?.customer?.users?.name ?? row?.customer?.name ?? "";
       const apellido =
-        r?.customer?.users?.lastname ?? r?.customer?.lastname ?? "";
+        row?.customer?.users?.lastname ?? row?.customer?.lastname ?? "";
       const cliente = [nombre, apellido].filter(Boolean).join(" ");
 
-      const descripcion = r?.description ?? "";
+      const descripcion = row?.description ?? "";
       const direccion =
-        r?.direccion ?? r?.customer?.customercity ?? r?.address ?? "";
+        row?.direccion ?? row?.customer?.customercity ?? row?.address ?? "";
 
-      const tipoRaw = r?.serviceType ?? r?.service?.category ?? "";
+      const tipoRaw = row?.serviceType ?? row?.service?.category ?? "";
       const lower = String(tipoRaw).toLowerCase();
       const tipo = lower.includes("instal")
         ? "Instalacion"
@@ -375,11 +426,11 @@ export default function ServiceRequestsPage() {
         ? toLocalDateTimeValue(scheduledEndAtDate)
         : null;
 
-      const estado = r?.state?.name ?? r?.status ?? "";
-      const stateId = r?.stateId ?? r?.state?.stateid ?? undefined;
+      const estado = row?.state?.name ?? row?.status ?? "";
+      const stateId = row?.stateId ?? row?.state?.stateid ?? undefined;
 
-      const fecha = r?.createdAt
-        ? new Date(r.createdAt).toLocaleDateString("es-CO")
+      const fecha = row?.createdAt
+        ? new Date(row.createdAt).toLocaleDateString("es-CO")
         : "";
 
       const technicians = extractTechnicianIds(r);
@@ -406,7 +457,6 @@ export default function ServiceRequestsPage() {
     });
   }, [data]);
 
-  const total = data?.meta?.total ?? rows.length;
   const totalPages = data?.meta?.totalPages ?? 1;
 
   const xlsxRows = useMemo(() => {
@@ -445,18 +495,326 @@ export default function ServiceRequestsPage() {
     },
   ];
 
-  const createPending =
-    (createMut as any).isPending ?? (createMut as any).isLoading ?? false;
-  const updatePending =
-    (updateMut as any).isPending ?? (updateMut as any).isLoading ?? false;
+  const createPending = createMut.isPending;
+  const updatePending = updateMut.isPending;
 
-  const busy = isLoading || actionLoading || createPending || updatePending;
+  const initialLoading = isLoading;
+  const tableLoading = isFetching && !isLoading;
+  const busy = actionLoading || createPending || updatePending;
   const canViewRequests = canView(MODULE_KEY);
   const canCreateRequests = canCreate(MODULE_KEY);
   const canUpdateRequests = canUpdate(MODULE_KEY);
   const canCancelRequests = canDelete(MODULE_KEY) || has(MODULE_KEY, "deactivate");
   const canPrintRequests = canViewRequests || has(MODULE_KEY, "print");
   const canExportRequests = canViewRequests || has(MODULE_KEY, "export");
+
+  const optimisticPatch = useCallback((id: number, patch: Partial<Row>) => {
+    queryClient.setQueryData<RequestListCache>(["service-requests"], (old) => {
+      if (!Array.isArray(old)) return old;
+      return old.map((it) => {
+        const itId = it?.serviceRequestId ?? it?.id;
+        if (Number(itId) !== Number(id)) return it;
+
+        const merged: ServiceRequestDTO = { ...it };
+
+        const nextStateId =
+          patch.stateId !== undefined && patch.stateId !== null
+            ? Number(patch.stateId)
+            : undefined;
+
+        if (nextStateId !== undefined && Number.isFinite(nextStateId)) {
+          merged.stateId = nextStateId;
+        }
+        if (patch.estado !== undefined)
+          merged.state = {
+            ...(it.state || {}),
+            name: patch.estado,
+            stateid:
+              nextStateId !== undefined && Number.isFinite(nextStateId)
+                ? nextStateId
+                : it?.state?.stateid,
+          };
+
+        if (patch.programada !== undefined) {
+          if (patch.programada) {
+            const parts = splitDateTime(patch.programada);
+            const iso = buildScheduledAt(
+              parts.date,
+              parts.time,
+              it.scheduledAt ? new Date(it.scheduledAt) : null
+            );
+            merged.scheduledAt = iso;
+          } else {
+            merged.scheduledAt = null;
+          }
+        }
+
+        if (patch.programadaEnd !== undefined) {
+          if (patch.programadaEnd) {
+            const parts = splitDateTime(patch.programadaEnd);
+            const iso = buildScheduledAt(
+              parts.date,
+              parts.time,
+              it.scheduledEndAt ? new Date(it.scheduledEndAt) : null
+            );
+            merged.scheduledEndAt = iso;
+          } else {
+            merged.scheduledEndAt = null;
+          }
+        }
+
+        if (patch.descripcion !== undefined) merged.description = patch.descripcion;
+
+        const nextServiceId =
+          patch.serviceId !== undefined && patch.serviceId !== null
+            ? Number(patch.serviceId)
+            : undefined;
+
+        if (patch.servicio !== undefined)
+          merged.service = {
+            ...(it.service || {}),
+            name: patch.servicio,
+            serviceid:
+              nextServiceId !== undefined && Number.isFinite(nextServiceId)
+                ? nextServiceId
+                : it?.service?.serviceid,
+          };
+
+        if (patch.direccion !== undefined) merged.direccion = patch.direccion;
+
+        return merged;
+      });
+    });
+
+    setSelected((prev) =>
+      prev && Number(prev.id) === Number(id) ? { ...prev, ...patch } : prev
+    );
+  }, [queryClient]);
+
+  async function handleCreate(values: CreateRequestPayload) {
+    setActionLoading(true);
+    try {
+      const technicians = Array.isArray(values.technicians) ? values.technicians : [];
+      const hasFullAssignment = Boolean(
+        values.scheduledAt && values.scheduledEndAt && technicians.length > 0
+      );
+      const stateIdToSend =
+        (hasFullAssignment &&
+          scheduledStateId &&
+          Number.isFinite(scheduledStateId) &&
+          scheduledStateId > 0 &&
+          scheduledStateId) ||
+        (pendingStateId && Number.isFinite(pendingStateId) && pendingStateId > 0 && pendingStateId) ||
+        5;
+
+      const dto: CreateServiceRequestInput = {
+        scheduledAt: values.scheduledAt ?? null,
+        scheduledEndAt: values.scheduledEndAt ?? null,
+        serviceType:
+          values.serviceType === "INSTALACION" || values.serviceType === "MANTENIMIENTO"
+            ? values.serviceType
+            : tipoToBackend(undefined),
+        description: values.description.trim(),
+        direccion: values.direccion.trim(),
+        stateId: stateIdToSend,
+        serviceId: Number(values.serviceId),
+        clientId: Number(values.clientId),
+        technicians,
+      };
+
+      await createMut.mutateAsync(dto);
+      await queryClient.invalidateQueries({ queryKey: ["service-requests"] });
+      setOpenCreate(false);
+
+      showSuccess("Solicitud creada correctamente.");
+    } catch (err: unknown) {
+      const msg = getBackendMessage(err);
+      showError(msg || "No se pudo crear la solicitud.");
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function handleUpdate(values: EditRequestPayload) {
+    if (!selected) return;
+
+    setActionLoading(true);
+    try {
+      const id = Number(selected.id);
+
+      const scheduledAt =
+        values.scheduledAt ??
+        buildScheduledAt(null, null, selected.programada ? new Date(selected.programada) : null);
+
+      const scheduledEndAt =
+        values.scheduledEndAt ??
+        buildScheduledAt(
+          null,
+          null,
+          selected.programadaEnd ? new Date(selected.programadaEnd) : null
+        );
+
+      const direccion = String(values.direccion ?? selected.direccion ?? "").trim();
+
+      const serviceType =
+        values.serviceType === "INSTALACION" || values.serviceType === "MANTENIMIENTO"
+          ? values.serviceType
+          : tipoToBackend(undefined);
+
+      const description = String(values.description ?? "").trim();
+
+      const serviceId = Number(
+        values.serviceId ?? parseMaybeId(String(selected.serviceId ?? ""))
+      );
+
+      const clientId = Number(
+        values.clientId ?? parseMaybeId(String(selected.clienteId ?? ""))
+      );
+
+      const technicians = Array.isArray(values.technicians)
+        ? values.technicians
+        : Array.isArray(selected.technicians)
+        ? selected.technicians
+        : [];
+
+      const payload: UpdateServiceRequestInput = {
+        scheduledAt,
+        scheduledEndAt,
+        serviceType,
+        description,
+        direccion,
+        serviceId,
+        clientId,
+        technicians,
+      };
+
+      let stateIdNum =
+        values.stateId && Number.isFinite(Number(values.stateId))
+          ? Number(values.stateId)
+          : values.estado
+          ? parseMaybeId(String(values.estado))
+          : 0;
+
+      const hasFullAssignment = Boolean(scheduledAt && scheduledEndAt && technicians.length > 0);
+      if (hasFullAssignment) {
+        const fallbackState =
+          (scheduledStateId && Number.isFinite(scheduledStateId) && scheduledStateId > 0 && scheduledStateId) ||
+          (pendingStateId && Number.isFinite(pendingStateId) && pendingStateId > 0 && pendingStateId) ||
+          0;
+        if (fallbackState > 0) stateIdNum = fallbackState;
+      }
+
+      if (stateIdNum > 0) payload.stateId = stateIdNum;
+      const forcedScheduled =
+        hasFullAssignment &&
+        scheduledStateId &&
+        Number.isFinite(scheduledStateId) &&
+        scheduledStateId > 0 &&
+        Number(stateIdNum) === Number(scheduledStateId);
+      const resolvedEstadoLabel = forcedScheduled
+        ? "Agendada"
+        : stateIdNum
+        ? String(values.estadoLabel ?? selected.estado)
+        : selected.estado;
+
+      optimisticPatch(id, {
+        programada: scheduledAt ? toLocalDateTimeValue(new Date(scheduledAt)) : null,
+        programadaEnd: scheduledEndAt ? toLocalDateTimeValue(new Date(scheduledEndAt)) : null,
+        descripcion: description,
+        direccion,
+        servicio: String(
+          serviceOptions.find((o) => String(o.id) === String(serviceId))?.label ??
+            selected.servicio
+        ),
+        serviceId,
+        cliente: selected.cliente,
+        clienteId: selected.clienteId,
+        estado: resolvedEstadoLabel,
+        stateId: stateIdNum || selected.stateId,
+        tipo: String(serviceType || "").toLowerCase().includes("instal")
+          ? "Instalacion"
+          : "Mantenimiento",
+        tipos: String(serviceType || "").toLowerCase().includes("instal")
+          ? ["Instalacion"]
+          : ["Mantenimiento"],
+        technicians,
+      });
+
+      await updateMut.mutateAsync({ id, payload });
+      await queryClient.invalidateQueries({ queryKey: ["service-requests"] });
+      setOpenEdit(false);
+
+      showSuccess("Solicitud actualizada correctamente.");
+    } catch (err: unknown) {
+      const msg = getBackendMessage(err);
+      showError(msg || "No se pudo actualizar la solicitud.");
+      await queryClient.invalidateQueries({ queryKey: ["service-requests"] });
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  const handleCancel = useCallback(async (row: Row) => {
+    if (!canCancelRequests) {
+      showError("No tienes permisos para cancelar solicitudes.");
+      return;
+    }
+
+    const res = await Swal.fire({
+      title: "¿Cancelar solicitud?",
+      text: `Se marcará la solicitud #${row.id} como cancelada.`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Sí, cancelar",
+      cancelButtonText: "Volver",
+      confirmButtonColor: "#d33",
+      reverseButtons: true,
+      focusCancel: true,
+    });
+    if (!res.isConfirmed) return;
+
+    setActionLoading(true);
+    try {
+      const id = Number(row.id);
+      optimisticPatch(id, { estado: "Cancelado", stateId: 4 });
+
+      const parts = splitDateTime(row.programada ?? null);
+      const scheduledAt = buildScheduledAt(
+        parts.date,
+        parts.time,
+        row.programada ? new Date(row.programada) : new Date()
+      );
+
+      const payload: UpdateServiceRequestInput = {
+        scheduledAt,
+        scheduledEndAt: row.programadaEnd
+          ? buildScheduledAt(
+              splitDateTime(row.programadaEnd).date,
+              splitDateTime(row.programadaEnd).time,
+              row.programadaEnd ? new Date(row.programadaEnd) : null
+            )
+          : null,
+        serviceType: tipoToBackend(row.tipos?.[0]),
+        description: row.descripcion?.trim(),
+        direccion: row.direccion?.trim(),
+        stateId: 4,
+        serviceId: parseMaybeId(String(row.serviceId ?? "")),
+        clientId: parseMaybeId(String(row.clienteId ?? "")),
+        technicians: Array.isArray(row.technicians) ? row.technicians : [],
+      };
+
+      await updateMut.mutateAsync({ id, payload });
+      await queryClient.invalidateQueries({ queryKey: ["service-requests"] });
+
+      showSuccess("La solicitud fue cancelada.");
+    } catch (err: unknown) {
+      const msg = getBackendMessage(err);
+      showError(msg || "No se pudo cancelar la solicitud.");
+      await queryClient.invalidateQueries({ queryKey: ["service-requests"] });
+    } finally {
+      setActionLoading(false);
+    }
+  }, [canCancelRequests, optimisticPatch, queryClient, updateMut]);
 
   useEffect(() => {
     if (cancelHandledRef.current) return;
@@ -496,298 +854,7 @@ export default function ServiceRequestsPage() {
       await handleCancel(row);
       clearParams();
     })();
-  }, [searchParams, isLoading, actionLoading, rows, router, pathname, canCancelRequests]);
-
-  function optimisticPatch(id: number, patch: Partial<Row>) {
-    queryClient.setQueryData<any>(["service-requests"], (old: any) => {
-      if (!Array.isArray(old)) return old;
-      return old.map((it: any) => {
-        const itId = it?.serviceRequestId ?? it?.id;
-        if (Number(itId) !== Number(id)) return it;
-
-        const merged: any = { ...it, ...patch };
-
-        if (patch.stateId !== undefined) merged.stateId = patch.stateId;
-        if (patch.estado !== undefined)
-          merged.state = {
-            ...(it.state || {}),
-            name: patch.estado,
-            stateid: patch.stateId ?? it?.state?.stateid,
-          };
-
-        if (patch.programada !== undefined) {
-          if (patch.programada) {
-            const parts = splitDateTime(patch.programada);
-            const iso = buildScheduledAt(
-              parts.date,
-              parts.time,
-              it.scheduledAt ? new Date(it.scheduledAt) : null
-            );
-            merged.scheduledAt = iso;
-          } else {
-            merged.scheduledAt = null;
-          }
-        }
-
-        if (patch.programadaEnd !== undefined) {
-          if (patch.programadaEnd) {
-            const parts = splitDateTime(patch.programadaEnd);
-            const iso = buildScheduledAt(
-              parts.date,
-              parts.time,
-              it.scheduledEndAt ? new Date(it.scheduledEndAt) : null
-            );
-            merged.scheduledEndAt = iso;
-          } else {
-            merged.scheduledEndAt = null;
-          }
-        }
-
-        if (patch.descripcion !== undefined) merged.description = patch.descripcion;
-
-        if (patch.servicio !== undefined)
-          merged.service = {
-            ...(it.service || {}),
-            name: patch.servicio,
-            serviceid: patch.serviceId ?? it?.service?.serviceid,
-          };
-
-        if (patch.direccion !== undefined) merged.direccion = patch.direccion;
-
-        return merged;
-      });
-    });
-
-    setSelected((prev) =>
-      prev && Number(prev.id) === Number(id) ? { ...prev, ...patch } : prev
-    );
-  }
-
-  async function handleCreate(values: CreateRequestPayload) {
-    setActionLoading(true);
-    try {
-      const v: any = values as any;
-      const technicians = Array.isArray(v?.technicians) ? v.technicians : [];
-      const hasFullAssignment = Boolean(v?.scheduledAt && v?.scheduledEndAt && technicians.length > 0);
-      const stateIdToSend =
-        (hasFullAssignment &&
-          scheduledStateId &&
-          Number.isFinite(scheduledStateId) &&
-          scheduledStateId > 0 &&
-          scheduledStateId) ||
-        (pendingStateId && Number.isFinite(pendingStateId) && pendingStateId > 0 && pendingStateId) ||
-        5;
-
-      const dto = {
-        scheduledAt: v?.scheduledAt ?? null,
-        scheduledEndAt: v?.scheduledEndAt ?? null,
-        serviceType:
-          v?.serviceType ?? tipoToBackend(Array.isArray(v?.tipos) ? v?.tipos?.[0] : undefined),
-        description: (v?.description ?? v?.descripcion ?? "").trim(),
-        direccion: (v?.direccion ?? "").trim(),
-        stateId: stateIdToSend,
-        serviceId: Number(v?.serviceId ?? parseMaybeId(String(v?.servicio ?? ""))),
-        clientId: Number(v?.clientId ?? parseMaybeId(String(v?.cliente ?? ""))),
-        technicians,
-      };
-
-      await createMut.mutateAsync(dto as any);
-      await queryClient.invalidateQueries({ queryKey: ["service-requests"] });
-      setOpenCreate(false);
-
-      showSuccess("Solicitud creada correctamente.");
-    } catch (err: any) {
-      const msg = getBackendMessage(err);
-      showError(msg || "No se pudo crear la solicitud.");
-    } finally {
-      setActionLoading(false);
-    }
-  }
-
-  async function handleUpdate(values: EditRequestPayload) {
-    if (!selected) return;
-
-    setActionLoading(true);
-    try {
-      const id = Number(selected.id);
-      const v: any = values as any;
-
-      const scheduledAt =
-        v?.scheduledAt ??
-        buildScheduledAt(
-          v?.programada ?? null,
-          v?.horaProgramada ?? null,
-          selected.programada ? new Date(selected.programada) : null
-        );
-
-      const scheduledEndAt =
-        v?.scheduledEndAt ??
-        buildScheduledAt(
-          v?.programada ?? null,
-          v?.horaFinal ?? null,
-          selected.programadaEnd ? new Date(selected.programadaEnd) : null
-        );
-
-      const direccion = String(v?.direccion ?? selected.direccion ?? "").trim();
-
-      const serviceType =
-        v?.serviceType ??
-        tipoToBackend(Array.isArray(v?.tipos) ? v?.tipos?.[0] : undefined);
-
-      const description = String(v?.description ?? v?.descripcion ?? "").trim();
-
-      const serviceId = Number(
-        v?.serviceId ?? parseMaybeId(String(v?.servicio ?? selected.serviceId ?? ""))
-      );
-
-      const clientId = Number(
-        v?.clientId ?? parseMaybeId(String(v?.cliente ?? selected.clienteId ?? ""))
-      );
-
-      const technicians = Array.isArray(v?.technicians)
-        ? v.technicians
-        : Array.isArray(selected.technicians)
-        ? selected.technicians
-        : [];
-
-      const payload: any = {
-        scheduledAt,
-        scheduledEndAt,
-        serviceType,
-        description,
-        direccion,
-        serviceId,
-        clientId,
-        technicians,
-      };
-
-      let stateIdNum =
-        v?.stateId && Number.isFinite(Number(v.stateId))
-          ? Number(v.stateId)
-          : v?.estado
-          ? parseMaybeId(String(v.estado))
-          : 0;
-
-      const hasFullAssignment = Boolean(scheduledAt && scheduledEndAt && technicians.length > 0);
-      if (hasFullAssignment) {
-        const fallbackState =
-          (scheduledStateId && Number.isFinite(scheduledStateId) && scheduledStateId > 0 && scheduledStateId) ||
-          (pendingStateId && Number.isFinite(pendingStateId) && pendingStateId > 0 && pendingStateId) ||
-          0;
-        if (fallbackState > 0) stateIdNum = fallbackState;
-      }
-
-      if (stateIdNum > 0) payload.stateId = stateIdNum;
-      const forcedScheduled =
-        hasFullAssignment &&
-        scheduledStateId &&
-        Number.isFinite(scheduledStateId) &&
-        scheduledStateId > 0 &&
-        Number(stateIdNum) === Number(scheduledStateId);
-      const resolvedEstadoLabel = forcedScheduled
-        ? "Agendada"
-        : stateIdNum
-        ? String(v?.estadoLabel ?? v?.estadoName ?? v?.estadoText ?? selected.estado)
-        : selected.estado;
-
-      optimisticPatch(id, {
-        programada: scheduledAt ? toLocalDateTimeValue(new Date(scheduledAt)) : null,
-        programadaEnd: scheduledEndAt ? toLocalDateTimeValue(new Date(scheduledEndAt)) : null,
-        descripcion: description,
-        direccion,
-        servicio: String(
-          serviceOptions.find((o) => String(o.id) === String(serviceId))?.label ??
-            selected.servicio
-        ),
-        serviceId,
-        cliente: selected.cliente,
-        clienteId: selected.clienteId,
-        estado: resolvedEstadoLabel,
-        stateId: stateIdNum || selected.stateId,
-        tipo: String(serviceType || "").toLowerCase().includes("instal")
-          ? "Instalacion"
-          : "Mantenimiento",
-        tipos: String(serviceType || "").toLowerCase().includes("instal")
-          ? ["Instalacion"]
-          : ["Mantenimiento"],
-        technicians,
-      });
-
-      await updateMut.mutateAsync({ id, payload });
-      await queryClient.invalidateQueries({ queryKey: ["service-requests"] });
-      setOpenEdit(false);
-
-      showSuccess("Solicitud actualizada correctamente.");
-    } catch (err: any) {
-      const msg = getBackendMessage(err);
-      showError(msg || "No se pudo actualizar la solicitud.");
-      await queryClient.invalidateQueries({ queryKey: ["service-requests"] });
-    } finally {
-      setActionLoading(false);
-    }
-  }
-
-  async function handleCancel(row: Row) {
-    if (!canCancelRequests) {
-      showError("No tienes permisos para cancelar solicitudes.");
-      return;
-    }
-
-    const res = await Swal.fire({
-      title: "¿Cancelar solicitud?",
-      text: `Se marcará la solicitud #${row.id} como cancelada.`,
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonText: "Sí, cancelar",
-      cancelButtonText: "Volver",
-      confirmButtonColor: "#d33",
-      reverseButtons: true,
-      focusCancel: true,
-    });
-    if (!res.isConfirmed) return;
-
-    setActionLoading(true);
-    try {
-      const id = Number(row.id);
-      optimisticPatch(id, { estado: "Cancelado", stateId: 4 });
-
-      const parts = splitDateTime(row.programada ?? null);
-      const scheduledAt = buildScheduledAt(
-        parts.date,
-        parts.time,
-        row.programada ? new Date(row.programada) : new Date()
-      );
-
-      const payload: any = {
-        scheduledAt,
-        scheduledEndAt: row.programadaEnd
-          ? buildScheduledAt(
-              splitDateTime(row.programadaEnd).date,
-              splitDateTime(row.programadaEnd).time,
-              row.programadaEnd ? new Date(row.programadaEnd) : null
-            )
-          : null,
-        serviceType: tipoToBackend(row.tipos?.[0]),
-        description: row.descripcion?.trim(),
-        direccion: row.direccion?.trim(),
-        stateId: 4,
-        serviceId: parseMaybeId(String(row.serviceId ?? "")),
-        clientId: parseMaybeId(String(row.clienteId ?? "")),
-        technicians: Array.isArray(row.technicians) ? row.technicians : [],
-      };
-
-      await updateMut.mutateAsync({ id, payload });
-      await queryClient.invalidateQueries({ queryKey: ["service-requests"] });
-
-      showSuccess("La solicitud fue cancelada.");
-    } catch (err: any) {
-      const msg = getBackendMessage(err);
-      showError(msg || "No se pudo cancelar la solicitud.");
-      await queryClient.invalidateQueries({ queryKey: ["service-requests"] });
-    } finally {
-      setActionLoading(false);
-    }
-  }
+  }, [searchParams, isLoading, actionLoading, rows, router, pathname, canCancelRequests, handleCancel]);
 
   function printRequest(row: Row) {
     const techs =
@@ -847,7 +914,7 @@ export default function ServiceRequestsPage() {
     <RequireAuth>
       <div className="relative" style={{ paddingLeft: isDesktop ? sidebarW : 0 }}>
         <main className="min-h-[100dvh] bg-gray-100 relative">
-        {busy && <Loader />}
+        {(initialLoading || busy) && <Loader />}
 
         {error ? (
           <div className="flex-1 flex items-center justify-center p-8">
@@ -859,10 +926,10 @@ export default function ServiceRequestsPage() {
             data={rows}
             columns={columns}
             pageSize={5}
+            loading={tableLoading}
             serverPagination={{
               page,
               limit,
-              total,
               totalPages,
               onPageChange: setPage,
               onPageSizeChange: (nextLimit) => {
@@ -975,7 +1042,7 @@ export default function ServiceRequestsPage() {
                       title="Imprimir"
                       onClick={() => printRequest(row)}
                     >
-                      <img src={ICONS.print} className="h-4 w-4 mx-auto" />
+                      <img src={ICONS.print} alt="Imprimir solicitud" className="h-4 w-4 mx-auto" />
                     </button>
                   )
                 : undefined
@@ -1000,7 +1067,7 @@ export default function ServiceRequestsPage() {
             const partsStart = splitDateTime(selected.programada ?? null);
             const partsEnd = splitDateTime(selected.programadaEnd ?? null);
 
-            const initialAny = {
+            const initialData: Partial<EditRequestPayload> = {
               serviceId: Number(selected.serviceId ?? 0) || undefined,
               clientId: Number(selected.clienteId ?? 0) || undefined,
               description: selected.descripcion ?? "",
@@ -1025,9 +1092,9 @@ export default function ServiceRequestsPage() {
                 isOpen={openEdit}
                 onClose={() => setOpenEdit(false)}
                 requestId={Number(selected.id)}
-                initial={initialAny as any}
-                servicios={serviceOptions as any}
-                clientes={customerOptions as any}
+                initial={initialData}
+                servicios={serviceOptions}
+                clientes={customerOptions}
                 onSave={handleUpdate}
                 title="Editar Solicitud"
               />

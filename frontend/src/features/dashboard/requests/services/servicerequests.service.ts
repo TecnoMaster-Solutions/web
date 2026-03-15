@@ -4,6 +4,26 @@ import type { AxiosError } from "axios";
 export type StateDTO = {
   stateid: number;
   name: string;
+  description?: string;
+};
+
+export type UserLiteDTO = {
+  userid?: number;
+  id?: number;
+  name?: string;
+  lastname?: string;
+  email?: string;
+  documentnumber?: string;
+  phone?: string;
+};
+
+export type CustomerDTO = {
+  customerid?: number;
+  clientid?: number;
+  userid?: number;
+  customercity?: string;
+  customerzipcode?: string;
+  users?: UserLiteDTO | null;
 };
 
 export type TechnicianUserDTO = {
@@ -26,6 +46,9 @@ export type ServiceRequestTechnicianMapDTO = {
   serviceRequestTechniciansId?: number;
   serviceRequestId?: number;
   technicianId?: number;
+  technicianid?: number;
+  title?: string | null;
+  users?: TechnicianUserDTO | null;
   technician?: TechnicianDTO | null;
 };
 
@@ -49,9 +72,17 @@ export type ServiceRequestDTO = {
   serviceid?: number;
   clientId?: number;
   clientid?: number;
-  state?: { stateid?: number; name?: string } | null;
-  service?: { serviceid?: number; name?: string; servicename?: string } | null;
-  customer?: any;
+  state?: { stateid?: number; name?: string; description?: string } | null;
+  service?: {
+    serviceid?: number;
+    name?: string;
+    servicename?: string;
+    category?: string;
+    price?: number | null;
+    description?: string;
+    image?: string | null;
+  } | null;
+  customer?: CustomerDTO | null;
   technicians?: TechnicianDTO[];
   assignedTechnicians?: TechnicianDTO[];
   techniciansMap?: ServiceRequestTechnicianMapDTO[];
@@ -143,13 +174,24 @@ function shouldAutoMoveRequestToInProcess(row: ServiceRequestDTO, now = new Date
   return startsAt.getTime() <= now.getTime();
 }
 
-function unwrap<T>(payload: any): T {
-  if (payload && typeof payload === "object" && "data" in payload) return (payload as any).data as T;
+type PayloadWithData<T> = {
+  data?: T;
+  meta?: PaginationMeta;
+};
+
+type RequestWithResponseText = {
+  responseText?: string;
+};
+
+function unwrap<T>(payload: unknown): T {
+  if (payload && typeof payload === "object" && "data" in payload) {
+    return (payload as PayloadWithData<T>).data as T;
+  }
   return payload as T;
 }
 
-function unwrapList<T>(payload: any): T[] {
-  const data = unwrap<any>(payload);
+function unwrapList<T>(payload: unknown): T[] {
+  const data = unwrap<unknown>(payload);
   return Array.isArray(data) ? (data as T[]) : [];
 }
 
@@ -161,11 +203,11 @@ function safeJsonParse(input: string) {
   }
 }
 
-async function readAxiosErrorBody(e: AxiosError<any>) {
+async function readAxiosErrorBody(e: AxiosError<unknown>) {
   const data = e.response?.data;
 
   if (data == null || (typeof data === "object" && Object.keys(data).length === 0)) {
-    const xhrText = (e.request as any)?.responseText;
+    const xhrText = (e.request as RequestWithResponseText | undefined)?.responseText;
     if (typeof xhrText === "string" && xhrText.trim()) return safeJsonParse(xhrText);
     return data;
   }
@@ -198,7 +240,9 @@ export async function listServiceRequests(
       : paramsOrSearch;
   const hasPagination =
     params?.page !== undefined || params?.limit !== undefined;
-  const res = await api.get<any>("/service-requests", {
+  const res = await api.get<
+    PayloadWithData<ServiceRequestDTO[]> | PaginatedResponse<ServiceRequestDTO>
+  >("/service-requests", {
     params: {
       page: params?.page,
       limit: params?.limit,
@@ -219,7 +263,14 @@ export async function listServiceRequests(
     if (hasPagination) {
       return {
         data: rows,
-        meta: payload?.meta,
+        meta: payload?.meta ?? {
+          page: params?.page ?? 1,
+          limit: params?.limit ?? (rows.length || 10),
+          total: rows.length,
+          totalPages: 1,
+          hasNextPage: false,
+          hasPrevPage: (params?.page ?? 1) > 1,
+        },
       };
     }
     return rows;
@@ -248,7 +299,14 @@ export async function listServiceRequests(
   if (hasPagination) {
     return {
       data: normalizedRows,
-      meta: payload?.meta,
+      meta: payload?.meta ?? {
+        page: params?.page ?? 1,
+        limit: params?.limit ?? (normalizedRows.length || 10),
+        total: normalizedRows.length,
+        totalPages: 1,
+        hasNextPage: false,
+        hasPrevPage: (params?.page ?? 1) > 1,
+      },
     };
   }
 
@@ -262,7 +320,7 @@ export async function listServiceRequestsByDateRange(
   options?: RequestOptions
 ): Promise<ServiceRequestDTO[]> {
   const trimmedSearch = search?.trim();
-  const res = await api.get<any>("/service-requests/by-date-range", {
+  const res = await api.get<PayloadWithData<ServiceRequestDTO[]>>("/service-requests/by-date-range", {
     params: {
       from,
       to,
@@ -296,7 +354,7 @@ export async function listServiceRequestsByDateRange(
 }
 
 export async function getServiceRequest(id: number): Promise<ServiceRequestDTO> {
-  const res = await api.get<any>(`/service-requests/${id}`);
+  const res = await api.get<PayloadWithData<ServiceRequestDTO>>(`/service-requests/${id}`);
   const row = unwrap<ServiceRequestDTO>(res.data);
   if (!shouldAutoMoveRequestToInProcess(row)) return row;
   return updateServiceRequest(id, { stateId: IN_PROCESS_STATE_ID });
@@ -327,10 +385,10 @@ export async function createServiceRequest(
     : payload;
 
   try {
-    const res = await api.post<any>(endpoint, body as any);
+    const res = await api.post<PayloadWithData<ServiceRequestDTO>>(endpoint, body);
     return unwrap<ServiceRequestDTO>(res.data);
   } catch (err) {
-    const e = err as AxiosError<any>;
+    const e = err as AxiosError<unknown>;
     const bodyErr = await readAxiosErrorBody(e);
     console.error(`ERROR POST ${endpoint} →`, e.response?.status, bodyErr ?? e.message);
     throw err;
@@ -341,7 +399,10 @@ export async function updateServiceRequest(
   id: number,
   payload: UpdateServiceRequestInput
 ): Promise<ServiceRequestDTO> {
-  const res = await api.patch<any>(`/service-requests/${id}`, payload);
+  const res = await api.patch<PayloadWithData<ServiceRequestDTO>>(
+    `/service-requests/${id}`,
+    payload
+  );
   return unwrap<ServiceRequestDTO>(res.data);
 }
 
@@ -354,6 +415,6 @@ export async function deleteServiceRequest(id: number): Promise<void> {
 }
 
 export async function listStates(): Promise<StateDTO[]> {
-  const res = await api.get<any>("/service-requests/states/all");
+  const res = await api.get<PayloadWithData<StateDTO[]>>("/service-requests/states/all");
   return unwrapList<StateDTO>(res.data);
 }

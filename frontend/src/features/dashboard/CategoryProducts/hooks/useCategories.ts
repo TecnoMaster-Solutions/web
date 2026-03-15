@@ -1,33 +1,45 @@
+"use client";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import { confirmDelete } from "@/shared/utils/Delete/confirmDelete";
 import { showSuccess, showError } from "@/shared/utils/notifications";
 import { getProducts } from "@/features/dashboard/products/api/products.api";
 import {
   getCategories,
+  getActiveCategories,
   createCategory,
   updateCategory,
   deleteCategory,
 } from "../connection/categoryApi";
 import {
   Category,
+  CategoryApiShape,
   CategoriesPaginatedResult,
   CreateCategoryData,
   EditCategoryData,
 } from "../types/typeCategoryProducts";
+
+type UseCategoriesOptions = {
+  onlyActive?: boolean;
+  includeCurrentCategory?: {
+    id: number;
+    name: string;
+  } | null;
+};
 
 const waitForNextRender = async () => {
   await new Promise<void>((resolve) => {
     requestAnimationFrame(() =>
       requestAnimationFrame(() => {
         resolve();
-      }),
+      })
     );
   });
 };
 
-const resolvePayloadData = (value: unknown): any => {
+const resolvePayloadData = (value: unknown): unknown => {
   if (!value || typeof value !== "object") return value;
-  if ("data" in value) return resolvePayloadData((value as any).data);
+  if ("data" in value) return resolvePayloadData((value as { data?: unknown }).data);
   return value;
 };
 
@@ -43,13 +55,14 @@ const toBoolean = (value: unknown): boolean => {
   return Boolean(value);
 };
 
-const parseCategoryPayload = (payload: any): Category | null => {
+const parseCategoryPayload = (payload: unknown): Category | null => {
   if (!payload || typeof payload !== "object") return null;
 
   const resolved = resolvePayloadData(payload);
   if (!resolved || typeof resolved !== "object") return null;
+  const category = resolved as CategoryApiShape;
 
-  const idValue = resolved.id ?? resolved.categoryid ?? resolved.category_id;
+  const idValue = category.id ?? category.categoryid ?? category.category_id;
   const numericId = typeof idValue === "number" ? idValue : Number(idValue);
   const id =
     typeof idValue === "number" ? idValue : Number.isFinite(numericId) ? numericId : null;
@@ -58,20 +71,24 @@ const parseCategoryPayload = (payload: any): Category | null => {
 
   return {
     id,
-    name: resolved.name ?? resolved.categoryname ?? "",
-    description: resolved.description ?? resolved.categorydescription ?? "",
-    status: toBoolean(resolved.status ?? resolved.isactive),
-    icon: resolved.icon ?? null,
+    name: String(category.name ?? category.categoryname ?? ""),
+    description: String(category.description ?? category.categorydescription ?? ""),
+    status: toBoolean(category.status ?? category.isactive),
+    icon: category.icon ?? null,
   };
 };
 
-const extractPayloadCategory = (response: any): Category | null => {
+const extractPayloadCategory = (response: unknown): Category | null => {
   return parseCategoryPayload(response);
 };
 
-export const useCategories = () => {
+export const useCategories = (options?: UseCategoriesOptions) => {
   const PAGE_SIZE = 5;
   const SEARCH_DEBOUNCE_MS = 350;
+
+  const onlyActive = options?.onlyActive ?? false;
+  const includeCurrentCategory = options?.includeCurrentCategory ?? null;
+
   const [categories, setCategories] = useState<Category[]>([]);
   const [pagedCategories, setPagedCategories] = useState<Category[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -113,16 +130,37 @@ export const useCategories = () => {
   }, []);
 
   const refreshAllCategories = useCallback(async () => {
-    const list = (await getCategories()) as Category[];
+    let list = onlyActive
+      ? ((await getActiveCategories()) as Category[])
+      : ((await getCategories()) as Category[]);
+
+    if (
+      includeCurrentCategory &&
+      Number(includeCurrentCategory.id) > 0 &&
+      String(includeCurrentCategory.name ?? "").trim() &&
+      !list.some((item) => Number(item.id) === Number(includeCurrentCategory.id))
+    ) {
+      list = [
+        ...list,
+        {
+          id: Number(includeCurrentCategory.id),
+          name: `${String(includeCurrentCategory.name).trim()} (Inactiva)`,
+          description: "",
+          status: false,
+          icon: null,
+        },
+      ];
+    }
+
     setCategories(list);
     return list;
-  }, []);
+  }, [onlyActive, includeCurrentCategory]);
 
   const refreshCategories = useCallback(
     async (
       targetPage: number = currentPage,
       searchText: string = search,
-      signal?: AbortSignal,
+      signal?: AbortSignal
     ) => {
       const response = (await getCategories({
         page: targetPage,
@@ -139,7 +177,7 @@ export const useCategories = () => {
       setTotalPages(Math.max(1, Number(meta?.totalPages ?? 1)));
       return { list, meta };
     },
-    [currentPage, search],
+    [currentPage, search]
   );
 
   useEffect(() => {
@@ -187,7 +225,7 @@ export const useCategories = () => {
         setLoading(false);
       }
     },
-    [refreshCategories, search],
+    [refreshCategories, search]
   );
 
   const handleSearchChange = useCallback(
@@ -203,10 +241,13 @@ export const useCategories = () => {
         setLoading(true);
         try {
           await refreshCategories(1, value, controller.signal);
-        } catch (error: any) {
+        } catch (error: unknown) {
           if (
-            error?.name === "CanceledError" ||
-            error?.code === "ERR_CANCELED" ||
+            (error instanceof Error && error.name === "CanceledError") ||
+            (typeof error === "object" &&
+              error !== null &&
+              "code" in error &&
+              (error as { code?: string }).code === "ERR_CANCELED") ||
             controller.signal.aborted
           ) {
             return;
@@ -218,7 +259,7 @@ export const useCategories = () => {
         }
       }, SEARCH_DEBOUNCE_MS);
     },
-    [refreshCategories],
+    [refreshCategories]
   );
 
   const handleCreateCategory = useCallback(
@@ -240,7 +281,7 @@ export const useCategories = () => {
         setLoading(false);
       }
     },
-    [refreshAllCategories, refreshCategories, refreshCategoryProductCounts, search],
+    [refreshAllCategories, refreshCategories, refreshCategoryProductCounts, search]
   );
 
   const handleEditCategory = useCallback(
@@ -252,10 +293,10 @@ export const useCategories = () => {
 
         if (updatedCategory) {
           setPagedCategories((prev) =>
-            prev.map((item) => (item.id === updatedCategory.id ? updatedCategory : item)),
+            prev.map((item) => (item.id === updatedCategory.id ? updatedCategory : item))
           );
           setCategories((prev) =>
-            prev.map((item) => (item.id === updatedCategory.id ? updatedCategory : item)),
+            prev.map((item) => (item.id === updatedCategory.id ? updatedCategory : item))
           );
         } else {
           await Promise.all([
@@ -273,7 +314,7 @@ export const useCategories = () => {
         setEditingCategory(null);
       }
     },
-    [currentPage, refreshAllCategories, refreshCategories, search],
+    [currentPage, refreshAllCategories, refreshCategories, search]
   );
 
   const handleDeleteCategory = useCallback(
@@ -311,10 +352,10 @@ export const useCategories = () => {
           } finally {
             setLoading(false);
           }
-        },
+        }
       );
     },
-    [currentPage, refreshAllCategories, refreshCategories, refreshCategoryProductCounts, search],
+    [currentPage, refreshAllCategories, refreshCategories, refreshCategoryProductCounts, search]
   );
 
   const handleView = useCallback((category: Category) => {

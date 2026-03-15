@@ -1,5 +1,14 @@
 import type { AppointmentEvent } from "../types/typeAppointment";
-import type { ServiceRequestDTO } from "@/features/dashboard/requests/services/servicerequests.service";
+import type {
+  ServiceRequestDTO,
+  ServiceRequestTechnicianMapDTO,
+  TechnicianDTO as RequestTechnicianDTO,
+} from "@/features/dashboard/requests/services/servicerequests.service";
+import type {
+  OrderServiceDTO,
+  OrderServiceLineDTO,
+  TechnicianDTO as OrderTechnicianDTO,
+} from "@/features/dashboard/OrdersServices/types/ordersServices.types";
 import { normalizeString, toPositiveNumber } from "./string.helpers";
 
 export type ServiceTypeFilterKey = "preventivo" | "correctivo" | "instalacion";
@@ -25,6 +34,28 @@ type TechnicianEntry = {
   title?: string | null;
 };
 
+type RequestTechnicianLink = ServiceRequestTechnicianMapDTO | null | undefined;
+
+const normalizeTechnician = (
+  tech?: RequestTechnicianDTO | OrderTechnicianDTO | TechnicianEntry | null,
+): TechnicianEntry | null => {
+  if (!tech) return null;
+
+  return {
+    technicianid: tech.technicianid ?? null,
+    technicianId: "technicianId" in tech ? tech.technicianId ?? null : null,
+    title: "title" in tech ? tech.title ?? null : null,
+    users: tech.users
+      ? {
+          userid: tech.users.userid ?? null,
+          id: tech.users.id ?? null,
+          name: tech.users.name ?? null,
+          lastname: tech.users.lastname ?? null,
+        }
+      : undefined,
+  };
+};
+
 export const buildTechnicianLabel = (tech: TechnicianEntry | null | undefined) => {
   if (!tech) return null;
 
@@ -41,23 +72,44 @@ export const buildTechnicianLabel = (tech: TechnicianEntry | null | undefined) =
 export const resolveTechniciansFromLinks = (request?: ServiceRequestDTO): TechnicianEntry[] => {
   if (!request?.techniciansMap?.length) return [];
   return request.techniciansMap
-    .map((link) => link?.technician)
+    .map((link: RequestTechnicianLink) => normalizeTechnician(link?.technician))
     .filter((tech): tech is TechnicianEntry => Boolean(tech));
 };
 
 export const getEventTechnicians = (event: AppointmentEvent): TechnicianEntry[] => {
-  if (event.source === "order") return event.order?.technicians ?? [];
+  if (event.source === "order") {
+    return (event.order?.technicians ?? [])
+      .map((tech) => normalizeTechnician(tech))
+      .filter((tech): tech is TechnicianEntry => Boolean(tech));
+  }
 
   return [
-    ...(event.request?.technicians ?? []),
-    ...(event.request?.assignedTechnicians ?? []),
-    ...(event.request?.serviceRequestTechnicians ?? []),
-    ...(event.request?.requestTechnicians ?? []),
+    ...(event.request?.technicians ?? []).map((tech) => normalizeTechnician(tech)),
+    ...(event.request?.assignedTechnicians ?? []).map((tech) => normalizeTechnician(tech)),
+    ...(event.request?.serviceRequestTechnicians ?? []).map((link) =>
+      normalizeTechnician(link?.technician),
+    ),
+    ...(event.request?.requestTechnicians ?? []).map((link) =>
+      normalizeTechnician(link?.technician),
+    ),
     ...resolveTechniciansFromLinks(event.request),
-  ];
+  ].filter((tech): tech is TechnicianEntry => Boolean(tech));
 };
 
-export const getOrderServiceRequestId = (order?: any): number | null => {
+type OrderServiceRequestCarrier = Partial<OrderServiceDTO> & {
+  serviceRequestId?: unknown;
+  servicerequestid?: unknown;
+  servicerequestId?: unknown;
+  service_request_id?: unknown;
+};
+
+type OrderServiceTypeCarrier = OrderServiceLineDTO & {
+  typeofservicename?: string | null;
+};
+
+export const getOrderServiceRequestId = (
+  order?: OrderServiceRequestCarrier | null
+): number | null => {
   if (!order) return null;
 
   const candidates = [
@@ -125,12 +177,15 @@ export const getEventServiceTypeKey = (event: AppointmentEvent): ServiceTypeFilt
     candidates.push(request?.service?.name);
     candidates.push(request?.description);
   } else {
-    const order: any = event.order;
+    const order = event.order as OrderServiceRequestCarrier & {
+      typeofservicename?: string | null;
+      services?: OrderServiceTypeCarrier[] | null;
+    };
     candidates.push(order?.description);
     candidates.push(order?.typeofservicename);
 
     const services = order?.services ?? [];
-    services.forEach((entry: any) => {
+    services.forEach((entry) => {
       candidates.push(entry?.typeofservicename);
       const service = entry?.service;
       candidates.push(service?.typeofservice?.name);

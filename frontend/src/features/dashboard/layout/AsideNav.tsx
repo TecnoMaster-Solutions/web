@@ -13,7 +13,6 @@ import {
   ChevronRight,
   ChevronLeft,
 } from "lucide-react";
-import Colors from "@/shared/theme/colors";
 import { motion, AnimatePresence } from "framer-motion";
 import React from "react";
 import { routes } from "@/shared/routes";
@@ -139,10 +138,15 @@ const AsideNav = ({
   const pathname = usePathname();
   const { user } = useAuth();
 
+  type UserWithPermissions = {
+    permissions?: string[] | null;
+    permission?: string[] | null;
+  } | null;
+
   const permissions = useMemo<string[]>(
     () =>
-      ((user as any)?.permissions ||
-        (user as any)?.permission ||
+      ((user as UserWithPermissions)?.permissions ||
+        (user as UserWithPermissions)?.permission ||
         []) as string[],
     [user]
   );
@@ -319,7 +323,7 @@ const AsideNav = ({
         icon: ChevronLeft,
       },
     ],
-    [isLinkActive, pathname]
+    []
   );
 
   return (

@@ -13,7 +13,7 @@ export default function AccessPage() {
 
   useEffect(() => hideLoader(), [hideLoader]);
 
-  const [mode, setMode] = useState<"login" | "register">(() => {
+  const [mode] = useState<"login" | "register">(() => {
     if (typeof window === "undefined") return "login";
     const p = new URLSearchParams(window.location.search).get("mode");
     return p === "register" ? "register" : "login";
@@ -38,9 +38,9 @@ export default function AccessPage() {
       <Suspense fallback={<div className="min-h-screen bg-white" />}>
         <AuthShell mode={mode}>
           {mode === "login" ? (
-            <LoginForm onSwitch={() => setMode("register")} />
+            <LoginForm />
           ) : (
-            <RegisterForm onSwitch={() => setMode("login")} />
+            <RegisterForm />
           )}
         </AuthShell>
       </Suspense>

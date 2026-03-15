@@ -5,7 +5,9 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useCart } from "../contexts/CartContext";
-import ClientCreateRequestModal from "@/features/dashboard/requests/components/ClientRequestModal";
+import ClientCreateRequestModal, {
+  type CreateRequestPayload,
+} from "@/features/dashboard/requests/components/ClientRequestModal";
 import { useCreateServiceRequest } from "@/features/dashboard/requests/hooks/useServiceRequests";
 import { showSuccess, showError } from "@/shared/utils/notifications";
 import { useAuth } from "@/features/auth/authcontext";
@@ -67,45 +69,27 @@ type Address = {
   complement?: string;
 };
 
+type CustomerCandidate = {
+  customerid?: number | null;
+  clientId?: number | null;
+  clientid?: number | null;
+  customer?: { customerid?: number | null; id?: number | null } | null;
+  customers?: Array<{ customerid?: number | null; id?: number | null }> | null;
+  userid?: number | null;
+  id?: number | null;
+  email?: string | null;
+  documentnumber?: string | null;
+  users?: {
+    userid?: number | null;
+    id?: number | null;
+    email?: string | null;
+    documentnumber?: string | null;
+  } | null;
+} | null;
+
 const CITIES = ["Medellín", "Bogotá", "Cali", "Barranquilla"];
 const ZONES = ["Centro", "Norte", "Sur", "Oriente", "Occidente"];
 const STREET_TYPES = ["Calle", "Carrera", "Avenida", "Transversal", "Diagonal"];
-
-function buildSalePayload({
-  cart,
-  customerId,
-}: {
-  cart: typeof cart;
-  customerId: number;
-}) {
-  const subtotal = cart.reduce(
-    (acc, item) => acc + item.price * item.quantity,
-    0
-  );
-
-  const taxpercent = 19;
-  const taxamount = Math.round((subtotal * taxpercent) / 100);
-
-  return {
-    customerid: customerId,
-    saledate: new Date().toISOString(),
-    salecode: `VEN-${Date.now()}`,
-    subtotal,
-    taxpercent,
-    taxamount,
-    discountamount: 0,
-    totalamount: subtotal + taxamount + 20000,
-    paymentmethod: "Cash",
-    salestatus: "Pending",
-    notes: "Venta creada desde carrito",
-    details: cart.map((item) => ({
-      productid: Number(item.id),
-      quantity: item.quantity,
-      unitprice: item.price,
-      discountpercent: 0,
-    })),
-  };
-}
 
 export default function CartModal({
   isOpen = false,
@@ -121,7 +105,10 @@ export default function CartModal({
     return 0;
   };
 
-  const extractCustomerId = (userData: any, profileData: any): number => {
+  const extractCustomerId = (
+    userData: CustomerCandidate,
+    profileData: CustomerCandidate
+  ): number => {
     const candidates = [
       userData?.customerid,
       userData?.clientId,
@@ -144,7 +131,7 @@ export default function CartModal({
     return 0;
   };
 
-  const [openProducts, setOpenProducts] = useState<Set<number>>(new Set());
+  const [openProducts, setOpenProducts] = useState<Set<string>>(new Set());
   const [addressError, setAddressError] = useState("");
   const [error, setError] = useState("");
   const [openServiceModal, setOpenServiceModal] = useState(false);
@@ -162,7 +149,7 @@ export default function CartModal({
     string | null
   >(null);
 
-  const [address, setAddress] = useState({
+  const [address, setAddress] = useState<Address>({
     city: "",
     zone: "",
     streetType: "",
@@ -177,24 +164,19 @@ export default function CartModal({
   useEffect(() => {
     const user = getUserFromToken();
     setAuthUser(user);
-
-    // Inicializar con todos los productos desplegados
-    const allProductIds = new Set(cart.map((item) => item.id));
-    setOpenProducts(allProductIds);
   }, []);
 
   // Actualizar openProducts cuando cambie el carrito
   useEffect(() => {
-    const currentIds = Array.from(openProducts);
-    const newIds = cart.map((item) => item.id);
+    setOpenProducts((prev) => {
+      const currentIds = Array.from(prev);
+      const newIds = cart.map((item) => item.id);
 
-    // Mantener los que ya estaban abiertos y agregar nuevos productos
-    const updatedSet = new Set([
-      ...currentIds.filter((id) => newIds.includes(id)),
-      ...newIds.filter((id) => !currentIds.includes(id)),
-    ]);
-
-    setOpenProducts(updatedSet);
+      return new Set([
+        ...currentIds.filter((id) => newIds.includes(id)),
+        ...newIds.filter((id) => !currentIds.includes(id)),
+      ]);
+    });
   }, [cart]);
 
   const isPage = mode === "page";
@@ -211,19 +193,18 @@ export default function CartModal({
     "Cliente";
   const customerDocument =
     profile?.documentnumber ??
-    (user as any)?.documentnumber ??
+    (user as CustomerCandidate)?.documentnumber ??
     profile?.users?.documentnumber ??
-    profile?.customer?.documentnumber ??
     "-";
   const customerIdForSale = extractCustomerId(user, profile);
   const authUserId = toPositiveNumber(
     authUser?.userid,
-    (user as any)?.userid,
-    (user as any)?.id,
-    (profile as any)?.userid,
-    (profile as any)?.id,
-    (profile as any)?.users?.userid,
-    (profile as any)?.users?.id
+    (user as CustomerCandidate)?.userid,
+    (user as CustomerCandidate)?.id,
+    (profile as CustomerCandidate)?.userid,
+    (profile as CustomerCandidate)?.id,
+    (profile as CustomerCandidate)?.users?.userid,
+    (profile as CustomerCandidate)?.users?.id
   );
   const authUserNameLabel =
     authUser?.name ??
@@ -278,7 +259,15 @@ export default function CartModal({
 
       // Crear solicitud de servicio (si existe)
       if (hasService && serviceDraft) {
-        await createRequestMut.mutateAsync(serviceDraft);
+        await createRequestMut.mutateAsync({
+          ...serviceDraft,
+          serviceType:
+            serviceDraft.serviceType === "INSTALACION"
+              ? "INSTALACION"
+              : "MANTENIMIENTO",
+          stateId: serviceDraft.stateId ?? 1,
+          technicians: [],
+        });
       }
 
       // Persistencia auxiliar (opcional)
@@ -295,9 +284,13 @@ export default function CartModal({
 
       const payerEmail =
         authUser?.email ??
-        (user as any)?.email ??
-        (profile as any)?.email ??
-        (profile as any)?.users?.email;
+        (user as CustomerCandidate)?.email ??
+        (profile as CustomerCandidate)?.email ??
+        (profile as CustomerCandidate)?.users?.email;
+      const normalizedPayerEmail =
+        typeof payerEmail === "string" && payerEmail.trim() !== ""
+          ? payerEmail
+          : undefined;
 
       const checkoutPayload = {
         items: cart.map((item) => ({
@@ -309,7 +302,7 @@ export default function CartModal({
         customerId: customerIdForSale,
         payer: {
           name: customerName,
-          email: payerEmail,
+          email: normalizedPayerEmail,
         },
         metadata: {
           customerId: customerIdForSale,

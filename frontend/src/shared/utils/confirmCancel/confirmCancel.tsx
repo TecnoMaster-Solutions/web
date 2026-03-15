@@ -1,5 +1,4 @@
 // components/ConfirmDialog/ConfirmDialog.tsx
-import React from 'react';
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
 import { showSuccess, showError } from "../notifications";
@@ -71,7 +70,7 @@ export const confirmAction = async (
       await onConfirm(reason);
       showSuccess(`"${itemName}" ha sido procesado correctamente.`);
       return true;
-    } catch (error) {
+    } catch {
       showError(`No se pudo completar la acción para "${itemName}". Intenta nuevamente.`);
       return false;
     }

@@ -113,6 +113,14 @@ type GetClientsParams = {
   search?: string;
 };
 
+type ApiErrorShape = {
+  name?: string;
+  code?: string;
+  response?: {
+    status?: number;
+  };
+};
+
 const EMPTY_PAGINATION = {
   page: 1,
   limit: 5,
@@ -171,8 +179,10 @@ export async function getClients({
     }
 
     return list.map(toUiClient);
-  } catch (error: any) {
-    if (error?.name === "CanceledError" || error?.code === "ERR_CANCELED") {
+  } catch (error: unknown) {
+    const apiError = error as ApiErrorShape;
+
+    if (apiError.name === "CanceledError" || apiError.code === "ERR_CANCELED") {
       return shouldPaginate
         ? {
             data: [],
@@ -186,7 +196,7 @@ export async function getClients({
         : [];
     }
 
-    if (error?.response?.status === 404) {
+    if (apiError.response?.status === 404) {
       return shouldPaginate
         ? {
             data: [],
@@ -200,7 +210,7 @@ export async function getClients({
         : [];
     }
 
-    throw error;
+    throw apiError;
   }
 }
 

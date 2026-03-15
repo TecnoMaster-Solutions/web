@@ -7,6 +7,7 @@ import {
   createSupplier,
   updateSupplier,
   deleteSupplier,
+  PaginatedResponse,
   SupplierDTO,
   CreateSupplierInput,
   UpdateSupplierInput,
@@ -20,9 +21,26 @@ export const supplierKeys = {
 };
 
 export function useSuppliers(params?: ListSuppliersParams) {
-  return useQuery({
+  return useQuery<PaginatedResponse<SupplierDTO>>({
     queryKey: supplierKeys.list(params),
-    queryFn: () => (params ? listSuppliers(params) : listSuppliers()),
+    queryFn: async () => {
+      if (params) {
+        return listSuppliers(params);
+      }
+
+      const data = await listSuppliers();
+      return {
+        data,
+        meta: {
+          total: data.length,
+          page: 1,
+          limit: data.length || 1,
+          totalPages: 1,
+          hasNextPage: false,
+          hasPrevPage: false,
+        },
+      };
+    },
   });
 }
 

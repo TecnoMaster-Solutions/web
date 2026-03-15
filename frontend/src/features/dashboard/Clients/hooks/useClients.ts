@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   getClients,
   deleteClient,
@@ -18,6 +18,7 @@ import {
 } from "../types/typeClients";
 
 import { showSuccess, showError } from "@/shared/utils/notifications";
+import { getApiErrorMessage } from "@/features/auth/utils/authUser";
 
 const MIN_LOADER_MS = 450;
 
@@ -28,6 +29,22 @@ const stateMap: Record<string, number> = {
 };
 
 let cachedClientRoleId: number | null = null;
+
+type RoleSummary = {
+  roleid?: number;
+  id?: number;
+  name?: string;
+};
+
+type ApiErrorShape = {
+  name?: string;
+  code?: string;
+  response?: {
+    data?: {
+      message?: string | string[];
+    };
+  };
+};
 
 const normalizeText = (value: string) =>
   value
@@ -49,7 +66,7 @@ const getClientRoleId = async (): Promise<number> => {
         : [];
 
   const clientRole = roles.find(
-    (role: any) => normalizeText(String(role?.name ?? "")) === "cliente"
+    (role: RoleSummary) => normalizeText(String(role?.name ?? "")) === "cliente"
   );
   const roleId = Number(clientRole?.roleid ?? clientRole?.id);
 
@@ -343,9 +360,10 @@ export function useClients() {
     startLoading();
     try {
       await fn();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as ApiErrorShape;
       console.error("Hook Error:", error);
-      const msg = error.response?.data?.message || "Ocurrió un error inesperado.";
+      const msg = apiError.response?.data?.message ?? getApiErrorMessage(error, "Ocurrio un error inesperado.");
       showError(Array.isArray(msg) ? msg[0] : msg);
       throw error; // Re-lanzar para que el flujo externo sepa que falló
     } finally {
@@ -407,6 +425,65 @@ export function useClients() {
     }
   }, [loadAllClients, loadClientsPage]);
 
+  const loadAllClients = useCallback(async () => {
+    const data = await getClients();
+    const mapped: Client[] = data.map((client) => ({
+      ...client,
+      tipoId: client.tipoId ?? 0,
+    }));
+    setClients(mapped);
+    return mapped;
+  }, []);
+
+  const loadClientsPage = useCallback(
+    async (
+      page: number,
+      searchText: string,
+      signal?: AbortSignal,
+    ): Promise<{ list: Client[]; meta: ClientsPaginatedResult["meta"] }> => {
+      const response = (await getClients({
+        page,
+        limit: PAGE_SIZE,
+        search: searchText,
+        signal,
+      })) as ClientsPaginatedResult;
+
+      const list = Array.isArray(response.data)
+        ? response.data.map((client) => ({
+            ...client,
+            tipoId: client.tipoId ?? 0,
+          }))
+        : [];
+      const meta = response.meta;
+
+      setPagedClients(list);
+      setCurrentPage(Number(meta?.page ?? page));
+      setTotalPages(Math.max(1, Number(meta?.totalPages ?? 1)));
+
+      return { list, meta };
+    },
+    [PAGE_SIZE],
+  );
+
+  useEffect(() => {
+    const loadInitialData = async () => {
+      setInitialLoading(true);
+      try {
+        await Promise.all([loadClientsPage(1, ""), loadAllClients()]);
+      } catch (error: unknown) {
+        console.error("Error al cargar clientes:", error);
+        showError(getApiErrorMessage(error, "No se pudieron cargar los clientes."));
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+
+    if (!hasFetchedRef.current) {
+      hasFetchedRef.current = true;
+      void loadInitialData();
+    }
+  }, [loadAllClients, loadClientsPage]);
+
   useEffect(() => {
     return () => {
       if (searchDebounceRef.current) {
@@ -426,16 +503,17 @@ export function useClients() {
       setLoading(true);
       try {
         await loadClientsPage(nextPage, search, controller.signal);
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const apiError = error as ApiErrorShape;
         if (
-          error?.name === "CanceledError" ||
-          error?.code === "ERR_CANCELED" ||
+          apiError.name === "CanceledError" ||
+          apiError.code === "ERR_CANCELED" ||
           controller.signal.aborted
         ) {
           return;
         }
         console.error("Error al cambiar de pagina en clientes:", error);
-        const msg = error?.response?.data?.message || "No se pudo cargar la pagina de clientes.";
+        const msg = apiError.response?.data?.message ?? getApiErrorMessage(error, "No se pudo cargar la pagina de clientes.");
         showError(Array.isArray(msg) ? msg[0] : msg);
       } finally {
         if (!controller.signal.aborted) setLoading(false);
@@ -458,16 +536,17 @@ export function useClients() {
         setLoading(true);
         try {
           await loadClientsPage(1, value, controller.signal);
-        } catch (error: any) {
+        } catch (error: unknown) {
+          const apiError = error as ApiErrorShape;
           if (
-            error?.name === "CanceledError" ||
-            error?.code === "ERR_CANCELED" ||
+            apiError.name === "CanceledError" ||
+            apiError.code === "ERR_CANCELED" ||
             controller.signal.aborted
           ) {
             return;
           }
           console.error("Error al buscar clientes:", error);
-          const msg = error?.response?.data?.message || "No se pudieron buscar los clientes.";
+          const msg = apiError.response?.data?.message ?? getApiErrorMessage(error, "No se pudieron buscar los clientes.");
           showError(Array.isArray(msg) ? msg[0] : msg);
         } finally {
           if (!controller.signal.aborted) setLoading(false);
@@ -487,6 +566,7 @@ export function useClients() {
       documentnumber: form.documento.trim(),
       phone: form.telefono.replace(/\D/g, ""), // ← solo dígitos para evitar 400 por regex
       typeid: Number(form.tipo),
+      stateid: stateMap[form.estado] ?? 1,
       roleid: clientRoleId,
       customercity: form.ciudad.trim(),
       customerzipcode: form.codigoPostal.trim(),
@@ -514,6 +594,8 @@ export function useClients() {
       return;
     }
 
+    const clientRoleId = await getClientRoleId();
+
     const userPayload = {
       name: form.nombre.trim(),
       lastname: form.apellido.trim(),
@@ -522,6 +604,8 @@ export function useClients() {
       phone: form.telefono.replace(/\D/g, ""),
       typeid: Number(form.tipo),
       stateid: stateMap[form.estado] ?? 1,
+      roleid: clientRoleId,
+      image: "",
       customercity: form.ciudad.trim(),
       customerzipcode: form.codigoPostal.trim(),
     };
@@ -643,17 +727,20 @@ export function useCreateClientForm({
   onSave,
   clients,
 }: UseCreateClientFormProps) {
-  const initialState: CreateClientData = {
-    tipo: 0,
-    documento: "",
-    nombre: "",
-    apellido: "",
-    telefono: "",
-    correoElectronico: "",
-    ciudad: "",
-    codigoPostal: "",
-    estado: "",
-  };
+  const initialState = useMemo<CreateClientData>(
+    () => ({
+      tipo: 0,
+      documento: "",
+      nombre: "",
+      apellido: "",
+      telefono: "",
+      correoElectronico: "",
+      ciudad: "",
+      codigoPostal: "",
+      estado: "",
+    }),
+    [],
+  );
 
   const [formData, setFormData] = useState<CreateClientData>(initialState);
   const [errors, setErrors] = useState<ClientFormErrors>({});
@@ -665,7 +752,7 @@ export function useCreateClientForm({
       setErrors({});
       setTouched({});
     }
-  }, [isOpen]);
+  }, [initialState, isOpen]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -857,3 +944,4 @@ export function useEditClientForm({
     handleSubmit,
   };
 }
+

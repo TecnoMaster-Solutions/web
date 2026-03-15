@@ -187,7 +187,7 @@ export const useEditUserForm = ({
         [field]: value,
       }));
 
-      if (touched[field]) {
+      if (field in touched && touched[field as keyof FormTouched]) {
         const strValue = typeof value === "string" ? value : String(value ?? "");
         validateFieldOnChange(field as string, strValue);
       }
@@ -339,7 +339,7 @@ export const useEditUserForm = ({
         roleid: user.roleid,
         CV: currentCV,
         techniciantypeids:
-          technician?.technicianTypeMaps?.map((tm) => Number(tm.techniciantypeid)) || [],
+          technician?.technicianTypeMaps?.map((tm: { techniciantypeid: number }) => Number(tm.techniciantypeid)) || [],
         customercity: customer?.customercity || "",
         customerzipcode: customer?.customerzipcode || "",
       });

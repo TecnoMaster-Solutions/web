@@ -2,6 +2,7 @@ export type OrdersServiceHistoryType = "SYSTEM" | "TECH";
 
 export type UserLite = {
   userid: number;
+  id?: number | null;
   name?: string | null;
   lastname?: string | null;
   email?: string | null;
@@ -9,6 +10,9 @@ export type UserLite = {
 
 export type CustomerDTO = {
   customerid: number;
+  clientid?: number | null;
+  userid?: number | null;
+  customercity?: string | null;
   users?: UserLite | null;
 };
 
@@ -29,6 +33,7 @@ export type ServiceDTO = {
   servicepriceofsale?: number | null;
   typeofservice?: {
     typeofserviceid?: number | null;
+    name?: string | null;
     typeofservicename?: string | null;
   } | null;
 };
@@ -45,6 +50,7 @@ export type OrderServiceLineDTO = {
   cantidad: number;
   unitprice: number;
   subtotal: number;
+  typeofservicename?: string | null;
   service: ServiceDTO;
 };
 

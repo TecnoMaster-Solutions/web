@@ -4,27 +4,16 @@ import { useMemo } from "react";
 import { useAuth } from "@/features/auth/authcontext";
 import RequestsPage from "@/features/dashboard/requests/pages/ServiceRequestsPage";
 import ServiceRequestsClientsPage from "@/features/dashboard/requests/pages/ServiceRequestsClientsPage";
-
-function normalizeRoleName(role: any) {
-  return String(role ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim()
-    .toLowerCase();
-}
+import {
+  getRawRoleName,
+  normalizeRoleName,
+} from "@/features/auth/utils/authUser";
 
 export default function RequestsRootPage() {
   const { user, profile } = useAuth();
 
   const isClientRole = useMemo(() => {
-    const role = [
-      user?.rolename,
-      (user as any)?.role,
-      (user as any)?.role?.name,
-      profile?.rolename,
-      (profile as any)?.role,
-      (profile as any)?.role?.name,
-    ]
+    const role = [getRawRoleName(user), getRawRoleName(profile)]
       .map((r) => normalizeRoleName(r))
       .find(Boolean);
 

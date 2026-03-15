@@ -49,7 +49,6 @@ const MONTH_LABEL_TO_NUMBER: Record<string, number> = {
   agosto: 8,
   septi: 9,
   septiembre: 9,
-  oct: 10,
   octubre: 10,
   novi: 11,
   noviembre: 11,

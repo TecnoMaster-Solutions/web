@@ -72,6 +72,38 @@ type ErrorKey =
 type Errors = Partial<Record<ErrorKey, string | null>>;
 type Touched = Partial<Record<ErrorKey, boolean>>;
 
+type ApiErrorShape = {
+  message?: string;
+  response?: {
+    status?: number;
+    data?: {
+      message?: string | string[];
+    };
+  };
+};
+
+type TechnicianRaw = {
+  technicianid?: number;
+  id?: number;
+  users?: {
+    name?: string;
+    lastname?: string;
+  } | null;
+  user?: {
+    name?: string;
+    lastname?: string;
+  } | null;
+  Users?: {
+    name?: string;
+    lastname?: string;
+  } | null;
+};
+
+type ApiCollectionResponse = {
+  data?: unknown[];
+  technicians?: unknown[];
+};
+
 function toIsoFromLocalDateTime(date: string, time: string) {
   const [y, m, d] = date.split("-").map((n) => Number(n));
   const [hh, mm] = time.split(":").map((n) => Number(n));
@@ -138,10 +170,21 @@ function isAllowedTime(hm: string) {
   return mins >= SCHEDULE_MIN && mins <= SCHEDULE_MAX;
 }
 
-function getBackendMessage(err: any) {
-  const msg = err?.response?.data?.message ?? err?.message ?? "";
+function getBackendMessage(err: unknown) {
+  const typedErr = err as ApiErrorShape;
+  const msg = typedErr?.response?.data?.message ?? typedErr?.message ?? "";
   if (Array.isArray(msg)) return msg.filter(Boolean).join(" | ");
   return String(msg || "");
+}
+
+function unwrapCollection(input: unknown): unknown[] {
+  if (Array.isArray(input)) return input;
+  if (input && typeof input === "object") {
+    const value = input as ApiCollectionResponse;
+    if (Array.isArray(value.data)) return value.data;
+    if (Array.isArray(value.technicians)) return value.technicians;
+  }
+  return [];
 }
 
 function normalizeText(v: string) {
@@ -244,15 +287,15 @@ export default function CreateRequestModal({
     return list.filter((s) => s.typeofserviceid === serviceTypeId);
   }, [finalServicios, serviceTypeId]);
 
-  const [techniciansRaw, setTechniciansRaw] = useState<any[]>([]);
+  const [techniciansRaw, setTechniciansRaw] = useState<TechnicianRaw[]>([]);
   const [techLoading, setTechLoading] = useState(false);
   const [techError, setTechError] = useState<string | null>(null);
-  const [scheduledOrdersRaw, setScheduledOrdersRaw] = useState<any[]>([]);
-  const [scheduledRequestsRaw, setScheduledRequestsRaw] = useState<any[]>([]);
+  const [scheduledOrdersRaw, setScheduledOrdersRaw] = useState<unknown[]>([]);
+  const [scheduledRequestsRaw, setScheduledRequestsRaw] = useState<unknown[]>([]);
 
   const technicians = useMemo<TechnicianOption[]>(() => {
     return (techniciansRaw || [])
-      .map((t: any) => {
+      .map((t) => {
         const u = t?.users || t?.user || t?.Users || {};
         const name = [u?.name, u?.lastname].filter(Boolean).join(" ").trim();
         const label = name || `Técnico #${t?.technicianid ?? t?.id ?? "?"}`;
@@ -523,7 +566,7 @@ export default function CreateRequestModal({
       if (sr.status === "fulfilled") setServiciosLocal(sr.value as ServiceOption[]);
       else {
         setServiciosLocal([]);
-        const status = (sr.reason as any)?.response?.status;
+        const status = (sr.reason as ApiErrorShape)?.response?.status;
         showError(
           status
             ? `No se pudieron cargar los servicios (${status}).`
@@ -535,7 +578,7 @@ export default function CreateRequestModal({
       if (cr.status === "fulfilled") setClientesLocal(cr.value as Option[]);
       else {
         setClientesLocal([]);
-        const status = (cr.reason as any)?.response?.status;
+        const status = (cr.reason as ApiErrorShape)?.response?.status;
         showError(
           status
             ? `No se pudieron cargar los clientes (${status}).`
@@ -562,16 +605,10 @@ export default function CreateRequestModal({
       setTechError(null);
       try {
         const { data } = await api.get("technicians");
-        const list = Array.isArray(data)
-          ? data
-          : Array.isArray(data?.data)
-          ? data.data
-          : Array.isArray(data?.technicians)
-          ? data.technicians
-          : [];
+        const list = unwrapCollection(data) as TechnicianRaw[];
         if (!cancelled) setTechniciansRaw(list);
-      } catch (e: any) {
-        const msg = e?.response?.data?.message || e?.message || "Error cargando técnicos.";
+      } catch (e: unknown) {
+        const msg = getBackendMessage(e) || "Error cargando tecnicos.";
         if (!cancelled) {
           setTechError(String(msg));
           setTechniciansRaw([]);
@@ -601,12 +638,12 @@ export default function CreateRequestModal({
       if (cancelled) return;
 
       const ordersData =
-        ordersRes.status === "fulfilled" && Array.isArray((ordersRes.value as any)?.data)
-          ? (ordersRes.value as any).data
+        ordersRes.status === "fulfilled"
+          ? unwrapCollection(ordersRes.value.data)
           : [];
       const requestsData =
-        requestsRes.status === "fulfilled" && Array.isArray((requestsRes.value as any)?.data)
-          ? (requestsRes.value as any).data
+        requestsRes.status === "fulfilled"
+          ? unwrapCollection(requestsRes.value.data)
           : [];
 
       setScheduledOrdersRaw(ordersData);
@@ -839,7 +876,7 @@ export default function CreateRequestModal({
     try {
       await onSave(payload);
       onClose();
-    } catch (err: any) {
+    } catch (err: unknown) {
       const msg = getBackendMessage(err);
       showError(msg || "No se pudo crear la solicitud.");
     } finally {
@@ -1047,7 +1084,6 @@ export default function CreateRequestModal({
                   }
                   disabled={saving || loadingLookups || finalClientes.length === 0}
                   className="w-full rounded-lg border border-gray-300 bg-white h-10 px-3 text-sm focus:ring-2 focus:ring-black/15 disabled:opacity-60"
-                  aria-expanded={clientOpen}
                   aria-controls="client-suggest"
                   aria-autocomplete="list"
                 />
@@ -1351,4 +1387,6 @@ export default function CreateRequestModal({
     </Modal>
   );
 }
+
+
 

@@ -42,8 +42,12 @@ export interface IQuote {
   observation?: string | null;
   servicetype?: string | null;
   subtotal?: number;
+  viaticos?: number;
   tax?: number;
   total?: number;
+  serviceRequestId?: number | null;
+  createdat?: string;
+  updatedat?: string;
   state?: {
     name?: string;
     description?: string | null;
@@ -97,6 +101,7 @@ export type QuoteCreatePayload = {
   statesid: number;
   servicetype: string;
   observation: string;
+  viaticos: number;
   details: Array<{
     productid: number | null;
     description: string;

@@ -16,7 +16,6 @@ import {
   getPurchaseOrdersFromAPI,
   createPurchaseOrderInDB,
   PurchaseOrderAPIResponse,
-  generateOrderNumber,
 } from "../services/suppliersOrderService";
 
 /* ============================= */
@@ -180,7 +179,7 @@ export const useCreatePurchaseOrderForm = ({
     setFormData(newFormData);
 
     if (touched[field]) {
-      const error = validateField(field, value, newFormData, false);
+      const error = validateField(field, value);
       setErrors((prev) => ({ ...prev, [field]: error }));
     }
   };
@@ -190,7 +189,7 @@ export const useCreatePurchaseOrderForm = ({
 
     const value = formData[field];
 
-    const error = validateField(field, value, formData, false);
+    const error = validateField(field, value);
     setErrors((prev) => ({ ...prev, [field]: error }));
   };
 
@@ -199,7 +198,7 @@ export const useCreatePurchaseOrderForm = ({
     setFormData(newFormData);
 
     if (touched.proveedor) {
-      const error = validateField("proveedor", name, newFormData, false);
+      const error = validateField("proveedor", name);
       setErrors((prev) => ({ ...prev, proveedor: error }));
     }
   };
@@ -371,4 +370,3 @@ export const useCreatePurchaseOrderForm = ({
     setItems,
   };
 };
-

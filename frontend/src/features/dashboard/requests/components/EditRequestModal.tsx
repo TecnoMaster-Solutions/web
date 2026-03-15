@@ -84,6 +84,44 @@ type ErrorKey =
 type Errors = Partial<Record<ErrorKey, string | null>>;
 type Touched = Partial<Record<ErrorKey, boolean>>;
 
+type ApiErrorShape = {
+  message?: string;
+  response?: {
+    status?: number;
+    data?: {
+      message?: string | string[];
+      data?: unknown[];
+      technicians?: unknown[];
+    };
+  };
+};
+
+type TechnicianRaw = {
+  technicianid?: number;
+  id?: number;
+  users?: {
+    name?: string;
+    lastname?: string;
+  } | null;
+  user?: {
+    name?: string;
+    lastname?: string;
+  } | null;
+  Users?: {
+    name?: string;
+    lastname?: string;
+  } | null;
+};
+
+type InitialRequest = NonNullable<Props["initial"]> & {
+  estadoName?: string;
+};
+
+type ApiCollectionResponse = {
+  data?: unknown[];
+  technicians?: unknown[];
+};
+
 function parseYMD(ymd: string) {
   const [y, m, d] = (ymd || "").split("-").map((x) => Number(x));
   if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return null;
@@ -153,10 +191,21 @@ function addMinutesToTime(hm: string, add: number) {
   return `${hh}:${mm}`;
 }
 
-function getBackendMessage(err: any) {
-  const msg = err?.response?.data?.message ?? err?.message ?? "";
+function getBackendMessage(err: unknown) {
+  const typedErr = err as ApiErrorShape;
+  const msg = typedErr?.response?.data?.message ?? typedErr?.message ?? "";
   if (Array.isArray(msg)) return msg.filter(Boolean).join(" | ");
   return String(msg || "");
+}
+
+function unwrapCollection(input: unknown): unknown[] {
+  if (Array.isArray(input)) return input;
+  if (input && typeof input === "object") {
+    const value = input as ApiCollectionResponse;
+    if (Array.isArray(value.data)) return value.data;
+    if (Array.isArray(value.technicians)) return value.technicians;
+  }
+  return [];
 }
 
 function normalizeText(v: string) {
@@ -246,7 +295,7 @@ export default function EditRequestModal({
   const [horaFinal, setHoraFinal] = useState<string | null>(null);
 
   const [estado, setEstado] = useState<string>(
-    String((initial as any)?.estado ?? (initial as any)?.stateId ?? "").trim()
+    String(initial?.estado ?? initial?.stateId ?? "").trim()
   );
   const { stateOptions, isLoading: statesLoading } = useRequestStates();
   const stateOptionsForSelect = useMemo(() => {
@@ -254,7 +303,7 @@ export default function EditRequestModal({
     if (stateOptions.some((s) => String(s.id) === String(estado))) return stateOptions;
 
     const fallbackLabel = String(
-      (initial as any)?.estadoLabel ?? (initial as any)?.estadoName ?? `Estado #${estado}`
+      initial?.estadoLabel ?? (initial as InitialRequest | null)?.estadoName ?? `Estado #${estado}`
     ).trim();
 
     return [{ id: String(estado), label: fallbackLabel || `Estado #${estado}` }, ...stateOptions];
@@ -293,15 +342,15 @@ export default function EditRequestModal({
     return list.filter((s) => Number(s.typeofserviceid) === Number(serviceTypeId));
   }, [finalServicios, serviceTypeId]);
 
-  const [techniciansRaw, setTechniciansRaw] = useState<any[]>([]);
+  const [techniciansRaw, setTechniciansRaw] = useState<TechnicianRaw[]>([]);
   const [techLoading, setTechLoading] = useState(false);
   const [techError, setTechError] = useState<string | null>(null);
-  const [scheduledOrdersRaw, setScheduledOrdersRaw] = useState<any[]>([]);
-  const [scheduledRequestsRaw, setScheduledRequestsRaw] = useState<any[]>([]);
+  const [scheduledOrdersRaw, setScheduledOrdersRaw] = useState<unknown[]>([]);
+  const [scheduledRequestsRaw, setScheduledRequestsRaw] = useState<unknown[]>([]);
 
   const technicians = useMemo<TechnicianOption[]>(() => {
     return (techniciansRaw || [])
-      .map((t: any) => {
+      .map((t) => {
         const u = t?.users || t?.user || t?.Users || {};
         const name = [u?.name, u?.lastname].filter(Boolean).join(" ").trim();
         const label = name || `Técnico #${t?.technicianid ?? t?.id ?? "?"}`;
@@ -570,7 +619,7 @@ export default function EditRequestModal({
       if (sr.status === "fulfilled") setServiciosLocal(sr.value as ServiceOption[]);
       else {
         setServiciosLocal([]);
-        const status = (sr.reason as any)?.response?.status;
+        const status = (sr.reason as ApiErrorShape)?.response?.status;
         showError(
           status
             ? `No se pudieron cargar los servicios (${status}).`
@@ -581,7 +630,7 @@ export default function EditRequestModal({
       if (cr.status === "fulfilled") setClientesLocal(cr.value as Option[]);
       else {
         setClientesLocal([]);
-        const status = (cr.reason as any)?.response?.status;
+        const status = (cr.reason as ApiErrorShape)?.response?.status;
         showError(
           status
             ? `No se pudieron cargar los clientes (${status}).`
@@ -606,11 +655,7 @@ export default function EditRequestModal({
       setServiceTypesLoading(true);
       try {
         const { data } = await api.get("services/types");
-        const list: ServiceTypeApi[] = Array.isArray(data)
-          ? data
-          : Array.isArray((data as any)?.data)
-          ? (data as any).data
-          : [];
+        const list: ServiceTypeApi[] = unwrapCollection(data) as ServiceTypeApi[];
         const mapped = list
           .map((x) => ({
             id: Number(x.typeofserviceid),
@@ -621,7 +666,7 @@ export default function EditRequestModal({
         mapped.sort((a, b) => a.label.localeCompare(b.label));
 
         if (!cancelled) setServiceTypes(mapped);
-      } catch (e: any) {
+      } catch {
         if (!cancelled) {
           setServiceTypes([]);
           showError("No se pudieron cargar los tipos de servicio.");
@@ -651,12 +696,12 @@ export default function EditRequestModal({
       if (cancelled) return;
 
       const ordersData =
-        ordersRes.status === "fulfilled" && Array.isArray((ordersRes.value as any)?.data)
-          ? (ordersRes.value as any).data
+        ordersRes.status === "fulfilled"
+          ? unwrapCollection(ordersRes.value.data)
           : [];
       const requestsData =
-        requestsRes.status === "fulfilled" && Array.isArray((requestsRes.value as any)?.data)
-          ? (requestsRes.value as any).data
+        requestsRes.status === "fulfilled"
+          ? unwrapCollection(requestsRes.value.data)
           : [];
 
       setScheduledOrdersRaw(ordersData);
@@ -679,16 +724,10 @@ export default function EditRequestModal({
       setTechError(null);
       try {
         const { data } = await api.get("technicians");
-        const list = Array.isArray(data)
-          ? data
-          : Array.isArray((data as any)?.data)
-          ? (data as any).data
-          : Array.isArray((data as any)?.technicians)
-          ? (data as any).technicians
-          : [];
+        const list = unwrapCollection(data) as TechnicianRaw[];
         if (!cancelled) setTechniciansRaw(list);
-      } catch (e: any) {
-        const msg = (e as any)?.response?.data?.message || (e as any)?.message || "Error cargando técnicos.";
+      } catch (e: unknown) {
+        const msg = getBackendMessage(e) || "Error cargando técnicos.";
         if (!cancelled) {
           setTechError(String(msg));
           setTechniciansRaw([]);
@@ -708,7 +747,7 @@ export default function EditRequestModal({
   useEffect(() => {
     if (!isOpen) return;
 
-    const init = initial as any;
+    const init = (initial ?? null) as InitialRequest | null;
 
     const initServiceId = String(
       init?.servicio ?? init?.serviceId ?? ""
@@ -739,7 +778,7 @@ export default function EditRequestModal({
 
     const initTechs = Array.isArray(init?.technicians) ? init.technicians : [];
     setSelectedTechnicians(
-      initTechs.map((x: any) => Number(x)).filter((x: number) => Number.isFinite(x) && x > 0)
+      initTechs.map((x) => Number(x)).filter((x: number) => Number.isFinite(x) && x > 0)
     );
 
     setClientQuery("");
@@ -765,7 +804,7 @@ export default function EditRequestModal({
     if (serviceTypesLoading) return;
     if (!serviceTypes.length) return;
 
-    const init = initial as any;
+    const init = (initial ?? null) as InitialRequest | null;
 
     const initServiceId = String(init?.servicio ?? init?.serviceId ?? "").trim();
     const svc = initServiceId ? finalServicios.find((s) => String(s.id) === initServiceId) : null;
@@ -992,7 +1031,7 @@ export default function EditRequestModal({
     try {
       await onSave(payload);
       onClose();
-    } catch (err: any) {
+    } catch (err: unknown) {
       const msg = getBackendMessage(err);
       showError(msg || "No se pudo actualizar la solicitud.");
     } finally {
@@ -1213,7 +1252,6 @@ export default function EditRequestModal({
                   }
                   disabled={saving || loadingLookups || finalClientes.length === 0}
                   className="w-full rounded-lg border border-gray-300 bg-white h-10 px-3 text-sm focus:ring-2 focus:ring-black/15 disabled:opacity-60"
-                  aria-expanded={clientOpen}
                   aria-controls="client-suggest-edit"
                   aria-autocomplete="list"
                 />
@@ -1536,6 +1574,7 @@ export default function EditRequestModal({
     </Modal>
   );
 }
+
 
 
 

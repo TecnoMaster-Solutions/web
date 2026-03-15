@@ -22,6 +22,15 @@ import {
 import { showError, showSuccess, showWarning } from "@/shared/utils/notifications";
 import { resolveAssetUrl } from "../utils/assetUrl";
 
+type AuthUserLike = {
+    permissions?: string[];
+};
+
+type ApiErrorLike = {
+    response?: { data?: { message?: string } };
+    message?: string;
+};
+
 interface SalePaymentRequestsSectionProps {
     sale: ISale;
     onSaleUpdated: (sale: ISale) => void;
@@ -89,11 +98,12 @@ export default function SalePaymentRequestsSection({
 }: SalePaymentRequestsSectionProps) {
     const onSaleUpdatedRef = useRef(onSaleUpdated);
     const { user } = useAuth();
-    const permissions = Array.isArray((user as any)?.permissions) ? (user as any).permissions : [];
+    const authUser = user as AuthUserLike | null;
+    const permissions = Array.isArray(authUser?.permissions) ? authUser.permissions : [];
     const canManagePayments = permissions.includes("sales.manage_payment");
 
     const [requests, setRequests] = useState<ISalePaymentRequest[]>(sale.paymentRequests ?? []);
-    const [loading, setLoading] = useState(false);
+    const [, setLoading] = useState(false);
     const [creating, setCreating] = useState(false);
     const [reviewingId, setReviewingId] = useState<number | null>(null);
     const [uploadingId, setUploadingId] = useState<number | null>(null);
@@ -135,8 +145,8 @@ export default function SalePaymentRequestsSection({
         [requests]
     );
 
-    const allowedRequestTypes = useMemo(() => {
-        if (pendingAmount <= 0 || approvedPaymentsCount >= 2) return [] as SalePaymentRequestType[];
+    const allowedRequestTypes = useMemo<SalePaymentRequestType[]>(() => {
+        if (pendingAmount <= 0 || approvedPaymentsCount >= 2) return [];
         if (approvedPaymentsCount > 0 || sale.paymentstatus === "Abonada") return ["REMAINING"];
         return ["HALF", "FULL"];
     }, [approvedPaymentsCount, pendingAmount, sale.paymentstatus]);
@@ -172,7 +182,10 @@ export default function SalePaymentRequestsSection({
 
     useEffect(() => {
         if (!allowedRequestTypes.includes(requestType)) {
-            setRequestType(allowedRequestTypes[0] ?? "HALF");
+            const nextType = allowedRequestTypes[0];
+            if (nextType) {
+                setRequestType(nextType);
+            }
         }
     }, [allowedRequestTypes, requestType]);
 
@@ -194,9 +207,14 @@ export default function SalePaymentRequestsSection({
             showSuccess("Solicitud de pago creada correctamente.");
             setAdminNotes("");
             await refreshAll();
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const apiError = error as ApiErrorLike | null;
             console.error(error);
-            showError(error?.response?.data?.message ?? "No se pudo crear la solicitud.");
+            showError(
+                apiError?.response?.data?.message ??
+                    apiError?.message ??
+                    "No se pudo crear la solicitud."
+            );
         } finally {
             setCreating(false);
         }
@@ -214,9 +232,14 @@ export default function SalePaymentRequestsSection({
             await approveSalePaymentRequest(paymentRequestId, payload);
             showSuccess("Solicitud aprobada y pago real registrado.");
             await refreshAll();
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const apiError = error as ApiErrorLike | null;
             console.error(error);
-            showError(error?.response?.data?.message ?? "No se pudo aprobar la solicitud.");
+            showError(
+                apiError?.response?.data?.message ??
+                    apiError?.message ??
+                    "No se pudo aprobar la solicitud."
+            );
         } finally {
             setReviewingId(null);
         }
@@ -230,9 +253,14 @@ export default function SalePaymentRequestsSection({
             });
             showSuccess("Solicitud rechazada.");
             await refreshAll();
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const apiError = error as ApiErrorLike | null;
             console.error(error);
-            showError(error?.response?.data?.message ?? "No se pudo rechazar la solicitud.");
+            showError(
+                apiError?.response?.data?.message ??
+                    apiError?.message ??
+                    "No se pudo rechazar la solicitud."
+            );
         } finally {
             setReviewingId(null);
         }
@@ -263,9 +291,14 @@ export default function SalePaymentRequestsSection({
             setReceiptFiles((prev) => ({ ...prev, [paymentRequestId]: null }));
             setReceiptErrors((prev) => ({ ...prev, [paymentRequestId]: "" }));
             await refreshAll();
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const apiError = error as ApiErrorLike | null;
             console.error(error);
-            showError(error?.response?.data?.message ?? "No se pudo subir el comprobante.");
+            showError(
+                apiError?.response?.data?.message ??
+                    apiError?.message ??
+                    "No se pudo subir el comprobante."
+            );
         } finally {
             setUploadingId(null);
         }

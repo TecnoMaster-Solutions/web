@@ -10,9 +10,11 @@ import SearchBar from "./components/SearchBar";
 import CardServices from "./components/CardServices";
 import Pagination from "./components/Pagination";
 import { useServices, Service } from "./hooks/useServices";
+import { useDebounce } from "./hooks/useDebounce";
 import {
   fetchLandingServices,
   fetchLandingServiceTypes,
+  ServiceTypeFromApi,
 } from "./api/servicesLanding.api";
 import { useAuth } from "@/features/auth/authcontext";
 
@@ -20,7 +22,29 @@ interface ServicesProps {
   className?: string;
 }
 
-function extractClientId(user: any, profile: any): number {
+type AuthUserLike = {
+  customerid?: number | null;
+  clientId?: number | null;
+  clientid?: number | null;
+  customer?: { customerid?: number | null } | null;
+  name?: string | null;
+  lastname?: string | null;
+} | null;
+
+type AuthProfileLike = {
+  customerid?: number | null;
+  clientId?: number | null;
+  clientid?: number | null;
+  customer?: { customerid?: number | null } | null;
+  name?: string | null;
+  lastname?: string | null;
+  users?: {
+    name?: string | null;
+    lastname?: string | null;
+  } | null;
+} | null;
+
+function extractClientId(user: AuthUserLike, profile: AuthProfileLike): number {
   const candidates = [
     user?.customerid,
     user?.clientId,
@@ -36,67 +60,90 @@ function extractClientId(user: any, profile: any): number {
     const n = Number(c);
     if (Number.isFinite(n) && n > 0) return n;
   }
+
   return 0;
 }
 
-function buildClientLabel(user: any, profile: any): string {
+function buildClientLabel(user: AuthUserLike, profile: AuthProfileLike): string {
   const name = profile?.users?.name ?? profile?.name ?? user?.name ?? "";
-  const lastname =
-    profile?.users?.lastname ?? profile?.lastname ?? user?.lastname ?? "";
+  const lastname = profile?.users?.lastname ?? profile?.lastname ?? user?.lastname ?? "";
   return [name, lastname].filter(Boolean).join(" ").trim();
 }
 
 export default function ServicesLanding({ className = "" }: ServicesProps) {
+  const { selectedFilters, handleToggleFilter, searchTerm, setSearchTerm } = useServices();
   const [services, setServices] = useState<Service[]>([]);
-  const [typeNames, setTypeNames] = useState<string[]>([]);
+  const [serviceTypes, setServiceTypes] = useState<ServiceTypeFromApi[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const itemsPerPage = 9;
 
   const { user, profile } = useAuth();
+  const debouncedSearchTerm = useDebounce(searchTerm, 400);
 
   const clientId = useMemo(() => extractClientId(user, profile), [user, profile]);
   const clientLabel = useMemo(() => buildClientLabel(user, profile), [user, profile]);
 
   useEffect(() => {
+    const loadTypes = async () => {
+      try {
+        const types = await fetchLandingServiceTypes();
+        setServiceTypes(Array.isArray(types) ? types : []);
+      } catch {
+        setServiceTypes([]);
+      }
+    };
+
+    loadTypes();
+  }, []);
+
+  const filters: FilterItem[] = useMemo(() => {
+    const unique = Array.from(
+      new Map(
+        serviceTypes.map((t) => [
+          Number(t.typeofserviceid),
+          {
+            id: String(t.typeofserviceid),
+            label: (t.name ?? "").trim(),
+          },
+        ]),
+      ).values(),
+    ).sort((a, b) => a.label.localeCompare(b.label, "es", { sensitivity: "base" }));
+
+    return [{ id: "all", label: "Todos" }, ...unique];
+  }, [serviceTypes]);
+
+  const selectedTypeId = useMemo(() => {
+    const valid = selectedFilters.find((f) => f !== "all");
+    const n = Number(valid);
+    return Number.isFinite(n) && n > 0 ? n : undefined;
+  }, [selectedFilters]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearchTerm, selectedTypeId]);
+
+  useEffect(() => {
     const load = async () => {
       try {
-        const [list, types] = await Promise.all([
-          fetchLandingServices({ page: 1, limit: 100, stateid: 1 }),
-          fetchLandingServiceTypes(),
-        ]);
+        const response = await fetchLandingServices({
+          page: currentPage,
+          limit: itemsPerPage,
+          search: debouncedSearchTerm.trim() || undefined,
+          typeofserviceid: selectedTypeId,
+          stateid: 1,
+        });
 
-        setServices(Array.isArray(list) ? list : []);
-        setTypeNames(Array.isArray(types) ? types : []);
+        setServices(Array.isArray(response.data) ? response.data : []);
+        setTotalPages(Number(response.meta?.totalPages ?? 1));
       } catch {
         setServices([]);
-        setTypeNames([]);
+        setTotalPages(1);
       }
     };
 
     load();
-  }, []);
-
-  const filters: FilterItem[] = useMemo(() => {
-    const unique = Array.from(new Set(typeNames)).sort((a, b) =>
-      a.localeCompare(b, "es", { sensitivity: "base" })
-    );
-
-    return [{ id: "all", label: "Todos" }, ...unique.map((n) => ({ id: n, label: n }))];
-  }, [typeNames]);
-
-  const { selectedFilters, handleToggleFilter, searchTerm, setSearchTerm, filteredServices } =
-    useServices(services);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, selectedFilters, services]);
-
-  const totalPages = Math.ceil(filteredServices.length / itemsPerPage);
-
-  const displayedServices = filteredServices.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  }, [currentPage, debouncedSearchTerm, selectedTypeId]);
 
   return (
     <div className={className}>
@@ -118,13 +165,13 @@ export default function ServicesLanding({ className = "" }: ServicesProps) {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {displayedServices.map((service) => {
-                const sid = Number((service as any)?.id);
+              {services.map((service) => {
+                const sid = Number(service.id);
                 const safeServiceId = Number.isFinite(sid) && sid > 0 ? sid : 0;
 
                 return (
                   <CardServices
-                    key={(service as any).id ?? `${service.title}-${service.category}`}
+                    key={service.id ?? `${service.title}-${service.category}`}
                     title={service.title}
                     description={service.description || "Sin descripción"}
                     category={service.category}

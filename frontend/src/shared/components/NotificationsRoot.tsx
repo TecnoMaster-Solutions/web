@@ -14,7 +14,7 @@ export default function NotificationsRoot() {
       draggable
       newestOnTop
       limit={3}
-      style={{ zIndex: 999999 }}
+      style={{ zIndex: 1000000 }}
     />
   );
 }

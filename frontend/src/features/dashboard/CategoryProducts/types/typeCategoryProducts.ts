@@ -29,11 +29,37 @@ export interface CategoryBase {
   icon?: File | string | null;
 }
 
-export interface CreateCategoryData extends CategoryBase { }
+export type CreateCategoryData = CategoryBase;
 
 export interface EditCategoryData extends CategoryBase {
   id: number;
   status: boolean;
+}
+
+export type CategoryFieldName = keyof FormErrors;
+
+export interface CategoryOption {
+  id: number;
+  name: string;
+}
+
+export interface CategoryApiShape {
+  id?: number | string | null;
+  categoryid?: number | string | null;
+  category_id?: number | string | null;
+  name?: string | null;
+  categoryname?: string | null;
+  description?: string | null;
+  categorydescription?: string | null;
+  status?: boolean | number | string | null;
+  isactive?: boolean | number | string | null;
+  icon?: string | null;
+  data?: unknown;
+}
+
+export interface CategoryApiListResponse {
+  data: CategoryApiShape[];
+  meta?: Partial<CategoriesPaginationMeta> | null;
 }
 
 export interface FormErrors {
@@ -49,16 +75,16 @@ export interface FormTouched {
 export interface CreateCategoryModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (categoryData: CategoryBase) => void;
-  categories: { id: number; name: string }[];
+  onSave: (categoryData: CategoryBase) => void | Promise<void>;
+  categories: CategoryOption[];
 }
 
 export interface EditCategoryModalProps {
   isOpen: boolean;
   category: EditCategoryData | null;
   onClose: () => void;
-  onSave: (categoryData: EditCategoryData) => void;
-  categories: { id: number; name: string }[];
+  onSave: (categoryData: EditCategoryData) => void | Promise<void>;
+  categories: CategoryOption[];
 }
 
 export interface ViewCategoryModalProps {
@@ -66,5 +92,3 @@ export interface ViewCategoryModalProps {
   category: Category | null;
   onClose: () => void;
 }
-
-
