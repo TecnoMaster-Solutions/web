@@ -14,7 +14,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: tecnomaster-solutions/vertecx-frontend
+  IMAGE_NAME: tecnomaster-solutions/web-frontend
 
 jobs:
   docker:
