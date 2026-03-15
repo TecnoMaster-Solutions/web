@@ -1,4 +1,3 @@
-import { ReactElement, JSXElementConstructor, ReactNode, ReactPortal } from "react";
 import { DataTable } from "../../../../../dashboard/components/datatable/DataTable";
 import { Column } from "../../../../../dashboard/components/datatable/types/column.types";
 import {
@@ -15,7 +14,6 @@ export const PurchaseOrdersTable: React.FC<PurchaseOrdersTableProps> = ({
   rightActions,
 }) => {
 
-  console.log(purchaseOrders);
   // Convertir órdenes de compra para la tabla asegurando que tengan ID
   // searchQuery: campo auxiliar de texto plano para que el DataTable busque correctamente
   // (el campo numeroOrden tiene timestamps que el DataTable trata como números)

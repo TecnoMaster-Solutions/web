@@ -1,5 +1,6 @@
 "use client";
 import React, { useRef } from "react";
+import Image from "next/image";
 import Modal from "../../../components/Modal";
 import Colors from "@/shared/theme/colors";
 import { useEditCategoryForm } from "../../hooks/useEditCategoryForm";
@@ -26,6 +27,9 @@ const EditCategoryModal: React.FC<EditCategoryModalProps> = ({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const handleCircleClick = () => fileInputRef.current?.click();
+  const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    handleInputChange(e);
+  };
 
   if (!isOpen || !category) return null;
 
@@ -85,9 +89,12 @@ const EditCategoryModal: React.FC<EditCategoryModalProps> = ({
             >
               {previewIcon ? (
                 <div className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center bg-white">
-                  <img
+                  <Image
                     src={previewIcon}
                     alt="Icono de categoría"
+                    width={48}
+                    height={48}
+                    unoptimized
                     className="w-full h-full object-cover"
                   />
                 </div>
@@ -208,14 +215,7 @@ const EditCategoryModal: React.FC<EditCategoryModalProps> = ({
           <select
             name="status"
             value={formData.status ? "true" : "false"}
-            onChange={(e) =>
-              handleInputChange({
-                target: {
-                  name: "status",
-                  value: e.target.value === "true",
-                },
-              } as any)
-            }
+            onChange={handleStatusChange}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
             style={{ borderColor: Colors.table.lines }}
           >
@@ -234,5 +234,6 @@ const EditCategoryModal: React.FC<EditCategoryModalProps> = ({
 };
 
 export default EditCategoryModal;
+
 
 

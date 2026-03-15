@@ -10,6 +10,10 @@ export interface CartItem {
   productstock?: number;
 }
 
+type CartItemSchemaContext = {
+  quantity?: number;
+};
+
 
    //VALIDACIÓN ITEMS
 const cartItemSchema = Yup.object().shape({
@@ -35,7 +39,7 @@ const cartItemSchema = Yup.object().shape({
       "stock",
       "Cantidad supera el stock disponible",
       function (value) {
-        const quantity = (this.parent as any).quantity;
+        const quantity = (this.parent as CartItemSchemaContext).quantity ?? 0;
         if (value === undefined || value === null) return true;
         return quantity <= value;
       }

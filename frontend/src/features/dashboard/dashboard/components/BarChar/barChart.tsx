@@ -15,8 +15,21 @@ interface BarConfig {
   radius?: [number, number, number, number];
 }
 
+type BarChartDatum = Record<string, string | number | null | undefined>;
+
+type TooltipPayloadItem = {
+  color?: string;
+  value?: string | number;
+};
+
+type CustomTooltipProps = {
+  active?: boolean;
+  payload?: TooltipPayloadItem[];
+  label?: string | number;
+};
+
 interface CustomBarChartProps {
-  data: any[];
+  data: BarChartDatum[];
   xKey: string;
   bars: BarConfig[];
   width?: number;
@@ -24,7 +37,7 @@ interface CustomBarChartProps {
 }
 
 // Componente personalizado para el Tooltip
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-white p-3 border border-gray-300 rounded-lg shadow-lg">

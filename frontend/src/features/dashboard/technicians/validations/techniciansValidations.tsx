@@ -4,6 +4,7 @@ export interface TechnicianErrors {
   name?: string;
   lastName?: string;
   documentType?: string;
+  typeid?: string;
   documentNumber?: string;
   phone?: string;
   email?: string;
@@ -16,10 +17,11 @@ export interface TechnicianErrors {
 const normEmail = (v: string) => String(v || "").trim().toLowerCase();
 const onlyDigits = (v: string) => String(v || "").replace(/\D/g, "");
 const normDoc = (v: string) => String(v || "").trim().toLowerCase();
+type TechnicianField = keyof Omit<CreateTechnicianData, "image" | "state">;
 
 export const validateTechnicianField = (
-  field: keyof Omit<CreateTechnicianData, "image" | "state">,
-  value: any,
+  field: TechnicianField,
+  value: CreateTechnicianData[TechnicianField] | undefined,
   technicians: Technician[],
   extra?: { documentType?: string; id?: number; excludeId?: number }
 ): string | undefined => {
@@ -97,7 +99,7 @@ export const validateTechnicianField = (
 
     case "email": {
       if (!String(value).trim()) return "El correo electrónico es obligatorio";
-      const emailNorm = normEmail(value);
+      const emailNorm = normEmail(String(value));
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNorm))
         return "El correo no es válido";
 
@@ -142,7 +144,7 @@ export const validateTechnicianForm = (
   opts?: ValidateFormOpts
 ): TechnicianErrors => {
   const errors: TechnicianErrors = {};
-  const baseFields: (keyof TechnicianErrors)[] = [
+  const baseFields: TechnicianField[] = [
     "name",
     "lastName",
     "documentType",
@@ -157,14 +159,14 @@ export const validateTechnicianForm = (
       ? opts.requirePdf
       : !opts?.hasExistingResume;
 
-  const fields: (keyof TechnicianErrors)[] = includeResume
+  const fields: TechnicianField[] = includeResume
     ? [...baseFields, "resumePdf"]
     : baseFields;
 
   fields.forEach((field) => {
     const error = validateTechnicianField(
-      field as keyof Omit<CreateTechnicianData, "image" | "state">,
-      (data as any)[field],
+      field,
+      data[field],
       technicians,
       {
         documentType: data.documentType,

@@ -61,7 +61,7 @@ export interface PurchaseOrder {
 // UTILS
 // ==============================
 
-const toNumber = (v: any): number => {
+const toNumber = (v: number | string | null | undefined): number => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
@@ -152,7 +152,7 @@ export const getPurchaseOrderById = async (
 };
 
 export const createPurchaseOrder = async (
-  payload: any
+  payload: PurchaseOrderFromApi
 ): Promise<PurchaseOrder> => {
   const { data } = await api.post<PurchaseOrderFromApi>(BASE, payload);
   return toUi(data);

@@ -1,6 +1,7 @@
 "use client";
 
 import type { NavigateAction, View } from "react-big-calendar";
+import type { ComponentType } from "react";
 import {
   Maximize,
   Minimize,
@@ -15,10 +16,11 @@ export type AppointmentToolbarProps = {
   onNavigate: (action: NavigateAction) => void;
   onView: (view: View) => void;
   view: View;
-  views?: View[];
+  views?:
+    | View[]
+    | Record<string, boolean | ComponentType<unknown>>;
   isFullscreen: boolean;
   onToggleFullscreen: () => void;
-  onDownloadCalendar?: () => void;
   onDownloadExcel?: () => void;
   downloadDisabled?: boolean;
 };
@@ -38,10 +40,11 @@ export const AppointmentToolbar = ({
   views = [],
   isFullscreen,
   onToggleFullscreen,
-  onDownloadCalendar,
   onDownloadExcel,
   downloadDisabled = false,
 }: AppointmentToolbarProps) => {
+  const viewNames = Array.isArray(views) ? views : Object.keys(views ?? {});
+
   return (
     <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
       <div className="flex flex-wrap items-center gap-2">
@@ -102,11 +105,11 @@ export const AppointmentToolbar = ({
             Excel
           </button>
         )}
-        {views.map((viewName) => (
+        {viewNames.map((viewName) => (
           <button
             key={viewName}
             type="button"
-            onClick={() => onView(viewName)}
+            onClick={() => onView(viewName as View)}
             className={`rounded-lg border px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition ${
               viewName === view
                 ? "border-black bg-slate-900 text-white"

@@ -3,6 +3,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import Modal from "@/features/dashboard/components/Modal";
 import {
+  CreateTechnicianData,
   DocumentType,
   EditTechnicianData,
   Technician,
@@ -119,8 +120,23 @@ const EditTechnicianModal: React.FC<EditTechnicianModalProps> = ({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, technician]);
 
-  const handleFieldChange = (field: any, rawValue: any) => {
-    let value = rawValue;
+  type TechnicianField =
+    | "documentType"
+    | "documentNumber"
+    | "name"
+    | "lastName"
+    | "phone"
+    | "email"
+    | "types"
+    | "resumePdf";
+
+  type TechnicianFieldValue = string | string[] | File | null;
+
+  const handleFieldChange = (
+    field: TechnicianField,
+    rawValue: TechnicianFieldValue
+  ) => {
+    let value: TechnicianFieldValue = rawValue;
 
     if (field === "documentType") {
       const id = Number(rawValue);
@@ -156,19 +172,19 @@ const EditTechnicianModal: React.FC<EditTechnicianModalProps> = ({
 
     switch (field) {
       case "name":
-        setName(value);
+        setName(String(value ?? ""));
         break;
       case "lastName":
-        setLastName(value);
+        setLastName(String(value ?? ""));
         break;
       case "documentNumber":
-        setDocumentNumber(value);
+        setDocumentNumber(String(value ?? ""));
         break;
       case "phone":
-        setPhone(value);
+        setPhone(String(value ?? ""));
         break;
       case "email":
-        setEmail(value);
+        setEmail(String(value ?? ""));
         break;
       case "types":
         setTypes(value as string[]);
@@ -178,9 +194,14 @@ const EditTechnicianModal: React.FC<EditTechnicianModalProps> = ({
         break;
     }
 
+    const validationValue =
+      field === "resumePdf" && value === null
+        ? (undefined as unknown as CreateTechnicianData["resumePdf"])
+        : (value as CreateTechnicianData[typeof field]);
+
     const fieldError = validateTechnicianField(
       field,
-      value,
+      validationValue,
       technicians,
       { documentType: documentTypeName, excludeId: technician.id }
     );
@@ -468,7 +489,7 @@ const EditTechnicianModal: React.FC<EditTechnicianModalProps> = ({
               className="flex h-10 w-10 items-center justify-center rounded-md border border-dashed border-gray-500 cursor-pointer overflow-hidden"
             >
               {previewImage ? (
-                <img src={previewImage} className="h-full w-full object-cover" />
+                <img src={previewImage} alt="Vista previa del tecnico" className="h-full w-full object-cover" />
               ) : (
                 <Upload size={16} />
               )}
@@ -491,5 +512,3 @@ const EditTechnicianModal: React.FC<EditTechnicianModalProps> = ({
 };
 
 export default EditTechnicianModal;
-
-

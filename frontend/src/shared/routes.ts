@@ -16,8 +16,8 @@ interface IRoutes {
     resetPassword: string;
   };
   dashboard: {
-    newClient?: string;
-    newService?: string;
+    newClient: string;
+    newService: string;
     main: string;
     users: string;
     products: string;
@@ -83,8 +83,8 @@ export const routes: IRoutes = {
     quotes: "/dashboard/quotes",
     settings: "/dashboard/settings",
     profile: "/dashboard/profile",
-    newClient: undefined,
-    newService: undefined,
+    newClient: "/dashboard/clients/new",
+    newService: "/dashboard/services/new",
   },
   quotes: {
     register: "/quotes/register",

@@ -1,3 +1,21 @@
+export interface UserState {
+  stateid: number;
+  name: string;
+  description?: string;
+}
+
+export interface UserDocumentType {
+  typeofdocumentid: number;
+  name: string;
+  createat?: string;
+  updateat?: string | null;
+}
+
+export interface TechnicianType {
+  techniciantypeid: number;
+  name: string;
+}
+
 export interface User {
   userid?: number;
   createat?: string | Date;
@@ -12,8 +30,8 @@ export interface User {
   email: string;
   password?: string;
   confirmPassword?: string;
-  states?: any;
-  typeofdocuments?: any;
+  states?: UserState;
+  typeofdocuments?: UserDocumentType;
   roleid: number;
   roles?: {
     roleid: number;
@@ -73,6 +91,22 @@ export interface CreateUserData {
   customerzipcode?: string;
 }
 
+export type UserPayload = {
+  name: string;
+  lastname: string | null;
+  email: string;
+  phone: string;
+  documentnumber: string;
+  typeid: number;
+  image: string | File | null;
+  stateid: number;
+  roleid: number;
+  CV?: string | File | null;
+  techniciantypeids?: number[];
+  customercity?: string;
+  customerzipcode?: string;
+};
+
 export interface EditUser {
   userid: number;
   name: string;
@@ -88,6 +122,8 @@ export interface EditUser {
   techniciantypeids?: number[];
   customercity?: string;
   customerzipcode?: string;
+  technicians?: User["technicians"];
+  customers?: User["customers"];
 }
 
 export interface FormErrors {

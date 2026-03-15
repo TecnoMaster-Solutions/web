@@ -21,6 +21,28 @@ interface YearlySalesPurchasesGraphProps {
   isCurrency?: boolean;
 }
 
+type CombinedDataPoint = {
+  month: string;
+  sales: number;
+  purchases: number;
+};
+
+type TooltipPayloadItem = {
+  dataKey?: string;
+  value?: number | string;
+  payload?: CombinedDataPoint;
+};
+
+type CustomTooltipProps = {
+  active?: boolean;
+  payload?: TooltipPayloadItem[];
+  isCurrency: boolean;
+};
+
+type BarClickEntry = {
+  payload?: CombinedDataPoint;
+};
+
 const buildCombinedData = (
   salesData: { month: string; total: number }[],
   purchasesData: { month: string; total: number }[]
@@ -41,11 +63,11 @@ const buildCombinedData = (
     };
   });
 
-const CustomTooltip = ({ active, payload, isCurrency }: any) => {
+const CustomTooltip = ({ active, payload, isCurrency }: CustomTooltipProps) => {
   if (active && payload && payload.length) {
     const monthLabel = payload[0]?.payload?.month ?? "";
-    const salesValue = payload.find((item: any) => item.dataKey === "sales")?.value ?? 0;
-    const purchasesValue = payload.find((item: any) => item.dataKey === "purchases")?.value ?? 0;
+    const salesValue = Number(payload.find((item) => item.dataKey === "sales")?.value ?? 0);
+    const purchasesValue = Number(payload.find((item) => item.dataKey === "purchases")?.value ?? 0);
 
     return (
       <div className="bg-white p-3 border border-gray-300 rounded-lg shadow-lg">
@@ -70,7 +92,7 @@ export const YearlySalesPurchasesGraph = ({
     ...combinedData.map((item) => Math.max(item.sales ?? 0, item.purchases ?? 0))
   );
 
-  const handleBarClick = (entry: any) => {
+  const handleBarClick = (entry: BarClickEntry) => {
     if (!entry?.payload?.month) return;
     const monthValue = getMonthNumberFromLabel(entry.payload.month);
     onMonthClick({

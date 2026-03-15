@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Calendar, dateFnsLocalizer, type View } from "react-big-calendar";
+import { Calendar, dateFnsLocalizer, type ToolbarProps } from "react-big-calendar";
 import { format, getDay, parse, startOfWeek } from "date-fns";
 import { es } from "date-fns/locale";
 import "react-big-calendar/lib/css/react-big-calendar.css";
@@ -15,7 +15,7 @@ import AppointmentFilters from "./components/AppointmentFilters";
 import AppointmentLegend from "./components/AppointmentLegend";
 import AppointmentStats from "./components/AppointmentStats";
 import AppointmentUpcomingList from "./components/AppointmentUpcomingList";
-import { AppointmentToolbar, type AppointmentToolbarProps } from "./components/AppointmentToolbar";
+import { AppointmentToolbar } from "./components/AppointmentToolbar";
 import EditRequestModal, {
   type EditRequestPayload,
 } from "@/features/dashboard/requests/components/EditRequestModal";
@@ -33,13 +33,16 @@ import {
   fetchOrderServiceHistory,
   updateOrderService,
 } from "@/features/dashboard/OrdersServices/api/ordersServices.api";
+import type {
+  OrdersServiceHistoryItem,
+  TechnicianDTO as OrderTechnicianDTO,
+} from "@/features/dashboard/OrdersServices/types/ordersServices.types";
 
 import type { AppointmentEvent } from "./types/typeAppointment";
 import { buildAppointmentEvents } from "./types/typeAppointment";
 
 import {
   CALENDAR_MESSAGES,
-  SERVICE_TYPE_FILTERS,
   calendarMaxTime,
   calendarMinTime,
 } from "./types/calendar.constants";
@@ -60,6 +63,7 @@ import {
 } from "./helpers/appointment.helpers";
 import { getStatePalette } from "./helpers/appointmentState.helpers";
 import { parseMaybeNumber, toPositiveNumber } from "./helpers/string.helpers";
+import { getApiErrorMessage } from "@/features/auth/utils/authUser";
 
 const locales = { es };
 
@@ -79,46 +83,6 @@ function Loader() {
   );
 }
 
-const escapeIcsText = (value: string) =>
-  value
-    .replace(/\\/g, "\\\\")
-    .replace(/\r?\n/g, "\\n")
-    .replace(/,/g, "\\,")
-    .replace(/;/g, "\\;");
-
-const formatIcsDate = (date: Date) =>
-  date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
-
-const buildCalendarIcs = (events: AppointmentEvent[]) => {
-  const lines = [
-    "BEGIN:VCALENDAR",
-    "VERSION:2.0",
-    "PRODID:-//VerteCX//Appointments//ES",
-    "CALSCALE:GREGORIAN",
-    "METHOD:PUBLISH",
-  ];
-
-  const stamp = formatIcsDate(new Date());
-
-  events.forEach((event) => {
-    const uid = `${event.source}-${event.id}-${event.start.getTime()}@vertecx`;
-    const summary = escapeIcsText(event.title);
-    const description = escapeIcsText(`${event.stateLabel} - ${event.clientLabel}`);
-
-    lines.push("BEGIN:VEVENT");
-    lines.push(`UID:${uid}`);
-    lines.push(`DTSTAMP:${stamp}`);
-    lines.push(`DTSTART:${formatIcsDate(event.start)}`);
-    lines.push(`DTEND:${formatIcsDate(event.end)}`);
-    lines.push(`SUMMARY:${summary}`);
-    lines.push(`DESCRIPTION:${description}`);
-    lines.push("END:VEVENT");
-  });
-
-  lines.push("END:VCALENDAR");
-  return lines.join("\r\n");
-};
-
 const tipoToBackend = (tipo?: string | null) => {
   const value = tipo?.toLowerCase() ?? "";
   if (value.includes("instal")) return "INSTALACION";
@@ -130,8 +94,9 @@ const periodFormatter = new Intl.DateTimeFormat("es-CO", {
   year: "numeric",
 });
 
-type AppointmentToolbarRendererProps = Omit<AppointmentToolbarProps, "isFullscreen" | "onToggleFullscreen">;
+type AppointmentToolbarRendererProps = ToolbarProps<AppointmentEvent, object>;
 const TECH_COMPLETE_CONFIRM_TAG = "[TECH_COMPLETE_CONFIRM]";
+type EditRequestModalInitial = React.ComponentProps<typeof EditRequestModal>["initial"];
 
 export default function IndexAppointment() {
   const { tokenRole, tokenRoleNormalized, clientProfileId, technicianProfileUserId } = useRoleScope();
@@ -160,10 +125,12 @@ export default function IndexAppointment() {
       if (!technicians.length) return null;
 
       const matchedByUser = technicians.find(
-        (t: any) => Number(t?.users?.userid ?? 0) > 0 && Number(t.users.userid) === technicianProfileUserId
+        (t: OrderTechnicianDTO) =>
+          Number(t?.users?.userid ?? 0) > 0 &&
+          Number(t.users?.userid) === technicianProfileUserId
       );
       const candidate = matchedByUser ?? technicians[0];
-      const id = Number((candidate as any)?.technicianid ?? 0);
+      const id = Number(candidate?.technicianid ?? 0);
       return Number.isFinite(id) && id > 0 ? id : null;
     },
     [technicianProfileUserId]
@@ -178,7 +145,9 @@ export default function IndexAppointment() {
 
       const history = await fetchOrderServiceHistory(orderId);
       const alreadyConfirmed = Array.isArray(history)
-        ? history.some((item: any) => String(item?.message ?? "").includes(TECH_COMPLETE_CONFIRM_TAG))
+        ? history.some((item: OrdersServiceHistoryItem) =>
+            String(item?.message ?? "").includes(TECH_COMPLETE_CONFIRM_TAG)
+          )
         : false;
       if (alreadyConfirmed) return;
 
@@ -270,26 +239,6 @@ export default function IndexAppointment() {
     setSearchTerm("");
   }, [clearFilters]);
 
-  const handleDownloadCalendar = useCallback(() => {
-    if (!filteredEvents.length) {
-      showError("No hay citas para descargar.");
-      return;
-    }
-
-    const ics = buildCalendarIcs(filteredEvents);
-    const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    const stamp = format(currentDate, "yyyy-MM");
-
-    anchor.href = url;
-    anchor.download = `citas-${stamp}.ics`;
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    URL.revokeObjectURL(url);
-  }, [filteredEvents, currentDate]);
-
   const handleDownloadExcel = useCallback(async () => {
     if (!filteredEvents.length) {
       showError("No hay citas para descargar.");
@@ -337,7 +286,6 @@ export default function IndexAppointment() {
         {...props}
         isFullscreen={isFullscreen}
         onToggleFullscreen={toggleFullscreen}
-        onDownloadCalendar={handleDownloadCalendar}
         onDownloadExcel={handleDownloadExcel}
         downloadDisabled={!filteredEvents.length}
       />
@@ -345,7 +293,6 @@ export default function IndexAppointment() {
     [
       isFullscreen,
       toggleFullscreen,
-      handleDownloadCalendar,
       handleDownloadExcel,
       filteredEvents.length,
     ]
@@ -420,7 +367,7 @@ export default function IndexAppointment() {
       .sort((a, b) => a.start.getTime() - b.start.getTime());
   }, [scopedAllEvents]);
 
-  const requestEditInitial = useMemo<EditRequestPayload | null>(() => {
+  const requestEditInitial = useMemo<EditRequestModalInitial>(() => {
     if (!editingRequest) return null;
 
     const start = splitDateTime(editingRequest.scheduledAt ?? null);
@@ -438,40 +385,59 @@ export default function IndexAppointment() {
     const tipoNormalized = tipoLabel.toLowerCase().includes("instal") ? "Instalacion" : "Mantenimiento";
 
     return {
-      tipos: [tipoNormalized] as ("Mantenimiento" | "Instalacion")[],
-      servicio: serviceId ? String(serviceId) : "",
-      cliente: clienteId ? String(clienteId) : "",
-      descripcion: editingRequest.description ?? "",
+      serviceId: serviceId && serviceId > 0 ? serviceId : undefined,
+      clientId: clienteId && clienteId > 0 ? clienteId : undefined,
+      serviceType: tipoToBackend(tipoNormalized),
+      description: editingRequest.description ?? "",
       direccion: editingRequest.direccion ?? "",
-      programada: start.date,
-      horaProgramada: start.time,
-      horaFinal: end.time,
+      scheduledAt: buildScheduledAt(
+        start.date ?? null,
+        start.time ?? null,
+        editingRequest.scheduledAt ? new Date(editingRequest.scheduledAt) : null
+      ),
+      scheduledEndAt: buildScheduledAt(
+        start.date ?? null,
+        end.time ?? null,
+        editingRequest.scheduledEndAt ? new Date(editingRequest.scheduledEndAt) : null
+      ),
       estado: editingRequest.state?.stateid ? String(editingRequest.state.stateid) : undefined,
+      stateId: editingRequest.state?.stateid,
+      technicians: [],
     };
   }, [editingRequest]);
 
   const handleRequestSave = async (payload: EditRequestPayload) => {
     if (!editingRequest) return;
 
+    const startParts = splitDateTime(payload.scheduledAt ?? editingRequest.scheduledAt ?? null);
+    const endParts = splitDateTime(payload.scheduledEndAt ?? editingRequest.scheduledEndAt ?? null);
     const scheduledAt = buildScheduledAt(
-      payload.programada ?? null,
-      payload.horaProgramada ?? null,
+      startParts.date ?? null,
+      startParts.time ?? null,
       editingRequest.scheduledAt ? new Date(editingRequest.scheduledAt) : null
     );
 
     const scheduledEndAt = buildScheduledAt(
-      payload.programada ?? null,
-      payload.horaFinal ?? null,
+      endParts.date ?? startParts.date ?? null,
+      endParts.time ?? null,
       editingRequest.scheduledEndAt ? new Date(editingRequest.scheduledEndAt) : null
     );
 
-    const serviceId = parseMaybeNumber(payload.servicio);
-    const clientId = parseMaybeNumber(payload.cliente);
-    const stateId = parseMaybeNumber(payload.estado);
+    const serviceId = parseMaybeNumber(payload.serviceId);
+    const clientId = parseMaybeNumber(payload.clientId);
+    const stateId = parseMaybeNumber(payload.stateId ?? payload.estado);
+    const requestId = toPositiveNumber(
+      editingRequest.serviceRequestId ?? editingRequest.servicerequestid ?? editingRequest.id,
+    );
+
+    if (!requestId) {
+      showError("La solicitud no tiene un identificador valido.");
+      return;
+    }
 
     const payloadBody: Record<string, unknown> = {
-      serviceType: tipoToBackend(payload.tipos?.[0] ?? editingRequest.serviceType),
-      description: payload.descripcion?.trim() ?? "",
+      serviceType: tipoToBackend(payload.serviceType ?? editingRequest.serviceType),
+      description: payload.description?.trim() ?? "",
       direccion: payload.direccion?.trim() ?? "",
       scheduledAt,
       scheduledEndAt,
@@ -483,7 +449,7 @@ export default function IndexAppointment() {
 
     try {
       await updateRequestMutation.mutateAsync({
-        id: editingRequest.serviceRequestId,
+        id: requestId,
         payload: payloadBody,
       });
       await refetch();
@@ -515,8 +481,8 @@ export default function IndexAppointment() {
           await updateOrderService(event.id, { stateid: 4 });
           await refetch();
           Swal.fire("Orden cancelada", `La orden #${event.id} fue cancelada correctamente.`, "success");
-        } catch (err: any) {
-          const msg = err?.response?.data?.message?.[0] || err?.response?.data?.message || err?.message;
+        } catch (err: unknown) {
+          const msg = getApiErrorMessage(err, "No se pudo cancelar la orden.");
           Swal.fire("Error", msg || "No se pudo cancelar la orden.", "error");
         }
         return;
@@ -539,8 +505,8 @@ export default function IndexAppointment() {
         await updateServiceRequest(event.id, { stateId: 4 });
         await refetch();
         Swal.fire("Cancelada", "La solicitud fue cancelada.", "success");
-      } catch (err: any) {
-        const msg = err?.response?.data?.message ?? err?.message ?? "No se pudo cancelar la solicitud.";
+      } catch (err: unknown) {
+        const msg = getApiErrorMessage(err, "No se pudo cancelar la solicitud.");
         Swal.fire("Error", msg, "error");
       }
     },
@@ -591,7 +557,7 @@ export default function IndexAppointment() {
       setFinalizingEventId(event.id);
 
       try {
-        const promises: Promise<any>[] = [];
+        const promises: Array<Promise<unknown>> = [];
 
         if (serviceRequestId) {
           promises.push(updateServiceRequest(serviceRequestId, { stateId: 6 }));
@@ -620,11 +586,11 @@ export default function IndexAppointment() {
           showSuccess(successText);
           finalizeToastTimeoutRef.current = null;
         }, 250);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Error al finalizar cita:", err);
         Swal.fire(
           "Error",
-          err?.response?.data?.message ?? err?.message ?? "No se pudieron actualizar los registros.",
+          getApiErrorMessage(err, "No se pudieron actualizar los registros."),
           "error"
         );
       } finally {
@@ -759,10 +725,10 @@ export default function IndexAppointment() {
           clientFilter={clientFilter}
           searchMatches={searchMatches}
           selectedEventKey={selectedEvent ? `${selectedEvent.source}-${selectedEvent.id}` : null}
-          onSourceChange={setSourceFilter}
-          onStateChange={setStateFilter}
+          onSourceChange={(value) => setSourceFilter(value as typeof sourceFilter)}
+          onStateChange={(value) => setStateFilter(value)}
           onSearchChange={setSearchTerm}
-          onServiceTypeChange={setServiceTypeFilter}
+          onServiceTypeChange={(value) => setServiceTypeFilter(value as typeof serviceTypeFilter)}
           onTechnicianChange={setTechnicianFilter}
           onClientChange={setClientFilter}
           onSelectSearchMatch={handleSelectSearchMatch}
@@ -787,9 +753,6 @@ export default function IndexAppointment() {
               <Calendar
                 localizer={localizer}
                 events={filteredEvents}
-                eventIdAccessor={(event) =>
-                  `${(event as AppointmentEvent).source}-${(event as AppointmentEvent).id}`
-                }
                 startAccessor="start"
                 endAccessor="end"
                 messages={CALENDAR_MESSAGES}

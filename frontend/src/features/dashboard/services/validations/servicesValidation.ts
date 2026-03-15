@@ -7,9 +7,11 @@ export interface ServiceErrors {
   image?: string;
 }
 
+type EditableServiceField = keyof Omit<Service, "id" | "state">;
+
 export const validateServiceField = (
-  field: keyof Omit<Service, "id" | "state">,
-  value: Service[keyof Omit<Service, "id" | "state">],
+  field: EditableServiceField,
+  value: Service[EditableServiceField],
   services: Service[],
   currentId?: number
 ): string | undefined => {
@@ -49,7 +51,7 @@ export const validateServiceForm = (
 ): ServiceErrors => {
   const errors: ServiceErrors = {};
 
-  const fields: (keyof Omit<Service, "id" | "state">)[] = [
+  const fields: EditableServiceField[] = [
     "name",
     "description",
     "category",
@@ -59,7 +61,9 @@ export const validateServiceForm = (
   fields.forEach((field) => {
     const value = data[field];
     const error = validateServiceField(field, value, services, currentId);
-    if (error) (errors as any)[field] = error;
+    if (error) {
+      errors[field as keyof ServiceErrors] = error;
+    }
   });
 
   return errors;

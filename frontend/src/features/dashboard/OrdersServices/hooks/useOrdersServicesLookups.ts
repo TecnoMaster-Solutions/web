@@ -3,20 +3,30 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 
-function asList(payload: any): any[] {
+type LookupRecord = Record<string, unknown>;
+type LookupEnvelope = LookupRecord & {
+  data?: unknown[];
+  items?: unknown[];
+  rows?: unknown[];
+  results?: unknown[];
+};
+
+function asList(payload: unknown): LookupRecord[] {
   if (Array.isArray(payload)) return payload;
-  if (Array.isArray(payload?.data)) return payload.data;
-  if (Array.isArray(payload?.items)) return payload.items;
-  if (Array.isArray(payload?.rows)) return payload.rows;
-  if (Array.isArray(payload?.results)) return payload.results;
+  const source = payload as LookupEnvelope | null | undefined;
+  if (Array.isArray(source?.data)) return source.data as LookupRecord[];
+  if (Array.isArray(source?.items)) return source.items as LookupRecord[];
+  if (Array.isArray(source?.rows)) return source.rows as LookupRecord[];
+  if (Array.isArray(source?.results)) return source.results as LookupRecord[];
   return [];
 }
 
-function pickErrorMessage(e: any) {
-  return e?.response?.data?.message || e?.message || "Error cargando datos.";
+function pickErrorMessage(e: unknown) {
+  const err = e as { response?: { data?: { message?: string } }; message?: string } | null;
+  return err?.response?.data?.message || err?.message || "Error cargando datos.";
 }
 
-function normalizeKey(v: any) {
+function normalizeKey(v: unknown) {
   return String(v ?? "")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -24,10 +34,10 @@ function normalizeKey(v: any) {
     .toLowerCase();
 }
 
-function findPendingStateId(statesPayload: any) {
+function findPendingStateId(statesPayload: unknown) {
   const states = asList(statesPayload);
-  const pending = states.find((s: any) => {
-    const name = normalizeKey(s?.name ?? s?.state ?? s?.label ?? s?.statename ?? "");
+  const pending = states.find((s) => {
+    const name = normalizeKey(s.name ?? s.state ?? s.label ?? s.statename ?? "");
     return name === "pendiente" || name.includes("pendiente");
   });
   const id = pending?.stateid ?? pending?.id;
@@ -35,10 +45,10 @@ function findPendingStateId(statesPayload: any) {
   return Number.isFinite(n) ? n : null;
 }
 
-function findScheduledStateId(statesPayload: any) {
+function findScheduledStateId(statesPayload: unknown) {
   const states = asList(statesPayload);
-  const scheduled = states.find((s: any) => {
-    const name = normalizeKey(s?.name ?? s?.state ?? s?.label ?? s?.statename ?? "");
+  const scheduled = states.find((s) => {
+    const name = normalizeKey(s.name ?? s.state ?? s.label ?? s.statename ?? "");
     return name.includes("agend");
   });
   const id = scheduled?.stateid ?? scheduled?.id;
@@ -50,12 +60,12 @@ export function useOrdersServicesLookups() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [customers, setCustomers] = useState<any[]>([]);
-  const [technicians, setTechnicians] = useState<any[]>([]);
-  const [products, setProducts] = useState<any[]>([]);
-  const [services, setServices] = useState<any[]>([]);
-  const [serviceTypes, setServiceTypes] = useState<any[]>([]);
-  const [states, setStates] = useState<any[]>([]);
+  const [customers, setCustomers] = useState<LookupRecord[]>([]);
+  const [technicians, setTechnicians] = useState<LookupRecord[]>([]);
+  const [products, setProducts] = useState<LookupRecord[]>([]);
+  const [services, setServices] = useState<LookupRecord[]>([]);
+  const [serviceTypes, setServiceTypes] = useState<LookupRecord[]>([]);
+  const [states, setStates] = useState<LookupRecord[]>([]);
   const [pendingStateId, setPendingStateId] = useState<number | null>(null);
   const [scheduledStateId, setScheduledStateId] = useState<number | null>(null);
 

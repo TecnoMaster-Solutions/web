@@ -27,6 +27,13 @@ type TechnicianField =
   | "types"
   | "resumePdf";
 
+type TechnicianFieldValue =
+  | string
+  | string[]
+  | File
+  | File
+  | null;
+
 interface CreateTechnicianModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -105,8 +112,11 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
 
   }, [isOpen]);
 
-  const handleFieldChange = (field: TechnicianField, rawValue: any) => {
-    let value = rawValue;
+  const handleFieldChange = (
+    field: TechnicianField,
+    rawValue: TechnicianFieldValue
+  ) => {
+    let value: TechnicianFieldValue = rawValue;
     const hasDigits = typeof rawValue === "string" && /\d/.test(rawValue);
 
     if (field === "documentType") {
@@ -144,19 +154,19 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
 
     switch (field) {
       case "name":
-        setNombre(value);
+        setNombre(String(value ?? ""));
         break;
       case "lastName":
-        setApellido(value);
+        setApellido(String(value ?? ""));
         break;
       case "documentNumber":
-        setNumeroDocumento(value);
+        setNumeroDocumento(String(value ?? ""));
         break;
       case "phone":
-        setTelefono(value);
+        setTelefono(String(value ?? ""));
         break;
       case "email":
-        setCorreo(value);
+        setCorreo(String(value ?? ""));
         break;
       case "types":
         setTypes(value as string[]);
@@ -166,9 +176,14 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
         break;
     }
 
+    const validationValue =
+      field === "resumePdf" && value === null
+        ? (undefined as unknown as CreateTechnicianData["resumePdf"])
+        : (value as CreateTechnicianData[typeof field]);
+
     let fieldError = validateTechnicianField(
       field,
-      value,
+      validationValue,
       technicians,
       { documentType: tipoDocumento }
     );
@@ -567,7 +582,6 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
                 className="flex h-10 w-10 items-center justify-center rounded-md border border-dashed border-gray-500 text-gray-600 cursor-pointer overflow-hidden"
               >
                 {previewImagen ? (
-                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={previewImagen}
                     alt="preview"
@@ -607,5 +621,3 @@ const CreateTechnicianModal: React.FC<CreateTechnicianModalProps> = ({
 };
 
 export default CreateTechnicianModal;
-
-

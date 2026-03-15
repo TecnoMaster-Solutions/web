@@ -10,6 +10,7 @@ import {
 } from "../connection/categoryApi";
 import {
   Category,
+  CategoryApiShape,
   CategoriesPaginatedResult,
   CreateCategoryData,
   EditCategoryData,
@@ -25,9 +26,9 @@ const waitForNextRender = async () => {
   });
 };
 
-const resolvePayloadData = (value: unknown): any => {
+const resolvePayloadData = (value: unknown): unknown => {
   if (!value || typeof value !== "object") return value;
-  if ("data" in value) return resolvePayloadData((value as any).data);
+  if ("data" in value) return resolvePayloadData((value as { data?: unknown }).data);
   return value;
 };
 
@@ -43,13 +44,14 @@ const toBoolean = (value: unknown): boolean => {
   return Boolean(value);
 };
 
-const parseCategoryPayload = (payload: any): Category | null => {
+const parseCategoryPayload = (payload: unknown): Category | null => {
   if (!payload || typeof payload !== "object") return null;
 
   const resolved = resolvePayloadData(payload);
   if (!resolved || typeof resolved !== "object") return null;
+  const category = resolved as CategoryApiShape;
 
-  const idValue = resolved.id ?? resolved.categoryid ?? resolved.category_id;
+  const idValue = category.id ?? category.categoryid ?? category.category_id;
   const numericId = typeof idValue === "number" ? idValue : Number(idValue);
   const id =
     typeof idValue === "number" ? idValue : Number.isFinite(numericId) ? numericId : null;
@@ -58,14 +60,14 @@ const parseCategoryPayload = (payload: any): Category | null => {
 
   return {
     id,
-    name: resolved.name ?? resolved.categoryname ?? "",
-    description: resolved.description ?? resolved.categorydescription ?? "",
-    status: toBoolean(resolved.status ?? resolved.isactive),
-    icon: resolved.icon ?? null,
+    name: String(category.name ?? category.categoryname ?? ""),
+    description: String(category.description ?? category.categorydescription ?? ""),
+    status: toBoolean(category.status ?? category.isactive),
+    icon: category.icon ?? null,
   };
 };
 
-const extractPayloadCategory = (response: any): Category | null => {
+const extractPayloadCategory = (response: unknown): Category | null => {
   return parseCategoryPayload(response);
 };
 
@@ -203,10 +205,13 @@ export const useCategories = () => {
         setLoading(true);
         try {
           await refreshCategories(1, value, controller.signal);
-        } catch (error: any) {
+        } catch (error: unknown) {
           if (
-            error?.name === "CanceledError" ||
-            error?.code === "ERR_CANCELED" ||
+            (error instanceof Error && error.name === "CanceledError") ||
+            (typeof error === "object" &&
+              error !== null &&
+              "code" in error &&
+              (error as { code?: string }).code === "ERR_CANCELED") ||
             controller.signal.aborted
           ) {
             return;

@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { getSuppliers, SupplierDTO } from "@/features/dashboard/suppliers/services/suppliers.service";
@@ -31,7 +31,7 @@ const SuppliersSlider = () => {
     ...suppliers.slice(0, itemsToShow),
   ] : [];
 
-  const nextSlide = () => {
+  const nextSlide = useCallback(() => {
     if (!isTransitioning || suppliers.length === 0) return;
 
     setCurrent((prev) => {
@@ -45,7 +45,7 @@ const SuppliersSlider = () => {
       }
       return newIndex;
     });
-  };
+  }, [isTransitioning, itemsToShow, suppliers.length]);
 
   const prevSlide = () => {
     if (!isTransitioning || suppliers.length === 0) return;
@@ -69,7 +69,7 @@ const SuppliersSlider = () => {
       nextSlide();
     }, 3000);
     return () => clearInterval(interval);
-  }, [isTransitioning, suppliers.length]);
+  }, [nextSlide, suppliers.length]);
 
   if (suppliers.length === 0) {
     return null; // Don't render if no suppliers to avoid breaking layout
@@ -108,7 +108,7 @@ const SuppliersSlider = () => {
               width: `${(extendedSuppliers.length * 100) / itemsToShow}%`,
             }}
           >
-            {extendedSuppliers.map((supplier: any, index: number) => (
+            {extendedSuppliers.map((supplier: SupplierDTO, index: number) => (
               <div
                 key={`${supplier.nit || index}-${index}`}
                 className="flex-shrink-0 flex justify-center items-center px-4"

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import Colors from "@/shared/theme/colors";
-import { createPurchaseOrderModalProps, createPurchaseOrderData } from "../../types/typesPurchaseOrder";
+import { createPurchaseOrderData } from "../../types/typesPurchaseOrder";
 import { useCreatePurchaseOrderForm } from "../../hooks/usePurchaseOrders";
 import {
   getSuppliers,
@@ -34,6 +34,10 @@ interface CreatePurchaseOrderPageProps {
   onSave: (purchaseOrderData: createPurchaseOrderData & { proveedorId?: number }) => Promise<PurchaseOrderAPIResponse | null>;
 }
 
+interface ErrorWithMessage {
+  message?: string;
+}
+
 export const CreatePurchaseOrderPage: React.FC<CreatePurchaseOrderPageProps> = ({
   onClose,
   onSaved,
@@ -48,7 +52,6 @@ export const CreatePurchaseOrderPage: React.FC<CreatePurchaseOrderPageProps> = (
     handleBlur,
     isSubmitting,
     setItems,
-    handleSubmit,
   } = useCreatePurchaseOrderForm({
     isOpen: true,
     onClose,
@@ -70,7 +73,7 @@ export const CreatePurchaseOrderPage: React.FC<CreatePurchaseOrderPageProps> = (
   ]);
 
   const [allProducts, setAllProducts] = useState<Product[]>([]);
-  const [loadingAllProducts, setLoadingAllProducts] = useState(false);
+  const [, setLoadingAllProducts] = useState(false);
 
   useEffect(() => {
     setOrderNumber(generateOrderNumber());
@@ -87,8 +90,8 @@ export const CreatePurchaseOrderPage: React.FC<CreatePurchaseOrderPageProps> = (
       .finally(() => setLoadingSuppliers(false));
 
     setLoadingAllProducts(true);
-    getProducts("active")
-      .then((data) => setAllProducts(data))
+    getProducts({ status: "active", page: 1, limit: 1000 })
+      .then((response) => setAllProducts(response.data))
       .catch(() => showError("Error al cargar productos."))
       .finally(() => setLoadingAllProducts(false));
   }, []);
@@ -267,9 +270,12 @@ export const CreatePurchaseOrderPage: React.FC<CreatePurchaseOrderPageProps> = (
     let savedOrder: PurchaseOrderAPIResponse | null = null;
     try {
       savedOrder = await onSave(purchaseOrderData);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorWithMessage = error as ErrorWithMessage;
       console.error("Error al guardar orden:", error);
-      showError(error?.message || "Error al guardar la orden de compra.");
+      showError(
+        errorWithMessage.message || "Error al guardar la orden de compra."
+      );
       setIsSending(false);
       return;
     }
@@ -315,7 +321,7 @@ export const CreatePurchaseOrderPage: React.FC<CreatePurchaseOrderPageProps> = (
             }.`
           );
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("Error al enviar notificación:", error);
         showWarning("Orden guardada. No se pudo enviar la notificación al proveedor.");
       }
@@ -705,4 +711,3 @@ export const CreatePurchaseOrderPage: React.FC<CreatePurchaseOrderPageProps> = (
 };
 
 export default CreatePurchaseOrderPage;
-

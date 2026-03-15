@@ -1,7 +1,6 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import Image from "next/image";
 import { ShoppingCart, Menu, X, UserCircle, Pencil, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { routes } from "@/shared/routes";
@@ -43,11 +42,6 @@ const Nav = () => {
     { href: routes.landing.products, label: "Productos" },
     { href: routes.landing.about, label: "Nosotros" },
     { href: routes.landing.contact, label: "Contactanos" },
-  ];
-
-  const guestLinks = [
-    { href: routes.auth.login, label: "Acceder" },
-    { href: routes.auth.register, label: "Registrarse" },
   ];
 
   useEffect(() => {

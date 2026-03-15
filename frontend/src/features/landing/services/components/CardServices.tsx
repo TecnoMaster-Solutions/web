@@ -24,6 +24,17 @@ interface CardServicesProps {
   clientLabel?: string;
 }
 
+type RoleCandidate = string | { name?: string | null } | null | undefined;
+type AuthRecord = {
+  rolename?: string | null;
+  role?: RoleCandidate;
+} | null;
+
+type BackendError = {
+  response?: { data?: { message?: string | string[] } };
+  message?: string;
+};
+
 function resolveServiceType(category?: string): ServiceTypeApi {
   const s = String(category || "")
     .normalize("NFD")
@@ -34,8 +45,10 @@ function resolveServiceType(category?: string): ServiceTypeApi {
   return "MANTENIMIENTO";
 }
 
-function getBackendMessage(err: any) {
-  const msg = err?.response?.data?.message ?? err?.message ?? "";
+function getBackendMessage(err: unknown) {
+  const backendError = err as BackendError | null;
+  const msg =
+    backendError?.response?.data?.message ?? backendError?.message ?? "";
   if (Array.isArray(msg)) return msg.filter(Boolean).join(" | ");
   return String(msg || "");
 }
@@ -57,13 +70,17 @@ export default function CardServices({
   const serviceType = useMemo(() => resolveServiceType(category), [category]);
 
   const isClientRole = useMemo(() => {
+    const currentUser = user as AuthRecord;
+    const currentProfile = profile as AuthRecord;
     const candidates = [
-      user?.rolename,
-      (user as any)?.role,
-      (user as any)?.role?.name,
-      profile?.rolename,
-      (profile as any)?.role,
-      (profile as any)?.role?.name,
+      currentUser?.rolename,
+      typeof currentUser?.role === "string" ? currentUser.role : null,
+      typeof currentUser?.role === "object" ? currentUser.role?.name : null,
+      currentProfile?.rolename,
+      typeof currentProfile?.role === "string" ? currentProfile.role : null,
+      typeof currentProfile?.role === "object"
+        ? currentProfile.role?.name
+        : null,
     ];
 
     const normalized = candidates
@@ -116,7 +133,8 @@ export default function CardServices({
     const payload: CreateServiceRequestInput = {
       scheduledAt: data.scheduledAt ?? null,
       scheduledEndAt: data.scheduledEndAt ?? null,
-      serviceType: (data.serviceType as any) ?? serviceType,
+      serviceType:
+        data.serviceType === "INSTALACION" ? "INSTALACION" : serviceType,
       description: String(data.description ?? "").trim(),
       direccion: String(data.direccion ?? "").trim(),
       stateId: stateIdToSend,
@@ -129,7 +147,7 @@ export default function CardServices({
       await createServiceRequest(payload);
       showSuccess("Hemos recibido tu solicitud. Pronto nos pondremos en contacto.");
       handleCloseModal();
-    } catch (error: any) {
+    } catch (error: unknown) {
       showError(
         getBackendMessage(error) || "No fue posible registrar la solicitud. Intenta nuevamente."
       );

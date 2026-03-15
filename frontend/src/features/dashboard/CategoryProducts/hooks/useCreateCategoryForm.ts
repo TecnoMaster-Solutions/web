@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import {
+  CategoryFieldName,
   CreateCategoryModalProps,
   CreateCategoryData,
   FormErrors,
@@ -28,6 +29,9 @@ const initialTouched: FormTouched = {
   description: false,
 };
 
+type CategoryInputChangeEvent = React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>;
+type CategoryInputBlurEvent = React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>;
+
 export const useCreateCategoryForm = ({
   isOpen,
   onClose,
@@ -48,24 +52,26 @@ export const useCreateCategoryForm = ({
   }, [isOpen]);
 
   const handleInputChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    (e: CategoryInputChangeEvent) => {
       const { name, value } = e.target;
-      setFormData((prev) => ({ ...prev, [name]: value }));
+      const fieldName = name as keyof CreateCategoryData;
+      setFormData((prev) => ({ ...prev, [fieldName]: value }));
 
-      if (touched[name as keyof FormTouched]) {
+      if (name in touched && touched[name as CategoryFieldName]) {
         const error = validateField(name, value, categories);
-        setErrors((prev) => ({ ...prev, [name]: error }));
+        setErrors((prev) => ({ ...prev, [name as CategoryFieldName]: error }));
       }
     },
     [categories, touched],
   );
 
   const handleBlur = useCallback(
-    (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    (e: CategoryInputBlurEvent) => {
       const { name, value } = e.target;
-      setTouched((prev) => ({ ...prev, [name]: true }));
+      const fieldName = name as CategoryFieldName;
+      setTouched((prev) => ({ ...prev, [fieldName]: true }));
       const error = validateField(name, value, categories);
-      setErrors((prev) => ({ ...prev, [name]: error }));
+      setErrors((prev) => ({ ...prev, [fieldName]: error }));
     },
     [categories],
   );

@@ -18,6 +18,7 @@ jest.mock("@/shared/utils/apiClient", () => ({
 }));
 
 const mockedApiClient = apiClient as jest.Mocked<typeof apiClient>;
+const resolved = <T,>(value: T) => value;
 
 describe("suppliers.service", () => {
   beforeEach(() => {
@@ -26,7 +27,7 @@ describe("suppliers.service", () => {
 
   it("listSuppliers devuelve lista simple cuando no recibe paginacion", async () => {
     const suppliers = [{ supplierid: 1, name: "Proveedor Uno" }];
-    mockedApiClient.get.mockResolvedValue({ data: suppliers } as any);
+    mockedApiClient.get.mockResolvedValue(resolved({ data: suppliers }));
 
     await expect(listSuppliers()).resolves.toEqual(suppliers);
     expect(mockedApiClient.get).toHaveBeenCalledWith("/suppliers", {
@@ -51,7 +52,7 @@ describe("suppliers.service", () => {
         hasPrevPage: false,
       },
     };
-    mockedApiClient.get.mockResolvedValue(paginated as any);
+    mockedApiClient.get.mockResolvedValue(resolved(paginated));
 
     await expect(
       listSuppliers({ page: 1, limit: 5, search: "  proveedor  ", stateid: 1 }),
@@ -68,7 +69,7 @@ describe("suppliers.service", () => {
 
   it("getSupplier desempaqueta la respuesta del backend", async () => {
     const supplier = { supplierid: 3, name: "Proveedor Tres" };
-    mockedApiClient.get.mockResolvedValue({ data: supplier } as any);
+    mockedApiClient.get.mockResolvedValue(resolved({ data: supplier }));
 
     await expect(getSupplier(3)).resolves.toEqual(supplier);
     expect(mockedApiClient.get).toHaveBeenCalledWith("/suppliers/3");
@@ -87,7 +88,7 @@ describe("suppliers.service", () => {
       rating: 5,
     };
     const created = { supplierid: 4, ...payload };
-    mockedApiClient.post.mockResolvedValue({ data: created } as any);
+    mockedApiClient.post.mockResolvedValue(resolved({ data: created }));
 
     await expect(createSupplier(payload)).resolves.toEqual(created);
     expect(mockedApiClient.post).toHaveBeenCalledWith("/suppliers", payload);
@@ -96,14 +97,14 @@ describe("suppliers.service", () => {
   it("updateSupplier envia id y cambios parciales", async () => {
     const changes = { name: "Proveedor Editado", rating: 4 };
     const updated = { supplierid: 4, ...changes };
-    mockedApiClient.patch.mockResolvedValue({ data: updated } as any);
+    mockedApiClient.patch.mockResolvedValue(resolved({ data: updated }));
 
     await expect(updateSupplier(4, changes)).resolves.toEqual(updated);
     expect(mockedApiClient.patch).toHaveBeenCalledWith("/suppliers/4", changes);
   });
 
   it("deleteSupplier llama el endpoint de eliminacion", async () => {
-    mockedApiClient.delete.mockResolvedValue(undefined as any);
+    mockedApiClient.delete.mockResolvedValue(resolved(undefined));
 
     await expect(deleteSupplier(9)).resolves.toBeUndefined();
     expect(mockedApiClient.delete).toHaveBeenCalledWith("/suppliers/9");
@@ -118,7 +119,7 @@ describe("suppliers.service", () => {
         image: "https://example.com/router.png",
       },
     ];
-    mockedApiClient.get.mockResolvedValue({ data: products } as any);
+    mockedApiClient.get.mockResolvedValue(resolved({ data: products }));
 
     await expect(getSupplierProducts(5)).resolves.toEqual(products);
     expect(mockedApiClient.get).toHaveBeenCalledWith("/suppliers/5/products");

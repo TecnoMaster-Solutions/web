@@ -5,7 +5,7 @@ import Colors from "@/shared/theme/colors";
 import { showError, showSuccess } from "@/shared/utils/notifications";
 import { QuoteCreatePayload, QuoteDetailPayload } from "../types/Quote.type";
 import { api } from "@/shared/utils/apiClient";
-import { getServicesRequestsForQuote } from "../api/quotes.api";
+import { getServicesRequestsForQuote, type QuoteServiceRequestApi } from "../api/quotes.api";
 
 /* ================================
  * TIPOS
@@ -105,6 +105,11 @@ const unwrapArray = (value: unknown): unknown[] => {
   return [];
 };
 
+const asRecord = (value: unknown): Record<string, unknown> =>
+  typeof value === "object" && value !== null
+    ? (value as Record<string, unknown>)
+    : {};
+
 const toPayloadServiceType = (rawType: string) => {
   const normalized = normalizeText(rawType);
   if (normalized.includes("manten")) return "MANTENIMIENTO";
@@ -198,7 +203,80 @@ export default function RegisterQuoteForm({ onSave }: Props) {
     const loadData = async () => {
       try {
         const requests = await getServicesRequestsForQuote();
-        setServiceRequests(requests);
+        const normalizedRequests: ServiceRequestFromApi[] = requests.map(
+          (request: QuoteServiceRequestApi) => {
+            const requestRecord = asRecord(request);
+            const customer = asRecord(requestRecord.customer);
+            const customerUsers = asRecord(customer.users);
+            const service = asRecord(requestRecord.service);
+            const serviceType = asRecord(service.typeofservice);
+            const techniciansMapRaw = Array.isArray(requestRecord.techniciansMap)
+              ? requestRecord.techniciansMap
+              : [];
+
+            return {
+              serviceRequestId: Number(request.serviceRequestId ?? 0),
+              serviceId:
+                request.serviceId != null
+                  ? Number(request.serviceId)
+                  : service.serviceid != null
+                    ? Number(service.serviceid)
+                    : undefined,
+              serviceType: String(request.serviceType ?? "").trim(),
+              description: String(request.description ?? "").trim(),
+              direccion: String(request.direccion ?? "").trim(),
+              service:
+                Object.keys(service).length > 0
+                  ? {
+                      serviceid:
+                        service.serviceid != null ? Number(service.serviceid) : undefined,
+                      name:
+                        service.name != null ? String(service.name).trim() : undefined,
+                      typeofserviceid:
+                        service.typeofserviceid != null
+                          ? Number(service.typeofserviceid)
+                          : serviceType.typeofserviceid != null
+                            ? Number(serviceType.typeofserviceid)
+                            : undefined,
+                    }
+                  : undefined,
+              customer: {
+                customerid: Number(customer.customerid ?? request.clientId ?? 0),
+                users: {
+                  name: String(customerUsers.name ?? "").trim(),
+                  lastname: String(customerUsers.lastname ?? "").trim(),
+                  documentnumber: String(customerUsers.documentnumber ?? "").trim(),
+                  email: String(customerUsers.email ?? "").trim(),
+                },
+              },
+              techniciansMap: techniciansMapRaw.map((item) => {
+                const technicianMap = asRecord(item);
+                const technician = asRecord(technicianMap.technician);
+                const technicianUsers = asRecord(technician.users);
+
+                return {
+                  technician: {
+                    technicianid: Number(technician.technicianid ?? 0),
+                    users: {
+                      name: String(technicianUsers.name ?? "").trim(),
+                      lastname: String(technicianUsers.lastname ?? "").trim(),
+                      documentnumber: String(
+                        technicianUsers.documentnumber ?? "",
+                      ).trim(),
+                      email: String(technicianUsers.email ?? "").trim(),
+                      stateid:
+                        technicianUsers.stateid != null
+                          ? Number(technicianUsers.stateid)
+                          : undefined,
+                    },
+                  },
+                };
+              }),
+            };
+          },
+        );
+
+        setServiceRequests(normalizedRequests);
 
         const [productsResponse, servicesResponse] = await Promise.all([
           api.get("/products?status=all"),

@@ -30,6 +30,8 @@ type ProductFromApi = {
   isactive: boolean;
 };
 
+type ProductsResponse = ProductFromApi[] | { data?: ProductFromApi[] | null };
+
 const toNumber = (v: unknown): number => {
   if (typeof v === "number") return Number.isFinite(v) ? v : 0;
   const n = Number(String(v ?? "").trim());
@@ -58,11 +60,17 @@ const toLanding = (p: ProductFromApi): Product => ({
 });
 
 export const getLandingProducts = async (): Promise<Product[]> => {
-  const { data } = await api.get<ProductFromApi[]>("/products", {
+  const { data } = await api.get<ProductsResponse>("/products", {
     params: { status: "active" },
   });
 
-  return (data ?? [])
+  const products = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.data)
+      ? data.data
+      : [];
+
+  return products
     .filter((product) => product.isactive !== false)
     .map(toLanding);
 };

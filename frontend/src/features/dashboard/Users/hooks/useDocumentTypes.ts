@@ -1,36 +1,40 @@
 import { useEffect, useState, useCallback } from "react";
 import { api } from "@/shared/utils/apiClient";
 import { showError } from "@/shared/utils/notifications";
+import { UserDocumentType } from "../types/typesUser";
 
-export interface DocumentType {
-  typeofdocumentid: number;
-  name: string;
-  createat?: string;
-  updateat?: string | null;
-}
+export type DocumentType = UserDocumentType;
 
 // Cache a nivel de módulo
-let cachedDocumentTypes: DocumentType[] | null = null;
-let inFlightRequest: Promise<DocumentType[]> | null = null;
+let cachedDocumentTypes: UserDocumentType[] | null = null;
+let inFlightRequest: Promise<UserDocumentType[]> | null = null;
 
 // Normalizar el payload desde múltiples formatos
-const normalizeDocumentTypeData = (raw: any): DocumentType[] => {
+type DocumentTypePayload = {
+  data?: unknown[];
+};
+
+const normalizeDocumentTypeData = (raw: unknown): UserDocumentType[] => {
   const list = Array.isArray(raw)
     ? raw
-    : Array.isArray(raw?.data)
-    ? raw.data
+    : Array.isArray((raw as DocumentTypePayload | undefined)?.data)
+    ? (raw as DocumentTypePayload).data ?? []
     : [];
 
-  return list.map((item: any) => ({
-    typeofdocumentid: item.typeofdocumentid,
-    name: item.name,
-    createat: item.createat,
-    updateat: item.updateat,
-  }));
+  return list.map((item) => {
+    const typed = (item ?? {}) as Record<string, unknown>;
+    return {
+      typeofdocumentid: Number(typed.typeofdocumentid),
+      name: String(typed.name ?? ""),
+      createat: typeof typed.createat === "string" ? typed.createat : undefined,
+      updateat:
+        typed.updateat == null ? null : String(typed.updateat),
+    };
+  });
 };
 
 export const useDocumentTypes = () => {
-  const [documentTypes, setDocumentTypes] = useState<DocumentType[]>([]);
+  const [documentTypes, setDocumentTypes] = useState<UserDocumentType[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 

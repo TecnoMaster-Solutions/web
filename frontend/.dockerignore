@@ -3,6 +3,7 @@ node_modules
 dist
 .git
 .env
+.env.*
 npm-debug.log
 .pnp.*
 .yarn/cache
@@ -11,3 +12,4 @@ npm-debug.log
 .yarn/install-state.gz
 *.bak
 yarn.lock.preimport.bak
+coverage

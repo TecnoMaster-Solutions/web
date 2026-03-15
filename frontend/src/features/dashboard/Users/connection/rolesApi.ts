@@ -1,10 +1,22 @@
 import { api } from "@/shared/utils/apiClient";
 import { showError } from "@/shared/utils/notifications";
+import type { Role } from "../hooks/useRoles";
 
 const RETRY_LIMIT = 2;
 
+type ApiErrorShape = {
+  name?: string;
+  code?: string;
+  response?: {
+    status?: number;
+    data?: {
+      message?: string;
+    };
+  };
+};
+
 // Obtener roles (con retry, timeout y validación)
-export const fetchRoles = async (signal?: AbortSignal) => {
+export const fetchRoles = async (signal?: AbortSignal): Promise<Role[]> => {
   let attempt = 0;
 
   while (attempt <= RETRY_LIMIT) {
@@ -23,14 +35,15 @@ export const fetchRoles = async (signal?: AbortSignal) => {
       if (Array.isArray(data.data)) return data.data;
 
       throw new Error("Estructura inesperada en la respuesta de roles.");
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as ApiErrorShape;
       // Cancelado por el usuario
-      if (error?.name === "CanceledError" || error?.code === "ERR_CANCELED") {
+      if (apiError?.name === "CanceledError" || apiError?.code === "ERR_CANCELED") {
         return [];
       }
 
       // Timeout
-      if (error?.code === "ECONNABORTED") {
+      if (apiError?.code === "ECONNABORTED") {
         attempt++;
         if (attempt > RETRY_LIMIT)
           throw new Error("La solicitud demoró demasiado. Intente nuevamente.");
@@ -38,14 +51,17 @@ export const fetchRoles = async (signal?: AbortSignal) => {
       }
 
       // Sin respuesta del servidor
-      if (!error.response) {
+      if (!apiError.response) {
         attempt++;
         if (attempt > RETRY_LIMIT)
           throw new Error("Error de red obteniendo roles.");
         continue;
       }
 
-      const status = error.response.status;
+      const status = apiError.response.status;
+      if (status == null) {
+        throw new Error("Respuesta inv\xE1lida del servidor al obtener los roles.");
+      }
 
       if (status >= 500)
         throw new Error("El servidor tuvo un problema al obtener roles.");
@@ -53,8 +69,8 @@ export const fetchRoles = async (signal?: AbortSignal) => {
       if (status === 401 || status === 403)
         throw new Error("No autorizado para consultar roles.");
 
-      showError(error.response?.data?.message ?? "No se pudieron obtener los roles.");
-      throw error;
+      showError(apiError.response?.data?.message ?? "No se pudieron obtener los roles.");
+      throw apiError;
     }
   }
 

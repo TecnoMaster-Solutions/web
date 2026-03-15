@@ -10,6 +10,23 @@ export interface CategoryData {
 export const PieChartCategoryAndProducts = ({ data }: { data: CategoryData[] }) => {
   const RADIAN = Math.PI / 180;
 
+  type PieLabelProps = {
+    cx?: number;
+    cy?: number;
+    midAngle?: number;
+    outerRadius?: number;
+    percent?: number;
+  };
+
+  type TooltipPayloadItem = {
+    payload: CategoryData;
+  };
+
+  type PieTooltipProps = {
+    active?: boolean;
+    payload?: TooltipPayloadItem[];
+  };
+
   const COLORS = [
     Colors.graphic.circle.primary,
     Colors.graphic.circle.secondary,
@@ -19,7 +36,13 @@ export const PieChartCategoryAndProducts = ({ data }: { data: CategoryData[] }) 
     Colors.graphic.circle.scenery,
   ];
 
-  const renderCustomizedLabel = ({ cx, cy, midAngle, outerRadius, percent }: any) => {
+  const renderCustomizedLabel = ({
+    cx = 0,
+    cy = 0,
+    midAngle = 0,
+    outerRadius = 0,
+    percent = 0,
+  }: PieLabelProps) => {
     const radius = outerRadius + 18;
     const x = cx + radius * Math.cos(-midAngle * RADIAN);
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
@@ -39,7 +62,7 @@ export const PieChartCategoryAndProducts = ({ data }: { data: CategoryData[] }) 
     );
   };
 
-  const CustomTooltip = ({ active, payload }: any) => {
+  const CustomTooltip = ({ active, payload }: PieTooltipProps) => {
     if (active && payload && payload.length) {
       const item = payload[0].payload;
       const total = data.reduce((sum, d) => sum + d.value, 0);

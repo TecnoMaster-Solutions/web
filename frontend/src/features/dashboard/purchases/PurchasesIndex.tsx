@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState, useEffect, useRef } from "react";
+import { useCallback, useMemo, useEffect, useRef } from "react";
 import Swal from "sweetalert2";
 import { useRouter, useSearchParams } from "next/navigation";
 import { showSuccess } from "@/shared/utils/notifications";
@@ -31,7 +31,7 @@ const normalizePurchaseState = (value?: string | null) => {
   return normalized;
 };
 
-const formatDateOnly = (value: any) => {
+const formatDateOnly = (value: string | Date | null | undefined) => {
   if (!value) return "";
 
   if (typeof value === "string") {
@@ -66,8 +66,6 @@ export default function PurchasesIndex() {
     setPage,
     setSearch,
   } = purchasesHook;
-
-  const [isCancelling, setIsCancelling] = useState<number | null>(null);
 
   const overlayLoading = loading || saving;
 
@@ -256,13 +254,10 @@ const columns: Column<IPurchase>[] = useMemo(
 
       if (!isConfirmed) return;
 
-      setIsCancelling(purchase.purchaseorderid);
-
       try {
         await handleCancelPurchase(purchase.purchaseorderid, observation);
 
         cancelledToastShown.current = false;
-        setIsCancelling(null);
 
         router.push(
           `/dashboard/purchases?cancelled=1&order=${encodeURIComponent(
@@ -270,7 +265,7 @@ const columns: Column<IPurchase>[] = useMemo(
           )}`
         );
       } catch (error) {
-        setIsCancelling(null);
+        console.error("Error cancelling purchase:", error);
       }
     },
     [handleCancelPurchase, router]

@@ -20,7 +20,29 @@ interface ServicesProps {
   className?: string;
 }
 
-function extractClientId(user: any, profile: any): number {
+type AuthUserLike = {
+  customerid?: number | null;
+  clientId?: number | null;
+  clientid?: number | null;
+  customer?: { customerid?: number | null } | null;
+  name?: string | null;
+  lastname?: string | null;
+} | null;
+
+type AuthProfileLike = {
+  customerid?: number | null;
+  clientId?: number | null;
+  clientid?: number | null;
+  customer?: { customerid?: number | null } | null;
+  name?: string | null;
+  lastname?: string | null;
+  users?: {
+    name?: string | null;
+    lastname?: string | null;
+  } | null;
+} | null;
+
+function extractClientId(user: AuthUserLike, profile: AuthProfileLike): number {
   const candidates = [
     user?.customerid,
     user?.clientId,
@@ -39,10 +61,19 @@ function extractClientId(user: any, profile: any): number {
   return 0;
 }
 
-function buildClientLabel(user: any, profile: any): string {
-  const name = profile?.users?.name ?? profile?.name ?? user?.name ?? "";
+function buildClientLabel(user: AuthUserLike, profile: AuthProfileLike): string {
+  const currentUser = user as AuthUserLike;
+  const currentProfile = profile as AuthProfileLike;
+  const name =
+    currentProfile?.users?.name ??
+    currentProfile?.name ??
+    currentUser?.name ??
+    "";
   const lastname =
-    profile?.users?.lastname ?? profile?.lastname ?? user?.lastname ?? "";
+    currentProfile?.users?.lastname ??
+    currentProfile?.lastname ??
+    currentUser?.lastname ??
+    "";
   return [name, lastname].filter(Boolean).join(" ").trim();
 }
 
@@ -59,18 +90,21 @@ export default function ServicesLanding({ className = "" }: ServicesProps) {
 
   useEffect(() => {
     const load = async () => {
-      try {
-        const [list, types] = await Promise.all([
-          fetchLandingServices({ page: 1, limit: 200, stateid: 1 }),
-          fetchLandingServiceTypes(),
-        ]);
+      const [servicesResult, typesResult] = await Promise.allSettled([
+        fetchLandingServices({ page: 1, limit: 100, stateid: 1 }),
+        fetchLandingServiceTypes(),
+      ]);
 
-        setServices(Array.isArray(list) ? list : []);
-        setTypeNames(Array.isArray(types) ? types : []);
-      } catch {
-        setServices([]);
-        setTypeNames([]);
-      }
+      setServices(
+        servicesResult.status === "fulfilled" && Array.isArray(servicesResult.value)
+          ? servicesResult.value
+          : []
+      );
+      setTypeNames(
+        typesResult.status === "fulfilled" && Array.isArray(typesResult.value)
+          ? typesResult.value
+          : []
+      );
     };
 
     load();
@@ -119,12 +153,12 @@ export default function ServicesLanding({ className = "" }: ServicesProps) {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {displayedServices.map((service) => {
-                const sid = Number((service as any)?.id);
+                const sid = Number(service.id);
                 const safeServiceId = Number.isFinite(sid) && sid > 0 ? sid : 0;
 
                 return (
                   <CardServices
-                    key={(service as any).id ?? `${service.title}-${service.category}`}
+                    key={service.id ?? `${service.title}-${service.category}`}
                     title={service.title}
                     description={service.description || "Sin descripción"}
                     category={service.category}

@@ -10,20 +10,32 @@ import React, {
   useState,
 } from "react";
 import Cookies from "js-cookie";
-import { api, clearTokens, setAccessToken, setRefreshToken, setTokens } from "@/lib/api";
+import {
+  api,
+  clearTokens,
+  setAccessToken,
+  setRefreshToken,
+  setTokens,
+} from "@/lib/api";
 import { AuthUser } from "@/features/auth/types/AuthUser";
 import { RegisterPayload } from "@/features/auth/types/RegisterPayload";
 import {
   getAllowedModulesFromPermissions,
   pickPostLoginRedirect,
 } from "@/features/auth/authz";
+import {
+  type AuthProfile,
+  getApiErrorMessage,
+  getAuthPermissions,
+  getAuthUserId,
+} from "@/features/auth/utils/authUser";
 
 type AuthResult = { ok: boolean; message?: string; redirectTo?: string };
 type AuthAction = "login" | "logout" | null;
 
 type AuthContextType = {
   user: AuthUser | null;
-  profile: any | null;
+  profile: AuthProfile | null;
   isAuthenticated: boolean;
   ready: boolean;
   login: (
@@ -37,10 +49,10 @@ type AuthContextType = {
     currentPassword: string,
     newPassword: string
   ) => Promise<AuthResult>;
-  loadProfile: (userId?: number) => Promise<any | null>;
-  refreshProfile: () => Promise<any | null>;
+  loadProfile: (userId?: number) => Promise<AuthProfile | null>;
+  refreshProfile: () => Promise<AuthProfile | null>;
   refreshBasicUserData: (userId?: number) => Promise<void>;
-  updateProfile: (data: any) => Promise<AuthResult>;
+  updateProfile: (data: RegisterPayload | Partial<AuthProfile>) => Promise<AuthResult>;
   register: (data: RegisterPayload) => Promise<AuthResult>;
   allowedModules: string[];
   lastAuthAction: AuthAction;
@@ -51,7 +63,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [profile, setProfile] = useState<any | null>(null);
+  const [profile, setProfile] = useState<AuthProfile | null>(null);
   const [ready, setReady] = useState(false);
   const [lastAuthAction, setLastAuthAction] = useState<AuthAction>(null);
 
@@ -73,8 +85,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const loadProfile = useCallback(
-    async (userId?: number): Promise<any | null> => {
-      const id = userId ?? (userRef.current as any)?.userid;
+    async (userId?: number): Promise<AuthProfile | null> => {
+      const id = userId ?? getAuthUserId(userRef.current);
       if (!id) {
         setProfile(null);
         return null;
@@ -82,7 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       try {
         const res = await api.get(`/users/${id}`);
-        const payload = res.data?.data ?? res.data;
+        const payload = (res.data?.data ?? res.data) as AuthProfile;
         setProfile(payload);
         return payload;
       } catch {
@@ -94,14 +106,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const refreshProfile = useCallback(async () => {
-    const id = (userRef.current as any)?.userid;
+    const id = getAuthUserId(userRef.current);
     if (!id) return null;
     return loadProfile(id);
   }, [loadProfile]);
 
   const refreshBasicUserData = useCallback(
     async (userId?: number) => {
-      const id = userId ?? (userRef.current as any)?.userid;
+      const id = userId ?? getAuthUserId(userRef.current);
       if (!id) return;
       await loadUser();
       await loadProfile(id);
@@ -123,7 +135,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const me = await loadUser();
-      if (me) await loadProfile((me as any)?.userid);
+      if (me) {
+        await loadProfile(getAuthUserId(me) ?? undefined);
+      }
 
       setReady(true);
     })();
@@ -142,26 +156,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const access = data?.access_token;
         const refresh = data?.refresh_token;
 
-        if (!access || !refresh)
-          return { ok: false, message: "Credenciales inválidas" };
+        if (!access || !refresh) {
+          return { ok: false, message: "Credenciales invalidas" };
+        }
 
         setTokens({ access_token: access, refresh_token: refresh });
 
         const me = await loadUser();
-        if (me) await loadProfile((me as any)?.userid);
+        if (me) {
+          await loadProfile(getAuthUserId(me) ?? undefined);
+        }
 
-        const perms: string[] = (me as any)?.permissions || [];
+        const perms = getAuthPermissions(me);
         const redirectTo =
           pickPostLoginRedirect(perms, nextPath) || "/dashboard";
 
         setLastAuthAction("login");
         setReady(true);
         return { ok: true, redirectTo };
-      } catch (err: any) {
+      } catch (err: unknown) {
         setReady(true);
         return {
           ok: false,
-          message: err?.response?.data?.message || "Correo o contraseña incorrectos",
+          message: getApiErrorMessage(err, "Correo o contrasena incorrectos"),
         };
       }
     },
@@ -180,47 +197,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setReady(true);
   }, []);
 
-  const changePassword: AuthContextType["changePassword"] = async (
-    currentPassword,
-    newPassword
-  ) => {
-    try {
-      await api.patch("/auth/change-password", {
-        currentPassword,
-        newPassword,
-        confirmNewPassword: newPassword,
-      });
-      await loadUser();
-      return { ok: true };
-    } catch (err: any) {
-      return {
-        ok: false,
-        message:
-          err?.response?.data?.message || "No se pudo actualizar la contraseña",
-      };
-    }
-  };
+  const changePassword = useCallback<AuthContextType["changePassword"]>(
+    async (currentPassword, newPassword) => {
+      try {
+        await api.patch("/auth/change-password", {
+          currentPassword,
+          newPassword,
+          confirmNewPassword: newPassword,
+        });
+        await loadUser();
+        return { ok: true };
+      } catch (err: unknown) {
+        return {
+          ok: false,
+          message: getApiErrorMessage(err, "No se pudo actualizar la contrasena"),
+        };
+      }
+    },
+    [loadUser]
+  );
 
   const updateProfile = useCallback(
-    async (data: any): Promise<AuthResult> => {
+    async (data: RegisterPayload | Partial<AuthProfile>): Promise<AuthResult> => {
       try {
-        const id = (userRef.current as any)?.userid;
+        const id = getAuthUserId(userRef.current);
         if (!id) return { ok: false, message: "Usuario no autenticado" };
 
         const res = await api.put(`/users/${id}`, data);
         const result = res.data;
 
-        if (result?.success === false)
+        if (result?.success === false) {
           return { ok: false, message: result.message };
+        }
 
         await loadUser();
         await loadProfile(id);
 
         return { ok: true };
-      } catch (err: any) {
+      } catch (err: unknown) {
         return {
           ok: false,
-          message: err?.response?.data?.message || "Error al actualizar",
+          message: getApiErrorMessage(err, "Error al actualizar"),
         };
       }
     },
@@ -231,13 +248,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async (data: RegisterPayload): Promise<AuthResult> => {
       try {
         const res = await api.post("/users", data);
-        if (res.data?.success === false)
+        if (res.data?.success === false) {
           return { ok: false, message: res.data.message };
+        }
         return { ok: true };
-      } catch (err: any) {
+      } catch (err: unknown) {
         return {
           ok: false,
-          message: err?.response?.data?.message || "No se pudo registrar",
+          message: getApiErrorMessage(err, "No se pudo registrar"),
         };
       }
     },
@@ -245,7 +263,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const allowedModules = useMemo(() => {
-    const perms: string[] = (user as any)?.permissions || [];
+    const perms = getAuthPermissions(user);
     if (!perms.length) return [];
     return getAllowedModulesFromPermissions(perms);
   }, [user]);
@@ -283,6 +301,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       register,
       allowedModules,
       lastAuthAction,
+      changePassword,
     ]
   );
 

@@ -7,7 +7,7 @@ export interface RoleErrors {
 
 export const validateRoleField = (
   field: keyof CreateRoleData,
-  value: any,
+  value: unknown,
   roles: Role[],
   excludeId?: number
 ): string | undefined => {
@@ -47,7 +47,7 @@ export const validateRoleForm = (
   fields.forEach((field) => {
     const error = validateRoleField(
       field as keyof CreateRoleData,
-      (data as any)[field],
+      data[field as keyof CreateRoleData],
       roles,
       excludeId
     );

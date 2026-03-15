@@ -1,6 +1,6 @@
 import { api } from "@/shared/utils/apiClient";
 import { showError } from "@/shared/utils/notifications";
-import { User, UsersPaginatedResult } from "../types/typesUser";
+import { User, UserPayload, UsersPaginatedResult } from "../types/typesUser";
 
 const RETRY_LIMIT = 2;
 
@@ -9,6 +9,18 @@ type GetUsersParams = {
   page?: number;
   limit?: number;
   search?: string;
+};
+
+type ApiErrorShape = {
+  name?: string;
+  code?: string;
+  message?: string;
+  response?: {
+    status?: number;
+    data?: {
+      message?: string;
+    };
+  };
 };
 
 // GET USERS (con retry, abort, validación de respuesta)
@@ -65,29 +77,33 @@ export const getUsers = async ({
       throw new Error(
         "Formato de respuesta de usuarios no reconocido por el cliente."
       );
-    } catch (error: any) {
-      if (error?.name === "CanceledError" || error?.code === "ERR_CANCELED") {
+    } catch (error: unknown) {
+      const apiError = error as ApiErrorShape;
+      if (apiError?.name === "CanceledError" || apiError?.code === "ERR_CANCELED") {
         return {
           data: [],
           meta: { page: page ?? 1, limit: limit ?? 5, total: 0, totalPages: 1 },
         };
       }
 
-      if (error?.code === "ECONNABORTED") {
+      if (apiError?.code === "ECONNABORTED") {
         attempt++;
         if (attempt > RETRY_LIMIT)
           throw new Error("La petición expiró. Intente nuevamente.");
         continue;
       }
 
-      if (!error.response) {
+      if (!apiError.response) {
         attempt++;
         if (attempt > RETRY_LIMIT)
           throw new Error("Error de red al intentar cargar usuarios.");
         continue;
       }
 
-      const status = error.response.status;
+      const status = apiError.response.status;
+      if (status == null) {
+        throw new Error("Respuesta inv\xE1lida del servidor al crear el usuario.");
+      }
 
       if (status >= 500)
         throw new Error("El servidor tuvo un problema. Intente más tarde.");
@@ -102,10 +118,10 @@ export const getUsers = async ({
       if (status === 401 || status === 403)
         throw new Error("No autorizado para consultar usuarios.");
 
-      throw new Error(
-        error.response?.data?.message ??
+        throw new Error(
+          apiError.response?.data?.message ??
           "No se pudo cargar el listado de usuarios."
-      );
+        );
     }
   }
 
@@ -128,7 +144,7 @@ export const getUserById = async (id: number) => {
 };
 
 // CREATE USER 
-export const createUser = async (user: any) => {
+export const createUser = async (user: UserPayload) => {
   try {
     if (!user.name?.trim()) {
       showError("El nombre es obligatorio.");
@@ -145,18 +161,19 @@ export const createUser = async (user: any) => {
     });
 
     return data;
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const apiError = error as ApiErrorShape;
     console.error("Error al crear usuario:", error);
 
-    const backendMsg = error?.response?.data?.message;
+    const backendMsg = apiError?.response?.data?.message;
     showError(backendMsg ?? "No se pudo crear el usuario.");
 
-    throw error;
+    throw apiError;
   }
 };
 
 // UPDATE USER (con retry)
-export const updateUser = async (id: number, user: any) => {
+export const updateUser = async (id: number, user: UserPayload) => {
   let attempt = 0;
 
   while (attempt <= RETRY_LIMIT) {
@@ -166,20 +183,21 @@ export const updateUser = async (id: number, user: any) => {
       });
 
       return data;
-    } catch (error: any) {
-      if (error.code === "ECONNABORTED") {
+    } catch (error: unknown) {
+      const apiError = error as ApiErrorShape;
+      if (apiError.code === "ECONNABORTED") {
         attempt++;
         if (attempt > RETRY_LIMIT)
           throw new Error("El servidor tardó demasiado. Intente nuevamente.");
         continue;
       }
 
-      const msg = error?.response?.data?.message;
+      const msg = apiError?.response?.data?.message;
 
       console.error("Error al actualizar usuario:", error);
       showError(msg ?? "No se pudo actualizar el usuario.");
 
-      throw error;
+      throw apiError;
     }
   }
 };
@@ -195,19 +213,23 @@ export const deleteUser = async (id: number) => {
       });
 
       return data;
-    } catch (error: any) {
-      if (!error.response) {
+    } catch (error: unknown) {
+      const apiError = error as ApiErrorShape;
+      if (!apiError.response) {
         attempt++;
         if (attempt > RETRY_LIMIT)
           throw new Error("Error de red al intentar eliminar usuario.");
         continue;
       }
 
-      const status = error.response.status;
+      const status = apiError.response.status;
+      if (status == null) {
+        throw new Error("Respuesta inv\xE1lida del servidor al actualizar el usuario.");
+      }
 
       if (status === 409 || status === 400) {
         throw new Error(
-          error.response.data?.message ??
+          apiError.response.data?.message ??
             "No se puede eliminar el usuario porque tiene registros asociados."
         );
       }
@@ -215,9 +237,9 @@ export const deleteUser = async (id: number) => {
       if (status >= 500)
         throw new Error("El servidor tuvo un error al eliminar el usuario.");
 
-      const msg = error.response.data?.message;
+      const msg = apiError.response.data?.message;
       showError(msg ?? "Error al eliminar el usuario.");
-      throw error;
+      throw apiError;
     }
   }
 };

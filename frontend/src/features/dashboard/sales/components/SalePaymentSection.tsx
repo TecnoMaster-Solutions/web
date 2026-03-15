@@ -2,9 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createSalePayment, getSalePayments } from "../services/sales.service";
-import { ISale, ISalesPayment } from "../types/sales.type";
+import { ISale, ISalesPayment } from "../types/Sales.type";
 import { showError, showSuccess, showWarning } from "@/shared/utils/notifications";
 import { resolveAssetUrl } from "../utils/assetUrl";
+
+type ApiErrorLike = {
+    response?: { data?: { message?: string } };
+    message?: string;
+};
 
 interface SalePaymentSectionProps {
     sale: ISale;
@@ -126,9 +131,14 @@ export default function SalePaymentSection({ sale, onSaleUpdated }: SalePaymentS
                     ? "Pago registrado. La venta quedó Pagada."
                     : "Pago registrado. La venta quedó Abonada."
             );
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const apiError = error as ApiErrorLike | null;
             console.error(error);
-            showError(error?.response?.data?.message ?? "No se pudo registrar el pago.");
+            showError(
+                apiError?.response?.data?.message ??
+                    apiError?.message ??
+                    "No se pudo registrar el pago."
+            );
         } finally {
             setSaving(false);
         }

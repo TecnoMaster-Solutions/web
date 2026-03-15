@@ -1,6 +1,17 @@
 import { api } from "@/lib/api";
 import { AxiosError } from "axios";
-import { ISale } from "../types/sales.type";
+import { ICustomer, IProduct, ISale } from "../types/Sales.type";
+
+type ApiErrorBody = {
+  message?: string;
+  error?: string;
+};
+
+const getAxiosMessage = (error: AxiosError<ApiErrorBody>, fallback: string) =>
+  error.response?.data?.message ??
+  error.response?.data?.error ??
+  error.message ??
+  fallback;
 
 export const getSales = async (signal?: AbortSignal): Promise<ISale[]> => {
   const { data } = await api.get<ISale[]>("/sales", {
@@ -10,20 +21,19 @@ export const getSales = async (signal?: AbortSignal): Promise<ISale[]> => {
   return data;
 };
 
-export const getCustomersForSale = async (): Promise<any[]> => {
+export const getCustomersForSale = async (): Promise<ICustomer[]> => {
   try {
-    const { data } = await api.get<any[]>("/customers", {
+    const { data } = await api.get<ICustomer[]>("/customers", {
       params: { includeRelations: true },
     });
     return data;
   } catch (error: unknown) {
     if (error instanceof AxiosError) {
       console.error("Error al obtener los clientes:", error.response?.data ?? error);
-      const message =
-        (error.response?.data as any)?.message ??
-        (error.response?.data as any)?.error ??
-        error.message ??
-        "No se pudo cargar el listado de clientes.";
+      const message = getAxiosMessage(
+        error as AxiosError<ApiErrorBody>,
+        "No se pudo cargar el listado de clientes."
+      );
       throw new Error(message);
     }
     console.error("Error al obtener los clientes:", error);
@@ -31,20 +41,19 @@ export const getCustomersForSale = async (): Promise<any[]> => {
   }
 };
 
-export const getProductsForSale = async (): Promise<any[]> => {
+export const getProductsForSale = async (): Promise<IProduct[]> => {
   try {
-    const { data } = await api.get<any[]>("/products", {
+    const { data } = await api.get<IProduct[]>("/products", {
       params: { status: "active" },
     });
     return data;
   } catch (error: unknown) {
     if (error instanceof AxiosError) {
       console.error("Error al obtener los productos:", error.response?.data ?? error);
-      const message =
-        (error.response?.data as any)?.message ??
-        (error.response?.data as any)?.error ??
-        error.message ??
-        "No se pudo cargar el listado de productos.";
+      const message = getAxiosMessage(
+        error as AxiosError<ApiErrorBody>,
+        "No se pudo cargar el listado de productos."
+      );
       throw new Error(message);
     }
     console.error("Error al obtener los productos:", error);
@@ -59,11 +68,10 @@ export const createSale = async (sale: Partial<ISale>) => {
   } catch (error: unknown) {
     if (error instanceof AxiosError) {
       console.error("Error al crear la venta:", error.response?.data ?? error);
-      const message =
-        (error.response?.data as any)?.message ??
-        (error.response?.data as any)?.error ??
-        error.message ??
-        "No se pudo crear la venta.";
+      const message = getAxiosMessage(
+        error as AxiosError<ApiErrorBody>,
+        "No se pudo crear la venta."
+      );
       throw new Error(message);
     }
     console.error("Error al crear la venta:", error);
@@ -80,11 +88,10 @@ export const cancelSale = async (id: number, observation: string) => {
   } catch (error: unknown) {
     if (error instanceof AxiosError) {
       console.error("Error al cancelar la venta:", error.response?.data ?? error);
-      const message =
-        (error.response?.data as any)?.message ??
-        (error.response?.data as any)?.error ??
-        error.message ??
-        "No se pudo cancelar la venta.";
+      const message = getAxiosMessage(
+        error as AxiosError<ApiErrorBody>,
+        "No se pudo cancelar la venta."
+      );
       throw new Error(message);
     }
     console.error("Error al cancelar la venta:", error);
@@ -99,11 +106,10 @@ export const completeSale = async (id: number) => {
   } catch (error: unknown) {
     if (error instanceof AxiosError) {
       console.error("Error al completar la venta:", error.response?.data ?? error);
-      const message =
-        (error.response?.data as any)?.message ??
-        (error.response?.data as any)?.error ??
-        error.message ??
-        "No se pudo completar la venta.";
+      const message = getAxiosMessage(
+        error as AxiosError<ApiErrorBody>,
+        "No se pudo completar la venta."
+      );
       throw new Error(message);
     }
     console.error("Error al completar la venta:", error);

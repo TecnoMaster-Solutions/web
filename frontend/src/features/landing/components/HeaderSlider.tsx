@@ -1,24 +1,23 @@
 import Image from "next/image";
 import React, { useEffect, useState } from "react";
 
-const HeaderSlider = () => {
-  const images = [
-    "/assets/imgs/HomeSlider1.webp",
-    "/assets/imgs/HomeSlider2.webp",
-  ];
+const HEADER_IMAGES = [
+  "/assets/imgs/HomeSlider1.webp",
+  "/assets/imgs/HomeSlider2.webp",
+];
+const HEADER_TEXT = "Bienvenido a TecnoMaster";
 
+const HeaderSlider = () => {
   const [current, setCurrent] = useState(0);
 
-  // Texto animado
-  const fullText = "Bienvenido a TecnoMaster";
   const [displayedText, setDisplayedText] = useState("");
 
   useEffect(() => {
     let index = 0;
     const interval = setInterval(() => {
-      setDisplayedText(fullText.slice(0, index + 1));
+      setDisplayedText(HEADER_TEXT.slice(0, index + 1));
       index++;
-      if (index === fullText.length) {
+      if (index === HEADER_TEXT.length) {
         clearInterval(interval);
       }
     }, 100); // velocidad de escritura (100ms por letra)
@@ -29,7 +28,7 @@ const HeaderSlider = () => {
   // Cambiar imagen cada 5 segundos
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrent((prev) => (prev + 1) % images.length);
+      setCurrent((prev) => (prev + 1) % HEADER_IMAGES.length);
     }, 5000);
     return () => clearInterval(interval);
   }, []);
@@ -38,7 +37,7 @@ const HeaderSlider = () => {
     <div className="relative w-full h-[900px] overflow-hidden">
       {/* Imagen */}
       <Image
-        src={images[current]}
+        src={HEADER_IMAGES[current]}
         alt="Home slider"
         fill
         priority
@@ -66,7 +65,7 @@ const HeaderSlider = () => {
       {/* Flecha izquierda */}
       <button
         onClick={() =>
-          setCurrent((prev) => (prev === 0 ? images.length - 1 : prev - 1))
+          setCurrent((prev) => (prev === 0 ? HEADER_IMAGES.length - 1 : prev - 1))
         }
         className="cursor-pointer absolute left-4 top-1/2 -translate-y-1/2 z-30 text-white/70 hover:text-white text-6xl md:text-8xl font-bold hover:scale-110 transition-all duration-300"
       >
@@ -75,7 +74,7 @@ const HeaderSlider = () => {
 
       {/* Flecha derecha */}
       <button
-        onClick={() => setCurrent((prev) => (prev + 1) % images.length)}
+        onClick={() => setCurrent((prev) => (prev + 1) % HEADER_IMAGES.length)}
         className="cursor-pointer absolute right-4 top-1/2 -translate-y-1/2 z-30 text-white/70 hover:text-white text-6xl md:text-8xl font-bold hover:scale-110 transition-all duration-300"
       >
         ›
@@ -83,7 +82,7 @@ const HeaderSlider = () => {
 
       {/* Indicadores */}
       <div className="absolute bottom-6 w-full z-30 flex justify-center gap-3">
-        {images.map((_, index) => (
+        {HEADER_IMAGES.map((_, index) => (
           <div
             key={index}
             className={`w-3 h-3 rounded-full cursor-pointer ${index === current ? "bg-white" : "bg-gray-500"

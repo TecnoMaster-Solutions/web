@@ -3,16 +3,26 @@
 import { useState, useEffect } from "react";
 import { apiClient } from "@/shared/utils/apiClient";
 import { showSuccess, showError } from "@/shared/utils/notifications";
+import type { IService } from "../types/Sales.type";
+
+type ServiceTypeOption = {
+    typeofserviceid: number;
+    name: string;
+};
+
+type ApiErrorLike = {
+    message?: string;
+};
 
 
 interface CreateServiceModalProps {
     onClose: () => void;
-    onSaved: (newService: any) => void;
+    onSaved: (newService: IService) => void;
 }
 
 export default function CreateServiceModal({ onClose, onSaved }: CreateServiceModalProps) {
     const [loading, setLoading] = useState(false);
-    const [types, setTypes] = useState<{ typeofserviceid: number; name: string }[]>([]);
+    const [types, setTypes] = useState<ServiceTypeOption[]>([]);
 
     // Form
     const [name, setName] = useState("");
@@ -27,7 +37,7 @@ export default function CreateServiceModal({ onClose, onSaved }: CreateServiceMo
 
     useEffect(() => {
         // Load Service Types
-        apiClient.get<any[]>("/services/types").then(data => {
+        apiClient.get<ServiceTypeOption[]>("/services/types").then(data => {
             setTypes(data);
         }).catch(err => console.error(err));
     }, []);
@@ -48,13 +58,14 @@ export default function CreateServiceModal({ onClose, onSaved }: CreateServiceMo
                 stateid: 1 // Active
             };
 
-            const newService = await apiClient.post("/services", payload);
+            const newService = await apiClient.post<IService>("/services", payload);
             showSuccess("Servicio creado correctamente");
             onSaved(newService);
             onClose();
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const error = err as ApiErrorLike | null;
             console.error(err);
-            showError(err.message || "Error al crear servicio");
+            showError(error?.message || "Error al crear servicio");
         } finally {
             setLoading(false);
         }

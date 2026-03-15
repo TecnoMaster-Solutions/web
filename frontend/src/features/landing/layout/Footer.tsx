@@ -1,7 +1,6 @@
 // components/layout/Footer.tsx
 
 "use client";
-import Image from "next/image";
 import Link from "next/link";
 import { routes } from "@/shared/routes";
 
