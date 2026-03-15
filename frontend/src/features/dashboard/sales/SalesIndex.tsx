@@ -347,6 +347,16 @@ export default function SalesIndex() {
     };
   }, [SEARCH_DEBOUNCE_MS, hasSalesRead, loadSalesPage, permissionsLoaded, search]);
 
+  useEffect(() => {
+    return () => {
+      if (searchDebounceRef.current) {
+        clearTimeout(searchDebounceRef.current);
+      }
+      pageAbortRef.current?.abort();
+      searchAbortRef.current?.abort();
+    };
+  }, []);
+
   const exportToExcel = async () => {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Ventas");

@@ -371,16 +371,6 @@ export function useClients() {
     }
   };
 
-  const loadClients = async () => {
-    const data = await getClients();
-    // Mapear tipoId desde el ClientUI (ya incluido en clients.api.ts)
-    const mapped: Client[] = data.map((c) => ({
-      ...c,
-      tipoId: (c as Client & { tipoId?: number }).tipoId ?? 0,
-    }));
-    setClients(mapped);
-  };
-
   const loadAllClients = useCallback(async () => {
     const data = await getClients();
     const mapped: Client[] = data.map((client) => ({
@@ -572,32 +562,7 @@ export function useClients() {
         showSuccess("Cliente actualizado correctamente.");
       });
 
-      setClients((prev) =>
-        prev.map((client) =>
-          client.id === form.id
-            ? {
-                ...client,
-                nombre: form.nombre.trim(),
-                apellido: form.apellido.trim(),
-                tipoId: Number(form.tipo),
-                tipo:
-                  {
-                    1: "CC",
-                    2: "TI",
-                    3: "CE",
-                    4: "PPN",
-                  }[Number(form.tipo)] ?? client.tipo,
-                documento: form.documento.trim(),
-                telefono: form.telefono.replace(/\D/g, ""),
-                correoElectronico: form.correoElectronico.trim(),
-                estado: form.estado,
-                ciudad: form.ciudad.trim(),
-                codigoPostal: form.codigoPostal.trim(),
-              }
-            : client
-        )
-      );
-      void loadClients();
+      await Promise.all([loadClientsPage(currentPage, search), loadAllClients()]);
     } catch {
       return;
     } finally {
@@ -925,4 +890,3 @@ export function useEditClientForm({
     handleSubmit,
   };
 }
-

@@ -299,13 +299,16 @@ export default function RegisterQuoteForm({ onSave }: Props) {
                   ? null
                   : String(product.productdescription),
               productpriceofsale: Number(
-                product.productpriceofsale ?? product.priceofsale ?? 0,
+                product.productpriceofsale ??
+                  product.priceofsale ??
+                  product.saleprice ??
+                  0,
               ),
               productstock: Number(product.productstock ?? product.stock ?? 0),
               isactive:
                 typeof product.isactive === "boolean"
                   ? product.isactive
-                  : true,
+                  : String(product.state ?? "").toLowerCase() !== "inactivo",
             } as ProductFromApi;
           })
           .filter(
