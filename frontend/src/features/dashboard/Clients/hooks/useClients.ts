@@ -371,60 +371,6 @@ export function useClients() {
     }
   };
 
-  const normalizeClientList = useCallback((list: Client[]): Client[] => {
-    return list.map((c) => ({
-      ...c,
-      tipoId: (c as Client & { tipoId?: number }).tipoId ?? 0,
-    }));
-  }, []);
-
-  const loadAllClients = useCallback(async () => {
-    const data = (await getClients()) as Client[];
-    setClients(normalizeClientList(data));
-  }, [normalizeClientList]);
-
-  const loadClientsPage = useCallback(
-    async (targetPage: number, searchText: string, signal?: AbortSignal) => {
-      const response = (await getClients({
-        page: targetPage,
-        limit: PAGE_SIZE,
-        search: searchText,
-        signal,
-      })) as ClientsPaginatedResult;
-
-      const list = Array.isArray(response?.data) ? response.data : [];
-      const meta = response?.meta;
-
-      setPagedClients(normalizeClientList(list));
-      setCurrentPage(Number(meta?.page ?? targetPage));
-      setTotalPages(Math.max(1, Number(meta?.totalPages ?? 1)));
-      return { list, meta };
-    },
-    [normalizeClientList],
-  );
-
-  useEffect(() => {
-    const load = async () => {
-      setInitialLoading(true);
-      setLoading(true);
-      try {
-        await Promise.all([loadClientsPage(1, ""), loadAllClients()]);
-      } catch (error: any) {
-        console.error("Error cargando clientes:", error);
-        const msg = error?.response?.data?.message || "No se pudieron cargar los clientes.";
-        showError(Array.isArray(msg) ? msg[0] : msg);
-      } finally {
-        setInitialLoading(false);
-        setLoading(false);
-      }
-    };
-
-    if (!hasFetchedRef.current) {
-      hasFetchedRef.current = true;
-      void load();
-    }
-  }, [loadAllClients, loadClientsPage]);
-
   const loadAllClients = useCallback(async () => {
     const data = await getClients();
     const mapped: Client[] = data.map((client) => ({
@@ -944,4 +890,3 @@ export function useEditClientForm({
     handleSubmit,
   };
 }
-
