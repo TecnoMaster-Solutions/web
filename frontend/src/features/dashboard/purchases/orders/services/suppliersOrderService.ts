@@ -89,7 +89,7 @@ export async function getPurchaseOrdersFromAPI(): Promise<purchaseOrder[]> {
         const mapped = rows.map((po) => {
             // Los items ahora vienen en la relación 'detalles' desde el backend
             let items: PurchaseOrderItem[] = [];
-            
+
             // Si hay detalles desde el backend, usarlos
             if (po.detalles && Array.isArray(po.detalles) && po.detalles.length > 0) {
                 items = po.detalles.map((detalle: any) => ({
@@ -129,7 +129,7 @@ export async function getPurchaseOrdersFromAPI(): Promise<purchaseOrder[]> {
             };
         });
 
-        return mapped;
+        return mapped.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
     } catch (error) {
         console.error("Error fetching purchase orders:", error);
         return [];
@@ -189,24 +189,24 @@ export async function sendPurchaseOrderNotification(
     // Determinar la URL base
     const { apiUrl, appUrl } = getPublicRuntimeConfig();
     let baseURL = "";
-    
+
     // Verificar si estamos en el navegador (client-side)
     if (typeof window !== "undefined" && window.location) {
         baseURL = window.location.origin;
     } else {
         baseURL = appUrl;
     }
-    
+
     // Determinar si usamos el API route de Next.js o el backend externo
     // Si la URL base contiene :3000, estamos en el frontend de Next.js y usamos el API route interno
     // Si la URL base contiene :3001, usamos el backend externo
     const isNextJS = baseURL.includes(":3000");
-    
+
     // Intentar primero con el endpoint del API route de Next.js
     let url = `${baseURL}/api/purchase-orders/send-notification`;
-    
+
     console.log("Notification URL (primary):", url);
-    
+
     try {
         const response = await fetch(url, {
             method: "POST",
@@ -215,18 +215,18 @@ export async function sendPurchaseOrderNotification(
             },
             body: JSON.stringify(payload),
         });
-        
+
         if (response.ok) {
             const result = await response.json();
             return result;
         }
-        
+
         // Si falla con 404, intentar con el backend externo
         if (response.status === 404) {
             console.log("Primary URL failed, trying external backend...");
             url = `${apiUrl}/purchase-orders/send-notification`;
             console.log("Notification URL (fallback):", url);
-            
+
             const fallbackResponse = await fetch(url, {
                 method: "POST",
                 headers: {
@@ -234,13 +234,13 @@ export async function sendPurchaseOrderNotification(
                 },
                 body: JSON.stringify(payload),
             });
-            
+
             if (fallbackResponse.ok) {
                 const result = await fallbackResponse.json();
                 return result;
             }
         }
-        
+
         throw new Error(`HTTP error! status: ${response.status}`);
     } catch (error) {
         console.error("Error sending notification:", error);

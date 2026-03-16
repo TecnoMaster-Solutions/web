@@ -111,6 +111,7 @@ type GetClientsParams = {
   page?: number;
   limit?: number;
   search?: string;
+  order?: "ASC" | "DESC";
 };
 
 const EMPTY_PAGINATION = {
@@ -127,6 +128,7 @@ export async function getClients({
   page,
   limit,
   search,
+  order = "DESC",
 }: GetClientsParams = {}): Promise<ClientUI[] | ClientsPaginatedResult> {
   const shouldPaginate = Number.isInteger(page) && Number.isInteger(limit);
 
@@ -136,6 +138,7 @@ export async function getClients({
     >("/customers", {
       params: {
         includeRelations: true,
+        order: order,
         ...(shouldPaginate ? { page, limit } : {}),
         ...(search?.trim() ? { search: search.trim() } : {}),
       },
@@ -175,28 +178,28 @@ export async function getClients({
     if (error?.name === "CanceledError" || error?.code === "ERR_CANCELED") {
       return shouldPaginate
         ? {
-            data: [],
-            meta: {
-              page: page ?? EMPTY_PAGINATION.page,
-              limit: limit ?? EMPTY_PAGINATION.limit,
-              total: EMPTY_PAGINATION.total,
-              totalPages: EMPTY_PAGINATION.totalPages,
-            },
-          }
+          data: [],
+          meta: {
+            page: page ?? EMPTY_PAGINATION.page,
+            limit: limit ?? EMPTY_PAGINATION.limit,
+            total: EMPTY_PAGINATION.total,
+            totalPages: EMPTY_PAGINATION.totalPages,
+          },
+        }
         : [];
     }
 
     if (error?.response?.status === 404) {
       return shouldPaginate
         ? {
-            data: [],
-            meta: {
-              page: page ?? EMPTY_PAGINATION.page,
-              limit: limit ?? EMPTY_PAGINATION.limit,
-              total: EMPTY_PAGINATION.total,
-              totalPages: EMPTY_PAGINATION.totalPages,
-            },
-          }
+          data: [],
+          meta: {
+            page: page ?? EMPTY_PAGINATION.page,
+            limit: limit ?? EMPTY_PAGINATION.limit,
+            total: EMPTY_PAGINATION.total,
+            totalPages: EMPTY_PAGINATION.totalPages,
+          },
+        }
         : [];
     }
 

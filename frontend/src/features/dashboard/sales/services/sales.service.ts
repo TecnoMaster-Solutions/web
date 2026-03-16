@@ -32,29 +32,38 @@ type CustomerApi = {
     } | null;
 };
 
-function unwrapList<T>(payload: any): T[] {
-    const data =
-        payload && typeof payload === "object" && "data" in payload
-            ? (payload as any).data
-            : payload;
-    return Array.isArray(data) ? (data as T[]) : [];
+type ApiResponsePayload<T> = {
+    data?: T;
+    meta?: {
+        page?: number;
+        limit?: number;
+        total?: number;
+        totalPages?: number;
+    };
+};
+
+function unwrapList<T>(payload: ApiResponsePayload<T> | T[] | unknown): T[] {
+    if (Array.isArray(payload)) return payload as T[];
+    const data = (payload as ApiResponsePayload<T>)?.data;
+    return Array.isArray(data) ? data : [];
 }
 
 function asPaginatedList<T>(
-    payload: any
+    payload: ApiResponsePayload<T> | unknown
 ): { data: T[]; meta: { page: number; limit: number; total: number; totalPages: number } } | null {
-    if (!payload || typeof payload !== "object") return null;
-    if (!Array.isArray(payload.data) || !payload.meta || typeof payload.meta !== "object") {
+    if (!payload || typeof payload !== 'object') return null;
+    const p = payload as ApiResponsePayload<T>;
+    if (!Array.isArray(p.data) || !p.meta || typeof p.meta !== 'object') {
         return null;
     }
 
     return {
-        data: payload.data as T[],
+        data: p.data as T[],
         meta: {
-            page: Number(payload.meta.page ?? 1),
-            limit: Number(payload.meta.limit ?? 5),
-            total: Number(payload.meta.total ?? 0),
-            totalPages: Number(payload.meta.totalPages ?? 1),
+            page: Number(p.meta.page ?? 1),
+            limit: Number(p.meta.limit ?? 5),
+            total: Number(p.meta.total ?? 0),
+            totalPages: Number(p.meta.totalPages ?? 1),
         },
     };
 }
@@ -102,6 +111,7 @@ export async function getSales({
     const shouldPaginate = Number.isInteger(page) && Number.isInteger(limit);
     const response = await apiClient.get<any>("/sales", {
         params: {
+            order: "DESC",
             ...(shouldPaginate ? { page, limit } : {}),
             ...(search?.trim() ? { search: search.trim() } : {}),
         },

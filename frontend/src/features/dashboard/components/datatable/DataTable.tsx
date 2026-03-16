@@ -105,12 +105,15 @@ const DataTableComponent = <T extends { [key: string]: any }>(
   const { canView, canCreate, canUpdate, canDelete } = usePermissions();
 
   const [q, setQ] = useState("");
-  const [serverSearchInput, setServerSearchInput] = useState(
-    serverSearch?.value ?? ""
-  );
+  const [searchInput, setSearchInput] = useState("");
   const initialPageSize = Math.max(1, Number(defaultPageSize || 8));
   const [pageSizeOption, setPageSizeOption] = useState<string | number>(initialPageSize);
   const [pageSize, setPageSize] = useState<number>(initialPageSize);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setQ(searchInput), 300);
+    return () => window.clearTimeout(timer);
+  }, [searchInput]);
   const [page, setPage] = useState(1);
   const [scrollTop, setScrollTop] = useState(0);
   const [animateCells, setAnimateCells] = useState(true);
@@ -157,22 +160,7 @@ const DataTableComponent = <T extends { [key: string]: any }>(
     setPageSizeOption(nextLimit);
   }, [defaultPageSize, isServerPagination, serverPagination]);
 
-  useEffect(() => {
-    if (!isServerSearch) return;
-    setServerSearchInput(serverSearch?.value ?? "");
-  }, [isServerSearch, serverSearch?.value]);
 
-  useEffect(() => {
-    if (!isServerSearch || !serverSearch) return;
-    const normalizedValue = serverSearch.value ?? "";
-    if (serverSearchInput === normalizedValue) return;
-
-    const timer = window.setTimeout(() => {
-      serverSearch.onChange(serverSearchInput);
-    }, SERVER_SEARCH_DEBOUNCE_MS);
-
-    return () => window.clearTimeout(timer);
-  }, [isServerSearch, serverSearch, serverSearchInput]);
 
   useEffect(() => {
     if (loading) {
@@ -267,8 +255,8 @@ const DataTableComponent = <T extends { [key: string]: any }>(
           stateName === "approved"
             ? "aprobado"
             : stateName === "revoke"
-            ? "anulado"
-            : stateName;
+              ? "anulado"
+              : stateName;
 
         return estadoTokens(mapped).concat([mapped]).map(normalizeText);
       }
@@ -308,9 +296,6 @@ const DataTableComponent = <T extends { [key: string]: any }>(
     const term = normalizeText(q);
     if (!term) return data;
 
-    const tokens = term.split(/\s+/).filter(Boolean);
-    if (tokens.length === 0) return data;
-
     const isExactStatus = term === "activo" || term === "inactivo";
 
     const hasKey = (k: string) => searchableKeys.includes(k as any);
@@ -326,6 +311,9 @@ const DataTableComponent = <T extends { [key: string]: any }>(
       if (hasKey("statusSearch") && row?.statusSearch != null) return normalizeText(row.statusSearch);
       return "";
     };
+
+    const tokens = term.split(/\s+/).filter(Boolean);
+    if (tokens.length === 0) return data;
 
     return (Array.isArray(data) ? data : []).filter((row) => {
       if (isExactStatus) {
@@ -612,14 +600,14 @@ const DataTableComponent = <T extends { [key: string]: any }>(
             <div className="relative flex-1">
               <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
               <input
-                value={isServerSearch ? serverSearchInput : q}
+                value={isServerSearch ? (serverSearch?.value ?? "") : searchInput}
                 onChange={(e) => {
                   const nextValue = e.target.value;
                   setAnimateCells(true);
                   if (isServerSearch && serverSearch) {
-                    setServerSearchInput(nextValue);
+                    serverSearch.onChange(nextValue);
                   } else {
-                    setQ(nextValue);
+                    setSearchInput(nextValue);
                     if (isServerPagination && serverPagination) {
                       serverPagination.onPageChange(1);
                     } else {
@@ -632,23 +620,23 @@ const DataTableComponent = <T extends { [key: string]: any }>(
               />
             </div>
 
-             {showPageSizeSelector && (
-               <div className="ml-2 flex items-center gap-2">
-                 <span className="text-sm text-[#506176]">Mostrar</span>
-                 <div className="relative">
-                   <select
-                     value={pageSizeOption}
-                     onChange={(e) => {
-                       const num = Number(e.target.value);
-                       setAnimateCells(true);
-                       setPageSizeOption(num);
-                       setPageSize(num);
-                       if (isServerPagination && serverPagination) {
-                         serverPagination.onPageSizeChange(num);
-                         return;
-                       }
-                       setPage(1);
-                     }}
+            {showPageSizeSelector && (
+              <div className="ml-2 flex items-center gap-2">
+                <span className="text-sm text-[#506176]">Mostrar</span>
+                <div className="relative">
+                  <select
+                    value={pageSizeOption}
+                    onChange={(e) => {
+                      const num = Number(e.target.value);
+                      setAnimateCells(true);
+                      setPageSizeOption(num);
+                      setPageSize(num);
+                      if (isServerPagination && serverPagination) {
+                        serverPagination.onPageSizeChange(num);
+                        return;
+                      }
+                      setPage(1);
+                    }}
                     className="h-10 w-16 appearance-none rounded-lg bg-white pl-3 pr-7 text-sm text-[#172B4D] border border-gray-200 transition-colors hover:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-500"
                   >
                     <option value={5}>5</option>

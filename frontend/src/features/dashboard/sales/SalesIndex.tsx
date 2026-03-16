@@ -110,8 +110,8 @@ function isGatewayPaymentMethod(method?: string | null) {
 }
 
 export default function SalesIndex() {
-  const PAGE_SIZE = 5;
-  const SEARCH_DEBOUNCE_MS = 350;
+  const [pageSize, setPageSize] = useState(5);
+  const SEARCH_DEBOUNCE_MS = 300;
 
   const router = useRouter();
   const { user, profile } = useAuth();
@@ -134,6 +134,11 @@ export default function SalesIndex() {
   const pageAbortRef = useRef<AbortController | null>(null);
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchAbortRef = useRef<AbortController | null>(null);
+  const pageSizeRef = useRef(pageSize);
+
+  useEffect(() => {
+    pageSizeRef.current = pageSize;
+  }, [pageSize]);
 
   const authRole = normalizeRoleName(
     (user as any)?.rolename ??
@@ -211,10 +216,11 @@ export default function SalesIndex() {
   );
 
   const loadSalesPage = useCallback(
-    async (targetPage: number, searchText: string, signal?: AbortSignal) => {
+    async (targetPage: number, searchText: string, signal?: AbortSignal, limitOverride?: number) => {
+      const effectiveLimit = limitOverride ?? pageSizeRef.current;
       const response = (await getSales({
         page: targetPage,
-        limit: PAGE_SIZE,
+        limit: effectiveLimit,
         search: searchText,
         signal,
       })) as ISalesPaginatedResult;
@@ -222,18 +228,88 @@ export default function SalesIndex() {
       const list = Array.isArray(response?.data) ? response.data : [];
       const meta = response?.meta;
 
-      setSales(mapSalesToRows(list));
+      const rows = mapSalesToRows(list);
+      // Ordenar por ID descendente como respaldo
+      rows.sort((a, b) => b.id - a.id);
+      setSales(rows);
       setCurrentPage(Number(meta?.page ?? targetPage));
       setTotalPages(Math.max(1, Number(meta?.totalPages ?? 1)));
 
       return { list, meta };
     },
-    [PAGE_SIZE, mapSalesToRows]
+    [mapSalesToRows] // sin pageSize — se usa pageSizeRef
   );
 
   const closePaymentModal = useCallback(() => {
     setPaymentSaleId(null);
   }, []);
+
+  const handlePageChange = useCallback(
+    async (nextPage: number) => {
+      pageAbortRef.current?.abort();
+      const controller = new AbortController();
+      pageAbortRef.current = controller;
+
+      setLoading(true);
+      try {
+        await loadSalesPage(nextPage, search, controller.signal);
+      } catch (error: any) {
+        if (error?.name === "CanceledError" || controller.signal.aborted) return;
+        console.error("Error cambiando pagina de ventas:", error);
+        showError("Error al cargar la pagina de ventas.");
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    },
+    [loadSalesPage, search]
+  );
+
+  const handlePageSizeChange = useCallback(
+    async (limit: number) => {
+      setPageSize(limit);
+      pageAbortRef.current?.abort();
+      const controller = new AbortController();
+      pageAbortRef.current = controller;
+
+      setLoading(true);
+      try {
+        await loadSalesPage(1, search, controller.signal, limit);
+      } catch (error: any) {
+        if (error?.name === "CanceledError" || controller.signal.aborted) return;
+        console.error("Error cambiando tamano de pagina de ventas:", error);
+        showError("Error al cargar la pagina de ventas.");
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    },
+    [loadSalesPage, search]
+  );
+
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      setSearch(value);
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+      pageAbortRef.current?.abort();
+      searchAbortRef.current?.abort();
+
+      const controller = new AbortController();
+      searchAbortRef.current = controller;
+
+      searchDebounceRef.current = setTimeout(async () => {
+        setLoading(true);
+        try {
+          await loadSalesPage(1, value, controller.signal);
+        } catch (error: any) {
+          if (error?.name === "CanceledError" || controller.signal.aborted) return;
+          console.error("Error buscando ventas:", error);
+          showError("Error al buscar ventas.");
+        } finally {
+          if (!controller.signal.aborted) setLoading(false);
+        }
+      }, SEARCH_DEBOUNCE_MS);
+    },
+    [loadSalesPage]
+  );
 
   useEffect(() => {
     if (!permissionsLoaded) return;
@@ -351,7 +427,6 @@ export default function SalesIndex() {
     {
       key: "id",
       header: "ID",
-      header: "ID",
       render: (row) => row.id.toString(),
     },
     { key: "codigo", header: "Codigo Venta" },
@@ -435,13 +510,14 @@ export default function SalesIndex() {
         <DataTable<SaleRow>
           data={sales}
           columns={columns}
-          searchableKeys={["codigo", "cliente", "estado", "estadoPago"]}
-          pageSize={PAGE_SIZE}
-          showPageSizeSelector={false}
+          searchableKeys={["id", "codigo", "cliente", "fecha", "total", "estado", "estadoPago"]}
+          pageSize={pageSize}
           serverPagination={{
             page: currentPage,
+            limit: pageSize,
             totalPages,
             onPageChange: handlePageChange,
+            onPageSizeChange: handlePageSizeChange,
           }}
           serverSearch={{
             value: search,

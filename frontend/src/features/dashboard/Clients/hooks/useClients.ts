@@ -19,7 +19,9 @@ import {
 
 import { showSuccess, showError } from "@/shared/utils/notifications";
 
-const MIN_LOADER_MS = 450;
+import { fieldValidators } from "../validations/clientsValidations";
+
+const MIN_LOADER_MS = 200;
 
 // ── Mapa de estados
 const stateMap: Record<string, number> = {
@@ -296,8 +298,8 @@ function validateEditClientForm(
 // =====================================================
 
 export function useClients() {
-  const PAGE_SIZE = 5;
-  const SEARCH_DEBOUNCE_MS = 350;
+  const [pageSize, setPageSize] = useState(5);
+  const SEARCH_DEBOUNCE_MS = 300;
 
   const [clients, setClients] = useState<Client[]>([]);
   const [pagedClients, setPagedClients] = useState<Client[]>([]);
@@ -316,6 +318,12 @@ export function useClients() {
   const searchAbortRef = useRef<AbortController | null>(null);
   const busyRef = useRef(false);
   const startRef = useRef(0);
+  const pageSizeRef = useRef(pageSize);
+
+  // Mantener el ref sincronizado con el state
+  useEffect(() => {
+    pageSizeRef.current = pageSize;
+  }, [pageSize]);
 
   const startLoading = () => {
     busyRef.current = true;
@@ -353,17 +361,55 @@ export function useClients() {
     }
   };
 
-  const loadClients = async () => {
+  const loadClientsPage = useCallback(
+    async (page: number, searchTerm = "", signal?: AbortSignal, limitOverride?: number) => {
+      const effectiveLimit = limitOverride ?? pageSizeRef.current;
+      const result = await getClients({ page, limit: effectiveLimit, search: searchTerm, signal });
+      let list: Client[] = [];
+      let totalP = 1;
+
+      if (result && "meta" in result && "data" in result) {
+        list = result.data.map((c) => ({
+          ...c,
+          tipoId: (c as Client & { tipoId?: number }).tipoId ?? 0,
+        })) as unknown as Client[];
+        totalP = result.meta.totalPages;
+        setCurrentPage(result.meta.page);
+      } else if (Array.isArray(result)) {
+        list = result.map((c) => ({
+          ...c,
+          tipoId: (c as Client & { tipoId?: number }).tipoId ?? 0,
+        })) as unknown as Client[];
+      }
+
+      // Ordenar por ID descendente como respaldo
+      list.sort((a, b) => b.id - a.id);
+
+      setPagedClients(list);
+      setTotalPages(totalP);
+      return { list };
+    },
+    [] // sin dependencia de pageSize — se usa pageSizeRef
+  );
+
+  const loadAllClients = useCallback(async () => {
     const data = await getClients();
-    // Mapear tipoId desde el ClientUI (ya incluido en clients.api.ts)
-    const mapped: Client[] = data.map((c) => ({
+    const list = data.map((c) => ({
       ...c,
       tipoId: (c as Client & { tipoId?: number }).tipoId ?? 0,
-    }));
-    setClients(mapped);
-  };
+    })) as unknown as Client[];
+    setClients(list);
+  }, []);
 
   useEffect(() => {
+    if (!hasFetchedRef.current) {
+      hasFetchedRef.current = true;
+      setInitialLoading(true);
+      Promise.all([loadAllClients(), loadClientsPage(1, "")]).finally(() => {
+        setInitialLoading(false);
+      });
+    }
+
     return () => {
       if (searchDebounceRef.current) {
         clearTimeout(searchDebounceRef.current);
@@ -371,7 +417,7 @@ export function useClients() {
       pageAbortRef.current?.abort();
       searchAbortRef.current?.abort();
     };
-  }, []);
+  }, [loadAllClients, loadClientsPage]);
 
   const handlePageChange = useCallback(
     async (nextPage: number) => {
@@ -398,6 +444,34 @@ export function useClients() {
       }
     },
     [loadClientsPage, search],
+  );
+
+  const handlePageSizeChange = useCallback(
+    async (limit: number) => {
+      setPageSize(limit);
+      pageAbortRef.current?.abort();
+      const controller = new AbortController();
+      pageAbortRef.current = controller;
+
+      setLoading(true);
+      try {
+        await loadClientsPage(1, search, controller.signal, limit);
+      } catch (error: any) {
+        if (
+          error?.name === "CanceledError" ||
+          error?.code === "ERR_CANCELED" ||
+          controller.signal.aborted
+        ) {
+          return;
+        }
+        console.error("Error al cambiar tamaño de pagina en clientes:", error);
+        const msg = error?.response?.data?.message || "No se pudo cargar la pagina de clientes.";
+        showError(Array.isArray(msg) ? msg[0] : msg);
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    },
+    [loadClientsPage, search]
   );
 
   const handleSearchChange = useCallback(
@@ -492,28 +566,28 @@ export function useClients() {
         prev.map((client) =>
           client.id === form.id
             ? {
-                ...client,
-                nombre: form.nombre.trim(),
-                apellido: form.apellido.trim(),
-                tipoId: Number(form.tipo),
-                tipo:
-                  {
-                    1: "CC",
-                    2: "TI",
-                    3: "CE",
-                    4: "PPN",
-                  }[Number(form.tipo)] ?? client.tipo,
-                documento: form.documento.trim(),
-                telefono: form.telefono.replace(/\D/g, ""),
-                correoElectronico: form.correoElectronico.trim(),
-                estado: form.estado,
-                ciudad: form.ciudad.trim(),
-                codigoPostal: form.codigoPostal.trim(),
-              }
+              ...client,
+              nombre: form.nombre.trim(),
+              apellido: form.apellido.trim(),
+              tipoId: Number(form.tipo),
+              tipo:
+                {
+                  1: "CC",
+                  2: "TI",
+                  3: "CE",
+                  4: "PPN",
+                }[Number(form.tipo)] ?? client.tipo,
+              documento: form.documento.trim(),
+              telefono: form.telefono.replace(/\D/g, ""),
+              correoElectronico: form.correoElectronico.trim(),
+              estado: form.estado,
+              ciudad: form.ciudad.trim(),
+              codigoPostal: form.codigoPostal.trim(),
+            }
             : client
         )
       );
-      void loadClients();
+      void loadAllClients();
     } catch {
       return;
     } finally {
@@ -590,7 +664,7 @@ export function useClients() {
     loading,
     currentPage,
     totalPages,
-    pageSize: PAGE_SIZE,
+    pageSize,
     search,
     isCreateModalOpen,
     setIsCreateModalOpen,
@@ -601,6 +675,7 @@ export function useClients() {
     handleDeleteClient,
     handlePageChange,
     handleSearchChange,
+    handlePageSizeChange,
     handleView,
     handleEdit,
     closeModals,

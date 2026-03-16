@@ -217,3 +217,15 @@ export interface ISalesPaginatedResult {
     data: ISale[];
     meta: ISalesPaginationMeta;
 }
+
+export enum SaleStatus {
+    PENDING   = 'Pending',
+    COMPLETED = 'Completed',
+    CANCELLED = 'Cancelled',
+}
+
+export enum PaymentStatus {
+    PENDING = 'Partial',
+    PARTIAL = 'Abonada',
+    PAID    = 'Pagada',
+}

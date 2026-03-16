@@ -53,17 +53,13 @@ export const ViewPurchaseOrderPage: React.FC<ViewPurchaseOrderPageProps> = ({
       maximumFractionDigits: 0,
     }).format(value);
 
-  const getStateColor = (estado: string) => {
-    switch (estado) {
-      case "Pendiente":
-        return Colors.states.warning;
-      case "Pendiente":
-        return Colors.states.error;
-      case "Pendiente":
-        return Colors.states.info;
-      default:
-        return Colors.states.inactive;
-    }
+  const getOrderStatusLabel = (estado: string): string => {
+    const labels: Record<string, string> = {
+      Pending: 'Pendiente',
+      Completed: 'Finalizado',
+      Cancelled: 'Anulada',
+    };
+    return labels[estado] ?? 'Desconocido';
   };
 
   return (
@@ -95,13 +91,19 @@ export const ViewPurchaseOrderPage: React.FC<ViewPurchaseOrderPageProps> = ({
                 <span
                   className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
                   style={{
-                    color: getStateColor(purchaseOrder.estado),
-                    backgroundColor: `${getStateColor(
-                      purchaseOrder.estado
-                    )}20`
+                    color: getOrderStatusLabel(purchaseOrder.estado) === 'Pendiente' 
+                      ? Colors.states.warning 
+                      : getOrderStatusLabel(purchaseOrder.estado) === 'Anulada'
+                        ? Colors.states.error
+                        : Colors.states.success,
+                    backgroundColor: getOrderStatusLabel(purchaseOrder.estado) === 'Pendiente'
+                      ? `${Colors.states.warning}20`
+                      : getOrderStatusLabel(purchaseOrder.estado) === 'Anulada'
+                        ? `${Colors.states.error}20`
+                        : `${Colors.states.success}20`
                   }}
                 >
-                  {purchaseOrder.estado}
+                  {getOrderStatusLabel(purchaseOrder.estado)}
                 </span>
               </div>
             </div>

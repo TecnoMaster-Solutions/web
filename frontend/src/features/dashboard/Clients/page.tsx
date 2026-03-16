@@ -40,6 +40,7 @@ export default function ClientsPage() {
     handleEditClient,
     handleDeleteClient,
     handlePageChange,
+    handlePageSizeChange,
     handleSearchChange,
     handleView,
     handleEdit,
@@ -124,17 +125,20 @@ export default function ClientsPage() {
               data={pagedClients}
               columns={columns}
               pageSize={pageSize}
-              showPageSizeSelector={false}
               serverPagination={{
                 page: currentPage,
+                limit: pageSize,
                 totalPages,
                 onPageChange: handlePageChange,
+                onPageSizeChange: handlePageSizeChange,
               }}
               serverSearch={{
                 value: search,
                 onChange: handleSearchChange,
               }}
               searchableKeys={[
+                "id",
+                "tipo",
                 "nombre",
                 "apellido",
                 "documento",

@@ -52,6 +52,9 @@ export const ClientsTable: React.FC<ClientsTableProps> = ({
   ];
 
   return (
+    <div>
+    <h2>Clients</h2>
+
     <DataTable<Client>
       data={clients}
       columns={columns}
@@ -71,8 +74,9 @@ export const ClientsTable: React.FC<ClientsTableProps> = ({
       onCreate={onCreate}
       searchPlaceholder="Buscar clientes..."
       createButtonText="Crear Cliente"
-      module="clients"   // 🔥 AQUÍ ESTABA EL PROBLEMA
+      module="clients"
     />
+  </div>
   );
 };
 
