@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Swal from "sweetalert2";
 import RequireAuth from "@/features/auth/requireauth";
+import DownloadXLSXButton from "@/features/dashboard/components/DownloadXLSXButton";
 import { useAuth } from "@/features/auth/authcontext";
 import { usePermissions } from "@/features/auth/hooks/usePermissions";
 import { showError, showSuccess } from "@/shared/utils/notifications";
@@ -311,6 +312,25 @@ export default function ServiceRequestsClientsPage() {
   const canUpdateRequests = canUpdate(MODULE_KEY);
   const canCancelRequests = canDelete(MODULE_KEY) || has(MODULE_KEY, "deactivate");
   const canPrintRequests = canViewRequests || has(MODULE_KEY, "print");
+  const canExportRequests =
+    has(MODULE_KEY, "download_report") || has(MODULE_KEY, "export");
+
+  const xlsxRows = useMemo(() => {
+    return [...rows]
+      .sort((a, b) => b.id - a.id)
+      .map((row) => ({
+        Id: row.id,
+        Cliente: row.cliente,
+        Servicio: row.servicio,
+        Tipo: row.tipo,
+        Fecha: row.fecha,
+        Direccion: row.direccion,
+        Descripcion: row.descripcion,
+        Estado: row.estado,
+        Programada: row.programada ?? "",
+        "Programada Fin": row.programadaEnd ?? "",
+      }));
+  }, [rows]);
 
   function canMutateRow(row: Row) {
     return row.estadoKey !== "Anulada" && row.estadoKey !== "Finalizado";
@@ -457,6 +477,44 @@ export default function ServiceRequestsClientsPage() {
                 <option value={12}>12</option>
                 <option value={18}>18</option>
               </select>
+                {canExportRequests && (
+                  <div className="hidden">
+                    <DownloadXLSXButton
+                      id="download-excel-btn-service-requests-client"
+                      data={xlsxRows as unknown as Record<string, unknown>[]}
+                      fileName="reporte_solicitudes_cliente.xlsx"
+                      headers={[
+                        "Id",
+                        "Cliente",
+                        "Servicio",
+                        "Tipo",
+                        "Fecha",
+                        "Direccion",
+                        "Descripcion",
+                        "Estado",
+                        "Programada",
+                        "Programada Fin",
+                      ]}
+                      excludeKeys={[]}
+                    />
+                  </div>
+                )}
+                {canExportRequests && (
+                  <button
+                    onClick={() =>
+                      document
+                        .querySelector<HTMLButtonElement>(
+                          "#download-excel-btn-service-requests-client"
+                        )
+                        ?.click()
+                    }
+                    className="inline-flex h-10 items-center rounded-md bg-[#04652c] px-3 text-sm font-semibold text-white shadow-sm hover:opacity-90 whitespace-nowrap"
+                    disabled={busy}
+                    type="button"
+                  >
+                    Descargar Reporte
+                  </button>
+                )}
                 {canCreateRequests && (
                   <button
                     onClick={() => setOpenCreate(true)}

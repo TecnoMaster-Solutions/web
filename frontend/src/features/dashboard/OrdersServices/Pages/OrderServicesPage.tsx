@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Swal from "sweetalert2";
 import { ToastContainer } from "react-toastify";
 import RequireAuth from "@/features/auth/requireauth";
+import { usePermissions } from "@/features/auth/hooks/usePermissions";
 import Modal from "@/features/dashboard/components/Modal";
 import Colors from "@/shared/theme/colors";
 import { showError, showSuccess, showWarning } from "@/shared/utils/notifications";
@@ -598,6 +599,7 @@ export default function OrdersServicesIndexPage() {
   const bodyOverflowRef = useRef<string | null>(null);
   const cancelHandledRef = useRef(false);
   const { user, profile } = useAuth();
+  const { has } = usePermissions();
 
   const normalizedRole = useMemo(() => {
     const candidates = [
@@ -634,6 +636,8 @@ export default function OrdersServicesIndexPage() {
     if (!isTechnicianRole) return null;
     return extractAuthTechnicianId(user, profile);
   }, [isTechnicianRole, user, profile]);
+  const canExportOrders =
+    has(MODULE_KEY, "download_report") || has(MODULE_KEY, "export");
 
   const fetchParams = useMemo(
     () => ({
@@ -1291,6 +1295,7 @@ const extraActions = useCallback(
   );
 
   const rightActions = useMemo(() => {
+    if (!canExportOrders) return null;
     return (
       <button
         type="button"
@@ -1302,7 +1307,7 @@ const extraActions = useCallback(
         Descargar Reporte
       </button>
     );
-  }, [downloadReport, loading]);
+  }, [canExportOrders, downloadReport, loading]);
 
   return (
     <RequireAuth>
@@ -1430,6 +1435,5 @@ const extraActions = useCallback(
     </RequireAuth>
   );
 }
-
 
 

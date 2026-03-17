@@ -5,6 +5,7 @@ import Swal from "sweetalert2";
 import RequireAuth from "../../auth/requireauth";
 import { DataTable } from "../components/datatable/DataTable";
 import { Column } from "../components/datatable/types/column.types";
+import DownloadXLSXButton from "../components/DownloadXLSXButton";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { usePermissions } from "@/features/auth/hooks/usePermissions";
@@ -22,7 +23,7 @@ import { api } from "@/shared/utils/apiClient";
 
 import { QuoteTableRow } from "./types/Quote.type";
 import Colors from "@/shared/theme/colors";
-import { showError, showInfo, showSuccess, showWarning } from "@/shared/utils/notifications";
+import { showError, showSuccess, showWarning } from "@/shared/utils/notifications";
 
 type QuoteStatusConfig = {
   label: string;
@@ -581,6 +582,24 @@ export default function QuotesIndex() {
     },
   ];
 
+  const xlsxRows = useMemo(() => {
+    return [...quotesData]
+      .sort((a, b) => b.id - a.id)
+      .map((row) => ({
+        Id: row.id,
+        Solicitud: row.requestRef,
+        Cliente: row.client,
+        Tecnico: row.technician,
+        "Tipo de servicio": row.serviceType,
+        Items: row.itemsSummary,
+        Estado: normalizeQuoteStatus(row.status).label,
+        Fecha: row.creationDate
+          ? new Date(row.creationDate).toLocaleDateString("es-CO")
+          : "",
+        Total: row.amount ?? 0,
+      }));
+  }, [quotesData]);
+
   const handleApproveQuote = useCallback(async (row: QuoteTableRow) => {
     if (!canApproveQuotes) {
       showWarning("No tienes permisos para aprobar cotizaciones.");
@@ -753,18 +772,43 @@ export default function QuotesIndex() {
             onDelete={canDeleteQuotes ? handleRevokeQuote : undefined}
             rightActions={
               canExportQuotes ? (
-              <button
-                type="button"
-                className="relative cursor-pointer inline-flex h-9 items-center gap-2 overflow-hidden rounded-md px-4 text-sm font-semibold text-white transition-transform duration-200 hover:scale-105 group"
-                style={{ background: Colors.buttons.primary }}
-                onClick={() => showInfo("Conecta aquí la descarga del reporte.")}
-              >
-                <span className="absolute inset-0 bg-[#227a69] scale-x-0 origin-left transition-transform duration-300 ease-out group-hover:scale-x-100"></span>
-                <span className="relative z-10 flex items-center gap-2 group-hover:text-white transition-colors duration-300">
-                  <Image src="/icons/download.svg" alt="Descargar" width={16} height={16} />
-                  Descargar Reporte
-                </span>
-              </button>
+                <>
+                  <div className="hidden">
+                    <DownloadXLSXButton
+                      id="download-excel-btn-quotes"
+                      data={xlsxRows as unknown as Record<string, unknown>[]}
+                      fileName="reporte_cotizaciones.xlsx"
+                      headers={[
+                        "Id",
+                        "Solicitud",
+                        "Cliente",
+                        "Tecnico",
+                        "Tipo de servicio",
+                        "Items",
+                        "Estado",
+                        "Fecha",
+                        "Total",
+                      ]}
+                      excludeKeys={[]}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    className="relative cursor-pointer inline-flex h-9 items-center gap-2 overflow-hidden rounded-md px-4 text-sm font-semibold text-white transition-transform duration-200 hover:scale-105 group"
+                    style={{ background: Colors.buttons.primary }}
+                    onClick={() =>
+                      document
+                        .querySelector<HTMLButtonElement>("#download-excel-btn-quotes")
+                        ?.click()
+                    }
+                  >
+                    <span className="absolute inset-0 bg-[#227a69] scale-x-0 origin-left transition-transform duration-300 ease-out group-hover:scale-x-100"></span>
+                    <span className="relative z-10 flex items-center gap-2 group-hover:text-white transition-colors duration-300">
+                      <Image src="/icons/download.svg" alt="Descargar" width={16} height={16} />
+                      Descargar Reporte
+                    </span>
+                  </button>
+                </>
               ) : null
             }
           />
