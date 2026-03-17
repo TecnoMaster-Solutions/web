@@ -193,6 +193,81 @@ function extractTechnicianNames(r: ServiceRequestDTO): string[] {
   return Array.from(new Set(names));
 }
 
+function mapServiceRequestToRow(r: ServiceRequestDTO): Row {
+  const row = r as ServiceRequestRowLike;
+  const id = row?.serviceRequestId ?? row?.id ?? "";
+  const servicio = row?.service?.name ?? row?.serviceType ?? "";
+  const serviceId =
+    row?.service?.serviceid ?? row?.serviceId ?? row?.service?.id ?? undefined;
+
+  const clienteId =
+    row?.clientId ?? row?.customer?.customerid ?? row?.customer?.id ?? "";
+  const nombre = row?.customer?.users?.name ?? row?.customer?.name ?? "";
+  const apellido =
+    row?.customer?.users?.lastname ?? row?.customer?.lastname ?? "";
+  const cliente = [nombre, apellido].filter(Boolean).join(" ");
+
+  const descripcion = row?.description ?? "";
+  const direccion =
+    row?.direccion ?? row?.customer?.customercity ?? row?.address ?? "";
+
+  const tipoRaw = row?.serviceType ?? row?.service?.category ?? "";
+  const lower = String(tipoRaw).toLowerCase();
+  const tipo = lower.includes("instal")
+    ? "Instalacion"
+    : lower.includes("manten")
+    ? "Mantenimiento"
+    : String(tipoRaw || "");
+
+  const tipos: ("Mantenimiento" | "Instalacion")[] =
+    tipo === "Mantenimiento"
+      ? ["Mantenimiento"]
+      : tipo === "Instalacion"
+      ? ["Instalacion"]
+      : [];
+
+  const scheduledAtDate = r?.scheduledAt ? new Date(r.scheduledAt) : null;
+  const scheduledEndAtDate = r?.scheduledEndAt
+    ? new Date(r.scheduledEndAt)
+    : null;
+
+  const programada = scheduledAtDate
+    ? toLocalDateTimeValue(scheduledAtDate)
+    : null;
+  const programadaEnd = scheduledEndAtDate
+    ? toLocalDateTimeValue(scheduledEndAtDate)
+    : null;
+
+  const estado = row?.state?.name ?? row?.status ?? "";
+  const stateId = row?.stateId ?? row?.state?.stateid ?? undefined;
+
+  const fecha = row?.createdAt
+    ? new Date(row.createdAt).toLocaleDateString("es-CO")
+    : "";
+
+  const technicians = extractTechnicianIds(r);
+  const technicianNames = extractTechnicianNames(r);
+
+  return {
+    id,
+    descripcion: String(descripcion),
+    tipo,
+    tipos,
+    servicio: String(servicio),
+    serviceId,
+    cliente: String(cliente),
+    clienteId,
+    direccion: String(direccion),
+    fecha,
+    estado: String(estado),
+    stateId,
+    programada,
+    programadaEnd,
+    technicians,
+    technicianNames,
+  };
+}
+
 function normalizeRoleName(role: unknown) {
   return String(role ?? "")
     .normalize("NFD")
@@ -383,80 +458,7 @@ export default function ServiceRequestsPage() {
 
   const rows: Row[] = useMemo(() => {
     const list = Array.isArray(data?.data) ? data.data : [];
-    return list.map((r: ServiceRequestDTO) => {
-      const row = r as ServiceRequestRowLike;
-      const id = row?.serviceRequestId ?? row?.id ?? "";
-      const servicio = row?.service?.name ?? row?.serviceType ?? "";
-      const serviceId =
-        row?.service?.serviceid ?? row?.serviceId ?? row?.service?.id ?? undefined;
-
-      const clienteId =
-        row?.clientId ?? row?.customer?.customerid ?? row?.customer?.id ?? "";
-      const nombre = row?.customer?.users?.name ?? row?.customer?.name ?? "";
-      const apellido =
-        row?.customer?.users?.lastname ?? row?.customer?.lastname ?? "";
-      const cliente = [nombre, apellido].filter(Boolean).join(" ");
-
-      const descripcion = row?.description ?? "";
-      const direccion =
-        row?.direccion ?? row?.customer?.customercity ?? row?.address ?? "";
-
-      const tipoRaw = row?.serviceType ?? row?.service?.category ?? "";
-      const lower = String(tipoRaw).toLowerCase();
-      const tipo = lower.includes("instal")
-        ? "Instalacion"
-        : lower.includes("manten")
-        ? "Mantenimiento"
-        : String(tipoRaw || "");
-
-      const tipos: ("Mantenimiento" | "Instalacion")[] =
-        tipo === "Mantenimiento"
-          ? ["Mantenimiento"]
-          : tipo === "Instalacion"
-          ? ["Instalacion"]
-          : [];
-
-      const scheduledAtDate = r?.scheduledAt ? new Date(r.scheduledAt) : null;
-      const scheduledEndAtDate = r?.scheduledEndAt
-        ? new Date(r.scheduledEndAt)
-        : null;
-
-      const programada = scheduledAtDate
-        ? toLocalDateTimeValue(scheduledAtDate)
-        : null;
-      const programadaEnd = scheduledEndAtDate
-        ? toLocalDateTimeValue(scheduledEndAtDate)
-        : null;
-
-      const estado = row?.state?.name ?? row?.status ?? "";
-      const stateId = row?.stateId ?? row?.state?.stateid ?? undefined;
-
-      const fecha = row?.createdAt
-        ? new Date(row.createdAt).toLocaleDateString("es-CO")
-        : "";
-
-      const technicians = extractTechnicianIds(r);
-      const technicianNames = extractTechnicianNames(r);
-
-      return {
-        id,
-        descripcion: String(descripcion),
-        tipo,
-        tipos,
-        servicio: String(servicio),
-        serviceId,
-        cliente: String(cliente),
-        clienteId,
-        direccion: String(direccion),
-        fecha,
-        estado: String(estado),
-        stateId,
-        programada,
-        programadaEnd,
-        technicians,
-        technicianNames,
-      };
-    });
+    return list.map(mapServiceRequestToRow);
   }, [data]);
 
   const totalPages = data?.meta?.totalPages ?? 1;
@@ -518,7 +520,7 @@ export default function ServiceRequestsPage() {
       technicianId: isTechnicianRole ? technicianIdFromAuth ?? undefined : undefined,
     });
     const reportRows = (Array.isArray(response) ? response : response.data)
-      .map((raw) => toRow(raw))
+      .map(mapServiceRequestToRow)
       .map((r) => ({
         Id: r.id,
         Cliente: r.cliente,
