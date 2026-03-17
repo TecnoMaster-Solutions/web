@@ -24,14 +24,18 @@ type CheckoutWindowOptions = {
 export function resolveMercadoPagoCheckoutUrl(
   response: Pick<MercadoPagoSaleCheckoutResponse, "initPoint" | "sandboxInitPoint">
 ): string {
-  const isDevelopment = process.env.NODE_ENV !== "production";
-  const target = isDevelopment ? response.sandboxInitPoint : response.initPoint;
+  const envValue = process.env.NEXT_PUBLIC_MP_USE_SANDBOX;
+  const useSandbox =
+    typeof envValue === "string"
+      ? envValue.trim().toLowerCase() === "true"
+      : process.env.NODE_ENV !== "production";
+  const target = useSandbox ? response.sandboxInitPoint : response.initPoint;
 
   if (!target) {
     throw new Error(
-      isDevelopment
-        ? "La API no devolvió sandboxInitPoint para desarrollo."
-        : "La API no devolvió initPoint para producción."
+      useSandbox
+        ? "La API no devolvio sandboxInitPoint para el modo sandbox."
+        : "La API no devolvio initPoint para el modo produccion."
     );
   }
 
@@ -213,3 +217,4 @@ export async function verifyMercadoPagoPayment(paymentId: string) {
     `${VERIFY_PATH}?paymentId=${encodeURIComponent(paymentId)}`
   );
 }
+
