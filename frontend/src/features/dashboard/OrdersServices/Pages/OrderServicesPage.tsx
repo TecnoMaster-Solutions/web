@@ -1339,7 +1339,7 @@ const extraActions = useCallback(
         onClick={downloadAllReport}
         disabled={loading}
         className="relative cursor-pointer inline-flex h-9 items-center gap-2 overflow-hidden rounded-md px-4 text-sm font-semibold text-white transition-transform duration-200 hover:scale-105 group disabled:opacity-60 disabled:cursor-not-allowed"
-        style={{ background: "#B20000" }}
+        style={{ background: "#04652c" }}
       >
         <span className="absolute inset-0 bg-green-800 scale-x-0 origin-left transition-transform duration-300 ease-out group-hover:scale-x-100"></span>
         <span className="relative z-10 flex items-center gap-2 group-hover:text-white transition-colors duration-300">
