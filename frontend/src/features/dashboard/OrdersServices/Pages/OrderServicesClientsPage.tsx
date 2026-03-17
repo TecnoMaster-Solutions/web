@@ -25,7 +25,7 @@ const ICONS = {
   edit: "/icons/Edit.svg",
   cancel: "/icons/minus-circle.svg",
   view: "/icons/Eye.svg",
-  print: "/icons/printer.svg",
+  print: "/icons/Printer.svg",
   report: "/icons/alert-triangle.svg",
   complete: "/icons/complete.svg",
 };
