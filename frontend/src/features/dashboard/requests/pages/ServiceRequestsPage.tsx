@@ -506,7 +506,8 @@ export default function ServiceRequestsPage() {
   const canUpdateRequests = canUpdate(MODULE_KEY);
   const canCancelRequests = canDelete(MODULE_KEY) || has(MODULE_KEY, "deactivate");
   const canPrintRequests = canViewRequests || has(MODULE_KEY, "print");
-  const canExportRequests = canViewRequests || has(MODULE_KEY, "export");
+  const canExportRequests =
+    has(MODULE_KEY, "download_report") || has(MODULE_KEY, "export");
 
   const optimisticPatch = useCallback((id: number, patch: Partial<Row>) => {
     queryClient.setQueryData<RequestListCache>(["service-requests"], (old) => {
