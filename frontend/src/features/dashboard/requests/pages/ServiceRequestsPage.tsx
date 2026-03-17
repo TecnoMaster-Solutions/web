@@ -11,6 +11,7 @@ import {
   useServiceRequests,
   useCreateServiceRequest,
   useUpdateServiceRequest,
+  serviceRequestKeys,
 } from "@/features/dashboard/requests/hooks/useServiceRequests";
 import CreateRequestModal, {
   type CreateRequestPayload,
@@ -554,9 +555,8 @@ export default function ServiceRequestsPage() {
   ]);
 
   const optimisticPatch = useCallback((id: number, patch: Partial<Row>) => {
-    queryClient.setQueryData<RequestListCache>(["service-requests"], (old) => {
-      if (!Array.isArray(old)) return old;
-      return old.map((it) => {
+    queryClient.setQueriesData<RequestListCache>({ queryKey: serviceRequestKeys.all }, (old) => {
+      const patchRow = (it: ServiceRequestDTO) => {
         const itId = it?.serviceRequestId ?? it?.id;
         if (Number(itId) !== Number(id)) return it;
 
@@ -628,7 +628,11 @@ export default function ServiceRequestsPage() {
         if (patch.direccion !== undefined) merged.direccion = patch.direccion;
 
         return merged;
-      });
+      };
+
+      if (Array.isArray(old)) return old.map(patchRow);
+      if (old && Array.isArray(old.data)) return { ...old, data: old.data.map(patchRow) };
+      return old;
     });
 
     setSelected((prev) =>
@@ -668,7 +672,7 @@ export default function ServiceRequestsPage() {
       };
 
       await createMut.mutateAsync(dto);
-      await queryClient.invalidateQueries({ queryKey: ["service-requests"] });
+      await queryClient.invalidateQueries({ queryKey: serviceRequestKeys.all });
       setOpenCreate(false);
 
       showSuccess("Solicitud creada correctamente.");
@@ -786,14 +790,14 @@ export default function ServiceRequestsPage() {
       });
 
       await updateMut.mutateAsync({ id, payload });
-      await queryClient.invalidateQueries({ queryKey: ["service-requests"] });
+      void queryClient.invalidateQueries({ queryKey: serviceRequestKeys.all });
       setOpenEdit(false);
 
       showSuccess("Solicitud actualizada correctamente.");
     } catch (err: unknown) {
       const msg = getBackendMessage(err);
       showError(msg || "No se pudo actualizar la solicitud.");
-      await queryClient.invalidateQueries({ queryKey: ["service-requests"] });
+      await queryClient.invalidateQueries({ queryKey: serviceRequestKeys.all });
     } finally {
       setActionLoading(false);
     }
@@ -849,13 +853,13 @@ export default function ServiceRequestsPage() {
       };
 
       await updateMut.mutateAsync({ id, payload });
-      await queryClient.invalidateQueries({ queryKey: ["service-requests"] });
+      await queryClient.invalidateQueries({ queryKey: serviceRequestKeys.all });
 
       showSuccess("La solicitud fue cancelada.");
     } catch (err: unknown) {
       const msg = getBackendMessage(err);
       showError(msg || "No se pudo cancelar la solicitud.");
-      await queryClient.invalidateQueries({ queryKey: ["service-requests"] });
+      await queryClient.invalidateQueries({ queryKey: serviceRequestKeys.all });
     } finally {
       setActionLoading(false);
     }
