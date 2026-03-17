@@ -8,6 +8,7 @@ import RequireAuth from "@/features/auth/requireauth";
 import { usePermissions } from "@/features/auth/hooks/usePermissions";
 import Modal from "@/features/dashboard/components/Modal";
 import Colors from "@/shared/theme/colors";
+import { exportXlsx } from "@/shared/utils/exportXlsx";
 import { showError, showSuccess, showWarning } from "@/shared/utils/notifications";
 import { useAuth } from "@/features/auth/authcontext";
 
@@ -1187,6 +1188,43 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
     URL.revokeObjectURL(url);
   }, [rows, loading]);
 
+  const downloadAllReport = useCallback(async () => {
+    if (loading) return;
+    const response = await fetchOrdersServices({
+      search,
+      clientId: isClientRole ? clientIdFromAuth ?? undefined : undefined,
+      technicianId: isTechnicianRole ? technicianIdFromAuth ?? undefined : undefined,
+    });
+    const reportRows = sortRowsByIdDesc(
+      (Array.isArray(response) ? response : response.data).map(toRow)
+    ).map((r) => {
+      const estadoKey = r.estadoKey ?? r.estado;
+      return {
+        Id: r.id,
+        Cliente: r.cliente,
+        Tipo: r.tipo,
+        "Fecha programada": r.fechaProgramada,
+        Estado: estadoKey === "GarantiaReportada" ? "Garantia (reportada)" : r.estado,
+        "Viaticos (COP)": r.viaticos ?? 0,
+        "Monto (COP)": r.monto ?? 0,
+      };
+    });
+
+    if (!reportRows.length) {
+      showWarning("No hay ordenes para descargar.");
+      return;
+    }
+
+    await exportXlsx(reportRows, "reporte_ordenes.xlsx", "Ordenes de servicio");
+  }, [
+    clientIdFromAuth,
+    isClientRole,
+    isTechnicianRole,
+    loading,
+    search,
+    technicianIdFromAuth,
+  ]);
+
   const actionGuard = useCallback((r: Row) => {
     const estadoKey = r.estadoKey ?? r.estado;
     if (estadoKey === "Anulada") {
@@ -1299,7 +1337,7 @@ const extraActions = useCallback(
     return (
       <button
         type="button"
-        onClick={downloadReport}
+        onClick={downloadAllReport}
         disabled={loading}
         className="cursor-pointer inline-flex h-9 items-center rounded-md px-3 text-sm font-semibold text-white shadow-sm hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
         style={{ background: Colors.buttons.primary }}
@@ -1307,7 +1345,7 @@ const extraActions = useCallback(
         Descargar Reporte
       </button>
     );
-  }, [canExportOrders, downloadReport, loading]);
+  }, [canExportOrders, downloadAllReport, loading]);
 
   return (
     <RequireAuth>
@@ -1435,5 +1473,3 @@ const extraActions = useCallback(
     </RequireAuth>
   );
 }
-
-

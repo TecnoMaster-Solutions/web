@@ -5,7 +5,6 @@ import Swal from "sweetalert2";
 import RequireAuth from "../../auth/requireauth";
 import { DataTable } from "../components/datatable/DataTable";
 import { Column } from "../components/datatable/types/column.types";
-import DownloadXLSXButton from "../components/DownloadXLSXButton";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { usePermissions } from "@/features/auth/hooks/usePermissions";
@@ -23,6 +22,7 @@ import { api } from "@/shared/utils/apiClient";
 
 import { QuoteTableRow } from "./types/Quote.type";
 import Colors from "@/shared/theme/colors";
+import { exportXlsx } from "@/shared/utils/exportXlsx";
 import { showError, showSuccess, showWarning } from "@/shared/utils/notifications";
 
 type QuoteStatusConfig = {
@@ -582,23 +582,55 @@ export default function QuotesIndex() {
     },
   ];
 
-  const xlsxRows = useMemo(() => {
-    return [...quotesData]
-      .sort((a, b) => b.id - a.id)
-      .map((row) => ({
-        Id: row.id,
-        Solicitud: row.requestRef,
-        Cliente: row.client,
-        Tecnico: row.technician,
-        "Tipo de servicio": row.serviceType,
-        Items: row.itemsSummary,
-        Estado: normalizeQuoteStatus(row.status).label,
-        Fecha: row.creationDate
-          ? new Date(row.creationDate).toLocaleDateString("es-CO")
-          : "",
-        Total: row.amount ?? 0,
-      }));
-  }, [quotesData]);
+  const handleDownloadReport = useCallback(async () => {
+    const response = await getQuotes({
+      search,
+      customerid: isClientRole ? currentCustomerId ?? undefined : undefined,
+      technicianid: isTechnicianRole ? currentTechnicianId ?? undefined : undefined,
+    });
+    const allQuotes: QuoteListItem[] = Array.isArray(response)
+      ? response
+      : Array.isArray(response?.data)
+        ? response.data
+        : [];
+
+    const reportRows = allQuotes
+      .map((q) => {
+        const rawStatus = q.state?.name ?? "";
+        const requestId = resolveRequestId(q);
+        const details = Array.isArray(q.details) ? q.details : [];
+        return {
+          Id: q.quotesid,
+          Solicitud: requestId ? `#${requestId}` : "Directa",
+          Cliente: resolveClientName(q),
+          Tecnico:
+            `${q.technician?.users?.name ?? ""} ${q.technician?.users?.lastname ?? ""}`.trim() ||
+            "Sin tecnico",
+          "Tipo de servicio": String(q.servicetype ?? "Sin tipo"),
+          Items: details
+            .map((detail) => String(detail?.description ?? "").trim())
+            .filter(Boolean)
+            .join(", "),
+          Estado: normalizeQuoteStatus(rawStatus).label,
+          Fecha: q.createdat ? new Date(q.createdat).toLocaleDateString("es-CO") : "",
+          Total: Number(q.total ?? 0),
+        };
+      })
+      .sort((a, b) => Number(b.Id) - Number(a.Id));
+
+    if (!reportRows.length) {
+      showWarning("No hay cotizaciones para descargar.");
+      return;
+    }
+
+    await exportXlsx(reportRows, "reporte_cotizaciones.xlsx", "Cotizaciones");
+  }, [
+    currentCustomerId,
+    currentTechnicianId,
+    isClientRole,
+    isTechnicianRole,
+    search,
+  ]);
 
   const handleApproveQuote = useCallback(async (row: QuoteTableRow) => {
     if (!canApproveQuotes) {
@@ -772,43 +804,18 @@ export default function QuotesIndex() {
             onDelete={canDeleteQuotes ? handleRevokeQuote : undefined}
             rightActions={
               canExportQuotes ? (
-                <>
-                  <div className="hidden">
-                    <DownloadXLSXButton
-                      id="download-excel-btn-quotes"
-                      data={xlsxRows as unknown as Record<string, unknown>[]}
-                      fileName="reporte_cotizaciones.xlsx"
-                      headers={[
-                        "Id",
-                        "Solicitud",
-                        "Cliente",
-                        "Tecnico",
-                        "Tipo de servicio",
-                        "Items",
-                        "Estado",
-                        "Fecha",
-                        "Total",
-                      ]}
-                      excludeKeys={[]}
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    className="relative cursor-pointer inline-flex h-9 items-center gap-2 overflow-hidden rounded-md px-4 text-sm font-semibold text-white transition-transform duration-200 hover:scale-105 group"
-                    style={{ background: Colors.buttons.primary }}
-                    onClick={() =>
-                      document
-                        .querySelector<HTMLButtonElement>("#download-excel-btn-quotes")
-                        ?.click()
-                    }
-                  >
-                    <span className="absolute inset-0 bg-[#227a69] scale-x-0 origin-left transition-transform duration-300 ease-out group-hover:scale-x-100"></span>
-                    <span className="relative z-10 flex items-center gap-2 group-hover:text-white transition-colors duration-300">
-                      <Image src="/icons/download.svg" alt="Descargar" width={16} height={16} />
-                      Descargar Reporte
-                    </span>
-                  </button>
-                </>
+                <button
+                  type="button"
+                  className="relative cursor-pointer inline-flex h-9 items-center gap-2 overflow-hidden rounded-md px-4 text-sm font-semibold text-white transition-transform duration-200 hover:scale-105 group"
+                  style={{ background: Colors.buttons.primary }}
+                  onClick={handleDownloadReport}
+                >
+                  <span className="absolute inset-0 bg-[#227a69] scale-x-0 origin-left transition-transform duration-300 ease-out group-hover:scale-x-100"></span>
+                  <span className="relative z-10 flex items-center gap-2 group-hover:text-white transition-colors duration-300">
+                    <Image src="/icons/download.svg" alt="Descargar" width={16} height={16} />
+                    Descargar Reporte
+                  </span>
+                </button>
               ) : null
             }
           />

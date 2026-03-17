@@ -9,6 +9,7 @@ import { useAuth } from "@/features/auth/authcontext";
 import { usePermissions } from "@/features/auth/hooks/usePermissions";
 import Modal from "@/features/dashboard/components/Modal";
 import DownloadXLSXButton from "@/features/dashboard/components/DownloadXLSXButton";
+import { exportXlsx } from "@/shared/utils/exportXlsx";
 import { showError, showInfo, showSuccess } from "@/shared/utils/notifications";
 import {
   cancelOrderService,
@@ -543,6 +544,35 @@ export default function OrderServicesClientsPage() {
       }));
   }, [rows]);
 
+  const downloadAllReport = useMemo(
+    () => async () => {
+      const data = await fetchOrdersServices({
+        search: query,
+        ...(clientIdFromAuth ? { clientId: clientIdFromAuth } : {}),
+      });
+      const reportRows = [...(Array.isArray(data) ? data : data.data)]
+        .map((raw) => toRow(raw))
+        .sort((a, b) => b.id - a.id)
+        .map((r) => ({
+          Id: r.id,
+          Cliente: r.cliente,
+          Tipo: r.tipo,
+          "Fecha programada": r.fechaProgramada,
+          Estado: r.estadoKey === "GarantiaReportada" ? "Garantia (reportada)" : r.estado,
+          "Viaticos (COP)": r.viaticos ?? 0,
+          "Monto (COP)": r.monto ?? 0,
+        }));
+
+      if (!reportRows.length) {
+        showError("No hay ordenes para descargar.");
+        return;
+      }
+
+      await exportXlsx(reportRows, "reporte_ordenes.xlsx", "Ordenes de servicio");
+    },
+    [clientIdFromAuth, query]
+  );
+
   function openCreate() {
     router.push(`/dashboard/orders-services/new?returnTo=${encodeURIComponent(pathname)}`);
   }
@@ -951,7 +981,15 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
                     <option value={18}>18</option>
                   </select>
                   {canExportOrder && (
-                    <div className="hidden md:block">
+                    <>
+                    <button
+                      onClick={downloadAllReport}
+                      className="hidden md:inline-flex h-10 items-center rounded-md bg-[#04652c] px-3 text-sm font-semibold text-white shadow-sm hover:opacity-90 whitespace-nowrap"
+                      type="button"
+                    >
+                      Descargar Reporte
+                    </button>
+                    <div className="hidden">
                       <DownloadXLSXButton
                         id="download-excel-btn-orders-clients"
                         data={xlsxRows as unknown as Record<string, unknown>[]}
@@ -968,6 +1006,7 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
                         excludeKeys={[]}
                       />
                     </div>
+                    </>
                   )}
                   {canCreateOrder && (
                     <button
@@ -1189,11 +1228,7 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
 
         {canExportOrder && (
           <button
-            onClick={() =>
-              document
-                .querySelector<HTMLButtonElement>("#download-excel-btn-orders-clients")
-                ?.click()
-            }
+            onClick={downloadAllReport}
             className="fixed bottom-20 right-6 z-50 flex md:hidden items-center justify-center w-12 h-12 rounded-full shadow-lg text-white transition-transform hover:scale-105"
             style={{ background: "#04652c" }}
             type="button"
