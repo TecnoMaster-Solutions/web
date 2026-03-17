@@ -19,11 +19,30 @@ import {
 type ApiErrorShape = {
   response?: { data?: { message?: string } };
   message?: string;
+  name?: string;
+  code?: string;
+};
+
+type UpdateServiceRequest = {
+  name: string;
+  description: string;
+  typeofserviceid: number;
+  stateid: number;
+  image?: string;
 };
 
 const getErrorMessage = (error: unknown, fallback: string) => {
   const e = error as ApiErrorShape | null;
   return e?.response?.data?.message ?? e?.message ?? fallback;
+};
+
+const isCanceledError = (error: unknown) => {
+  const e = error as ApiErrorShape | null;
+  return (
+    e?.name === "AbortError" ||
+    e?.code === "ERR_CANCELED" ||
+    e?.name === "CanceledError"
+  );
 };
 
 export const useServices = () => {
@@ -102,12 +121,8 @@ export const useServices = () => {
         setTotal(Number(response.meta.total ?? 0));
         setTotalPages(Number(response.meta.totalPages ?? 1));
         await waitForRender();
-      } catch (error: any) {
-        if (
-          error?.name !== "AbortError" &&
-          error?.code !== "ERR_CANCELED" &&
-          error?.name !== "CanceledError"
-        ) {
+      } catch (error: unknown) {
+        if (!isCanceledError(error)) {
           console.error("Error al cargar servicios:", error);
           showWarning("Error al cargar servicios desde el servidor");
         }
@@ -182,7 +197,7 @@ export const useServices = () => {
 
       showSuccess("Servicio creado exitosamente");
       await waitForRender();
-    } catch (error: any) {
+    } catch (error: unknown) {
       const msg = getErrorMessage(error, "Error al crear servicio");
       console.error(error);
       showWarning(msg);
@@ -208,7 +223,7 @@ export const useServices = () => {
         throw new Error("Estado inválido.");
       }
 
-      const body: any = {
+      const body: UpdateServiceRequest = {
         name: payload.name.trim(),
         description: (payload.description ?? "").trim(),
         typeofserviceid: payload.typeofserviceid,
@@ -233,7 +248,7 @@ export const useServices = () => {
       showSuccess("Servicio actualizado exitosamente");
       await waitForRender();
       setEditingService(null);
-    } catch (error: any) {
+    } catch (error: unknown) {
       const msg = getErrorMessage(error, "Error al actualizar servicio");
       console.error(error);
       showWarning(msg);
@@ -261,7 +276,7 @@ export const useServices = () => {
           showSuccess(
             `El servicio "${service.name}" ha sido eliminado correctamente.`
           );
-        } catch (error: any) {
+        } catch (error: unknown) {
           const msg = getErrorMessage(
             error,
             "No se pudo eliminar el servicio."

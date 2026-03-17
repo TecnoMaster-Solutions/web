@@ -12,6 +12,44 @@ import {
 } from "../api/purchases.api";
 import { IPurchase, IPurchaseOrder } from "../Types/Purchase.type";
 
+type PurchaseProduct = Awaited<ReturnType<typeof getProductsForPurchase>>;
+type PurchaseProductItem = PurchaseProduct extends Array<infer T> ? T : never;
+type PurchaseSupplier = Awaited<ReturnType<typeof getSuppliersForPurchase>>;
+type PurchaseSupplierItem = PurchaseSupplier extends Array<infer T> ? T : never;
+type PurchaseOrderDetailResponse = Awaited<ReturnType<typeof getPurchaseOrderById>>;
+
+type ApiErrorShape = {
+  name?: string;
+  code?: string;
+  response?: { data?: { message?: string } };
+  message?: string;
+};
+
+type CreatePurchasePayload = {
+  numberoforder: string;
+  reference: string;
+  supplierid: number;
+  observation: string;
+  stateid: number;
+  createdat: string;
+  updatedat: string;
+  purchaseOrderId?: number;
+  purchaseOrderFinalStateId?: number;
+  products: Array<
+    | {
+        productid: number;
+        saleprice: number;
+      }
+    | {
+        productid: number;
+        quantity: number;
+        unitprice: number;
+        productpriceofsupplier: number;
+        saleprice?: number;
+      }
+  >;
+};
+
 export interface PurchaseFormState {
   orderNumber: string;
   invoiceNumber: string;
@@ -67,8 +105,6 @@ const toLocalNoonISO = (ymd: string) => {
   return new Date(y, m - 1, d, 12, 0, 0, 0).toISOString();
 };
 
-let CACHE: IPurchase[] | null = null;
-
 const PO_PENDING_STATE_ID = 5;
 const OC_APROBADA_ID = 6;
 const OC_ANULADA_ID = 8;
@@ -85,8 +121,8 @@ export function usePurchases() {
 
   const [tableLoading, setTableLoading] = useState(false);
 
-  const [products, setProducts] = useState<any[]>([]);
-  const [suppliers, setSuppliers] = useState<any[]>([]);
+  const [products, setProducts] = useState<PurchaseProductItem[]>([]);
+  const [suppliers, setSuppliers] = useState<PurchaseSupplierItem[]>([]);
   const [purchaseOrders, setPurchaseOrders] = useState<IPurchaseOrder[]>([]);
   const [poLoading, setPoLoading] = useState(false);
   const [poDetailLoading, setPoDetailLoading] = useState(false);
@@ -100,6 +136,9 @@ export function usePurchases() {
 
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  
+  // Estados para filtros de fecha
+  const [dateRange, setDateRange] = useState<{ startDate: string | null; endDate: string | null }>({ startDate: null, endDate: null });
 
   const [form, setForm] = useState<PurchaseFormState>({
     orderNumber: "",
@@ -132,7 +171,7 @@ export function usePurchases() {
   const generateNextOrderNumber = (data: IPurchase[]) => {
     const year = new Date().getFullYear();
     const currentYearOrders = data
-      .map((p) => p.numberoforder || (p as any).orderNumber)
+      .map((p) => p.numberoforder)
       .filter((n) => n?.includes(`ORD-${year}-`));
 
     if (currentYearOrders.length === 0) return `ORD-${year}-001`;
@@ -174,9 +213,11 @@ export function usePurchases() {
           limit: customLimit,
           search: customSearch,
           signal: controller.signal,
+          fecha_inicio: dateRange.startDate || undefined,
+          fecha_fin: dateRange.endDate || undefined,
         });
 
-        CACHE = response.data;
+
         setPurchases(response.data);
         setTotal(Number(response.meta.total ?? 0));
 
@@ -186,11 +227,12 @@ export function usePurchases() {
             ? prev
             : { ...prev, orderNumber: nextOrder }
         );
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const apiError = error as ApiErrorShape | null;
         if (
-          error?.name !== "AbortError" &&
-          error?.code !== "ERR_CANCELED" &&
-          error?.name !== "CanceledError"
+          apiError?.name !== "AbortError" &&
+          apiError?.code !== "ERR_CANCELED" &&
+          apiError?.name !== "CanceledError"
         ) {
           console.error("Error fetching purchases:", error);
         }
@@ -203,20 +245,14 @@ export function usePurchases() {
         }
       }
     },
-    []
+    [dateRange]
   );
 
   useEffect(() => {
     const fetchProducts = async () => {
       try {
         const response = await getProductsForPurchase();
-        const normalizedProducts = Array.isArray(response)
-          ? response
-          : Array.isArray((response as any)?.data)
-            ? (response as any).data
-            : [];
-
-        setProducts(normalizedProducts);
+        setProducts(Array.isArray(response) ? response : []);
       } catch (err) {
         console.error("Error cargando productos", err);
         setProducts([]);
@@ -230,7 +266,7 @@ export function usePurchases() {
     const fetchSuppliers = async () => {
       try {
         const data = await getSuppliersForPurchase();
-        const actives = data.filter((s: any) => s.stateid === 1);
+        const actives = data.filter((s) => s.stateid === 1);
         setSuppliers(actives);
       } catch (err) {
         console.error("Error cargando proveedores", err);
@@ -247,6 +283,13 @@ export function usePurchases() {
       abortRef.current?.abort();
     };
   }, [page, limit, debouncedSearch, fetchPurchases]);
+
+  // Callback para manejar cambios en filtros de fecha
+  const handleFilterChange = useCallback(async (filters: { dateRange?: { startDate: string | null; endDate: string | null } }) => {
+    if (filters.dateRange) {
+      setDateRange(filters.dateRange);
+    }
+  }, []);
 
   useEffect(() => {
     const supplierId = Number(form.supplier);
@@ -283,7 +326,7 @@ export function usePurchases() {
 
         setForm((prev) => {
           const stillExists = data.some(
-            (po: any) => String(po.id) === prev.purchaseOrderId
+            (po) => String(po.id) === prev.purchaseOrderId
           );
 
           const nextPurchaseOrderId = stillExists ? prev.purchaseOrderId : "";
@@ -330,7 +373,7 @@ export function usePurchases() {
           return;
         }
 
-        const newCart: CartItem[] = detalles.map((d: any) => {
+        const newCart: CartItem[] = detalles.map((d: NonNullable<PurchaseOrderDetailResponse["detalles"]>[number]) => {
           const productName =
             d?.producto?.productname ??
             d?.productoNombre ??
@@ -566,7 +609,7 @@ export function usePurchases() {
         ? COMPRA_ANULADA_ID
         : COMPRA_APROBADA_ID;
 
-    const payloadBase: any = {
+    const payloadBase: Omit<CreatePurchasePayload, "products"> = {
       numberoforder: form.orderNumber || "TEMP-001",
       reference: form.invoiceNumber,
       supplierid: Number(form.supplier),
@@ -600,7 +643,7 @@ export function usePurchases() {
       };
 
     try {
-      return await createPurchase(payload as any);
+      return await createPurchase(payload);
     } finally {
       setSaving(false);
     }
@@ -611,7 +654,7 @@ export function usePurchases() {
       setCancelLoading(true);
       setSaving(true);
 
-      CACHE = null;
+
       await cancelPurchase(id, observation);
       await fetchPurchases(page, limit, debouncedSearch);
     } catch (error) {
@@ -660,6 +703,10 @@ export function usePurchases() {
     setLimit,
     setSearch,
 
+    // Filtros de fecha
+    dateRange,
+    handleFilterChange,
+
     form,
     setForm,
     error,
@@ -700,3 +747,4 @@ export function usePurchases() {
     isUsingPurchaseOrder,
   };
 }
+

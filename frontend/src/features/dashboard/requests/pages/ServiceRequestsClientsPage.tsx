@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Swal from "sweetalert2";
@@ -20,10 +20,11 @@ import {
   cancelServiceRequest,
   createServiceRequest,
   listServiceRequests,
+  type PaginationMeta,
   updateServiceRequest,
+  type UpdateServiceRequestInput,
   type ServiceRequestDTO,
 } from "@/features/dashboard/requests/services/servicerequests.service";
-import type { PaginatedResult } from "@/shared/types/pagination";
 
 type EstadoKey = "Aprobada" | "Anulada" | "Pendiente" | "Finalizado" | "Agendada";
 
@@ -42,6 +43,46 @@ type Row = {
   programada?: string | null;
   programadaEnd?: string | null;
   stateId?: number;
+};
+
+type AuthEntity = {
+  customerid?: number | null;
+  clientid?: number | null;
+  clientId?: number | null;
+  customer?: {
+    customerid?: number | null;
+    id?: number | null;
+  } | null;
+  customers?: Array<{
+    customerid?: number | null;
+    id?: number | null;
+  }> | null;
+};
+
+type ServiceRequestRowLike = ServiceRequestDTO & {
+  status?: string | null;
+  address?: string | null;
+  customer?: (ServiceRequestDTO["customer"] & {
+    id?: number | null;
+  }) | null;
+  service?: (ServiceRequestDTO["service"] & {
+    id?: number | null;
+  }) | null;
+};
+
+type ApiErrorShape = {
+  message?: string;
+  response?: {
+    data?: {
+      message?: string | string[];
+    };
+  };
+};
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  const apiError = error as ApiErrorShape;
+  const message = apiError.response?.data?.message ?? apiError.message ?? fallback;
+  return Array.isArray(message) ? message.join(" | ") : String(message);
 };
 
 const ICONS = {
@@ -70,12 +111,15 @@ function normalizeText(value: unknown) {
     .trim();
 }
 
-function toPositiveId(value: any): number | null {
+function toPositiveId(value: unknown): number | null {
   const n = Number(value);
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
-function extractAuthClientId(user: any, profile: any): number | null {
+function extractAuthClientId(
+  user: AuthEntity | null | undefined,
+  profile: AuthEntity | null | undefined,
+): number | null {
   const candidates = [
     user?.customerid,
     user?.clientid,
@@ -129,10 +173,10 @@ function tipoToBackend(tipo?: string | null) {
 }
 
 function toRow(r: ServiceRequestDTO): Row {
-  const anyR: any = r;
+  const anyR = r as ServiceRequestRowLike;
   const id = Number(anyR?.serviceRequestId ?? anyR?.servicerequestid ?? anyR?.id ?? 0);
-  const nombre = anyR?.customer?.users?.name ?? anyR?.customer?.name ?? "";
-  const apellido = anyR?.customer?.users?.lastname ?? anyR?.customer?.lastname ?? "";
+  const nombre = anyR?.customer?.users?.name ?? "";
+  const apellido = anyR?.customer?.users?.lastname ?? "";
   const cliente = [nombre, apellido].filter(Boolean).join(" ").trim() || "-";
   const estadoApi = String(anyR?.state?.name ?? anyR?.status ?? "").trim();
 
@@ -195,16 +239,21 @@ export default function ServiceRequestsClientsPage() {
   const [openEdit, setOpenEdit] = useState(false);
   const [selected, setSelected] = useState<Row | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
-  const [paginationMeta, setPaginationMeta] = useState({
+  const [paginationMeta, setPaginationMeta] = useState<PaginationMeta>({
     page: 1,
     limit: 6,
     total: 0,
     totalPages: 1,
+    hasNextPage: false,
+    hasPrevPage: false,
   });
 
-  const clientIdFromAuth = useMemo(() => extractAuthClientId(user, profile), [user, profile]);
+  const clientIdFromAuth = useMemo(
+    () => extractAuthClientId(user as AuthEntity | null, profile as AuthEntity | null),
+    [user, profile],
+  );
 
-  async function loadData() {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const data = await listServiceRequests({
@@ -217,17 +266,19 @@ export default function ServiceRequestsClientsPage() {
         data &&
         typeof data === "object" &&
         "data" in data &&
-        Array.isArray((data as PaginatedResult<ServiceRequestDTO>).data)
-          ? (data as PaginatedResult<ServiceRequestDTO>)
+        Array.isArray((data as { data?: ServiceRequestDTO[] }).data)
+          ? (data as { data: ServiceRequestDTO[]; meta: PaginationMeta })
           : null;
       const list = paginated?.data ?? (Array.isArray(data) ? data : []);
-      const mapped = list.map(toRow).filter((r) => r.id > 0);
+      const mapped = list.map(toRow).filter((r: Row) => r.id > 0);
       setRows(mapped);
       setPaginationMeta({
         page: paginated?.meta.page ?? page,
         limit: paginated?.meta.limit ?? limit,
         total: paginated?.meta.total ?? mapped.length,
         totalPages: paginated?.meta.totalPages ?? 1,
+        hasNextPage: paginated?.meta.hasNextPage ?? (paginated?.meta.totalPages ?? 1) > (paginated?.meta.page ?? page),
+        hasPrevPage: paginated?.meta.hasPrevPage ?? (paginated?.meta.page ?? page) > 1,
       });
     } catch {
       setRows([]);
@@ -236,17 +287,19 @@ export default function ServiceRequestsClientsPage() {
         limit,
         total: 0,
         totalPages: 1,
+        hasNextPage: false,
+        hasPrevPage: page > 1,
       });
       showError("No se pudieron cargar las solicitudes.");
     } finally {
       setLoading(false);
     }
-  }
+  }, [clientIdFromAuth, limit, page, query]);
 
   useEffect(() => {
     if (!ready) return;
     void loadData();
-  }, [ready, clientIdFromAuth, page, limit, query]);
+  }, [ready, loadData]);
 
   const totalPages = Math.max(1, paginationMeta.totalPages);
   const current = Math.min(paginationMeta.page, totalPages);
@@ -270,20 +323,22 @@ export default function ServiceRequestsClientsPage() {
       await createServiceRequest({
         scheduledAt: values.scheduledAt ?? null,
         scheduledEndAt: values.scheduledEndAt ?? null,
-        serviceType: values.serviceType as any,
+        serviceType:
+          values.serviceType === "INSTALACION"
+            ? "INSTALACION"
+            : "MANTENIMIENTO",
         description: String(values.description ?? "").trim(),
         direccion: String(values.direccion ?? "").trim(),
         stateId: Number(values.stateId ?? 5),
         serviceId: Number(values.serviceId),
         clientId: Number(values.clientId),
         technicians: [],
-      } as any);
+      });
       setOpenCreate(false);
       await loadData();
       showSuccess("Solicitud creada correctamente.");
-    } catch (err: any) {
-      const msg = err?.response?.data?.message ?? err?.message ?? "No se pudo crear la solicitud.";
-      showError(Array.isArray(msg) ? msg.join(" | ") : String(msg));
+    } catch (err: unknown) {
+      showError(getErrorMessage(err, "No se pudo crear la solicitud."));
     } finally {
       setActionLoading(false);
     }
@@ -293,41 +348,37 @@ export default function ServiceRequestsClientsPage() {
     if (!canUpdateRequests || !selected) return;
     setActionLoading(true);
     try {
-      const startParts = splitDateTime(selected.programada ?? null);
-      const endParts = splitDateTime(selected.programadaEnd ?? null);
-      const startDate = values.programada ?? startParts.date ?? null;
-      const startTime = values.horaProgramada ?? startParts.time ?? null;
-      const endTime = values.horaFinal ?? endParts.time ?? null;
-      const payload: Record<string, unknown> = {
-        serviceType: tipoToBackend(values.tipos?.[0] ?? selected.tipo),
-        description: String(values.descripcion ?? selected.descripcion ?? "").trim(),
+      const startParts = splitDateTime(values.scheduledAt ?? selected.programada ?? null);
+      const endParts = splitDateTime(values.scheduledEndAt ?? selected.programadaEnd ?? null);
+      const payload: UpdateServiceRequestInput = {
+        serviceType: tipoToBackend(values.serviceType ?? selected.tipo),
+        description: String(values.description ?? selected.descripcion ?? "").trim(),
         direccion: String(values.direccion ?? selected.direccion ?? "").trim(),
       };
 
-      const serviceId = Number(values.servicio ?? selected.serviceId ?? 0);
+      const serviceId = Number(values.serviceId ?? selected.serviceId ?? 0);
       if (Number.isFinite(serviceId) && serviceId > 0) payload.serviceId = serviceId;
 
-      const clientId = Number(values.cliente ?? selected.clienteId ?? 0);
+      const clientId = Number(values.clientId ?? selected.clienteId ?? 0);
       if (Number.isFinite(clientId) && clientId > 0) payload.clientId = clientId;
 
-      const stateId = Number(values.estado ?? selected.stateId ?? 0);
+      const stateId = Number(values.stateId ?? values.estado ?? selected.stateId ?? 0);
       if (Number.isFinite(stateId) && stateId > 0) payload.stateId = stateId;
 
-      if (startDate && startTime) {
-        payload.scheduledAt = buildScheduledAt(startDate, startTime, null);
+      if (startParts.date && startParts.time) {
+        payload.scheduledAt = buildScheduledAt(startParts.date, startParts.time, null);
       }
-      if (startDate && endTime) {
-        payload.scheduledEndAt = buildScheduledAt(startDate, endTime, null);
+      if ((endParts.date ?? startParts.date) && endParts.time) {
+        payload.scheduledEndAt = buildScheduledAt(endParts.date ?? startParts.date, endParts.time, null);
       }
 
-      await updateServiceRequest(selected.id, payload as any);
+      await updateServiceRequest(selected.id, payload);
       setOpenEdit(false);
       setSelected(null);
       await loadData();
       showSuccess("Solicitud actualizada correctamente.");
-    } catch (err: any) {
-      const msg = err?.response?.data?.message ?? err?.message ?? "No se pudo actualizar la solicitud.";
-      showError(Array.isArray(msg) ? msg.join(" | ") : String(msg));
+    } catch (err: unknown) {
+      showError(getErrorMessage(err, "No se pudo actualizar la solicitud."));
     } finally {
       setActionLoading(false);
     }
@@ -354,9 +405,8 @@ export default function ServiceRequestsClientsPage() {
       const updatedRow = toRow(updated);
       setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, ...updatedRow } : r)));
       showSuccess("La solicitud fue cancelada.");
-    } catch (err: any) {
-      const msg = err?.response?.data?.message ?? err?.message ?? "No se pudo cancelar la solicitud.";
-      showError(Array.isArray(msg) ? msg.join(" | ") : String(msg));
+    } catch (err: unknown) {
+      showError(getErrorMessage(err, "No se pudo cancelar la solicitud."));
     } finally {
       setActionLoading(false);
     }
@@ -599,17 +649,32 @@ export default function ServiceRequestsClientsPage() {
           }}
           requestId={selected.id}
           initial={{
-            tipos: selected.tipo.includes("Instal")
-              ? ["Instalacion"]
-              : ["Mantenimiento"],
-            servicio: selected.serviceId ? String(selected.serviceId) : "",
-            cliente: selected.clienteId ? String(selected.clienteId) : "",
-            descripcion: selected.descripcion ?? "",
+            serviceType: selected.tipo.includes("Instal") ? "INSTALACION" : "MANTENIMIENTO",
+            serviceId: selected.serviceId ?? 0,
+            clientId: selected.clienteId ?? 0,
+            description: selected.descripcion ?? "",
             direccion: selected.direccion ?? "",
-            programada: splitDateTime(selected.programada ?? null).date,
-            horaProgramada: splitDateTime(selected.programada ?? null).time,
-            horaFinal: splitDateTime(selected.programadaEnd ?? null).time,
+            scheduledAt:
+              splitDateTime(selected.programada ?? null).date &&
+              splitDateTime(selected.programada ?? null).time
+                ? buildScheduledAt(
+                    splitDateTime(selected.programada ?? null).date,
+                    splitDateTime(selected.programada ?? null).time,
+                    null,
+                  )
+                : null,
+            scheduledEndAt:
+              splitDateTime(selected.programadaEnd ?? null).date &&
+              splitDateTime(selected.programadaEnd ?? null).time
+                ? buildScheduledAt(
+                    splitDateTime(selected.programadaEnd ?? null).date,
+                    splitDateTime(selected.programadaEnd ?? null).time,
+                    null,
+                  )
+                : null,
             estado: selected.stateId ? String(selected.stateId) : undefined,
+            stateId: selected.stateId,
+            technicians: [],
           }}
           servicios={serviceOptions}
           clientes={customerOptions}

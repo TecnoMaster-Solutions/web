@@ -52,7 +52,7 @@ const ContactForm: React.FC = () => {
       } else {
         showError(data.error || 'Hubo un problema al enviar. Intenta nuevamente.');
       }
-    } catch (error) {
+    } catch {
       showError('Hubo un problema al enviar. Intenta nuevamente.');
     } finally {
       setIsSubmitting(false);

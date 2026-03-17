@@ -6,7 +6,6 @@ import {
   Bar,
   Rectangle,
   XAxis,
-  YAxis,
   Tooltip,
   ResponsiveContainer,
   ReferenceLine,
@@ -17,21 +16,42 @@ import { getMonthLabelFromNumber, getMonthNumberFromLabel, MonthSelection, MONTH
 import { formatCOP } from "../../indexDashboard"
 
 interface YearlyGraphProps {
-  title: string;
+  title?: string;
   data: { month: string; total: number }[];
   onMonthClick: (month: MonthSelection) => void;
   isCurrency?: boolean;
 }
 
-// Componente Tooltip personalizado
-const CustomTooltip = ({ active, payload, isCurrency }: any) => {
+type TooltipPayloadItem = {
+  value?: number | string;
+  payload?: {
+    month?: string;
+  };
+};
+
+type CustomTooltipProps = {
+  active?: boolean;
+  payload?: TooltipPayloadItem[];
+  isCurrency: boolean;
+};
+
+type ChartBarClickPayload = {
+  payload?: {
+    month?: string;
+    total?: number;
+  };
+};
+
+const CustomTooltip = ({ active, payload, isCurrency }: CustomTooltipProps) => {
   if (active && payload && payload.length) {
-    const value = payload[0].value;
+    const firstItem = payload[0];
+    const value = Number(firstItem?.value ?? 0);
     const displayValue = isCurrency ? formatCOP(value) : value;
+    const monthLabel = firstItem?.payload?.month ?? "";
 
     return (
       <div className="bg-white p-3 border border-gray-300 rounded-lg shadow-lg">
-        <p className="font-bold text-gray-800">{`Mes: ${payload[0].payload.month}`}</p>
+        <p className="font-bold text-gray-800">{`Mes: ${monthLabel}`}</p>
         <p className="text-gray-600">{`Total: ${displayValue}`}</p>
       </div>
     );
@@ -39,7 +59,7 @@ const CustomTooltip = ({ active, payload, isCurrency }: any) => {
   return null;
 };
 
-export const YearlyGraph = ({ title, data, onMonthClick, isCurrency = true }: YearlyGraphProps) => {
+export const YearlyGraph = ({ data, onMonthClick, isCurrency = true }: YearlyGraphProps) => {
   const normalizedData = MONTH_LABELS_ES.map((label, index) => {
     const monthNumber = index + 1;
     const total = data
@@ -54,11 +74,12 @@ export const YearlyGraph = ({ title, data, onMonthClick, isCurrency = true }: Ye
 
   const maxValue = Math.max(0, ...normalizedData.map((item) => item.total));
 
-  const handleBarClick = (entry: any) => {
-    if (!entry) return;
-    const monthValue = getMonthNumberFromLabel(entry.month);
+  const handleBarClick = (entry: ChartBarClickPayload) => {
+    const monthLabel = entry?.payload?.month;
+    if (!monthLabel) return;
+    const monthValue = getMonthNumberFromLabel(monthLabel);
     onMonthClick({
-      label: entry.month,
+      label: monthLabel,
       value: monthValue,
     });
   };

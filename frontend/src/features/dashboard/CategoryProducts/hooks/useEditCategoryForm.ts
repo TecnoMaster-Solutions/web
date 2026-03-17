@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
+  CategoryFieldName,
   EditCategoryData,
   EditCategoryModalProps,
   FormErrors,
@@ -14,6 +15,13 @@ import { showWarning } from "@/shared/utils/notifications";
 
 const initialErrors: FormErrors = { name: "", description: "" };
 const initialTouched: FormTouched = { name: false, description: false };
+
+type CategoryInputChangeEvent = React.ChangeEvent<
+  HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+>;
+type CategoryInputBlurEvent = React.FocusEvent<
+  HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+>;
 
 export const useEditCategoryForm = ({
   isOpen,
@@ -78,24 +86,27 @@ export const useEditCategoryForm = ({
   }, [category, isOpen]);
 
   const handleInputChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    (e: CategoryInputChangeEvent) => {
       const { name, value } = e.target;
-      setFormData((prev) => ({ ...prev, [name]: value }));
+      const fieldName = name as keyof EditCategoryData;
+      const nextValue = fieldName === "status" ? value === "true" : value;
+      setFormData((prev) => ({ ...prev, [fieldName]: nextValue }));
 
-      if (touched[name as keyof FormTouched]) {
+      if (fieldName in touched && touched[fieldName as CategoryFieldName]) {
         const error = validateField(name, value, categories, formData.id);
-        setErrors((prev) => ({ ...prev, [name]: error }));
+        setErrors((prev) => ({ ...prev, [fieldName]: error }));
       }
     },
     [categories, formData.id, touched],
   );
 
   const handleBlur = useCallback(
-    (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    (e: CategoryInputBlurEvent) => {
       const { name, value } = e.target;
-      setTouched((prev) => ({ ...prev, [name]: true }));
+      const fieldName = name as CategoryFieldName;
+      setTouched((prev) => ({ ...prev, [fieldName]: true }));
       const error = validateField(name, value, categories, formData.id);
-      setErrors((prev) => ({ ...prev, [name]: error }));
+      setErrors((prev) => ({ ...prev, [fieldName]: error }));
     },
     [categories, formData.id],
   );

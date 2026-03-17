@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Modal from "@/features/dashboard/components/Modal";
 import type { Option } from "@/features/dashboard/requests/types/option.types";
-import { showError, showInfo, showSuccess } from "@/shared/utils/notifications";
+import { showError, showInfo } from "@/shared/utils/notifications";
 import { getServiceOptions } from "@/features/dashboard/requests/services/lookups.service";
 import { hasInvalidRequestCharacters } from "@/features/dashboard/requests/utils/textValidation";
 
@@ -69,8 +69,17 @@ type ErrorKey = "tipo" | "serviceId" | "description" | "direccion";
 type Errors = Partial<Record<ErrorKey, string | null>>;
 type Touched = Partial<Record<ErrorKey, boolean>>;
 
+type ApiErrorShape = {
+  message?: string;
+  response?: {
+    data?: {
+      message?: string | string[];
+    };
+  };
+};
+
 function getBackendMessage(err: unknown) {
-  const anyErr = err as any;
+  const anyErr = err as ApiErrorShape;
   const msg = anyErr?.response?.data?.message ?? anyErr?.message ?? "";
   if (Array.isArray(msg)) return msg.filter(Boolean).join(" | ");
   return String(msg || "");
@@ -89,7 +98,6 @@ export default function ClientCreateRequestModal({
   initialDireccion,
   initialAddressFields,
   onInitialAddressFieldsChange,
-  addressOptions,
   pendingStateId = null,
 }: Props) {
   const [serviceTypeId, setServiceTypeId] = useState<number | null>(null);
@@ -242,7 +250,7 @@ export default function ClientCreateRequestModal({
         setLoadingLookups(true);
         const opts = await getServiceOptions();
         if (cancel) return;
-        setServiciosLocal(Array.isArray(opts) ? (opts as any) : []);
+        setServiciosLocal(Array.isArray(opts) ? opts : []);
       } catch {
         if (cancel) return;
         setServiciosLocal([]);
@@ -262,13 +270,13 @@ export default function ClientCreateRequestModal({
     if (!initialServiceId) return;
     if (!finalServicios.length) return;
 
-    const found = finalServicios.find(
-      (s: any) => Number(s?.id) === Number(initialServiceId)
-    );
-    if (!found) return;
+      const found = finalServicios.find(
+        (s) => Number(s?.id) === Number(initialServiceId)
+      );
+      if (!found) return;
 
-    const sid = Number(found.id);
-    if (Number.isFinite(sid) && sid > 0) setServiceId(sid as any);
+      const sid = Number(found.id);
+      if (Number.isFinite(sid) && sid > 0) setServiceId(sid);
 
     const tid = Number(found.typeofserviceid);
     if (Number.isFinite(tid) && tid > 0) setServiceTypeId(tid);

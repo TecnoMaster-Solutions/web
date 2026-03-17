@@ -24,6 +24,11 @@ type DailyPoint = {
   purchases?: number;
 };
 
+type DailyApiItem = {
+  day?: number | string | null;
+  total?: number | string | null;
+};
+
 const mergeDailyData = (
   sales: { day: number; total: number }[],
   purchases: { day: number; total: number }[]
@@ -86,12 +91,12 @@ export const MonthlySalesPurchasesGraph = ({
 
         if (cancelled) return;
 
-        const sanitizedSales = (salesResponse ?? []).map((item: any) => ({
+        const sanitizedSales = ((salesResponse ?? []) as DailyApiItem[]).map((item) => ({
           day: Number(item.day ?? 0),
           total: Number(item.total ?? 0),
         }));
 
-        const sanitizedPurchases = (purchasesResponse ?? []).map((item: any) => ({
+        const sanitizedPurchases = ((purchasesResponse ?? []) as DailyApiItem[]).map((item) => ({
           day: Number(item.day ?? 0),
           total: Number(item.total ?? 0),
         }));

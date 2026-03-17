@@ -1,5 +1,5 @@
 import { CategoryBase, FormErrors } from "../types/typeCategoryProducts";
-import { showError, showWarning } from "@/shared/utils/notifications";
+import { showError } from "@/shared/utils/notifications";
 
 /**
  * 🔎 Valida si un nombre de categoría ya existe (case insensitive)

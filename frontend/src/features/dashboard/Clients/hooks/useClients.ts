@@ -364,22 +364,27 @@ export function useClients() {
   const loadClientsPage = useCallback(
     async (page: number, searchTerm = "", signal?: AbortSignal, limitOverride?: number) => {
       const effectiveLimit = limitOverride ?? pageSizeRef.current;
-      const result = await getClients({ page, limit: effectiveLimit, search: searchTerm, signal });
+      
+      // Construir parámetros de filtro
+      const filterParams: Record<string, string> = {};
+      
+      // Agregar búsqueda
+      if (searchTerm.trim()) {
+        filterParams.search = searchTerm.trim();
+      }
+      
+      const result = await getClients({ page, limit: effectiveLimit, signal, ...filterParams });
       let list: Client[] = [];
       let totalP = 1;
 
       if (result && "meta" in result && "data" in result) {
-        list = result.data.map((c) => ({
-          ...c,
-          tipoId: (c as Client & { tipoId?: number }).tipoId ?? 0,
-        })) as unknown as Client[];
+        // Los datos ya vienen con tipoId correcto de la función toUiClient
+        list = result.data as unknown as Client[];
         totalP = result.meta.totalPages;
         setCurrentPage(result.meta.page);
       } else if (Array.isArray(result)) {
-        list = result.map((c) => ({
-          ...c,
-          tipoId: (c as Client & { tipoId?: number }).tipoId ?? 0,
-        })) as unknown as Client[];
+        // Los datos ya vienen con tipoId correcto de la función toUiClient
+        list = result as unknown as Client[];
       }
 
       // Ordenar por ID descendente como respaldo
@@ -394,11 +399,9 @@ export function useClients() {
 
   const loadAllClients = useCallback(async () => {
     const data = await getClients();
-    const list = data.map((c) => ({
-      ...c,
-      tipoId: (c as Client & { tipoId?: number }).tipoId ?? 0,
-    })) as unknown as Client[];
-    setClients(list);
+    // Los datos ya vienen con tipoId correcto de la función toUiClient
+    // No es necesario re-mapear aquí
+    setClients(data as unknown as Client[]);
   }, []);
 
   useEffect(() => {
@@ -517,6 +520,7 @@ export function useClients() {
       documentnumber: form.documento.trim(),
       phone: form.telefono.replace(/\D/g, ""), // ← solo dígitos para evitar 400 por regex
       typeid: Number(form.tipo),
+      stateid: stateMap[form.estado] ?? 1,
       roleid: clientRoleId,
       customercity: form.ciudad.trim(),
       customerzipcode: form.codigoPostal.trim(),
@@ -544,16 +548,28 @@ export function useClients() {
       return;
     }
 
+    // Validar que el tipo de documento sea válido antes de guardar
+    const tipoDocumento = Number(form.tipo);
+    
+    if (isNaN(tipoDocumento) || tipoDocumento <= 0 || tipoDocumento > 6) {
+      showError("Por favor seleccione un tipo de documento válido (1-6).");
+      return;
+    }
+
+    const clientRoleId = await getClientRoleId();
+
     const userPayload = {
       name: form.nombre.trim(),
       lastname: form.apellido.trim(),
       email: form.correoElectronico.trim(),
       documentnumber: form.documento.trim(),
       phone: form.telefono.replace(/\D/g, ""),
-      typeid: Number(form.tipo),
+      typeid: tipoDocumento,
       stateid: stateMap[form.estado] ?? 1,
+      roleid: clientRoleId,
       customercity: form.ciudad.trim(),
       customerzipcode: form.codigoPostal.trim(),
+      image: "",
     };
 
     try {
@@ -562,6 +578,17 @@ export function useClients() {
         showSuccess("Cliente actualizado correctamente.");
       });
 
+      // Actualizar el tipo de documento a texto para mostrar correctamente
+      // Los IDs de la tabla typeofdocuments son: 1=CC, 2=PPT, 3=NIT, 4=PA, 5=CE, 6=VI
+      const tipoDocumentoTexto = {
+        1: "CC",
+        2: "PPT",
+        3: "NIT",
+        4: "PA",
+        5: "CE",
+        6: "VI",
+      }[tipoDocumento] ?? "CC"; // Valor por defecto si no se encuentra
+
       setClients((prev) =>
         prev.map((client) =>
           client.id === form.id
@@ -569,14 +596,8 @@ export function useClients() {
               ...client,
               nombre: form.nombre.trim(),
               apellido: form.apellido.trim(),
-              tipoId: Number(form.tipo),
-              tipo:
-                {
-                  1: "CC",
-                  2: "TI",
-                  3: "CE",
-                  4: "PPN",
-                }[Number(form.tipo)] ?? client.tipo,
+              tipoId: tipoDocumento,
+              tipo: tipoDocumentoTexto,
               documento: form.documento.trim(),
               telefono: form.telefono.replace(/\D/g, ""),
               correoElectronico: form.correoElectronico.trim(),
@@ -587,7 +608,10 @@ export function useClients() {
             : client
         )
       );
-      void loadAllClients();
+      
+      // Recargar los datos del servidor para asegurar consistencia
+      await loadAllClients();
+      await loadClientsPage(currentPage, search);
     } catch {
       return;
     } finally {

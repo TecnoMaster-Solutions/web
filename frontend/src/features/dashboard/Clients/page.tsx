@@ -58,7 +58,11 @@ export default function ClientsPage() {
 
   const columns: Column<Client>[] = [
     { key: "id", header: "ID" },
-    { key: "tipo", header: "Tipo" },
+    { 
+      key: "tipo", 
+      header: "Tipo",
+      render: (row: Client) => row.tipo || "-" 
+    },
     { key: "documento", header: "Documento" },
     {
       key: "nombre",

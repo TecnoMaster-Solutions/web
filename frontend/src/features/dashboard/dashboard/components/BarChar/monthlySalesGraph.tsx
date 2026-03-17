@@ -19,6 +19,18 @@ interface MonthlyGraphProps {
   year?: number;
 }
 
+type DailySeriesItem = {
+  day: number;
+  total: number;
+};
+
+type DailySeriesApiItem = {
+  day?: number | string | null;
+  total?: number | string | null;
+};
+
+type DailySeriesLoader = (month: number, year?: number) => Promise<DailySeriesApiItem[]>;
+
 export const MonthlyGraph = ({
   title,
   month,
@@ -28,7 +40,7 @@ export const MonthlyGraph = ({
   isCurrency = true,
   year,
 }: MonthlyGraphProps) => {
-  const [dailyData, setDailyData] = useState<{ day: number; total: number }[]>([]);
+  const [dailyData, setDailyData] = useState<DailySeriesItem[]>([]);
   const isClientsChart = title === "Clientes";
   const resolvedMonthNumber = getMonthNumberFromLabel(monthNumber ?? month);
 
@@ -52,7 +64,7 @@ export const MonthlyGraph = ({
         return;
       }
       try {
-        let apiFunction: any = null;
+        let apiFunction: DailySeriesLoader | null = null;
 
         if (title === "Ventas") apiFunction = dashboardApi.getDailySalesByMonth;
         if (title === "Compras") apiFunction = dashboardApi.getDailyPurchasesByMonth;
@@ -67,13 +79,17 @@ export const MonthlyGraph = ({
         setDailyData([]); // Clear the data before setting new data
 
         const sanitizedResponse = isClientsChart
-          ? response.map((item: { day: number; total: number }) => ({
+          ? response.map((item) => ({
             ...item,
-            total: Math.max(0, Math.round(item.total)),
+            day: Number(item.day ?? 0),
+            total: Math.max(0, Math.round(Number(item.total ?? 0))),
           }))
-          : response;
+          : response.map((item) => ({
+              day: Number(item.day ?? 0),
+              total: Number(item.total ?? 0),
+            }));
 
-        sanitizedResponse.sort((a: any, b: any) => (a.day ?? 0) - (b.day ?? 0));
+        sanitizedResponse.sort((a, b) => (a.day ?? 0) - (b.day ?? 0));
 
         if (cancelled) return;
         setDailyData(sanitizedResponse);

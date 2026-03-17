@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState, useEffect } from "react";
+import Image from "next/image";
 import Modal from "@/features/dashboard/components/Modal";
 import Colors from "@/shared/theme/colors";
 import { Product } from "@/features/dashboard/products/types/typesProducts";
@@ -36,9 +37,7 @@ const ViewProductModal: React.FC<ViewProductModalProps> = ({
   const images = useMemo(() => {
     if (!product) return [] as string[];
 
-    const arr = Array.isArray((product as any).images)
-      ? ((product as any).images as string[])
-      : [];
+    const arr = Array.isArray(product.images) ? product.images : [];
     const single = product.image ? [product.image] : [];
     const base = arr.length ? arr : single;
 
@@ -218,9 +217,12 @@ const ViewProductModal: React.FC<ViewProductModalProps> = ({
                   style={{ borderColor: Colors.table.lines, height: 160 }}
                 >
                   {activeUrl ? (
-                    <img
+                    <Image
                       src={activeUrl}
                       alt="principal"
+                      width={320}
+                      height={160}
+                      unoptimized
                       className="w-full h-full object-contain"
                     />
                   ) : (
@@ -248,9 +250,12 @@ const ViewProductModal: React.FC<ViewProductModalProps> = ({
                         }}
                         title={idx === 0 ? "Principal" : "Ver imagen"}
                       >
-                        <img
+                        <Image
                           src={url}
                           alt={`thumb-${idx}`}
+                          width={64}
+                          height={64}
+                          unoptimized
                           className="w-full h-full object-cover"
                         />
                       </button>

@@ -5,7 +5,7 @@ import { ChevronDown } from "lucide-react";
 import Colors from "@/shared/theme/colors";
 import { SearchIcon } from "./icons/SearchIcon";
 import { PlusIcon } from "./icons/PlusIcon";
-import { DataTableProps } from "./types/datatable.types";
+import { DataTableProps, DataTableFilters, FilterOption, DateFilter } from "./types/datatable.types";
 import { MobileCardComponent } from "./ui/mobile/MobileCardComponent";
 import { ActionButtonsComponent } from "./ui/ActionButtonsComponent";
 import { ActionButtonComponent } from "./ui/ActionButtonComponent";
@@ -62,12 +62,18 @@ function Th({
 
 const OptimizedTd = React.memo(OptimizedTdComponent);
 export const ActionButton = React.memo(ActionButtonComponent);
-export const ActionButtons = React.memo(ActionButtonsComponent);
+export const ActionButtons = React.memo(
+  ActionButtonsComponent
+) as typeof ActionButtonsComponent;
 const MobileCard = React.memo(MobileCardComponent) as typeof MobileCardComponent;
 const CreateButton = React.memo(CreateButtonComponent);
 const Pagination = React.memo(PaginationComponent);
 
-const DataTableComponent = <T extends { [key: string]: any }>(
+type RowWithOptionalName = {
+  name?: unknown;
+};
+
+const DataTableComponent = <T extends object>(
   props: DataTableProps<T> & { module: string }
 ) => {
   const {
@@ -77,6 +83,9 @@ const DataTableComponent = <T extends { [key: string]: any }>(
     showPageSizeSelector = true,
     serverPagination,
     serverSearch,
+    serverFilters,
+    statusFilterOptions,
+    dateFilterField,
     searchableKeys = [],
     onView,
     onEdit,
@@ -106,6 +115,51 @@ const DataTableComponent = <T extends { [key: string]: any }>(
 
   const [q, setQ] = useState("");
   const [searchInput, setSearchInput] = useState("");
+  
+  // Estados para filtros avanzados
+  const [statusFilter, setStatusFilter] = useState<string>("");
+  const [dateRange, setDateRange] = useState<DateFilter>({ startDate: null, endDate: null });
+  
+  // Sincronizar filtros externos con estados internos
+  useEffect(() => {
+    if (serverFilters?.filters) {
+      if (serverFilters.filters.status !== undefined) {
+        setStatusFilter(serverFilters.filters.status ?? "");
+      }
+      if (serverFilters.filters.dateRange) {
+        setDateRange(serverFilters.filters.dateRange);
+      }
+    }
+  }, [serverFilters?.filters]);
+  
+  // Callback para manejar cambios en filtros
+  const handleStatusFilterChange = useCallback((value: string) => {
+    setStatusFilter(value);
+    const newFilters: DataTableFilters = {
+      ...(serverFilters?.filters || {}),
+      status: value || null,
+      dateRange,
+    };
+    serverFilters?.onFilterChange(newFilters);
+  }, [serverFilters, dateRange]);
+  
+  const handleDateFilterChange = useCallback((newDateRange: DateFilter) => {
+    setDateRange(newDateRange);
+    const newFilters: DataTableFilters = {
+      ...(serverFilters?.filters || {}),
+      status: statusFilter || null,
+      dateRange: newDateRange,
+    };
+    serverFilters?.onFilterChange(newFilters);
+  }, [serverFilters, statusFilter]);
+  
+  const handleClearFilters = useCallback(() => {
+    setStatusFilter("");
+    setDateRange({ startDate: null, endDate: null });
+    serverFilters?.onFilterChange({ status: null, dateRange: { startDate: null, endDate: null } });
+  }, [serverFilters]);
+  
+  const hasActiveFilters = statusFilter || dateRange.startDate || dateRange.endDate;
   const initialPageSize = Math.max(1, Number(defaultPageSize || 8));
   const [pageSizeOption, setPageSizeOption] = useState<string | number>(initialPageSize);
   const [pageSize, setPageSize] = useState<number>(initialPageSize);
@@ -124,6 +178,14 @@ const DataTableComponent = <T extends { [key: string]: any }>(
   const isMounted = useRef(false);
   const isServerPagination = Boolean(serverPagination);
   const isServerSearch = Boolean(serverSearch);
+  const toRowRecord = useCallback(
+    (row: T): Record<string, unknown> => row as Record<string, unknown>,
+    []
+  );
+  const getRowValue = useCallback(
+    <K extends keyof T>(row: T, key: K): T[K] => toRowRecord(row)[String(key)] as T[K],
+    [toRowRecord]
+  );
 
   useEffect(() => {
     isMounted.current = true;
@@ -177,10 +239,6 @@ const DataTableComponent = <T extends { [key: string]: any }>(
       .replace(/[\u0300-\u036f]/g, "")
       .toLowerCase()
       .trim();
-  }, []);
-
-  const toDigits = useCallback((v: unknown) => {
-    return String(v ?? "").replace(/[^\d]/g, "");
   }, []);
 
   const moneyTokens = useCallback(
@@ -249,7 +307,7 @@ const DataTableComponent = <T extends { [key: string]: any }>(
         const stateName =
           typeof value === "string"
             ? normalizeText(value)
-            : normalizeText((value as any)?.name ?? "");
+            : normalizeText((value as RowWithOptionalName | null)?.name ?? "");
 
         const mapped =
           stateName === "approved"
@@ -298,17 +356,34 @@ const DataTableComponent = <T extends { [key: string]: any }>(
 
     const isExactStatus = term === "activo" || term === "inactivo";
 
-    const hasKey = (k: string) => searchableKeys.includes(k as any);
+    const hasKey = (k: string) =>
+      searchableKeys.some((searchableKey) => String(searchableKey) === k);
 
-    const pickStatusText = (row: any): string => {
-      if (hasKey("status") && row?.status != null) return normalizeText(row.status);
-      if (hasKey("estado") && row?.estado != null) return normalizeText(row.estado);
+    const pickStatusText = (row: T): string => {
+      const status = hasKey("status") ? getRowValue(row, "status" as keyof T) : undefined;
+      if (status != null) return normalizeText(status);
+
+      const estado = hasKey("estado") ? getRowValue(row, "estado" as keyof T) : undefined;
+      if (estado != null) return normalizeText(estado);
+
       if (hasKey("state")) {
-        if (typeof row?.state === "string") return normalizeText(row.state);
-        if (row?.state?.name != null) return normalizeText(row.state.name);
+        const state = getRowValue(row, "state" as keyof T);
+        if (typeof state === "string") return normalizeText(state);
+        if ((state as RowWithOptionalName | null)?.name != null) {
+          return normalizeText((state as RowWithOptionalName).name);
+        }
       }
-      if (hasKey("stateSearch") && row?.stateSearch != null) return normalizeText(row.stateSearch);
-      if (hasKey("statusSearch") && row?.statusSearch != null) return normalizeText(row.statusSearch);
+
+      const stateSearch = hasKey("stateSearch")
+        ? getRowValue(row, "stateSearch" as keyof T)
+        : undefined;
+      if (stateSearch != null) return normalizeText(stateSearch);
+
+      const statusSearch = hasKey("statusSearch")
+        ? getRowValue(row, "statusSearch" as keyof T)
+        : undefined;
+      if (statusSearch != null) return normalizeText(statusSearch);
+
       return "";
     };
 
@@ -324,7 +399,7 @@ const DataTableComponent = <T extends { [key: string]: any }>(
 
       return tokens.every((t) => {
         return searchableKeys.some((key) => {
-          const value = (row as any)[key];
+          const value = getRowValue(row, key);
           if (value == null) return false;
 
           if (String(key) === "stateSearch" || String(key) === "statusSearch") {
@@ -339,7 +414,7 @@ const DataTableComponent = <T extends { [key: string]: any }>(
         });
       });
     });
-  }, [q, data, searchableKeys, normalize, normalizeText, loading, isServerSearch]);
+  }, [q, data, searchableKeys, normalize, normalizeText, loading, isServerSearch, getRowValue]);
 
   const totalPages = useMemo(() => {
     if (isServerPagination) {
@@ -385,10 +460,20 @@ const DataTableComponent = <T extends { [key: string]: any }>(
     return current.slice(startIndex, startIndex + VISIBLE_ROWS);
   }, [current, startIndex, disableInternalScroll]);
 
-  const resolveRowKey = useCallback((row: T, idxFallback: number) => {
-    const anyRow = row as any;
-    return anyRow.id ?? anyRow.purchaseorderid ?? anyRow.numberoforder ?? anyRow.reference ?? idxFallback;
-  }, []);
+  const resolveRowKey = useCallback((row: T, idxFallback: number): React.Key => {
+    const candidates = [
+      getRowValue(row, "id" as keyof T),
+      getRowValue(row, "purchaseorderid" as keyof T),
+      getRowValue(row, "numberoforder" as keyof T),
+      getRowValue(row, "reference" as keyof T),
+    ];
+    const candidate = candidates.find((value) =>
+      typeof value === "string" || typeof value === "number"
+    );
+    return typeof candidate === "string" || typeof candidate === "number"
+      ? candidate
+      : idxFallback;
+  }, [getRowValue]);
 
   const visibleColumns = useMemo(
     () => columns.filter((col) => col.priority === "high" || (!col.priority && columns.indexOf(col) < 3)),
@@ -431,8 +516,8 @@ const DataTableComponent = <T extends { [key: string]: any }>(
               animateOnMount={animateCells}
               className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm"
             >
-              <div className="truncate" title={String((row as any)[c.key])}>
-                {c.render ? c.render(row) : String((row as any)[c.key])}
+              <div className="truncate" title={String(getRowValue(row, c.key))}>
+                {c.render ? c.render(row) : String(getRowValue(row, c.key))}
               </div>
             </OptimizedTd>
           ))}
@@ -499,6 +584,8 @@ const DataTableComponent = <T extends { [key: string]: any }>(
     showActionsColumn,
     disableInternalScroll,
     isDesktop,
+    animateCells,
+    getRowValue,
   ]);
 
   /* ================================
@@ -594,6 +681,62 @@ const DataTableComponent = <T extends { [key: string]: any }>(
 
   return (
     <div className="flex flex-col gap-2 sm:gap-4 px-2 sm:px-0 mt-4 sm:mt-6" style={tableStyle}>
+      {/* Barra de filtros avanzados */}
+      {(statusFilterOptions || dateFilterField) && (
+        <div className="flex flex-wrap items-center gap-3 bg-gray-50 p-3 rounded-lg">
+          {/* Filtro de estado */}
+          {statusFilterOptions && statusFilterOptions.length > 0 && (
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-gray-600 whitespace-nowrap">Estado:</label>
+              <select
+                value={statusFilter}
+                onChange={(e) => handleStatusFilterChange(e.target.value)}
+                className="h-9 px-3 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-500"
+              >
+                <option value="">Todos</option>
+                {statusFilterOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Filtro de fecha */}
+          {dateFilterField && (
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-gray-600 whitespace-nowrap">Fecha:</label>
+              <input
+                type="date"
+                value={dateRange.startDate || ""}
+                onChange={(e) => handleDateFilterChange({ ...dateRange, startDate: e.target.value || null })}
+                className="h-9 px-3 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-500"
+                placeholder="Desde"
+              />
+              <span className="text-gray-400">-</span>
+              <input
+                type="date"
+                value={dateRange.endDate || ""}
+                onChange={(e) => handleDateFilterChange({ ...dateRange, endDate: e.target.value || null })}
+                className="h-9 px-3 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-500"
+                placeholder="Hasta"
+              />
+            </div>
+          )}
+
+          {/* Botón limpiar filtros */}
+          {hasActiveFilters && (
+            <button
+              onClick={handleClearFilters}
+              className="text-sm text-red-600 hover:text-red-800 hover:underline ml-auto"
+            >
+              Limpiar filtros
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         {searchableKeys.length > 0 && (
           <div className="flex items-center gap-3 w-full sm:max-w-lg">
@@ -628,13 +771,13 @@ const DataTableComponent = <T extends { [key: string]: any }>(
                     value={pageSizeOption}
                     onChange={(e) => {
                       const num = Number(e.target.value);
-                      setAnimateCells(true);
-                      setPageSizeOption(num);
-                      setPageSize(num);
-                      if (isServerPagination && serverPagination) {
-                        serverPagination.onPageSizeChange(num);
-                        return;
-                      }
+                       setAnimateCells(true);
+                       setPageSizeOption(num);
+                       setPageSize(num);
+                       if (isServerPagination && serverPagination?.onPageSizeChange) {
+                         serverPagination.onPageSizeChange(num);
+                         return;
+                       }
                       setPage(1);
                     }}
                     className="h-10 w-16 appearance-none rounded-lg bg-white pl-3 pr-7 text-sm text-[#172B4D] border border-gray-200 transition-colors hover:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-500"

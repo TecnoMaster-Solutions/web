@@ -6,6 +6,7 @@ import {
   User,
   EditUser,
   CreateUserData,
+  UserPayload,
   UsersPaginatedResult,
 } from "../types/typesUser";
 import { getUsers, createUser, updateUser, deleteUser } from "../connection/userApi";
@@ -14,7 +15,7 @@ import { getUsers, createUser, updateUser, deleteUser } from "../connection/user
 //  UTILIDAD: construir payload para creación/edición de usuarios
 export const buildUserPayload = (
   user: CreateUserData | EditUser
-): Record<string, any> => {
+): UserPayload => {
   return {
     name: user.name?.trim(),
     lastname: user.lastname?.trim() ?? null,
@@ -37,6 +38,12 @@ export const buildUserPayload = (
       customerzipcode: user.customerzipcode,
     }),
   };
+};
+
+type ApiErrorShape = {
+  name?: string;
+  code?: string;
+  message?: string;
 };
 
 
@@ -145,10 +152,11 @@ export const useUser = () => {
         setLoading(true);
         try {
           await refreshUsers(1, value, controller.signal);
-        } catch (error: any) {
+        } catch (error: unknown) {
+          const apiError = error as ApiErrorShape;
           if (
-            error?.name === "CanceledError" ||
-            error?.code === "ERR_CANCELED" ||
+            apiError?.name === "CanceledError" ||
+            apiError?.code === "ERR_CANCELED" ||
             controller.signal.aborted
           ) {
             return;
@@ -177,9 +185,10 @@ export const useUser = () => {
         await refreshUsers(1, search);
 
         showSuccess("Usuario creado exitosamente");
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const apiError = error as ApiErrorShape;
         console.error("Create error:", error);
-        showError(error.message || "Error al crear usuario");
+        showError(apiError.message || "Error al crear usuario");
       } finally {
         setLoading(false);
       }
@@ -200,9 +209,10 @@ export const useUser = () => {
 
         showSuccess("Usuario actualizado exitosamente");
         setEditingUser(null);
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const apiError = error as ApiErrorShape;
         console.error("Update error:", error);
-        showError(error.message || "Error al actualizar usuario");
+        showError(apiError.message || "Error al actualizar usuario");
       } finally {
         setLoading(false);
       }

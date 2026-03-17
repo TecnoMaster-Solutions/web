@@ -16,10 +16,14 @@ import { showSuccess, showError } from "@/shared/utils/notifications";
 
 const DEFAULT_IMG = "/assets/imgs/default-product.png";
 
+type ParamsLike = { id?: string | string[] };
+type BackendError = { message?: string };
+
 export default function ProductDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const id = (params as any)?.id as string;
+  const rawId = (params as ParamsLike | null)?.id;
+  const id = Array.isArray(rawId) ? rawId[0] : rawId ?? "";
 
   const { addToCart, cart } = useCart();
 
@@ -42,10 +46,13 @@ export default function ProductDetailPage() {
         setProduct(p);
         setActiveIdx(0);
         setQty(1);
-      } catch (e: any) {
+      } catch (e: unknown) {
         console.error(e);
         if (!alive) return;
-        setError(e?.message ?? "Error cargando el producto.");
+        setError(
+          (e as BackendError | null | undefined)?.message ??
+            "Error cargando el producto."
+        );
       }
     };
 
@@ -59,9 +66,7 @@ export default function ProductDetailPage() {
   const allImages = useMemo(() => {
     if (!product) return [];
     const main = product.image ? [product.image] : [];
-    const extra = Array.isArray((product as any).images)
-      ? ((product as any).images as string[])
-      : [];
+    const extra = Array.isArray(product.images) ? product.images : [];
     return Array.from(new Set([...main, ...extra])).filter(Boolean);
   }, [product]);
 
@@ -94,7 +99,14 @@ export default function ProductDetailPage() {
       return;
     }
 
-    if (qtyInCart + qty > stock) {
+    if (remaining <= 0) {
+      showError(`No puedes agregar más. Stock disponible: ${stock}`, {
+        toastId: `stock-limit-${product.id}`,
+      });
+      return;
+    }
+
+    if (qty > remaining) {
       showError(`No puedes agregar más. Stock disponible: ${stock}`, {
         toastId: `stock-limit-${product.id}`,
       });
@@ -111,8 +123,11 @@ export default function ProductDetailPage() {
       });
     }
 
-    showSuccess("Producto agregado al carrito", { toastId: `add-${product.id}` });
+    showSuccess("Producto agregado al carrito", {
+      toastId: `add-${product.id}`,
+    });
   };
+
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -214,20 +229,20 @@ export default function ProductDetailPage() {
                     </span>
 
                     <span
-                      className={`text-xs font-semibold px-3 py-1 rounded-full ${
-                        inStock
-                          ? "bg-green-100 text-green-700"
-                          : "bg-red-100 text-red-600"
-                      }`}
+                      className={`text-xs font-semibold px-3 py-1 rounded-full ${inStock
+                        ? "bg-green-100 text-green-700"
+                        : "bg-red-100 text-red-600"
+                        }`}
                     >
                       {inStock ? "Disponible" : "Agotado"}
                     </span>
 
                     {inStock && (
                       <span className="text-gray-600 text-sm">
-                        <strong>Unidades disponibles:</strong> {stock}
+                        <strong>Disponibles para agregar:</strong> {remaining}
                       </span>
                     )}
+
                   </div>
 
                   {product.price !== undefined && (

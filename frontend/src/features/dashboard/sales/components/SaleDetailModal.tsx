@@ -13,8 +13,7 @@ export default function SaleDetailModal({ saleId, onClose }: SaleDetailModalProp
         <Modal
             isOpen={!!saleId}
             onClose={onClose}
-            title={undefined}
-            hideHeader={true}
+            title=""
             widthClass="max-w-4xl"
         >
             {saleId ? <SaleDetailContent saleId={saleId} onBack={onClose} /> : null}

@@ -4,29 +4,18 @@ import { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import ServiceOrdersPage from "@/features/dashboard//OrdersServices/Pages/OrderServicesPage";
 import { useAuth } from "@/features/auth/authcontext";
+import {
+  getRawRoleName,
+  normalizeRoleName,
+} from "@/features/auth/utils/authUser";
 import { routes } from "@/shared/routes";
-
-function normalizeRoleName(role: any) {
-  return String(role ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim()
-    .toLowerCase();
-}
 
 export default function OrdersServicesPage() {
   const router = useRouter();
   const { user, profile, ready } = useAuth();
 
   const isClientRole = useMemo(() => {
-    const role = [
-      user?.rolename,
-      (user as any)?.role,
-      (user as any)?.role?.name,
-      profile?.rolename,
-      (profile as any)?.role,
-      (profile as any)?.role?.name,
-    ]
+    const role = [getRawRoleName(user), getRawRoleName(profile)]
       .map((item) => normalizeRoleName(item))
       .find(Boolean);
 

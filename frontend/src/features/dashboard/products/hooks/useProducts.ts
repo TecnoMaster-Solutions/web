@@ -23,6 +23,8 @@ import {
 type ApiErrorShape = {
   response?: { data?: { message?: string } };
   message?: string;
+  name?: string;
+  code?: string;
 };
 
 const getErrorMessage = (error: unknown, fallback: string) => {
@@ -109,11 +111,12 @@ export const useProducts = () => {
         setTotal(Number(response.meta.total ?? 0));
         setTotalPages(Number(response.meta.totalPages ?? 1));
         await waitForRender();
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const apiError = error as ApiErrorShape | null;
         if (
-          error?.name !== "AbortError" &&
-          error?.code !== "ERR_CANCELED" &&
-          error?.name !== "CanceledError"
+          apiError?.name !== "AbortError" &&
+          apiError?.code !== "ERR_CANCELED" &&
+          apiError?.name !== "CanceledError"
         ) {
           console.error("Error al cargar productos:", error);
           showWarning("Error al cargar productos desde el servidor");

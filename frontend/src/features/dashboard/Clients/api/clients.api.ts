@@ -86,12 +86,23 @@ export type ClientUI = {
   hasAssociations: boolean;
 };
 
+// Mapa de tipos de documento para mostrar en UI
+// Los IDs de la tabla typeofdocuments son: 1=CC, 2=PPT, 3=NIT, 4=PA, 5=CE, 6=VI
+const documentTypeMap: Record<number, string> = {
+  1: "CC",
+  2: "PPT",
+  3: "NIT",
+  4: "PA",
+  5: "CE",
+  6: "VI",
+};
+
 export const toUiClient = (c: CustomerFromApi): ClientUI => ({
   id: c.customerid,
   userid: c.userid ?? c.users?.userid ?? 0,
   nombre: c.users?.name ?? "",
   apellido: c.users?.lastname ?? "",
-  tipo: c.users?.typeofdocuments?.name ?? "",
+  tipo: c.users?.typeofdocuments?.name ?? (c.users?.typeid ? documentTypeMap[c.users.typeid] ?? "" : ""),
   tipoId:
     c.users?.typeofdocuments?.id ??
     c.users?.typeofdocuments?.typeofdocumentid ??
@@ -112,6 +123,14 @@ type GetClientsParams = {
   limit?: number;
   search?: string;
   order?: "ASC" | "DESC";
+};
+
+type ApiErrorShape = {
+  name?: string;
+  code?: string;
+  response?: {
+    status?: number;
+  };
 };
 
 const EMPTY_PAGINATION = {
@@ -174,8 +193,10 @@ export async function getClients({
     }
 
     return list.map(toUiClient);
-  } catch (error: any) {
-    if (error?.name === "CanceledError" || error?.code === "ERR_CANCELED") {
+  } catch (error: unknown) {
+    const apiError = error as ApiErrorShape;
+
+    if (apiError.name === "CanceledError" || apiError.code === "ERR_CANCELED") {
       return shouldPaginate
         ? {
           data: [],
@@ -189,7 +210,7 @@ export async function getClients({
         : [];
     }
 
-    if (error?.response?.status === 404) {
+    if (apiError.response?.status === 404) {
       return shouldPaginate
         ? {
           data: [],
@@ -203,7 +224,7 @@ export async function getClients({
         : [];
     }
 
-    throw error;
+    throw apiError;
   }
 }
 

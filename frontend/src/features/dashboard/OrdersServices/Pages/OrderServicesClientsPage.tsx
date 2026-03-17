@@ -74,6 +74,15 @@ type WarrantyInfo = {
 };
 
 type OrderFile = { label?: string; url: string };
+type AuthLike = {
+  customerid?: number | null;
+  clientid?: number | null;
+  clientId?: number | null;
+  customer?: { customerid?: number | null; id?: number | null } | null;
+  customers?: Array<{ customerid?: number | null; id?: number | null }> | null;
+};
+type BackendRecord = Record<string, unknown>;
+type BackendFile = string | BackendRecord;
 
 function formatCOP(n?: number) {
   return n == null
@@ -99,6 +108,12 @@ function formatDate(input?: string | null) {
 
 function nl2br(s: string) {
   return s.replace(/\n/g, "<br/>");
+}
+
+function toOptionalString(value: unknown): string | null {
+  if (typeof value === "string") return value;
+  if (value == null) return null;
+  return String(value);
 }
 
 function formatDateES(input?: string | null) {
@@ -141,27 +156,29 @@ function pageList(totalPages: number, current: number) {
   return pages;
 }
 
-function toPositiveId(value: any): number | null {
+function toPositiveId(value: unknown): number | null {
   const n = Number(value);
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
-function extractAuthClientId(user: any, profile: any): number | null {
+function extractAuthClientId(user: unknown, profile: unknown): number | null {
+  const authUser = (user as AuthLike | null | undefined) ?? undefined;
+  const authProfile = (profile as AuthLike | null | undefined) ?? undefined;
   const candidates = [
-    user?.customerid,
-    user?.clientid,
-    user?.clientId,
-    user?.customer?.customerid,
-    user?.customers?.[0]?.customerid,
-    user?.customer?.id,
-    user?.customers?.[0]?.id,
-    profile?.customerid,
-    profile?.clientid,
-    profile?.clientId,
-    profile?.customer?.customerid,
-    profile?.customers?.[0]?.customerid,
-    profile?.customer?.id,
-    profile?.customers?.[0]?.id,
+    authUser?.customerid,
+    authUser?.clientid,
+    authUser?.clientId,
+    authUser?.customer?.customerid,
+    authUser?.customers?.[0]?.customerid,
+    authUser?.customer?.id,
+    authUser?.customers?.[0]?.id,
+    authProfile?.customerid,
+    authProfile?.clientid,
+    authProfile?.clientId,
+    authProfile?.customer?.customerid,
+    authProfile?.customers?.[0]?.customerid,
+    authProfile?.customer?.id,
+    authProfile?.customers?.[0]?.id,
   ];
 
   for (const candidate of candidates) {
@@ -203,7 +220,7 @@ function escapeHtml(value: unknown) {
     .replace(/'/g, "&#39;");
 }
 
-function resolveWarrantyFromBackend(o: any): WarrantyInfo | undefined {
+function resolveWarrantyFromBackend(o: BackendRecord): WarrantyInfo | undefined {
   const w =
     o?.warranty ??
     o?.warrantyReport ??
@@ -213,36 +230,57 @@ function resolveWarrantyFromBackend(o: any): WarrantyInfo | undefined {
     o?.warranty_info ??
     o?.warrantyInfo;
   if (!w) return undefined;
+  const warrantyRecord = w as BackendRecord;
 
-  const label = String(w.label ?? w.reason ?? w.motivo ?? "Garantia");
-  const details = w.details ?? w.description ?? w.detalle ?? w.message ?? undefined;
+  const label = String(warrantyRecord.label ?? warrantyRecord.reason ?? warrantyRecord.motivo ?? "Garantia");
+  const rawDetails =
+    warrantyRecord.details ??
+    warrantyRecord.description ??
+    warrantyRecord.detalle ??
+    warrantyRecord.message;
+  const details =
+    typeof rawDetails === "string"
+      ? rawDetails
+      : rawDetails != null
+      ? String(rawDetails)
+      : undefined;
 
   const notifiedClient =
-    typeof w.notifiedClient === "boolean"
-      ? w.notifiedClient
-      : typeof w.notifiedclient === "boolean"
-      ? w.notifiedclient
-      : typeof w.notifyClient === "boolean"
-      ? w.notifyClient
+    typeof warrantyRecord.notifiedClient === "boolean"
+      ? warrantyRecord.notifiedClient
+      : typeof warrantyRecord.notifiedclient === "boolean"
+      ? warrantyRecord.notifiedclient
+      : typeof warrantyRecord.notifyClient === "boolean"
+      ? warrantyRecord.notifyClient
       : undefined;
 
   const reportedAtISO = String(
-    w.reportedAtISO ?? w.reportedAt ?? w.reportedat ?? w.createdat ?? w.createdAt ?? new Date().toISOString()
+    warrantyRecord.reportedAtISO ??
+      warrantyRecord.reportedAt ??
+      warrantyRecord.reportedat ??
+      warrantyRecord.createdat ??
+      warrantyRecord.createdAt ??
+      new Date().toISOString()
   );
 
+  const reportedByRecord = (warrantyRecord.reportedBy as BackendRecord | undefined) ?? undefined;
+  const reportedByUsers = (reportedByRecord?.users as BackendRecord | undefined) ?? undefined;
+  const reportedByUser = (warrantyRecord.reportedByUser as BackendRecord | undefined) ?? undefined;
+  const reportedByFallback = (warrantyRecord.reportedby as BackendRecord | undefined) ?? undefined;
+
   const rb =
-    w.reportedBy?.users
-      ? [w.reportedBy.users.name, w.reportedBy.users.lastname].filter(Boolean).join(" ")
-      : w.reportedByUser?.name
-      ? [w.reportedByUser.name, w.reportedByUser.lastname].filter(Boolean).join(" ")
-      : w.reportedBy?.name
-      ? String(w.reportedBy.name)
-      : w.reportedby?.name
-      ? String(w.reportedby.name)
-      : w.reportedByName
-      ? String(w.reportedByName)
-      : w.reportedbyname
-      ? String(w.reportedbyname)
+    reportedByUsers
+      ? [reportedByUsers.name, reportedByUsers.lastname].filter(Boolean).join(" ")
+      : reportedByUser?.name
+      ? [reportedByUser.name, reportedByUser.lastname].filter(Boolean).join(" ")
+      : reportedByRecord?.name
+      ? String(reportedByRecord.name)
+      : reportedByFallback?.name
+      ? String(reportedByFallback.name)
+      : warrantyRecord.reportedByName
+      ? String(warrantyRecord.reportedByName)
+      : warrantyRecord.reportedbyname
+      ? String(warrantyRecord.reportedbyname)
       : "";
 
   const reportedBy = rb?.trim() ? rb : "-";
@@ -250,7 +288,7 @@ function resolveWarrantyFromBackend(o: any): WarrantyInfo | undefined {
   return { label, reportedBy, reportedAtISO, details, notifiedClient };
 }
 
-function resolveServicesFromBackend(anyO: any): LineItem[] {
+function resolveServicesFromBackend(anyO: BackendRecord): LineItem[] {
   const arr =
     anyO?.services ??
     anyO?.servicios ??
@@ -261,24 +299,25 @@ function resolveServicesFromBackend(anyO: any): LineItem[] {
   const list = Array.isArray(arr) ? arr : [];
 
   return list
-    .map((s: any) => {
-      const svc = s?.service ?? s?.services ?? s?.servicio ?? s;
+    .map((s) => {
+      const line = s as BackendRecord;
+      const svc = (line.service ?? line.services ?? line.servicio ?? line) as BackendRecord;
       const nombre =
-        svc?.servicename ||
-        svc?.name ||
-        s?.servicename ||
-        s?.name ||
-        (svc?.serviceid ? `Servicio #${svc.serviceid}` : "Servicio");
+        svc.servicename ||
+        svc.name ||
+        line.servicename ||
+        line.name ||
+        (svc.serviceid ? `Servicio #${String(svc.serviceid)}` : "Servicio");
 
-      const cantidad = Number(s?.cantidad ?? s?.quantity ?? s?.qty ?? 0) || 0;
+      const cantidad = Number(line.cantidad ?? line.quantity ?? line.qty ?? 0) || 0;
 
       const rawPrecio =
-        svc?.servicepriceofsale ??
-        svc?.serviceprice ??
-        svc?.price ??
-        s?.precio ??
-        s?.price ??
-        (typeof s?.subtotal === "number" && cantidad > 0 ? s.subtotal / cantidad : undefined);
+        svc.servicepriceofsale ??
+        svc.serviceprice ??
+        svc.price ??
+        line.precio ??
+        line.price ??
+        (typeof line.subtotal === "number" && cantidad > 0 ? line.subtotal / cantidad : undefined);
 
       const precioNum = rawPrecio == null ? undefined : Number(rawPrecio);
       const precio = Number.isFinite(precioNum) ? precioNum : undefined;
@@ -288,28 +327,29 @@ function resolveServicesFromBackend(anyO: any): LineItem[] {
     .filter((x: LineItem) => x.cantidad > 0);
 }
 
-function resolveFilesFromBackend(anyO: any): OrderFile[] {
+function resolveFilesFromBackend(anyO: BackendRecord): OrderFile[] {
   const arr = anyO?.files ?? anyO?.attachments ?? anyO?.adjuntos ?? anyO?.documents ?? [];
   const list = Array.isArray(arr) ? arr : [];
 
   return list
-    .map((f: any) => {
-      if (typeof f === "string") return { url: f };
-      const url = f?.url ?? f?.fileurl ?? f?.fileUrl ?? f?.path ?? f?.secure_url ?? f?.link ?? "";
-      const label = f?.originalname ?? f?.originalName ?? f?.filename ?? f?.name ?? undefined;
+    .map((f) => {
+      const file = f as BackendFile;
+      if (typeof file === "string") return { url: file };
+      const url = file.url ?? file.fileurl ?? file.fileUrl ?? file.path ?? file.secure_url ?? file.link ?? "";
+      const label = file.originalname ?? file.originalName ?? file.filename ?? file.name ?? undefined;
       return { url: String(url || ""), label: label ? String(label) : undefined };
     })
     .filter((x: OrderFile) => !!x.url);
 }
 
 function toRow(order: OrderServiceDTO): Row {
-  const o: any = order;
+  const o = order as OrderServiceDTO & BackendRecord;
   const estadoFromApi = mapEstadoFromBackend(o?.state?.name);
   let estadoKey = mapEstadoKey(o?.state?.name);
   const tecnico =
     Array.isArray(o?.technicians) && o.technicians.length
       ? o.technicians
-          .map((t: any) => [t?.users?.name, t?.users?.lastname].filter(Boolean).join(" ").trim())
+          .map((t) => [t?.users?.name, t?.users?.lastname].filter(Boolean).join(" ").trim())
           .filter(Boolean)
           .join(", ")
       : "-";
@@ -318,21 +358,26 @@ function toRow(order: OrderServiceDTO): Row {
     [o?.client?.users?.name, o?.client?.users?.lastname].filter(Boolean).join(" ").trim() ||
     (o?.client?.customerid ? `Cliente #${o.client.customerid}` : "-");
 
-  const fechainicio = o?.fechainicio ?? o?.fechaInicio ?? o?.startdate ?? o?.startDate ?? null;
-  const fechafin = o?.fechafin ?? o?.fechaFin ?? o?.enddate ?? o?.endDate ?? null;
-  const horainicio = o?.horainicio ?? o?.horaInicio ?? o?.starttime ?? o?.startTime ?? null;
-  const horafin = o?.horafin ?? o?.horaFin ?? o?.endtime ?? o?.endTime ?? null;
+  const fechainicio = toOptionalString(o?.fechainicio ?? o?.fechaInicio ?? o?.startdate ?? o?.startDate ?? null);
+  const fechafin = toOptionalString(o?.fechafin ?? o?.fechaFin ?? o?.enddate ?? o?.endDate ?? null);
+  const horainicio = toOptionalString(o?.horainicio ?? o?.horaInicio ?? o?.starttime ?? o?.startTime ?? null);
+  const horafin = toOptionalString(o?.horafin ?? o?.horaFin ?? o?.endtime ?? o?.endTime ?? null);
+  const createdAtValue = toOptionalString(o?.createdat ?? o?.createdAt ?? null);
+  const updatedAtValue = toOptionalString(o?.updatedat ?? o?.updatedAt ?? null);
 
   const materiales: LineItem[] =
-    o?.products?.map((p: any) => {
-      const nombre = p.product?.productname || (p.product?.productid ? `Producto #${p.product.productid}` : "Producto");
+    o?.products?.map((p) => {
+      const productLineRecord = p as BackendRecord;
+      const productRecord = (p.product as BackendRecord | undefined) ?? undefined;
+      const nombre =
+        productRecord?.productname || (productRecord?.productid ? `Producto #${productRecord.productid}` : "Producto");
       const cantidad = Number(p.cantidad) || 0;
       const rawPrecio =
-        p.product?.productpriceofsale ??
-        p.product?.productprice ??
-        p.product?.price ??
-        p.precio ??
-        p.price ??
+        productRecord?.productpriceofsale ??
+        productRecord?.productprice ??
+        productRecord?.price ??
+        productLineRecord.precio ??
+        productLineRecord.price ??
         (typeof p.subtotal === "number" && cantidad > 0 ? p.subtotal / cantidad : undefined);
       const precioNum = rawPrecio == null ? undefined : Number(rawPrecio);
       const precio = Number.isFinite(precioNum) ? precioNum : undefined;
@@ -349,8 +394,8 @@ function toRow(order: OrderServiceDTO): Row {
     id: Number(o?.ordersservicesid ?? 0),
     fechaProgramada:
       formatDateES(fechainicio) ||
-      formatDateES(o?.createdat ?? o?.createdAt ?? null) ||
-      formatDate(o?.fechainicio ?? o?.createdat ?? null),
+      formatDateES(createdAtValue) ||
+      formatDate(fechainicio ?? createdAtValue),
     tipo: inferTipo(o?.description),
     tecnico,
     cliente,
@@ -367,8 +412,8 @@ function toRow(order: OrderServiceDTO): Row {
     fechafin: fechafin ? String(fechafin) : undefined,
     horainicio: horainicio ? String(horainicio) : undefined,
     horafin: horafin ? String(horafin) : undefined,
-    createdat: o?.createdat ?? o?.createdAt ?? undefined,
-    updatedat: o?.updatedat ?? o?.updatedAt ?? undefined,
+    createdat: createdAtValue ?? undefined,
+    updatedat: updatedAtValue ?? undefined,
   };
 }
 
@@ -473,7 +518,6 @@ export default function OrderServicesClientsPage() {
     };
   }, [clientIdFromAuth, ready, page, limit, query]);
 
-  const total = paginationMeta.total;
   const totalPages = Math.max(1, paginationMeta.totalPages);
   const current = Math.min(paginationMeta.page, totalPages);
   const paged = rows;
@@ -810,7 +854,7 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
     try {
       const history = await fetchOrderServiceHistory(row.id);
       hasTechnicianConfirmation = Array.isArray(history)
-        ? history.some((item: any) => String(item?.message ?? "").includes(TECH_COMPLETE_CONFIRM_TAG))
+        ? history.some((item) => String(item?.message ?? "").includes(TECH_COMPLETE_CONFIRM_TAG))
         : false;
     } catch {
       showError("No se pudo validar la confirmacion del tecnico.");
@@ -1057,7 +1101,6 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
                             whileHover={{ scale: 1.03 }}
                             whileTap={{ scale: 0.97 }}
                             onClick={() => openReport(row)}
-                            disabled={row.estadoKey === "Anulada"}
                             title={
                               row.estadoKey === "Garantia" || row.estadoKey === "GarantiaReportada"
                                 ? "Editar reporte de garantia"
@@ -1254,8 +1297,3 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
     </RequireAuth>
   );
 }
-
-
-
-
-

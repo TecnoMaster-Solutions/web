@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/features/auth/authcontext";
 import Nav from "@/features/landing/layout/Nav";
-import { showError, showSuccess } from "@/shared/utils/notifications";
+import { showError } from "@/shared/utils/notifications";
 import { routes } from "@/shared/routes";
 
 type FormState = {
@@ -107,7 +107,15 @@ export default function LoginPage() {
       return;
     }
 
-    showSuccess("Inicio de sesión exitoso.");
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem(
+        "__pending_toast__",
+        JSON.stringify({
+          type: "success",
+          message: "Inicio de sesión exitoso.",
+        })
+      );
+    }
     router.replace(result.redirectTo);
   };
 
@@ -134,9 +142,9 @@ export default function LoginPage() {
 
           <form noValidate onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="font-semibold text-sm">Email</label>
+              <label htmlFor="email" className="font-semibold text-sm">Email</label>
               <input
-                data-testid="email-input"
+                id="email"
                 type="text"
                 inputMode="email"
                 className={`w-full h-11 mt-1 px-4 rounded-lg border bg-white outline-none ${
@@ -160,14 +168,15 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="font-semibold text-sm">Contraseña</label>
+              <label htmlFor="password" className="font-semibold text-sm">Contraseña</label>
               <div
                 className={`flex items-center mt-1 w-full rounded-lg border bg-white overflow-hidden ${
                   passHasError ? "border-red-500" : ""
                 }`}
               >
                 <input
-                  data-testid="password-input" type={show ? "text" : "password"}
+                  id="password"
+                  type={show ? "text" : "password"}
                   className="flex-1 h-11 px-4 outline-none bg-white"
                   value={form.password}
                   onChange={(e) => setField("password", e.target.value)}
@@ -243,5 +252,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
-

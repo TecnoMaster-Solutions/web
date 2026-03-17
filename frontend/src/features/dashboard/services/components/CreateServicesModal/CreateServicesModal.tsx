@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Modal from "@/features/dashboard/components/Modal";
 import Colors from "@/shared/theme/colors";
 import { Service, CreateServicePayload } from "../../types/typesServices";
@@ -14,14 +14,14 @@ interface CreateServiceModalProps {
   services: Service[];
 }
 
+type Errors = Partial<Record<"name" | "typeofserviceid" | "image", string>>;
+
 const toTitleCase = (s: string) =>
   s
     .trim()
     .split(/\s+/)
     .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w))
     .join(" ");
-
-type Errors = Partial<Record<"name" | "typeofserviceid" | "image", string>>;
 
 const CreateServiceModal: React.FC<CreateServiceModalProps> = ({
   isOpen,
@@ -32,7 +32,6 @@ const CreateServiceModal: React.FC<CreateServiceModalProps> = ({
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [typeofserviceid, setTypeofserviceid] = useState<number>(0);
-  const [category, setCategory] = useState("");
   const [image, setImage] = useState<File | string | null>(null);
   const [errors, setErrors] = useState<Errors>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -40,16 +39,10 @@ const CreateServiceModal: React.FC<CreateServiceModalProps> = ({
   const [types, setTypes] = useState<ServiceTypeApi[]>([]);
   const [loadingTypes, setLoadingTypes] = useState(false);
 
-  const selectedTypeName = useMemo(() => {
-    const t = types.find((x) => x.typeofserviceid === typeofserviceid);
-    return t?.name ?? "";
-  }, [types, typeofserviceid]);
-
   const resetForm = () => {
     setName("");
     setDescription("");
     setTypeofserviceid(0);
-    setCategory("");
     setImage(null);
     setErrors({});
   };
@@ -93,8 +86,6 @@ const CreateServiceModal: React.FC<CreateServiceModalProps> = ({
       showWarning("Por favor completa los campos requeridos");
       return;
     }
-
-    const finalCategory = toTitleCase(selectedTypeName || category);
 
     const data: CreateServicePayload = {
       name: name.trim(),
@@ -264,9 +255,6 @@ const CreateServiceModal: React.FC<CreateServiceModalProps> = ({
             onChange={(e) => {
               const id = Number(e.target.value || 0);
               setTypeofserviceid(id);
-              setCategory(
-                toTitleCase(types.find((t) => t.typeofserviceid === id)?.name ?? "")
-              );
               setErrors((p) => ({
                 ...p,
                 typeofserviceid: id
@@ -313,5 +301,3 @@ const CreateServiceModal: React.FC<CreateServiceModalProps> = ({
 };
 
 export default CreateServiceModal;
-
-

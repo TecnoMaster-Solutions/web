@@ -11,6 +11,8 @@ import {
   type PurchaseFormField,
 } from "../validations/purchasesValidations";
 import { PurchaseFormState } from "../hooks/usePurchases";
+import { IPurchaseOrder } from "../Types/Purchase.type";
+import type { PurchaseProductApi, PurchaseSupplierApi } from "../api/purchases.api";
 
 const DEFAULT_SUPPLIER_IMAGE =
   "https://cdn-icons-png.flaticon.com/512/1698/1698535.png";
@@ -47,7 +49,7 @@ const OC_ANULADA_ID = 8;
  * - Si viene ISO string: "2026-03-05T12:00:00.000Z" => toma "2026-03-05"
  * - Devuelve "dd/mm/yyyy"
  */
-const formatDateOnly = (value: any) => {
+const formatDateOnly = (value: string | Date | null | undefined) => {
   if (!value) return "";
 
   if (typeof value === "string") {
@@ -72,11 +74,15 @@ type CartItem = {
 };
 
 interface Props {
-  onSave: () => Promise<any>;
+  onSave: () => Promise<unknown>;
   onClose: (created?: boolean) => void;
 
   purchases: IPurchase[];
-  fetchPurchases: () => Promise<void>;
+  fetchPurchases: (
+    customPage?: number,
+    customLimit?: number,
+    customSearch?: string
+  ) => Promise<void>;
   form: PurchaseFormState;
 
   selectedProduct: string;
@@ -105,10 +111,10 @@ interface Props {
 
   addToCart: () => void;
 
-  products: any[];
-  suppliers: any[];
+  products: PurchaseProductApi[];
+  suppliers: PurchaseSupplierApi[];
 
-  purchaseOrders: any[];
+  purchaseOrders: IPurchaseOrder[];
   poLoading: boolean;
 
   poDetailLoading: boolean;
@@ -192,21 +198,21 @@ export default function RegisterPurchaseForm({
     const error = validatePurchaseField(field, value, purchases ?? []);
     setErrors((prev) => {
       const next = { ...prev };
-      if (error) (next as any)[field] = error;
-      else delete (next as any)[field];
+      if (error) next[field] = error;
+      else delete next[field];
       return next;
     });
   };
 
   useEffect(() => {
     if (form.orderNumber !== undefined) {
-      validateField("orderNumber" as any, form.orderNumber);
+      validateField("orderNumber", form.orderNumber);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.orderNumber]);
 
   useEffect(() => {
-    validateField("products" as any, cart.length);
+    validateField("products", cart.length);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cart.length]);
 
@@ -240,14 +246,14 @@ export default function RegisterPurchaseForm({
         productsCount: cart.length,
         purchaseOrderId: form.purchaseOrderId,
         purchaseOrderFinalStateId: form.purchaseOrderFinalStateId,
-      } as any,
+      },
       purchases ?? []
     );
 
     if (isUsingPurchaseOrder) {
       const fs = Number(form.purchaseOrderFinalStateId || 0);
       if (![OC_APROBADA_ID, OC_ANULADA_ID].includes(fs)) {
-        (validationErrors as any).purchaseOrderFinalStateId =
+        validationErrors.purchaseOrderFinalStateId =
           "Selecciona el estado final de la OC (Aprobada o Anulada).";
       }
     }
@@ -317,8 +323,6 @@ export default function RegisterPurchaseForm({
   const selectedSupplier = suppliers.find(
     (s) => String(s.supplierid) === String(form.supplier)
   );
-
-  const showOcFinalState = isUsingPurchaseOrder;
 
   return (
     <form
@@ -464,7 +468,7 @@ export default function RegisterPurchaseForm({
                     : "Selecciona la orden (opcional)"}
                 </option>
 
-                {purchaseOrders.map((po: any) => {
+                {purchaseOrders.map((po) => {
                   const dateLabel = formatDateOnly(po.fecha);
                   return (
                     <option key={po.id} value={po.id}>
@@ -705,7 +709,7 @@ export default function RegisterPurchaseForm({
                 type="button"
                 onClick={() => {
                   if (!form.supplier) {
-                    validateField("supplier" as any, form.supplier);
+                    validateField("supplier", form.supplier);
                     showWarning("Selecciona primero un proveedor.", {
                       autoClose: 5000,
                     });

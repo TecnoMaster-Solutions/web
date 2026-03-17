@@ -11,6 +11,7 @@ import {
   pickDefaultDashboardRoute,
 } from "@/features/auth/authz";
 import { ChangePasswordModal } from "@/features/auth/Components/PasswordModals";
+import { getAuthPermissions } from "@/features/auth/utils/authUser";
 import { routes } from "@/shared/routes";
 import { showSuccess } from "@/shared/utils/notifications";
 
@@ -46,7 +47,7 @@ export default function DashboardLayout({
   const hideAside = allowedModules.length <= 1;
 
   const permissions = useMemo<string[]>(
-    () => (user as any)?.permissions || [],
+    () => getAuthPermissions(user),
     [user]
   );
 

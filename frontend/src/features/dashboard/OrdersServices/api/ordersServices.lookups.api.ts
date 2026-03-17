@@ -4,44 +4,59 @@ import { useCallback, useEffect, useState } from "react";
 import type { AxiosRequestConfig } from "axios";
 import { api } from "@/lib/api";
 
-type LookupsResponse = {
-  customers?: any;
-  clients?: any;
-  technicians?: any;
-  products?: any;
-  services?: any;
-  serviceTypes?: any;
-  tiposServicio?: any;
-  types?: any;
-  pendingStateId?: number | null;
-  pendingState?: any;
-  scheduledStateId?: number | null;
-  scheduledState?: any;
+type LookupItem = Record<string, unknown>;
+type LookupList = LookupItem[];
+type LookupEnvelope = {
+  data?: unknown;
+  items?: unknown;
+  results?: unknown;
+  rows?: unknown;
 };
 
-async function tryGet<T = any>(paths: string[], config?: AxiosRequestConfig) {
-  let lastErr: any = null;
+type LookupsResponse = {
+  customers?: unknown;
+  clients?: unknown;
+  technicians?: unknown;
+  products?: unknown;
+  services?: unknown;
+  serviceTypes?: unknown;
+  tiposServicio?: unknown;
+  types?: unknown;
+  pendingStateId?: number | null;
+  pendingState?: LookupItem;
+  scheduledStateId?: number | null;
+  scheduledState?: LookupItem;
+};
+
+type ApiErrorShape = {
+  response?: { status?: number; data?: { message?: string | string[] } };
+  message?: string;
+};
+
+async function tryGet<T = unknown>(paths: string[], config?: AxiosRequestConfig) {
+  let lastErr: unknown = null;
   for (const p of paths) {
     try {
       const res = await api.get<T>(p, config);
       return res;
-    } catch (e: any) {
+    } catch (e: unknown) {
       lastErr = e;
     }
   }
   throw lastErr;
 }
 
-function pickErrorMessage(e: any) {
-  return e?.response?.data?.message || e?.message || "Error cargando datos.";
+function pickErrorMessage(e: unknown) {
+  const error = e as ApiErrorShape | null;
+  return error?.response?.data?.message || error?.message || "Error cargando datos.";
 }
 
-function isNumericStringExpectedError(e: any) {
+function isNumericStringExpectedError(e: unknown) {
   const msg = String(pickErrorMessage(e)).toLowerCase();
   return msg.includes("numeric string is expected");
 }
 
-function normalizeKey(v: any) {
+function normalizeKey(v: unknown) {
   return String(v ?? "")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -49,34 +64,39 @@ function normalizeKey(v: any) {
     .toLowerCase();
 }
 
-function unwrapList(x: any): any[] {
+function unwrapList(x: unknown): LookupList {
   if (Array.isArray(x)) return x;
   if (x && typeof x === "object") {
-    if (Array.isArray((x as any).data)) return (x as any).data;
-    if (Array.isArray((x as any).items)) return (x as any).items;
-    if (Array.isArray((x as any).results)) return (x as any).results;
-    if (Array.isArray((x as any).rows)) return (x as any).rows;
+    const envelope = x as LookupEnvelope;
+    if (Array.isArray(envelope.data)) return envelope.data as LookupList;
+    if (Array.isArray(envelope.items)) return envelope.items as LookupList;
+    if (Array.isArray(envelope.results)) return envelope.results as LookupList;
+    if (Array.isArray(envelope.rows)) return envelope.rows as LookupList;
   }
   return [];
 }
 
-function findPendingStateId(statesLike: any) {
+function findPendingStateId(statesLike: unknown) {
   const states = unwrapList(statesLike);
-  const pending = states.find((s: any) => {
-    const name = normalizeKey(s?.name ?? s?.state ?? s?.label ?? "");
+  const pending = states.find((s) => {
+    const state = s as LookupItem;
+    const name = normalizeKey(state.name ?? state.state ?? state.label ?? "");
     return name === "pendiente" || name.includes("pendiente");
   });
-  const id = pending?.stateid ?? pending?.id;
+  const pendingState = pending as LookupItem | undefined;
+  const id = pendingState?.stateid ?? pendingState?.id;
   return typeof id === "number" ? id : null;
 }
 
-function findScheduledStateId(statesLike: any) {
+function findScheduledStateId(statesLike: unknown) {
   const states = unwrapList(statesLike);
-  const scheduled = states.find((s: any) => {
-    const name = normalizeKey(s?.name ?? s?.state ?? s?.label ?? "");
+  const scheduled = states.find((s) => {
+    const state = s as LookupItem;
+    const name = normalizeKey(state.name ?? state.state ?? state.label ?? "");
     return name.includes("agend");
   });
-  const id = scheduled?.stateid ?? scheduled?.id;
+  const scheduledState = scheduled as LookupItem | undefined;
+  const id = scheduledState?.stateid ?? scheduledState?.id;
   return typeof id === "number" ? id : null;
 }
 
@@ -84,11 +104,11 @@ export function useOrdersServicesLookups() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [customers, setCustomers] = useState<any[]>([]);
-  const [technicians, setTechnicians] = useState<any[]>([]);
-  const [products, setProducts] = useState<any[]>([]);
-  const [services, setServices] = useState<any[]>([]);
-  const [serviceTypes, setServiceTypes] = useState<any[]>([]);
+  const [customers, setCustomers] = useState<LookupList>([]);
+  const [technicians, setTechnicians] = useState<LookupList>([]);
+  const [products, setProducts] = useState<LookupList>([]);
+  const [services, setServices] = useState<LookupList>([]);
+  const [serviceTypes, setServiceTypes] = useState<LookupList>([]);
   const [pendingStateId, setPendingStateId] = useState<number | null>(null);
   const [scheduledStateId, setScheduledStateId] = useState<number | null>(null);
 
@@ -98,12 +118,12 @@ export function useOrdersServicesLookups() {
 
     const fallback = async () => {
       const [cRes, tRes, pRes, sRes, typesRes] = await Promise.all([
-        tryGet<any>(["api/customers", "/api/customers", "customers", "/customers"], {
+        tryGet<unknown>(["api/customers", "/api/customers", "customers", "/customers"], {
           params: { includeRelations: true },
         }),
-        tryGet<any>(["api/technicians", "/api/technicians", "technicians", "/technicians"]),
-        tryGet<any>(["api/products", "/api/products", "products", "/products"]),
-        tryGet<any>([
+        tryGet<unknown>(["api/technicians", "/api/technicians", "technicians", "/technicians"]),
+        tryGet<unknown>(["api/products", "/api/products", "products", "/products"]),
+        tryGet<unknown>([
           "api/services",
           "/api/services",
           "services",
@@ -113,7 +133,7 @@ export function useOrdersServicesLookups() {
           "servicios",
           "/servicios",
         ]),
-        tryGet<any>([
+        tryGet<unknown>([
           "services/types",
           "/services/types",
           "api/services/types",
@@ -131,7 +151,7 @@ export function useOrdersServicesLookups() {
 
       let pending: number | null = null;
       try {
-        const statesRes = await tryGet<any>(["api/states", "/api/states", "states", "/states"]);
+        const statesRes = await tryGet<unknown>(["api/states", "/api/states", "states", "/states"]);
         pending = findPendingStateId(statesRes.data);
         setScheduledStateId(findScheduledStateId(statesRes.data));
       } catch {
@@ -156,7 +176,7 @@ export function useOrdersServicesLookups() {
         "/orders-services/lookups",
       ]);
 
-      const data: LookupsResponse = (res as any)?.data ?? {};
+      const data: LookupsResponse = res.data ?? {};
 
       const cs = data.customers ?? data.clients ?? [];
       const ts = data.technicians ?? [];
@@ -183,7 +203,7 @@ export function useOrdersServicesLookups() {
         setServices(svList);
       } else {
         try {
-          const sRes = await tryGet<any>([
+          const sRes = await tryGet<unknown>([
             "api/services",
             "/api/services",
             "services",
@@ -204,7 +224,7 @@ export function useOrdersServicesLookups() {
         setServiceTypes(typesList);
       } else {
         try {
-          const tr = await tryGet<any>([
+          const tr = await tryGet<unknown>([
             "services/types",
             "/services/types",
             "api/services/types",
@@ -227,12 +247,12 @@ export function useOrdersServicesLookups() {
       setPendingStateId(pending ?? null);
       setScheduledStateId(scheduled ?? findScheduledStateId(data));
       setError(null);
-    } catch (e: any) {
-      const status = e?.response?.status;
+    } catch (e: unknown) {
+      const status = (e as ApiErrorShape | null)?.response?.status;
       if (status === 404 || isNumericStringExpectedError(e) || status === 400) {
         try {
           await fallback();
-        } catch (e2: any) {
+        } catch (e2: unknown) {
           setError(String(pickErrorMessage(e2)));
           setCustomers([]);
           setTechnicians([]);

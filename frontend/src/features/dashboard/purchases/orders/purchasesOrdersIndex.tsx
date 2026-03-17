@@ -16,11 +16,7 @@ export default function PurchaseOrdersIndex() {
   const {
     purchaseOrders,
     loading,
-    isCreateModalOpen,
-    setIsCreateModalOpen,
-    viewingPurchaseOrder,
     handleCreatePurchaseOrder,
-    handleView,
     closeModals,
   } = usePurchaseOrders();
 
@@ -30,17 +26,8 @@ export default function PurchaseOrdersIndex() {
 
   // Sorting
   type SortField = "fecha" | "total";
-  const [sortField, setSortField] = useState<SortField | null>(null);
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
-
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setSortField(field);
-      setSortDir("asc");
-    }
-  };
+  const [sortField] = useState<SortField | null>(null);
+  const [sortDir] = useState<"asc" | "desc">("asc");
 
   const sortedOrders = useMemo((): purchaseOrder[] => {
     if (!sortField) return purchaseOrders;
@@ -160,4 +147,3 @@ export default function PurchaseOrdersIndex() {
     </div>
   );
 }
-

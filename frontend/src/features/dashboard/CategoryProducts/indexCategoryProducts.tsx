@@ -1,5 +1,4 @@
 "use client";
-import { useCallback } from "react";
 import Colors from "@/shared/theme/colors";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -10,6 +9,12 @@ import CreateCategoryModal from "./components/CreateCategoryModal/CreateCategory
 import { useCategories } from "./hooks/useCategories";
 import { Category, EditCategoryData } from "./types/typeCategoryProducts";
 import { Column } from "../components/datatable/types/column.types";
+
+type CategoryTableRow = Category & {
+  rowNumber: number;
+  statusSearch: string;
+  productsCount: number;
+};
 
 function Loader() {
   return (
@@ -44,13 +49,13 @@ export default function CategoriesPage() {
     closeModals,
   } = useCategories();
 
-  const columns: Column<Category>[] = [
+  const columns: Column<CategoryTableRow>[] = [
     { key: "id", header: "ID" },
     { key: "name", header: "Nombre" },
     {
       key: "description",
       header: "Descripcion",
-      render: (row: Category) => {
+      render: (row: CategoryTableRow) => {
         const desc =
           row.description && row.description.trim() !== ""
             ? row.description
@@ -79,7 +84,7 @@ export default function CategoriesPage() {
     {
       key: "status",
       header: "Estado",
-      render: (row: Category) => (
+      render: (row: CategoryTableRow) => (
         <span
           className="rounded-full px-2 py-0.5 text-xs font-medium"
           style={{
@@ -104,23 +109,6 @@ export default function CategoriesPage() {
       rowNumber: (currentPage - 1) * pageSize + index + 1,
       statusSearch: c.status ? "activo" : "inactivo",
     }));
-
-  const categoryActionGuard = useCallback((category: Category) => {
-    const count = category.productsCount ?? 0;
-    if (count === 0) {
-      return undefined;
-    }
-
-    const deleteTitle =
-      count === 1
-        ? "No se puede eliminar: la categoria tiene 1 producto asociado"
-        : `No se puede eliminar: la categoria tiene ${count} productos asociados`;
-
-    return {
-      disableDelete: true,
-      deleteTitle,
-    };
-  }, []);
 
   return (
     <div className="min-h-screen flex">
@@ -168,7 +156,7 @@ export default function CategoriesPage() {
             {initialLoading ? (
               <Loader />
             ) : (
-              <DataTable<Category>
+              <DataTable<CategoryTableRow>
                 module="categories"
                 data={categoriesForTable}
                 columns={columns}
@@ -190,7 +178,20 @@ export default function CategoriesPage() {
                 onView={handleView}
                 onEdit={handleEdit}
                 onDelete={handleDeleteCategory}
-                actionGuard={categoryActionGuard}
+                actionGuard={(row) => {
+                  const count = row.productsCount ?? 0;
+                  if (count === 0) {
+                    return {};
+                  }
+
+                  return {
+                    disableDelete: true,
+                    deleteTitle:
+                      count === 1
+                        ? "No se puede eliminar: la categoria tiene 1 producto asociado"
+                        : `No se puede eliminar: la categoria tiene ${count} productos asociados`,
+                  };
+                }}
                 loading={loading}
               />
             )}

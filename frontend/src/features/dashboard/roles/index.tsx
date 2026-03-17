@@ -28,7 +28,6 @@ export default function Index() {
     total,
     search,
     setPage,
-    setLimit,
     setSearch,
     isCreateModalOpen,
     setIsCreateModalOpen,
@@ -56,7 +55,9 @@ export default function Index() {
             <CreateRoleModal
               open={isCreateModalOpen}
               onClose={() => setIsCreateModalOpen(false)}
-              onSubmit={(data) => handleCreateRole(data)}
+              onSubmit={async (data) => {
+                await handleCreateRole(data);
+              }}
               existingRoles={roles}
               loading={creating}
             />
@@ -65,7 +66,9 @@ export default function Index() {
               isOpen={isEditModalOpen}
               role={selectedRole}
               onClose={() => setIsEditModalOpen(false)}
-              onSave={(id, data) => handleEditRole(id, data)}
+              onSave={async (id, data) => {
+                await handleEditRole(id, data);
+              }}
               existingRoles={roles}
             />
 

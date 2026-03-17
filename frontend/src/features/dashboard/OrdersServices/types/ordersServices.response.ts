@@ -65,7 +65,7 @@ export type OS_History = {
   action: string;
   actionlabel: string;
   description: string | null;
-  payload: Record<string, any>;
+  payload: Record<string, unknown>;
   actoruserid: number | null;
   createdat: string;
 };

@@ -27,6 +27,20 @@ type PaginatedRolesResponse = {
   };
 };
 
+type ApiErrorResponse = {
+  message?: string;
+};
+
+type ErrorWithResponse = Error & {
+  response?: unknown;
+};
+
+type PatchRoleMetaPayload = {
+  roleid: number;
+  name?: string;
+  status?: "active" | "inactive";
+};
+
 const toUiStatus = (s?: string) =>
   (s ?? "").toLowerCase() === "active" ? "Activo" : "Inactivo";
 
@@ -83,9 +97,10 @@ export const deleteRole = async (id: number) => {
   });
 
   if (res.status >= 400) {
-    const error: any = new Error(
-      (res.data as any)?.message || "No se pudo eliminar el rol."
-    );
+    const error = new Error(
+      (res.data as ApiErrorResponse | undefined)?.message ||
+        "No se pudo eliminar el rol."
+    ) as ErrorWithResponse;
     error.response = res;
     throw error;
   }
@@ -121,7 +136,7 @@ export const patchRoleMeta = async (
   roleid: number,
   payload: { name?: string; status?: "Activo" | "Inactivo" }
 ) => {
-  const role: any = { roleid };
+  const role: PatchRoleMetaPayload = { roleid };
 
   if (payload.name !== undefined) role.name = payload.name;
 
@@ -136,9 +151,10 @@ export const patchRoleMeta = async (
   );
 
   if (res.status >= 400) {
-    const error: any = new Error(
-      (res.data as any)?.message || "No se pudo actualizar el rol."
-    );
+    const error = new Error(
+      (res.data as ApiErrorResponse | undefined)?.message ||
+        "No se pudo actualizar el rol."
+    ) as ErrorWithResponse;
     error.response = res;
     throw error;
   }

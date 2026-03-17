@@ -1,35 +1,41 @@
-// mocks/mockClients.ts
-
 import { Client } from "../types/typeClients";
 
 export const initialClients: Client[] = [
   {
     id: 1,
+    userid: 101,
     tipo: "CC",
+    tipoId: 1,
     documento: "1021086280",
     nombre: "Joao Estid",
     apellido: "Ortiz Cuello",
     telefono: "3008239274",
     correoElectronico: "joaoestid@gmail.com",
     estado: "Inactivo",
-    ciudad: "Medellín",
+    ciudad: "Medellin",
     codigoPostal: "050001",
+    hasAssociations: false,
   },
   {
     id: 2,
+    userid: 102,
     tipo: "PPT",
+    tipoId: 4,
     documento: "1221106280",
     nombre: "Samuel",
     apellido: "Cordoba",
     telefono: "3113369669",
     correoElectronico: "sami69@gmail.com",
     estado: "Activo",
-    ciudad: "Bogotá",
+    ciudad: "Bogota",
     codigoPostal: "110111",
+    hasAssociations: false,
   },
   {
     id: 3,
+    userid: 103,
     tipo: "CC",
+    tipoId: 1,
     documento: "1221302283",
     nombre: "Daniel",
     apellido: "Alvarez",
@@ -38,5 +44,6 @@ export const initialClients: Client[] = [
     estado: "Inactivo",
     ciudad: "Cali",
     codigoPostal: "760001",
+    hasAssociations: true,
   },
 ];

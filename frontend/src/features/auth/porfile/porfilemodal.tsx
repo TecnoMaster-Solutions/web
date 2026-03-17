@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import Modal from "@/features/dashboard/components/Modal";
 import { useAuth } from "@/features/auth/authcontext";
+import { getApiErrorMessage, getRawRoleName } from "@/features/auth/utils/authUser";
 import { uploadImageToCloudinary } from "@/shared/utils/cloudinary";
 import { api } from "@/lib/api";
 import { showSuccess, showError } from "@/shared/utils/notifications";
@@ -22,6 +24,43 @@ type FormState = {
   customerzipcode: string;
   CV: string;
   technicianTypeIds: number[];
+};
+
+type TechnicianTypeMap = {
+  techniciantypeid: number;
+};
+
+type UserProfileResponse = {
+  name?: string;
+  lastname?: string;
+  email?: string;
+  phone?: string;
+  documentnumber?: string;
+  image?: string;
+  roles?: {
+    name?: string;
+  };
+  customers?: Array<{
+    customercity?: string;
+    customerzipcode?: string;
+  }>;
+  technicians?: Array<{
+    CV?: string;
+    technicianTypeMaps?: TechnicianTypeMap[];
+  }>;
+};
+
+type UpdateProfilePayload = {
+  name: string;
+  lastname: string;
+  phone: string;
+  email: string;
+  documentnumber: string;
+  image: string;
+  customercity?: string;
+  customerzipcode?: string;
+  CV?: string;
+  techniciantypeids?: number[];
 };
 
 export default function ProfileModal({ isOpen, onClose }: Props) {
@@ -102,9 +141,9 @@ export default function ProfileModal({ isOpen, onClose }: Props) {
 
     try {
       const res = await api.get(`/users/${userId}`);
-      const u = res.data.data;
+      const u = res.data.data as UserProfileResponse;
 
-      setRoleName((u.roles?.name || "").toLowerCase());
+      setRoleName(getRawRoleName({ rolename: u.roles?.name }) ?? "");
 
       setForm({
         name: u.name || "",
@@ -118,7 +157,7 @@ export default function ProfileModal({ isOpen, onClose }: Props) {
         CV: u.technicians?.[0]?.CV || "",
         technicianTypeIds:
           u.technicians?.[0]?.technicianTypeMaps?.map(
-            (m: any) => m.techniciantypeid
+            (m: TechnicianTypeMap) => m.techniciantypeid
           ) || [],
       });
     } finally {
@@ -189,7 +228,7 @@ export default function ProfileModal({ isOpen, onClose }: Props) {
         setUploadingCV(false);
       }
 
-      const payload: any = {
+      const payload: UpdateProfilePayload = {
         name: form.name,
         lastname: form.lastname,
         phone: form.phone,
@@ -219,8 +258,8 @@ export default function ProfileModal({ isOpen, onClose }: Props) {
       } else {
         showError(res.data.message || "Error al guardar");
       }
-    } catch (err: any) {
-      showError(err?.response?.data?.message || "Error al guardar los cambios");
+    } catch (err: unknown) {
+      showError(getApiErrorMessage(err, "Error al guardar los cambios"));
     } finally {
       setUploadingAvatar(false);
       setUploadingCV(false);
@@ -264,10 +303,12 @@ export default function ProfileModal({ isOpen, onClose }: Props) {
           <div className="flex items-center gap-4">
             <div className="relative h-20 w-20 rounded-2xl bg-gray-200 grid place-content-center overflow-hidden">
               {displayedAvatar ? (
-                <img
+                <Image
                   src={displayedAvatar}
                   alt="avatar"
-                  className="h-full w-full object-cover"
+                  fill
+                  unoptimized
+                  className="object-cover"
                 />
               ) : (
                 <span className="text-xl font-semibold text-gray-600">

@@ -349,7 +349,7 @@ export default function SaleDetailContent({ saleId, onBack }: SaleDetailContentP
             {sale.notes ? (
                 <div className="bg-gray-50 p-4 rounded-lg">
                     <h4 className="font-bold text-gray-700 mb-2">Observaciones</h4>
-                    <p className="text-gray-600 italic">" {sale.notes} "</p>
+                    <p className="text-gray-600 italic">&quot; {sale.notes} &quot;</p>
                 </div>
             ) : null}
         </div>

@@ -1,5 +1,21 @@
 import { Column } from "./column.types";
 
+export type FilterOption = {
+  key: string;
+  label: string;
+  value: string;
+};
+
+export type DateFilter = {
+  startDate: string | null;
+  endDate: string | null;
+};
+
+export type DataTableFilters = {
+  status?: string | null;
+  dateRange?: DateFilter;
+};
+
 export type DataTableProps<T> = {
   data: T[];
   columns: Column<T>[];
@@ -7,15 +23,22 @@ export type DataTableProps<T> = {
   showPageSizeSelector?: boolean;
   serverPagination?: {
     page: number;
-    limit: number;
+    limit?: number;
     totalPages: number;
     onPageChange: (page: number) => void;
-    onPageSizeChange: (limit: number) => void;
+    onPageSizeChange?: (limit: number) => void;
   };
   serverSearch?: {
     value: string;
     onChange: (value: string) => void;
   };
+  // Nuevos filtros avanzados
+  serverFilters?: {
+    filters: DataTableFilters;
+    onFilterChange: (filters: DataTableFilters) => void;
+  };
+  statusFilterOptions?: FilterOption[];
+  dateFilterField?: string; // Campo de fecha a filtrar (ej: 'createdat', 'fecha', 'fecharegistro')
   searchableKeys?: (keyof T)[];
   actionGuard?: (row: T) => {
     disableEdit?: boolean;

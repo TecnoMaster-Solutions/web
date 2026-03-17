@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Modal from "@/features/dashboard/components/Modal";
 import { getSaleById } from "../services/sales.service";
-import { ISale } from "../types/sales.type";
+import { ISale } from "../types/Sales.type";
 import SalePaymentRequestsSection from "./SalePaymentRequestsSection";
 import { showError } from "@/shared/utils/notifications";
 
@@ -19,7 +19,7 @@ export default function SalePaymentsModal({
     onSaved,
 }: SalePaymentsModalProps) {
     const [sale, setSale] = useState<ISale | null>(null);
-    const [loading, setLoading] = useState(false);
+    const [, setLoading] = useState(false);
 
     const handleSaleUpdated = useCallback(
         (updatedSale: ISale) => {

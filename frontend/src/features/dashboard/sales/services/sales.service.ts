@@ -13,7 +13,7 @@ import {
     ISalePaymentRequest,
     IReviewSalePaymentRequestDto,
     IUploadSalePaymentReceiptDto,
-} from "../types/sales.type";
+} from "../types/Sales.type";
 
 type CustomerApi = {
     customerid?: number;
@@ -32,38 +32,46 @@ type CustomerApi = {
     } | null;
 };
 
-type ApiResponsePayload<T> = {
+type PayloadWithData<T> = {
     data?: T;
-    meta?: {
-        page?: number;
-        limit?: number;
-        total?: number;
-        totalPages?: number;
-    };
 };
 
-function unwrapList<T>(payload: ApiResponsePayload<T> | T[] | unknown): T[] {
-    if (Array.isArray(payload)) return payload as T[];
-    const data = (payload as ApiResponsePayload<T>)?.data;
-    return Array.isArray(data) ? data : [];
+type PaginationShape = {
+    page?: number;
+    limit?: number;
+    total?: number;
+    totalPages?: number;
+};
+
+type PaginatedPayload<T> = {
+    data?: T[];
+    meta?: PaginationShape;
+};
+
+function unwrapList<T>(payload: unknown): T[] {
+    const data =
+        payload && typeof payload === "object" && "data" in payload
+            ? (payload as PayloadWithData<T[]>).data
+            : payload;
+    return Array.isArray(data) ? (data as T[]) : [];
 }
 
 function asPaginatedList<T>(
-    payload: ApiResponsePayload<T> | unknown
+    payload: unknown
 ): { data: T[]; meta: { page: number; limit: number; total: number; totalPages: number } } | null {
-    if (!payload || typeof payload !== 'object') return null;
-    const p = payload as ApiResponsePayload<T>;
-    if (!Array.isArray(p.data) || !p.meta || typeof p.meta !== 'object') {
+    if (!payload || typeof payload !== "object") return null;
+    const paginatedPayload = payload as PaginatedPayload<T>;
+    if (!Array.isArray(paginatedPayload.data) || !paginatedPayload.meta || typeof paginatedPayload.meta !== "object") {
         return null;
     }
 
     return {
-        data: p.data as T[],
+        data: paginatedPayload.data as T[],
         meta: {
-            page: Number(p.meta.page ?? 1),
-            limit: Number(p.meta.limit ?? 5),
-            total: Number(p.meta.total ?? 0),
-            totalPages: Number(p.meta.totalPages ?? 1),
+            page: Number(paginatedPayload.meta.page ?? 1),
+            limit: Number(paginatedPayload.meta.limit ?? 5),
+            total: Number(paginatedPayload.meta.total ?? 0),
+            totalPages: Number(paginatedPayload.meta.totalPages ?? 1),
         },
     };
 }
@@ -109,7 +117,7 @@ export async function getSales({
     search,
 }: GetSalesParams = {}): Promise<ISale[] | ISalesPaginatedResult> {
     const shouldPaginate = Number.isInteger(page) && Number.isInteger(limit);
-    const response = await apiClient.get<any>("/sales", {
+    const response = await apiClient.get<PaginatedPayload<ISale> | ISale[]>("/sales", {
         params: {
             order: "DESC",
             ...(shouldPaginate ? { page, limit } : {}),
@@ -178,11 +186,12 @@ export async function deleteSale(id: number): Promise<void> {
 }
 
 export async function getProducts(): Promise<IProduct[]> {
-    return apiClient.get<IProduct[]>("/products");
+    const response = await apiClient.get<PayloadWithData<IProduct[]> | IProduct[]>("/products");
+    return unwrapList<IProduct>(response);
 }
 
 export async function getCustomers(): Promise<ICustomer[]> {
-    const response = await apiClient.get<any>("/customers", {
+    const response = await apiClient.get<PayloadWithData<CustomerApi[]>>("/customers", {
         params: { includeRelations: true },
     });
 
@@ -192,7 +201,9 @@ export async function getCustomers(): Promise<ICustomer[]> {
 }
 
 export async function getServices(): Promise<{ data: IService[] }> {
-    return apiClient.get<{ data: IService[] }>("/services");
+    const response = await apiClient.get<PayloadWithData<IService[]> | IService[]>("/services");
+    const data = unwrapList<IService>(response);
+    return { data };
 }
 
 export async function getSalePayments(saleId: number): Promise<ISalesPayment[]> {

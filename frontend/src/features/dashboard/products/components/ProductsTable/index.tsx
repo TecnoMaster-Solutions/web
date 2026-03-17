@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useMemo } from "react";
+import type { CSSProperties } from "react";
+import Image from "next/image";
 import { DataTable } from "@/features/dashboard/components/datatable/DataTable";
 import Colors from "@/shared/theme/colors";
 import type { Product } from "@/features/dashboard/products/types/typesProducts";
@@ -48,6 +50,15 @@ const cleanText = (v: unknown) => {
 const isInactiveState = (v: unknown) =>
   String(v ?? "").trim().toLowerCase() === "inactivo";
 
+const truncStyle: CSSProperties = {
+  whiteSpace: "normal",
+  wordBreak: "break-word",
+  overflowWrap: "anywhere",
+  display: "-webkit-box",
+  WebkitBoxOrient: "vertical",
+  overflow: "hidden",
+};
+
 const Trunc: React.FC<{
   value: unknown;
   max?: number;
@@ -61,15 +72,7 @@ const Trunc: React.FC<{
     <span
       className={["block max-w-full min-w-0 overflow-hidden leading-5", className].join(" ")}
       title={text !== "—" ? text : undefined}
-      style={{
-        whiteSpace: "normal",
-        wordBreak: "break-word",
-        overflowWrap: "anywhere",
-        display: "-webkit-box",
-        WebkitBoxOrient: "vertical" as any,
-        WebkitLineClamp: lines,
-        overflow: "hidden",
-      }}
+      style={{ ...truncStyle, WebkitLineClamp: lines }}
     >
       {shown}
     </span>
@@ -139,11 +142,13 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
       render: (p) =>
         p.image ? (
           <div className="w-full flex justify-center">
-            <img
+            <Image
               src={p.image}
               alt={cleanText(p.name)}
+              width={40}
+              height={40}
+              unoptimized
               className="w-10 h-10 object-cover rounded-md border border-gray-200"
-              loading="lazy"
             />
           </div>
         ) : (

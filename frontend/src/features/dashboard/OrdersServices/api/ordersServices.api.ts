@@ -15,6 +15,7 @@ import type {
 const BASE = "orders-services";
 const IN_PROCESS_STATE_ID = 7;
 type RequestOptions = { signal?: AbortSignal };
+type ApiErrorShape = { response?: { status?: number } };
 
 export type PaginationMeta = {
   page: number;
@@ -213,8 +214,8 @@ export async function addOrderServiceWorklog(
   try {
     const { data } = await api.post<OrdersServiceHistoryItem>(`${BASE}/${id}/history`, dto);
     return data;
-  } catch (error: any) {
-    const status = Number(error?.response?.status ?? 0);
+  } catch (error: unknown) {
+    const status = Number((error as ApiErrorShape | null)?.response?.status ?? 0);
     const hasOptionalFields =
       dto.title != null || dto.progresspercent != null || (Array.isArray(dto.attachments) && dto.attachments.length > 0);
     if (status !== 400 || !hasOptionalFields) throw error;

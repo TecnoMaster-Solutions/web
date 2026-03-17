@@ -1,26 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Modal from "@/features/dashboard/components/Modal";
 import { addOrderServiceWorklog, fetchOrderServiceHistory } from "@/features/dashboard/OrdersServices/api/ordersServices.api";
+import type { AddWorklogDto, OrdersServiceHistoryItem } from "@/features/dashboard/OrdersServices/types/ordersServices.types";
 import { showError, showSuccess, showWarning } from "@/shared/utils/notifications";
 import { RefreshCw } from "lucide-react";
 
 type TechnicianOption = { technicianid: number; label: string };
 type HistoryType = "TECH" | "SYSTEM";
 
-type HistoryItem = {
-  ordersserviceshistoryid?: number;
-  type?: string;
-  message?: string;
-  createdat?: string;
-};
-
-type AddWorklogPayload = {
-  technicianid: number;
-  note: string;
-  title?: string;
-};
+type HistoryItem = Pick<OrdersServiceHistoryItem, "ordersserviceshistoryid" | "type" | "message" | "createdat">;
 
 type Props = {
   isOpen: boolean;
@@ -77,24 +67,24 @@ export default function OrderServiceHistoryCreateModal({
     setType(defaultType);
   }, [isOpen, defaultTechId, defaultType]);
 
-  async function loadHistory() {
+  const loadHistory = useCallback(async () => {
     if (!orderId) return;
     setHistoryLoading(true);
     try {
       const data = await fetchOrderServiceHistory(orderId, type);
-      setHistory(Array.isArray(data) ? (data as any) : []);
+      setHistory(Array.isArray(data) ? data : []);
     } catch {
       setHistory([]);
     } finally {
       setHistoryLoading(false);
     }
-  }
+  }, [orderId, type]);
 
   useEffect(() => {
     if (!isOpen) return;
     if (!orderId) return;
     loadHistory();
-  }, [isOpen, orderId, type]);
+  }, [isOpen, orderId, loadHistory]);
 
   async function onSubmit() {
     const techId = Number(technicianid) || 0;
@@ -134,11 +124,11 @@ export default function OrderServiceHistoryCreateModal({
 
     setSaving(true);
     try {
-      const dto: AddWorklogPayload = t
+      const dto: AddWorklogDto = t
         ? { technicianid: techId, note: n, title: t }
         : { technicianid: techId, note: n };
 
-      await addOrderServiceWorklog(orderId, dto as any);
+      await addOrderServiceWorklog(orderId, dto);
       showSuccess("Historial registrado");
       setTitle("");
       setNote("");

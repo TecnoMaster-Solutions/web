@@ -9,6 +9,7 @@ import { uploadImageToCloudinary } from "@/shared/utils/cloudinary";
 import { getProducts } from "@/features/dashboard/products/api/products.api";
 import type { Product } from "@/features/dashboard/products/types/typesProducts";
 import { getSupplierProducts } from "@/features/dashboard/suppliers/services/suppliers.service";
+import type { SupplierDTO } from "@/features/dashboard/suppliers/types/Supplier.type";
 
 type SupplierForm = {
   name: string;
@@ -85,7 +86,17 @@ function sanitizeNITBaseOnly(v: string) {
 
 type ErrorMap = Partial<Record<keyof SupplierForm | "image", string | null>>;
 
-const validators: Record<keyof SupplierForm | "image", (value: any, form: SupplierForm) => string | null> = {
+type SupplierValidationKey = keyof SupplierForm | "image";
+type SupplierValidationValue = SupplierForm[keyof SupplierForm] | File | null;
+type SupplierProduct = Awaited<ReturnType<typeof getSupplierProducts>>[number];
+type SupplierLike = SupplierSubmitPayload &
+  Partial<Pick<SupplierDTO, "supplierid">> & { id?: number };
+type ApiErrorShape = { message?: string };
+
+const validators: Record<
+  SupplierValidationKey,
+  (value: SupplierValidationValue, form: SupplierForm) => string | null
+> = {
   name: (v) => {
     const s = String(v ?? "").trim();
     if (s.length < 3) return "Mínimo 3 caracteres.";
@@ -125,14 +136,14 @@ const validators: Record<keyof SupplierForm | "image", (value: any, form: Suppli
   rating: () => null,
   imageFile: () => null,
   imageUrl: () => null,
-  image: (file: File | null) => {
+  image: (value) => {
+    const file = value instanceof File ? value : null;
     if (!file) return null;
     if (!file.type.startsWith("image/")) return "Archivo no es una imagen.";
     if (file.size > MAX_IMG_MB * 1024 * 1024) return `Máx ${MAX_IMG_MB}MB.`;
     return null;
   },
 };
-
 function validateAllFields(form: SupplierForm): ErrorMap {
   const e: ErrorMap = {};
   e.name = validators.name(form.name, form);
@@ -285,13 +296,14 @@ export default function EditSupplierModal({ isOpen, onClose, onSave, supplier, t
       setErrors(validateAllFields(next));
       
       // Siempre cargar productos desde la API para obtener información completa (incluyendo imagen)
-      const supplierId = (supplier as any).supplierid || (supplier as any).id;
+      const supplierId =
+        (supplier as SupplierLike).supplierid ?? (supplier as SupplierLike).id;
       if (supplierId) {
         getSupplierProducts(supplierId)
-          .then((products: any) => {
+          .then((products: SupplierProduct[]) => {
             if (products && products.length > 0) {
               setSupplierProducts(
-                products.map((p: { id: number; productName: string; precioUnitario: number; image?: string }) => ({
+                products.map((p) => ({
                   productoId: p.id,
                   productName: p.productName ?? "",
                   precioUnitario: p.precioUnitario ?? 0,
@@ -320,8 +332,8 @@ export default function EditSupplierModal({ isOpen, onClose, onSave, supplier, t
     } else {
       // Cargar productos del sistema
       setLoadingProducts(true);
-      getProducts("active")
-        .then((data) => setAllProducts(data))
+      getProducts({ status: "active", page: 1, limit: 1000 })
+        .then((response) => setAllProducts(response.data))
         .catch(() => showError("Error al cargar productos."))
         .finally(() => setLoadingProducts(false));
     }
@@ -371,16 +383,18 @@ export default function EditSupplierModal({ isOpen, onClose, onSave, supplier, t
     );
   };
 
-  const validateAndSet = <K extends keyof SupplierForm | "image">(
+  const validateAndSet = <K extends SupplierValidationKey>(
     key: K,
     nextForm: SupplierForm
   ) => {
-    const value = key === "image" ? nextForm.imageFile : nextForm[key as keyof SupplierForm];
-    const msg = validators[key](value as any, nextForm);
+    const value: SupplierValidationValue =
+      key === "image"
+        ? nextForm.imageFile
+        : nextForm[key as keyof SupplierForm];
+    const msg = validators[key](value, nextForm);
     setErrors((er) => ({ ...er, [key]: msg }));
     return msg;
   };
-
   const update = <K extends keyof SupplierForm>(k: K, v: SupplierForm[K]) => {
     setForm((prev) => {
       const next = { ...prev, [k]: v };
@@ -458,8 +472,11 @@ export default function EditSupplierModal({ isOpen, onClose, onSave, supplier, t
 
       await onSave(payload);
       onClose();
-    } catch (err: any) {
-      showError(err?.message || "Ocurrió un error al guardar.");
+    } catch (err: unknown) {
+      showError(
+        (err as ApiErrorShape | null | undefined)?.message ||
+          "Ocurrió un error al guardar."
+      );
     } finally {
       setSaving(false);
     }
@@ -652,8 +669,8 @@ export default function EditSupplierModal({ isOpen, onClose, onSave, supplier, t
                 // Si no hay productos cargados, recargar
                 if (allProducts.length === 0 && !loadingProducts) {
                   setLoadingProducts(true);
-                  getProducts("active")
-                    .then((data) => setAllProducts(data))
+                  getProducts({ status: "active", page: 1, limit: 1000 })
+                    .then((response) => setAllProducts(response.data))
                     .catch(() => showError("Error al cargar productos."))
                     .finally(() => setLoadingProducts(false));
                 }
@@ -760,6 +777,3 @@ export default function EditSupplierModal({ isOpen, onClose, onSave, supplier, t
     </Modal>
   );
 }
-
-
-

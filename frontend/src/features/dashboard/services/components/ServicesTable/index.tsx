@@ -25,14 +25,6 @@ interface ServicesTableProps {
 
 type ServiceRow = Service;
 
-const cleanText = (v: unknown) => {
-  const s = String(v ?? "").trim();
-  if (!s) return "—";
-  const lower = s.toLowerCase();
-  if (lower === "null" || lower === "undefined") return "—";
-  return s;
-};
-
 export const ServicesTable: React.FC<ServicesTableProps> = ({
   services,
   page,

@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
+import type { ToastOptions } from "react-toastify";
 import {
   showError,
   showInfo,
@@ -12,7 +13,7 @@ import {
 type PendingToastPayload = {
   type: "success" | "error" | "warning" | "info";
   message: string;
-  options?: any;
+  options?: ToastOptions;
 };
 
 const KEY = "__pending_toast__";

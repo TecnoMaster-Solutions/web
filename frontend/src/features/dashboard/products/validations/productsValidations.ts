@@ -106,8 +106,8 @@ export const validateProductForm = (
   ];
 
   for (const field of fields) {
-    const error = validateProductField(field, (data as any)[field], products, currentId);
-    if (error) (errors as any)[field] = error;
+    const error = validateProductField(field, data[field], products, currentId);
+    if (error) errors[field] = error;
   }
 
   return errors;

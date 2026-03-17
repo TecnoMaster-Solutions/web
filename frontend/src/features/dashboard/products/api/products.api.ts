@@ -181,10 +181,14 @@ export type ProductDeletionInfo = {
   canDeactivate?: boolean;
 };
 
+type ProductDeletionInfoResponse = ProductDeletionInfo & {
+  canDeactivate?: unknown;
+};
+
 export const getProductDeletionInfo = async (
   id: number
 ): Promise<ProductDeletionInfo> => {
-  const { data } = await api.get<ProductDeletionInfo>(
+  const { data } = await api.get<ProductDeletionInfoResponse>(
     `/products/${id}/deletion-info`
   );
 
@@ -192,8 +196,8 @@ export const getProductDeletionInfo = async (
     canDelete: !!data?.canDelete,
     reason: typeof data?.reason === "string" ? data.reason : undefined,
     canDeactivate:
-      typeof (data as any)?.canDeactivate === "boolean"
-        ? (data as any).canDeactivate
+      typeof data?.canDeactivate === "boolean"
+        ? data.canDeactivate
         : undefined,
   };
 };

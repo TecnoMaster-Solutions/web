@@ -9,10 +9,12 @@ export type GetPurchasesParams = {
   limit?: number;
   search?: string;
   signal?: AbortSignal;
+  fecha_inicio?: string;
+  fecha_fin?: string;
 };
 
 type PaginatedPurchasesResponse = {
-  data: any[];
+  data: IPurchase[];
   meta: {
     total: number;
     page: number;
@@ -21,11 +23,44 @@ type PaginatedPurchasesResponse = {
   };
 };
 
+type ApiErrorShape = {
+  name?: string;
+  code?: string;
+  response?: {
+    status?: number;
+    data?: { message?: string | string[] };
+  };
+  message?: string;
+};
+
+export type PurchaseProductApi = {
+  productid: number;
+  productname: string;
+  productpriceofsupplier?: number;
+  productpriceofsale?: number;
+  image?: string;
+  stateid?: number;
+};
+
+export type PurchaseSupplierApi = {
+  supplierid: number;
+  name: string;
+  image?: string;
+  nit?: string;
+  contactname?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  stateid?: number;
+};
+
 export const getPurchases = async ({
   page = 1,
   limit = 8,
   search = "",
   signal,
+  fecha_inicio,
+  fecha_fin,
 }: GetPurchasesParams = {}): Promise<{
   data: IPurchase[];
   meta: {
@@ -46,6 +81,8 @@ export const getPurchases = async ({
             page,
             limit,
             search: search.trim() || undefined,
+            ...(fecha_inicio ? { fecha_inicio } : {}),
+            ...(fecha_fin ? { fecha_fin } : {}),
           },
           signal,
           timeout: 5000,
@@ -56,7 +93,7 @@ export const getPurchases = async ({
       const rows = Array.isArray(data?.data) ? data.data : [];
 
       return {
-        data: rows.map((p: any) => ({
+        data: rows.map((p: IPurchase) => ({
           ...p,
           amount: Number(p.amount ?? 0),
         })),
@@ -67,8 +104,12 @@ export const getPurchases = async ({
           totalPages: Number(data?.meta?.totalPages ?? 1),
         },
       };
-    } catch (error: any) {
-      if (error?.name === "CanceledError" || error?.code === "ERR_CANCELED") {
+    } catch (error: unknown) {
+      const apiError = error as ApiErrorShape | null;
+      if (
+        apiError?.name === "CanceledError" ||
+        apiError?.code === "ERR_CANCELED"
+      ) {
         return {
           data: [],
           meta: {
@@ -80,7 +121,7 @@ export const getPurchases = async ({
         };
       }
 
-      if (error?.code === "ECONNABORTED") {
+      if (apiError?.code === "ECONNABORTED") {
         attempt++;
         if (attempt > RETRY_LIMIT) {
           throw new Error("La petición expiró. Intente nuevamente.");
@@ -88,7 +129,7 @@ export const getPurchases = async ({
         continue;
       }
 
-      if (!error.response) {
+      if (!apiError?.response) {
         attempt++;
         if (attempt > RETRY_LIMIT) {
           throw new Error(
@@ -98,7 +139,7 @@ export const getPurchases = async ({
         continue;
       }
 
-      const status = error.response.status;
+      const status = apiError.response.status ?? 0;
 
       if (status >= 500) {
         throw new Error("El servidor tuvo un problema (500). Intente más tarde.");
@@ -121,9 +162,11 @@ export const getPurchases = async ({
       }
 
       console.error("Error cargando compras:", error);
+      const backendMessage = apiError?.response?.data?.message;
       throw new Error(
-        error?.response?.data?.message ??
-          "No se pudo cargar el listado de compras."
+        Array.isArray(backendMessage)
+          ? backendMessage.join(", ")
+          : backendMessage || "No se pudo cargar el listado de compras."
       );
     }
   }
@@ -154,11 +197,12 @@ export const createPurchase = async (purchase: Partial<IPurchase>) => {
   try {
     const { data } = await api.post("/purchasesmanagement", purchase);
     return data;
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const apiError = error as ApiErrorShape | null;
     console.error("Error completo:", error);
-    console.error("STATUS:", error?.response?.status);
-    console.error("DATA:", error?.response?.data);
-    console.error("MESSAGE:", error?.response?.data?.message);
+    console.error("STATUS:", apiError?.response?.status);
+    console.error("DATA:", apiError?.response?.data);
+    console.error("MESSAGE:", apiError?.response?.data?.message);
     throw error;
   }
 };
@@ -175,27 +219,30 @@ export const cancelPurchase = async (id: number, observation?: string) => {
     );
 
     return data;
-  } catch (error: any) {
-    const backendMessage = error?.response?.data?.message;
+  } catch (error: unknown) {
+    const apiError = error as ApiErrorShape | null;
+    const backendMessage = apiError?.response?.data?.message;
     const message = Array.isArray(backendMessage)
       ? backendMessage.join(", ")
       : backendMessage ||
         "Error al anular la compra. Por favor, inténtalo de nuevo.";
 
     showError(message);
-    error.message = message;
+    if (apiError) {
+      apiError.message = message;
+    }
     throw error;
   }
 };
 
-export const getProductsForPurchase = async () => {
-  const { data } = await api.get("/products");
-  return data;
+export const getProductsForPurchase = async (): Promise<PurchaseProductApi[]> => {
+  const { data } = await api.get<PurchaseProductApi[] | { data?: PurchaseProductApi[] }>("/products");
+  return Array.isArray(data) ? data : data.data ?? [];
 };
 
-export const getSuppliersForPurchase = async () => {
-  const response = await api.get("/suppliers");
-  return response.data.data;
+export const getSuppliersForPurchase = async (): Promise<PurchaseSupplierApi[]> => {
+  const response = await api.get<PurchaseSupplierApi[] | { data?: PurchaseSupplierApi[] }>("/suppliers");
+  return Array.isArray(response.data) ? response.data : response.data.data ?? [];
 };
 
 export const getPurchaseOrdersForSupplier = async (

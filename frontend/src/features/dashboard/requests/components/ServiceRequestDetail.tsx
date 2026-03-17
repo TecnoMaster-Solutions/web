@@ -32,7 +32,7 @@ const buildTechnicianLabel = (
     | {
         technicianid?: number;
         technicianId?: number;
-        users?: { name?: string | null; lastname?: string | null };
+        users?: { name?: string | null; lastname?: string | null } | null;
         title?: string | null;
       }
     | null
@@ -86,21 +86,11 @@ const ServiceRequestDetailContent = ({ data }: { data: ServiceRequestDTO }) => {
   const scheduledEnd = formatDateTime(data.scheduledEndAt);
   const created = formatDateTime(data.createdAt);
 
-  const customerUser = data.customer?.users;
-  const customerFullName = [customerUser?.name, customerUser?.lastname]
-    .filter(Boolean)
-    .join(" ");
-  const customerDocument = customerUser?.documentnumber;
-  const customerEmail = customerUser?.email;
-  const customerPhone = customerUser?.phone;
   const customerCity = data.customer?.customercity ?? "-";
   const customerZip = data.customer?.customerzipcode ?? "-";
 
   const stateLabel = data.state?.name ?? "-";
   const stateDescription = data.state?.description ?? "Sin descripcion del estado.";
-
-  const serviceDescription = data.service?.description;
-  const serviceImage = data.service?.image;
 
   return (
     <div className="space-y-6">

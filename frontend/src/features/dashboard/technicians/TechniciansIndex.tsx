@@ -8,7 +8,7 @@ import CreateTechnicianModal from "./components/createTechniciansModal/createTec
 import EditTechnicianModal from "./components/editTechniciansModal/editTechniciansModal";
 import ViewTechnicianModal from "./components/viewTechniciansModal/viewTechniciansModal";
 
-import { Technician, CreateTechnicianData } from "./types/typesTechnicians";
+import { CreateTechnicianData } from "./types/typesTechnicians";
 import { useTechnicians } from "./hooks/useTechnicians";
 
 function Loader({ show }: { show: boolean }) {

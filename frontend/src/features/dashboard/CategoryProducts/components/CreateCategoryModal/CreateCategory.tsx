@@ -1,5 +1,6 @@
 "use client";
 import React, { useRef } from "react";
+import Image from "next/image";
 import Modal from "../../../components/Modal";
 import Colors from "@/shared/theme/colors";
 import { useCreateCategoryForm } from "../../hooks/useCreateCategoryForm";
@@ -93,9 +94,12 @@ const CreateCategoryModal: React.FC<CreateCategoryModalProps> = ({
             >
               {formData.icon ? (
                 <div className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center bg-white">
-                  <img
+                  <Image
                     src={getIconPreviewUrl(formData.icon) || ""}
                     alt="Icono de categoría"
+                    width={48}
+                    height={48}
+                    unoptimized
                     className="w-full h-full object-cover"
                   />
                 </div>
@@ -218,5 +222,7 @@ const CreateCategoryModal: React.FC<CreateCategoryModalProps> = ({
 };
 
 export default CreateCategoryModal;
+
+
 
 
