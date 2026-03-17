@@ -5,7 +5,6 @@ import Swal from "sweetalert2";
 import RequireAuth from "../../auth/requireauth";
 import { DataTable } from "../components/datatable/DataTable";
 import { Column } from "../components/datatable/types/column.types";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { usePermissions } from "@/features/auth/hooks/usePermissions";
 import { useAuth } from "@/features/auth/authcontext";
@@ -806,15 +805,10 @@ export default function QuotesIndex() {
               canExportQuotes ? (
                 <button
                   type="button"
-                  className="relative cursor-pointer inline-flex h-9 items-center gap-2 overflow-hidden rounded-md px-4 text-sm font-semibold text-white transition-transform duration-200 hover:scale-105 group"
-                  style={{ background: Colors.buttons.primary }}
+                  className="cursor-pointer transition duration-300 hover:bg-[#227a69] hover:text-white hover:scale-105 px-4 py-2 rounded-lg bg-[#2a9781] text-white w-full sm:w-auto"
                   onClick={handleDownloadReport}
                 >
-                  <span className="absolute inset-0 bg-[#227a69] scale-x-0 origin-left transition-transform duration-300 ease-out group-hover:scale-x-100"></span>
-                  <span className="relative z-10 flex items-center gap-2 group-hover:text-white transition-colors duration-300">
-                    <Image src="/icons/download.svg" alt="Descargar" width={16} height={16} />
-                    Descargar Reporte
-                  </span>
+                  Descargar Reporte
                 </button>
               ) : null
             }
