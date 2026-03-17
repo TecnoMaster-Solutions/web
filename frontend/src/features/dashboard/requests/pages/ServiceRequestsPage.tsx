@@ -44,7 +44,7 @@ import type {
 } from "@/features/dashboard/requests/services/servicerequests.service";
 
 const ICONS = {
-  print: "/icons/printer.svg",
+  print: "/icons/Printer.svg",
 };
 const MODULE_KEY = "servicesrequest";
 

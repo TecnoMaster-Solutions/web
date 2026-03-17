@@ -91,7 +91,7 @@ const ICONS = {
   edit: "/icons/Edit.svg",
   cancel: "/icons/minus-circle.svg",
   view: "/icons/Eye.svg",
-  print: "/icons/printer.svg",
+  print: "/icons/Printer.svg",
 };
 const MODULE_KEY = "servicesrequest";
 

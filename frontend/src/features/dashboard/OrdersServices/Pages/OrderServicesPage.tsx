@@ -30,7 +30,7 @@ import { FilePlus2 } from "lucide-react";
 const MODULE_KEY = "orders-services";
 
 const ICONS = {
-  print: "/icons/printer.svg",
+  print: "/icons/Printer.svg",
   report: "/icons/alert-triangle.svg",
 };
 
