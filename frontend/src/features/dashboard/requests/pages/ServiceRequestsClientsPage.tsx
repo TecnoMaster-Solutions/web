@@ -532,7 +532,7 @@ export default function ServiceRequestsClientsPage() {
                 {canExportRequests && (
                   <button
                     onClick={handleDownloadReport}
-                    className="inline-flex h-10 items-center rounded-md bg-[#04652c] px-3 text-sm font-semibold text-white shadow-sm hover:opacity-90 whitespace-nowrap"
+                    className="cursor-pointer transition duration-300 hover:bg-[#227a69] hover:text-white hover:scale-105 px-4 py-2 rounded-lg bg-[#2a9781] text-white w-full sm:w-auto"
                     disabled={busy}
                     type="button"
                   >

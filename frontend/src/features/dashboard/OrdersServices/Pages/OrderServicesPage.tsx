@@ -7,7 +7,6 @@ import { ToastContainer } from "react-toastify";
 import RequireAuth from "@/features/auth/requireauth";
 import { usePermissions } from "@/features/auth/hooks/usePermissions";
 import Modal from "@/features/dashboard/components/Modal";
-import Colors from "@/shared/theme/colors";
 import { exportXlsx } from "@/shared/utils/exportXlsx";
 import { showError, showSuccess, showWarning } from "@/shared/utils/notifications";
 import { useAuth } from "@/features/auth/authcontext";
@@ -1339,8 +1338,7 @@ const extraActions = useCallback(
         type="button"
         onClick={downloadAllReport}
         disabled={loading}
-        className="cursor-pointer inline-flex h-9 items-center rounded-md px-3 text-sm font-semibold text-white shadow-sm hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
-        style={{ background: Colors.buttons.primary }}
+        className="cursor-pointer transition duration-300 hover:bg-[#227a69] hover:text-white hover:scale-105 px-4 py-2 rounded-lg bg-[#2a9781] text-white w-full sm:w-auto disabled:opacity-60 disabled:cursor-not-allowed"
       >
         Descargar Reporte
       </button>
