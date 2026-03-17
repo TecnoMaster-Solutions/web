@@ -5,7 +5,7 @@ import { ChevronDown } from "lucide-react";
 import Colors from "@/shared/theme/colors";
 import { SearchIcon } from "./icons/SearchIcon";
 import { PlusIcon } from "./icons/PlusIcon";
-import { DataTableProps } from "./types/datatable.types";
+import { DataTableProps, DataTableFilters, DateFilter } from "./types/datatable.types";
 import { MobileCardComponent } from "./ui/mobile/MobileCardComponent";
 import { ActionButtonsComponent } from "./ui/ActionButtonsComponent";
 import { ActionButtonComponent } from "./ui/ActionButtonComponent";
@@ -17,6 +17,7 @@ import { usePermissions } from "@/features/auth/hooks/usePermissions";
 const ROW_HEIGHT = 60;
 const VISIBLE_ROWS = 10;
 const ACTIONS_COL_WIDTH = "230px";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const SERVER_SEARCH_DEBOUNCE_MS = 300;
 
 /* ================================
@@ -83,6 +84,9 @@ const DataTableComponent = <T extends object>(
     showPageSizeSelector = true,
     serverPagination,
     serverSearch,
+    serverFilters,
+    statusFilterOptions,
+    dateFilterField,
     searchableKeys = [],
     onView,
     onEdit,
@@ -111,12 +115,60 @@ const DataTableComponent = <T extends object>(
   const { canView, canCreate, canUpdate, canDelete } = usePermissions();
 
   const [q, setQ] = useState("");
-  const [serverSearchInput, setServerSearchInput] = useState(
-    serverSearch?.value ?? ""
-  );
+  const [searchInput, setSearchInput] = useState("");
+  
+  // Estados para filtros avanzados
+  const [statusFilter, setStatusFilter] = useState<string>("");
+  const [dateRange, setDateRange] = useState<DateFilter>({ startDate: null, endDate: null });
+  
+  // Sincronizar filtros externos con estados internos
+  useEffect(() => {
+    if (serverFilters?.filters) {
+      if (serverFilters.filters.status !== undefined) {
+        setStatusFilter(serverFilters.filters.status ?? "");
+      }
+      if (serverFilters.filters.dateRange) {
+        setDateRange(serverFilters.filters.dateRange);
+      }
+    }
+  }, [serverFilters?.filters]);
+  
+  // Callback para manejar cambios en filtros
+  const handleStatusFilterChange = useCallback((value: string) => {
+    setStatusFilter(value);
+    const newFilters: DataTableFilters = {
+      ...(serverFilters?.filters || {}),
+      status: value || null,
+      dateRange,
+    };
+    serverFilters?.onFilterChange(newFilters);
+  }, [serverFilters, dateRange]);
+  
+  const handleDateFilterChange = useCallback((newDateRange: DateFilter) => {
+    setDateRange(newDateRange);
+    const newFilters: DataTableFilters = {
+      ...(serverFilters?.filters || {}),
+      status: statusFilter || null,
+      dateRange: newDateRange,
+    };
+    serverFilters?.onFilterChange(newFilters);
+  }, [serverFilters, statusFilter]);
+  
+  const handleClearFilters = useCallback(() => {
+    setStatusFilter("");
+    setDateRange({ startDate: null, endDate: null });
+    serverFilters?.onFilterChange({ status: null, dateRange: { startDate: null, endDate: null } });
+  }, [serverFilters]);
+  
+  const hasActiveFilters = statusFilter || dateRange.startDate || dateRange.endDate;
   const initialPageSize = Math.max(1, Number(defaultPageSize || 8));
   const [pageSizeOption, setPageSizeOption] = useState<string | number>(initialPageSize);
   const [pageSize, setPageSize] = useState<number>(initialPageSize);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setQ(searchInput), 300);
+    return () => window.clearTimeout(timer);
+  }, [searchInput]);
   const [page, setPage] = useState(1);
   const [scrollTop, setScrollTop] = useState(0);
   const [animateCells, setAnimateCells] = useState(true);
@@ -171,22 +223,7 @@ const DataTableComponent = <T extends object>(
     setPageSizeOption(nextLimit);
   }, [defaultPageSize, isServerPagination, serverPagination]);
 
-  useEffect(() => {
-    if (!isServerSearch) return;
-    setServerSearchInput(serverSearch?.value ?? "");
-  }, [isServerSearch, serverSearch?.value]);
 
-  useEffect(() => {
-    if (!isServerSearch || !serverSearch) return;
-    const normalizedValue = serverSearch.value ?? "";
-    if (serverSearchInput === normalizedValue) return;
-
-    const timer = window.setTimeout(() => {
-      serverSearch.onChange(serverSearchInput);
-    }, SERVER_SEARCH_DEBOUNCE_MS);
-
-    return () => window.clearTimeout(timer);
-  }, [isServerSearch, serverSearch, serverSearchInput]);
 
   useEffect(() => {
     if (loading) {
@@ -277,8 +314,8 @@ const DataTableComponent = <T extends object>(
           stateName === "approved"
             ? "aprobado"
             : stateName === "revoke"
-            ? "anulado"
-            : stateName;
+              ? "anulado"
+              : stateName;
 
         return estadoTokens(mapped).concat([mapped]).map(normalizeText);
       }
@@ -318,9 +355,6 @@ const DataTableComponent = <T extends object>(
     const term = normalizeText(q);
     if (!term) return data;
 
-    const tokens = term.split(/\s+/).filter(Boolean);
-    if (tokens.length === 0) return data;
-
     const isExactStatus = term === "activo" || term === "inactivo";
 
     const hasKey = (k: string) =>
@@ -353,6 +387,9 @@ const DataTableComponent = <T extends object>(
 
       return "";
     };
+
+    const tokens = term.split(/\s+/).filter(Boolean);
+    if (tokens.length === 0) return data;
 
     return (Array.isArray(data) ? data : []).filter((row) => {
       if (isExactStatus) {
@@ -645,20 +682,76 @@ const DataTableComponent = <T extends object>(
 
   return (
     <div className="flex flex-col gap-2 sm:gap-4 px-2 sm:px-0 mt-4 sm:mt-6" style={tableStyle}>
+      {/* Barra de filtros avanzados */}
+      {(statusFilterOptions || dateFilterField) && (
+        <div className="flex flex-wrap items-center gap-3 bg-gray-50 p-3 rounded-lg">
+          {/* Filtro de estado */}
+          {statusFilterOptions && statusFilterOptions.length > 0 && (
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-gray-600 whitespace-nowrap">Estado:</label>
+              <select
+                value={statusFilter}
+                onChange={(e) => handleStatusFilterChange(e.target.value)}
+                className="h-9 px-3 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-500"
+              >
+                <option value="">Todos</option>
+                {statusFilterOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Filtro de fecha */}
+          {dateFilterField && (
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-gray-600 whitespace-nowrap">Fecha:</label>
+              <input
+                type="date"
+                value={dateRange.startDate || ""}
+                onChange={(e) => handleDateFilterChange({ ...dateRange, startDate: e.target.value || null })}
+                className="h-9 px-3 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-500"
+                placeholder="Desde"
+              />
+              <span className="text-gray-400">-</span>
+              <input
+                type="date"
+                value={dateRange.endDate || ""}
+                onChange={(e) => handleDateFilterChange({ ...dateRange, endDate: e.target.value || null })}
+                className="h-9 px-3 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-500"
+                placeholder="Hasta"
+              />
+            </div>
+          )}
+
+          {/* Botón limpiar filtros */}
+          {hasActiveFilters && (
+            <button
+              onClick={handleClearFilters}
+              className="text-sm text-red-600 hover:text-red-800 hover:underline ml-auto"
+            >
+              Limpiar filtros
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         {searchableKeys.length > 0 && (
           <div className="flex items-center gap-3 w-full sm:max-w-lg">
             <div className="relative flex-1">
               <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
               <input
-                value={isServerSearch ? serverSearchInput : q}
+                value={isServerSearch ? (serverSearch?.value ?? "") : searchInput}
                 onChange={(e) => {
                   const nextValue = e.target.value;
                   setAnimateCells(true);
                   if (isServerSearch && serverSearch) {
-                    setServerSearchInput(nextValue);
+                    serverSearch.onChange(nextValue);
                   } else {
-                    setQ(nextValue);
+                    setSearchInput(nextValue);
                     if (isServerPagination && serverPagination) {
                       serverPagination.onPageChange(1);
                     } else {
@@ -671,23 +764,23 @@ const DataTableComponent = <T extends object>(
               />
             </div>
 
-             {showPageSizeSelector && (
-               <div className="ml-2 flex items-center gap-2">
-                 <span className="text-sm text-[#506176]">Mostrar</span>
-                 <div className="relative">
-                   <select
-                     value={pageSizeOption}
-                     onChange={(e) => {
-                       const num = Number(e.target.value);
-                        setAnimateCells(true);
-                        setPageSizeOption(num);
-                        setPageSize(num);
-                        if (isServerPagination && serverPagination?.onPageSizeChange) {
-                          serverPagination.onPageSizeChange(num);
-                          return;
-                        }
-                       setPage(1);
-                     }}
+            {showPageSizeSelector && (
+              <div className="ml-2 flex items-center gap-2">
+                <span className="text-sm text-[#506176]">Mostrar</span>
+                <div className="relative">
+                  <select
+                    value={pageSizeOption}
+                    onChange={(e) => {
+                      const num = Number(e.target.value);
+                       setAnimateCells(true);
+                       setPageSizeOption(num);
+                       setPageSize(num);
+                       if (isServerPagination && serverPagination?.onPageSizeChange) {
+                         serverPagination.onPageSizeChange(num);
+                         return;
+                       }
+                      setPage(1);
+                    }}
                     className="h-10 w-16 appearance-none rounded-lg bg-white pl-3 pr-7 text-sm text-[#172B4D] border border-gray-200 transition-colors hover:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-500"
                   >
                     <option value={5}>5</option>

@@ -5,7 +5,8 @@ import {
   formErrors,
   formTouched,
   purchaseOrder,
-  PurchaseOrderItem
+  PurchaseOrderItem,
+  PurchaseOrderFormErrors
 } from "../types/typesPurchaseOrder";
 import { showSuccess, showError, showWarning } from "@/shared/utils/notifications";
 import {
@@ -157,6 +158,8 @@ export const useCreatePurchaseOrderForm = ({
     descripcion: false
   });
 
+  const [formErrors, setFormErrors] = useState<PurchaseOrderFormErrors>({});
+
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   /* ============================= */
@@ -243,6 +246,35 @@ export const useCreatePurchaseOrderForm = ({
   /* VALIDACIONES */
   /* ============================= */
 
+  const validatePurchaseOrderForm = (
+    supplierId: number | null,
+    items: PurchaseOrderItem[]
+  ): PurchaseOrderFormErrors => {
+    const errors: PurchaseOrderFormErrors = {};
+
+    if (!supplierId || supplierId <= 0) {
+      errors.supplierId = 'Debe seleccionar un proveedor';
+    }
+
+    if (!items || items.length === 0) {
+      errors.items = 'La orden debe tener al menos un producto';
+      return errors;
+    }
+
+    const itemErrors = items.map(item => {
+      const err: { productId?: string; quantity?: string; unitPrice?: string } = {};
+      if (!item.productoId) err.productId = 'Seleccione un producto';
+      if (!item.cantidad || item.cantidad < 1) err.quantity = 'La cantidad mínima es 1';
+      if (!item.precioUnitario || item.precioUnitario <= 0) err.unitPrice = 'El precio debe ser mayor a 0';
+      return err;
+    });
+
+    const hasItemErrors = itemErrors.some(e => Object.keys(e).length > 0);
+    if (hasItemErrors) errors.itemErrors = itemErrors;
+
+    return errors;
+  };
+
   const validateItems = (): boolean => {
     if (formData.items.length === 0) {
       showWarning("Debe agregar al menos un producto.");
@@ -299,6 +331,14 @@ export const useCreatePurchaseOrderForm = ({
   const handleSubmit = async (e?: React.FormEvent): Promise<PurchaseOrderAPIResponse | null> => {
     e?.preventDefault();
 
+    // Validar formulario antes de enviar
+    const errors = validatePurchaseOrderForm(formData.proveedorId, formData.items);
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      showWarning('Por favor complete los campos correctamente');
+      return null;
+    }
+
     if (!validateFormWithNotifications()) return null;
 
     setIsSubmitting(true);
@@ -337,6 +377,8 @@ export const useCreatePurchaseOrderForm = ({
         descripcion: ""
       });
 
+      setFormErrors({});
+
       setTouched({
         proveedor: false,
         fecha: false,
@@ -360,6 +402,7 @@ export const useCreatePurchaseOrderForm = ({
     touched,
     isSubmitting,
     calculatedTotal,
+    formErrors,
     handleInputChange,
     handleSupplierChange,
     handleBlur,

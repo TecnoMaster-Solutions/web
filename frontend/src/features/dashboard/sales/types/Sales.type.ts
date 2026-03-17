@@ -31,6 +31,7 @@ export interface ICustomer {
     userid: number;
     customercity: string | null;
     customerzipcode: string | null;
+    customername?: string; // Optional for backwards compatibility
     users?: {
         userid: number;
         name: string;
@@ -216,4 +217,16 @@ export interface ISalesPaginationMeta {
 export interface ISalesPaginatedResult {
     data: ISale[];
     meta: ISalesPaginationMeta;
+}
+
+export enum SaleStatus {
+    PENDING   = 'Pending',
+    COMPLETED = 'Completed',
+    CANCELLED = 'Cancelled',
+}
+
+export enum PaymentStatus {
+    PENDING = 'Partial',
+    PARTIAL = 'Abonada',
+    PAID    = 'Pagada',
 }

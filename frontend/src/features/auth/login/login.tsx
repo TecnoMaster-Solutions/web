@@ -128,7 +128,11 @@ export default function LoginPage() {
 
       <div className="flex flex-col lg:flex-row flex-1 px-6 lg:px-20 items-center justify-center gap-20">
         <div className="w-full lg:w-[45%] max-w-lg flex flex-col justify-center">
-          <h2 className="text-[1.85rem] font-extrabold tracking-tight mb-1 text-center lg:text-left bg-gradient-to-r from-[#04652c] via-[#06a646] to-[#2a9781] bg-clip-text text-transparent">
+          <h1 className="text-[1.85rem] font-extrabold tracking-tight mb-1 text-center lg:text-left bg-gradient-to-r from-[#04652c] via-[#06a646] to-[#2a9781] bg-clip-text text-transparent">
+            Login
+          </h1>
+
+          <h2 className="text-sm font-medium text-[#3b5f73] mb-6">
             Bienvenido a TecnoMaster
           </h2>
 
@@ -203,6 +207,7 @@ export default function LoginPage() {
             </div>
 
             <button
+              data-testid="login-button"
               type="submit"
               disabled={loading}
               className={`w-full h-11 rounded-lg text-white font-semibold ${

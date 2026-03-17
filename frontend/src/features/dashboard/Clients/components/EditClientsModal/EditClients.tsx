@@ -41,7 +41,7 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
             </label>
             <select
               name="tipo"
-              value={formData.tipo}
+              value={formData.tipo || 0}
               onChange={handleInputChange}
               onBlur={handleBlur}
               className="w-full px-3 py-2 border rounded-lg text-sm"
@@ -54,9 +54,11 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
             >
               <option value={0}>Seleccione</option>
               <option value={1}>CC</option>
-              <option value={2}>TI</option>
-              <option value={3}>CE</option>
-              <option value={4}>PPN</option>
+              <option value={2}>PPT</option>
+              <option value={3}>NIT</option>
+              <option value={4}>PA</option>
+              <option value={5}>CE</option>
+              <option value={6}>VI</option>
             </select>
             {errors.tipo && touched.tipo && (
               <span className="text-red-500 text-xs">{errors.tipo}</span>

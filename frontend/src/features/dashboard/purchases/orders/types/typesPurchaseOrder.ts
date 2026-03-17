@@ -117,3 +117,19 @@ export interface purchaseOrderForTable
   /** Campo auxiliar de texto plano para búsqueda en DataTable */
   searchQuery?: string;
 }
+
+/* ============================= */
+/* ERRORES DE VALIDACIÓN FORMULARIO */
+/* ============================= */
+
+export interface PurchaseOrderItemError {
+  productId?: string;
+  quantity?: string;
+  unitPrice?: string;
+}
+
+export interface PurchaseOrderFormErrors {
+  supplierId?: string;
+  items?: string;
+  itemErrors?: PurchaseOrderItemError[];
+}

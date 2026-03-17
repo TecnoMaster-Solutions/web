@@ -2,6 +2,8 @@ import { api } from "@/lib/api";
 import { AxiosError } from "axios";
 import { ICustomer, IProduct, ISale } from "../types/Sales.type";
 
+export type { ISale };
+
 type ApiErrorBody = {
   message?: string;
   error?: string;

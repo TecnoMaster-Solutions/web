@@ -10,8 +10,9 @@ import { showSuccess, showError } from "@/shared/utils/notifications";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Colors from "@/shared/theme/colors";
-import { ISale, ISalesPaginatedResult } from "./types/Sales.type";
+import { ISalesPaginatedResult } from "./types/Sales.type";
 import { getSales, annulSale } from "./services/sales.service";
+import { getSales as getAllSales, ISale } from "./api/sales.api";
 import CreateSaleForm from "./components/CreateSaleForm";
 import SalePaymentsModal from "./components/SalePaymentsModal";
 import { useAuth } from "@/features/auth/authcontext";
@@ -132,8 +133,8 @@ function isGatewayPaymentMethod(method?: string | null) {
 }
 
 export default function SalesIndex() {
-  const PAGE_SIZE = 5;
-  const SEARCH_DEBOUNCE_MS = 350;
+  const [pageSize, setPageSize] = useState(5);
+  const SEARCH_DEBOUNCE_MS = 300;
 
   const router = useRouter();
   const { user, profile } = useAuth();
@@ -156,6 +157,11 @@ export default function SalesIndex() {
   const pageAbortRef = useRef<AbortController | null>(null);
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchAbortRef = useRef<AbortController | null>(null);
+  const pageSizeRef = useRef(pageSize);
+
+  useEffect(() => {
+    pageSizeRef.current = pageSize;
+  }, [pageSize]);
 
   const authRole = normalizeRoleName(
     (user as AuthRecord | null)?.rolename ??
@@ -236,10 +242,11 @@ export default function SalesIndex() {
   );
 
   const loadSalesPage = useCallback(
-    async (targetPage: number, searchText: string, signal?: AbortSignal) => {
+    async (targetPage: number, searchText: string, signal?: AbortSignal, limitOverride?: number) => {
+      const effectiveLimit = limitOverride ?? pageSizeRef.current;
       const response = (await getSales({
         page: targetPage,
-        limit: PAGE_SIZE,
+        limit: effectiveLimit,
         search: searchText,
         signal,
       })) as ISalesPaginatedResult;
@@ -247,13 +254,16 @@ export default function SalesIndex() {
       const list = Array.isArray(response?.data) ? response.data : [];
       const meta = response?.meta;
 
-      setSales(mapSalesToRows(list));
+      const rows = mapSalesToRows(list);
+      // Ordenar por ID descendente como respaldo
+      rows.sort((a, b) => b.id - a.id);
+      setSales(rows);
       setCurrentPage(Number(meta?.page ?? targetPage));
       setTotalPages(Math.max(1, Number(meta?.totalPages ?? 1)));
 
       return { list, meta };
     },
-    [PAGE_SIZE, mapSalesToRows]
+    [mapSalesToRows] // sin pageSize — se usa pageSizeRef
   );
 
   const closePaymentModal = useCallback(() => {
@@ -276,6 +286,30 @@ export default function SalesIndex() {
         }
         console.error(error);
         showError("Error al cargar la página de ventas.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [loadSalesPage, search]
+  );
+
+  const handlePageSizeChange = useCallback(
+    async (newPageSize: number) => {
+      setPageSize(newPageSize);
+      pageAbortRef.current?.abort();
+      const controller = new AbortController();
+      pageAbortRef.current = controller;
+
+      setLoading(true);
+      try {
+        await loadSalesPage(1, search, controller.signal, newPageSize);
+      } catch (error: unknown) {
+        const apiError = error as ApiErrorLike | null;
+        if (apiError?.name === "CanceledError" || apiError?.code === "ERR_CANCELED") {
+          return;
+        }
+        console.error(error);
+        showError("Error al cambiar el tamaño de página.");
       } finally {
         setLoading(false);
       }
@@ -358,53 +392,89 @@ export default function SalesIndex() {
   }, []);
 
   const exportToExcel = async () => {
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet("Ventas");
+    try {
+      // Obtener todos los registros directamente de la API
+      const allSales = await getAllSales();
+      
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Ventas");
 
-    worksheet.columns = [
-      { header: "ID", key: "id", width: 12 },
-      { header: "Codigo", key: "codigo", width: 20 },
-      { header: "Cliente", key: "cliente", width: 32 },
-      { header: "Fecha", key: "fecha", width: 16 },
-      { header: "Total", key: "total", width: 18 },
-      { header: "Estado", key: "estado", width: 18 },
-      { header: "Estado Pago", key: "estadoPago", width: 18 },
-    ];
+      worksheet.columns = [
+        { header: "ID", key: "id", width: 12 },
+        { header: "Codigo", key: "codigo", width: 20 },
+        { header: "Cliente", key: "cliente", width: 32 },
+        { header: "Fecha", key: "fecha", width: 16 },
+        { header: "Total", key: "total", width: 18 },
+        { header: "Estado", key: "estado", width: 18 },
+        { header: "Estado Pago", key: "estadoPago", width: 18 },
+      ];
 
-    worksheet.getRow(1).eachCell((cell) => {
-      cell.fill = {
-        type: "pattern",
-        pattern: "solid",
-        fgColor: { argb: "FFDC2626" },
-      };
-      cell.font = { color: { argb: "FFFFFFFF" }, bold: true };
-      cell.alignment = { horizontal: "center" };
-    });
-
-    sales.forEach((sale) => {
-      worksheet.addRow({
-        id: sale.id,
-        codigo: sale.codigo,
-        cliente: sale.cliente,
-        fecha: sale.fecha,
-        total: sale.total,
-        estado: sale.estado,
-        estadoPago: sale.estadoPago,
+      worksheet.getRow(1).eachCell((cell) => {
+        cell.fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: "FFDC2626" },
+        };
+        cell.font = { color: { argb: "FFFFFFFF" }, bold: true };
+        cell.alignment = { horizontal: "center" };
       });
-    });
 
-    worksheet.getColumn("total").numFmt = '"$"#,##0.00';
+      // Transformar los datos para el Excel
+      const salesData = allSales.map((sale: ISale) => {
+        const isGatewayPaymentMethod = (method: string) =>
+          method === "MercadoPago" || method === "PlaceToPay" || method === "Wompi";
+        return {
+          id: sale.saleid,
+          codigo: sale.salecode,
+          cliente: sale.customer?.users?.name
+            ? `${sale.customer.users.name} ${sale.customer.users.lastname || ""}`
+            : sale.customer?.customername || "",
+          fecha: sale.saledate
+            ? new Date(sale.saledate).toLocaleDateString("es-CO")
+            : "",
+          total: sale.totalamount,
+          estado:
+            sale.paymentstatus === "Pagada" || sale.salestatus === "Completed"
+              ? "Finalizada"
+              : sale.salestatus === "Cancelled"
+                ? "Anulada"
+                : sale.salestatus === "Pending"
+                  ? "Pendiente"
+                  : sale.salestatus,
+          estadoPago: isGatewayPaymentMethod(sale.paymentmethod)
+            ? sale.paymentstatus
+            : sale.paymentstatus,
+        };
+      });
 
-    const buffer = await workbook.xlsx.writeBuffer();
-    const blob = new Blob([buffer], {
-      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `ventas_${new Date().toISOString().slice(0, 10)}.xlsx`;
-    link.click();
-    window.URL.revokeObjectURL(url);
+      salesData.forEach((sale) => {
+        worksheet.addRow({
+          id: sale.id,
+          codigo: sale.codigo,
+          cliente: sale.cliente,
+          fecha: sale.fecha,
+          total: sale.total,
+          estado: sale.estado,
+          estadoPago: sale.estadoPago,
+        });
+      });
+
+      worksheet.getColumn("total").numFmt = '"$"#,##0.00';
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `ventas_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      link.click();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error al exportar ventas:", error);
+      showError("Error al exportar las ventas. Por favor intente de nuevo.");
+    }
   };
 
   const handleOpenAnnul = (row: SaleRow) => {
@@ -531,13 +601,14 @@ export default function SalesIndex() {
         <DataTable<SaleRow>
           data={sales}
           columns={columns}
-          searchableKeys={["codigo", "cliente", "estado", "estadoPago"]}
-          pageSize={PAGE_SIZE}
-          showPageSizeSelector={false}
+          searchableKeys={["id", "codigo", "cliente", "fecha", "total", "estado", "estadoPago"]}
+          pageSize={pageSize}
           serverPagination={{
             page: currentPage,
+            limit: pageSize,
             totalPages,
             onPageChange: handlePageChange,
+            onPageSizeChange: handlePageSizeChange,
           }}
           serverSearch={{
             value: search,
