@@ -9,6 +9,7 @@ import { useAuth } from "@/features/auth/authcontext";
 import { usePermissions } from "@/features/auth/hooks/usePermissions";
 import Modal from "@/features/dashboard/components/Modal";
 import DownloadXLSXButton from "@/features/dashboard/components/DownloadXLSXButton";
+import { exportXlsx } from "@/shared/utils/exportXlsx";
 import { showError, showInfo, showSuccess } from "@/shared/utils/notifications";
 import {
   cancelOrderService,
@@ -24,7 +25,7 @@ const ICONS = {
   edit: "/icons/Edit.svg",
   cancel: "/icons/minus-circle.svg",
   view: "/icons/Eye.svg",
-  print: "/icons/printer.svg",
+  print: "/icons/Printer.svg",
   report: "/icons/alert-triangle.svg",
   complete: "/icons/complete.svg",
 };
@@ -543,6 +544,35 @@ export default function OrderServicesClientsPage() {
       }));
   }, [rows]);
 
+  const downloadAllReport = useMemo(
+    () => async () => {
+      const data = await fetchOrdersServices({
+        search: query,
+        ...(clientIdFromAuth ? { clientId: clientIdFromAuth } : {}),
+      });
+      const reportRows = [...(Array.isArray(data) ? data : data.data)]
+        .map((raw) => toRow(raw))
+        .sort((a, b) => b.id - a.id)
+        .map((r) => ({
+          Id: r.id,
+          Cliente: r.cliente,
+          Tipo: r.tipo,
+          "Fecha programada": r.fechaProgramada,
+          Estado: r.estadoKey === "GarantiaReportada" ? "Garantia (reportada)" : r.estado,
+          "Viaticos (COP)": r.viaticos ?? 0,
+          "Monto (COP)": r.monto ?? 0,
+        }));
+
+      if (!reportRows.length) {
+        showError("No hay ordenes para descargar.");
+        return;
+      }
+
+      await exportXlsx(reportRows, "reporte_ordenes.xlsx", "Ordenes de servicio");
+    },
+    [clientIdFromAuth, query]
+  );
+
   function openCreate() {
     router.push(`/dashboard/orders-services/new?returnTo=${encodeURIComponent(pathname)}`);
   }
@@ -951,7 +981,33 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
                     <option value={18}>18</option>
                   </select>
                   {canExportOrder && (
-                    <div className="hidden md:block">
+                    <>
+                    <button
+                      onClick={downloadAllReport}
+                      className="hidden md:inline-flex relative cursor-pointer h-9 items-center gap-2 overflow-hidden rounded-md px-4 text-sm font-semibold text-white transition-transform duration-200 hover:scale-105 group"
+                      style={{ background: "#B20000" }}
+                      type="button"
+                    >
+                      <span className="absolute inset-0 bg-green-800 scale-x-0 origin-left transition-transform duration-300 ease-out group-hover:scale-x-100"></span>
+                      <span className="relative z-10 flex items-center gap-2 group-hover:text-white transition-colors duration-300">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-4 w-4 text-white"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={2}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4"
+                          />
+                        </svg>
+                        Descargar Reporte
+                      </span>
+                    </button>
+                    <div className="hidden">
                       <DownloadXLSXButton
                         id="download-excel-btn-orders-clients"
                         data={xlsxRows as unknown as Record<string, unknown>[]}
@@ -968,6 +1024,7 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
                         excludeKeys={[]}
                       />
                     </div>
+                    </>
                   )}
                   {canCreateOrder && (
                     <button
@@ -1189,11 +1246,7 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
 
         {canExportOrder && (
           <button
-            onClick={() =>
-              document
-                .querySelector<HTMLButtonElement>("#download-excel-btn-orders-clients")
-                ?.click()
-            }
+            onClick={downloadAllReport}
             className="fixed bottom-20 right-6 z-50 flex md:hidden items-center justify-center w-12 h-12 rounded-full shadow-lg text-white transition-transform hover:scale-105"
             style={{ background: "#04652c" }}
             type="button"

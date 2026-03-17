@@ -71,7 +71,7 @@ export const ClientsTable: React.FC<ClientsTableProps> = ({
       onCreate={onCreate}
       searchPlaceholder="Buscar clientes..."
       createButtonText="Crear Cliente"
-      module="clients"   // 🔥 AQUÍ ESTABA EL PROBLEMA
+      module="clients"
     />
   );
 };

@@ -5,8 +5,9 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Swal from "sweetalert2";
 import { ToastContainer } from "react-toastify";
 import RequireAuth from "@/features/auth/requireauth";
+import { usePermissions } from "@/features/auth/hooks/usePermissions";
 import Modal from "@/features/dashboard/components/Modal";
-import Colors from "@/shared/theme/colors";
+import { exportXlsx } from "@/shared/utils/exportXlsx";
 import { showError, showSuccess, showWarning } from "@/shared/utils/notifications";
 import { useAuth } from "@/features/auth/authcontext";
 
@@ -28,7 +29,7 @@ import { FilePlus2 } from "lucide-react";
 const MODULE_KEY = "orders-services";
 
 const ICONS = {
-  print: "/icons/printer.svg",
+  print: "/icons/Printer.svg",
   report: "/icons/alert-triangle.svg",
 };
 
@@ -598,6 +599,7 @@ export default function OrdersServicesIndexPage() {
   const bodyOverflowRef = useRef<string | null>(null);
   const cancelHandledRef = useRef(false);
   const { user, profile } = useAuth();
+  const { has } = usePermissions();
 
   const normalizedRole = useMemo(() => {
     const candidates = [
@@ -634,6 +636,8 @@ export default function OrdersServicesIndexPage() {
     if (!isTechnicianRole) return null;
     return extractAuthTechnicianId(user, profile);
   }, [isTechnicianRole, user, profile]);
+  const canExportOrders =
+    has(MODULE_KEY, "download_report") || has(MODULE_KEY, "export");
 
   const fetchParams = useMemo(
     () => ({
@@ -1183,6 +1187,43 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
     URL.revokeObjectURL(url);
   }, [rows, loading]);
 
+  const downloadAllReport = useCallback(async () => {
+    if (loading) return;
+    const response = await fetchOrdersServices({
+      search,
+      clientId: isClientRole ? clientIdFromAuth ?? undefined : undefined,
+      technicianId: isTechnicianRole ? technicianIdFromAuth ?? undefined : undefined,
+    });
+    const reportRows = sortRowsByIdDesc(
+      (Array.isArray(response) ? response : response.data).map(toRow)
+    ).map((r) => {
+      const estadoKey = r.estadoKey ?? r.estado;
+      return {
+        Id: r.id,
+        Cliente: r.cliente,
+        Tipo: r.tipo,
+        "Fecha programada": r.fechaProgramada,
+        Estado: estadoKey === "GarantiaReportada" ? "Garantia (reportada)" : r.estado,
+        "Viaticos (COP)": r.viaticos ?? 0,
+        "Monto (COP)": r.monto ?? 0,
+      };
+    });
+
+    if (!reportRows.length) {
+      showWarning("No hay ordenes para descargar.");
+      return;
+    }
+
+    await exportXlsx(reportRows, "reporte_ordenes.xlsx", "Ordenes de servicio");
+  }, [
+    clientIdFromAuth,
+    isClientRole,
+    isTechnicianRole,
+    loading,
+    search,
+    technicianIdFromAuth,
+  ]);
+
   const actionGuard = useCallback((r: Row) => {
     const estadoKey = r.estadoKey ?? r.estado;
     if (estadoKey === "Anulada") {
@@ -1291,18 +1332,36 @@ const extraActions = useCallback(
   );
 
   const rightActions = useMemo(() => {
+    if (!canExportOrders) return null;
     return (
       <button
         type="button"
-        onClick={downloadReport}
+        onClick={downloadAllReport}
         disabled={loading}
-        className="cursor-pointer inline-flex h-9 items-center rounded-md px-3 text-sm font-semibold text-white shadow-sm hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
-        style={{ background: Colors.buttons.primary }}
+        className="relative cursor-pointer inline-flex h-9 items-center gap-2 overflow-hidden rounded-md px-4 text-sm font-semibold text-white transition-transform duration-200 hover:scale-105 group disabled:opacity-60 disabled:cursor-not-allowed"
+        style={{ background: "#B20000" }}
       >
-        Descargar Reporte
+        <span className="absolute inset-0 bg-green-800 scale-x-0 origin-left transition-transform duration-300 ease-out group-hover:scale-x-100"></span>
+        <span className="relative z-10 flex items-center gap-2 group-hover:text-white transition-colors duration-300">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-4 w-4 text-white"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4"
+            />
+          </svg>
+          Descargar Reporte
+        </span>
       </button>
     );
-  }, [downloadReport, loading]);
+  }, [canExportOrders, downloadAllReport, loading]);
 
   return (
     <RequireAuth>
@@ -1430,6 +1489,3 @@ const extraActions = useCallback(
     </RequireAuth>
   );
 }
-
-
-

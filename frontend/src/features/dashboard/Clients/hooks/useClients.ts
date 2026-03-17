@@ -10,7 +10,6 @@ import { api } from "@/shared/utils/apiClient";
 
 import {
   Client,
-  ClientsPaginatedResult,
   CreateClientData,
   EditClientData,
   ClientFormErrors,
@@ -18,9 +17,8 @@ import {
 } from "../types/typeClients";
 
 import { showSuccess, showError } from "@/shared/utils/notifications";
-import { getApiErrorMessage } from "@/features/auth/utils/authUser";
 
-const MIN_LOADER_MS = 450;
+const MIN_LOADER_MS = 200;
 
 // ── Mapa de estados
 const stateMap: Record<string, number> = {
@@ -29,22 +27,6 @@ const stateMap: Record<string, number> = {
 };
 
 let cachedClientRoleId: number | null = null;
-
-type RoleSummary = {
-  roleid?: number;
-  id?: number;
-  name?: string;
-};
-
-type ApiErrorShape = {
-  name?: string;
-  code?: string;
-  response?: {
-    data?: {
-      message?: string | string[];
-    };
-  };
-};
 
 const normalizeText = (value: string) =>
   value
@@ -66,7 +48,7 @@ const getClientRoleId = async (): Promise<number> => {
         : [];
 
   const clientRole = roles.find(
-    (role: RoleSummary) => normalizeText(String(role?.name ?? "")) === "cliente"
+    (role: { name?: string; roleid?: number; id?: number }) => normalizeText(String(role?.name ?? "")) === "cliente"
   );
   const roleId = Number(clientRole?.roleid ?? clientRole?.id);
 
@@ -313,8 +295,8 @@ function validateEditClientForm(
 // =====================================================
 
 export function useClients() {
-  const PAGE_SIZE = 5;
-  const SEARCH_DEBOUNCE_MS = 350;
+  const [pageSize, setPageSize] = useState(5);
+  const SEARCH_DEBOUNCE_MS = 300;
 
   const [clients, setClients] = useState<Client[]>([]);
   const [pagedClients, setPagedClients] = useState<Client[]>([]);
@@ -333,6 +315,12 @@ export function useClients() {
   const searchAbortRef = useRef<AbortController | null>(null);
   const busyRef = useRef(false);
   const startRef = useRef(0);
+  const pageSizeRef = useRef(pageSize);
+
+  // Mantener el ref sincronizado con el state
+  useEffect(() => {
+    pageSizeRef.current = pageSize;
+  }, [pageSize]);
 
   const startLoading = () => {
     busyRef.current = true;
@@ -361,9 +349,9 @@ export function useClients() {
     try {
       await fn();
     } catch (error: unknown) {
-      const apiError = error as ApiErrorShape;
+      const err = error as { response?: { data?: { message?: string | string[] } }; message?: string };
       console.error("Hook Error:", error);
-      const msg = apiError.response?.data?.message ?? getApiErrorMessage(error, "Ocurrio un error inesperado.");
+      const msg = err.response?.data?.message || err.message || "Ocurrió un error inesperado.";
       showError(Array.isArray(msg) ? msg[0] : msg);
       throw error; // Re-lanzar para que el flujo externo sepa que falló
     } finally {
@@ -371,66 +359,58 @@ export function useClients() {
     }
   };
 
-  const loadAllClients = useCallback(async () => {
-    const data = await getClients();
-    const mapped: Client[] = data.map((client) => ({
-      ...client,
-      tipoId: client.tipoId ?? 0,
-    }));
-    setClients(mapped);
-    return mapped;
-  }, []);
-
   const loadClientsPage = useCallback(
-    async (
-      page: number,
-      searchText: string,
-      signal?: AbortSignal,
-    ): Promise<{ list: Client[]; meta: ClientsPaginatedResult["meta"] }> => {
-      const response = (await getClients({
-        page,
-        limit: PAGE_SIZE,
-        search: searchText,
-        signal,
-      })) as ClientsPaginatedResult;
+    async (page: number, searchTerm = "", signal?: AbortSignal, limitOverride?: number) => {
+      const effectiveLimit = limitOverride ?? pageSizeRef.current;
+      
+      // Construir parámetros de filtro
+      const filterParams: Record<string, string> = {};
+      
+      // Agregar búsqueda
+      if (searchTerm.trim()) {
+        filterParams.search = searchTerm.trim();
+      }
+      
+      const result = await getClients({ page, limit: effectiveLimit, signal, ...filterParams });
+      let list: Client[] = [];
+      let totalP = 1;
 
-      const list = Array.isArray(response.data)
-        ? response.data.map((client) => ({
-            ...client,
-            tipoId: client.tipoId ?? 0,
-          }))
-        : [];
-      const meta = response.meta;
+      if (result && "meta" in result && "data" in result) {
+        // Los datos ya vienen con tipoId correcto de la función toUiClient
+        list = result.data as unknown as Client[];
+        totalP = result.meta.totalPages;
+        setCurrentPage(result.meta.page);
+      } else if (Array.isArray(result)) {
+        // Los datos ya vienen con tipoId correcto de la función toUiClient
+        list = result as unknown as Client[];
+      }
+
+      // Ordenar por ID descendente como respaldo
+      list.sort((a, b) => b.id - a.id);
 
       setPagedClients(list);
-      setCurrentPage(Number(meta?.page ?? page));
-      setTotalPages(Math.max(1, Number(meta?.totalPages ?? 1)));
-
-      return { list, meta };
+      setTotalPages(totalP);
+      return { list };
     },
-    [PAGE_SIZE],
+    [] // sin dependencia de pageSize — se usa pageSizeRef
   );
 
-  useEffect(() => {
-    const loadInitialData = async () => {
-      setInitialLoading(true);
-      try {
-        await Promise.all([loadClientsPage(1, ""), loadAllClients()]);
-      } catch (error: unknown) {
-        console.error("Error al cargar clientes:", error);
-        showError(getApiErrorMessage(error, "No se pudieron cargar los clientes."));
-      } finally {
-        setInitialLoading(false);
-      }
-    };
+  const loadAllClients = useCallback(async () => {
+    const data = await getClients();
+    // Los datos ya vienen con tipoId correcto de la función toUiClient
+    // No es necesario re-mapear aquí
+    setClients(data as unknown as Client[]);
+  }, []);
 
+  useEffect(() => {
     if (!hasFetchedRef.current) {
       hasFetchedRef.current = true;
-      void loadInitialData();
+      setInitialLoading(true);
+      Promise.all([loadAllClients(), loadClientsPage(1, "")]).finally(() => {
+        setInitialLoading(false);
+      });
     }
-  }, [loadAllClients, loadClientsPage]);
 
-  useEffect(() => {
     return () => {
       if (searchDebounceRef.current) {
         clearTimeout(searchDebounceRef.current);
@@ -438,7 +418,7 @@ export function useClients() {
       pageAbortRef.current?.abort();
       searchAbortRef.current?.abort();
     };
-  }, []);
+  }, [loadAllClients, loadClientsPage]);
 
   const handlePageChange = useCallback(
     async (nextPage: number) => {
@@ -450,22 +430,51 @@ export function useClients() {
       try {
         await loadClientsPage(nextPage, search, controller.signal);
       } catch (error: unknown) {
-        const apiError = error as ApiErrorShape;
+        const err = error as { name?: string; code?: string; response?: { data?: { message?: string | string[] } } };
         if (
-          apiError.name === "CanceledError" ||
-          apiError.code === "ERR_CANCELED" ||
+          err?.name === "CanceledError" ||
+          err?.code === "ERR_CANCELED" ||
           controller.signal.aborted
         ) {
           return;
         }
         console.error("Error al cambiar de pagina en clientes:", error);
-        const msg = apiError.response?.data?.message ?? getApiErrorMessage(error, "No se pudo cargar la pagina de clientes.");
+        const msg = err?.response?.data?.message || "No se pudo cargar la pagina de clientes.";
         showError(Array.isArray(msg) ? msg[0] : msg);
       } finally {
         if (!controller.signal.aborted) setLoading(false);
       }
     },
     [loadClientsPage, search],
+  );
+
+  const handlePageSizeChange = useCallback(
+    async (limit: number) => {
+      setPageSize(limit);
+      pageAbortRef.current?.abort();
+      const controller = new AbortController();
+      pageAbortRef.current = controller;
+
+      setLoading(true);
+      try {
+        await loadClientsPage(1, search, controller.signal, limit);
+      } catch (error: unknown) {
+        const err = error as { name?: string; code?: string; response?: { data?: { message?: string | string[] } } };
+        if (
+          err?.name === "CanceledError" ||
+          err?.code === "ERR_CANCELED" ||
+          controller.signal.aborted
+        ) {
+          return;
+        }
+        console.error("Error al cambiar tamaño de pagina en clientes:", error);
+        const msg = err?.response?.data?.message || "No se pudo cargar la pagina de clientes.";
+        showError(Array.isArray(msg) ? msg[0] : msg);
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    },
+    [loadClientsPage, search]
   );
 
   const handleSearchChange = useCallback(
@@ -483,16 +492,16 @@ export function useClients() {
         try {
           await loadClientsPage(1, value, controller.signal);
         } catch (error: unknown) {
-          const apiError = error as ApiErrorShape;
+          const err = error as { name?: string; code?: string; response?: { data?: { message?: string | string[] } } };
           if (
-            apiError.name === "CanceledError" ||
-            apiError.code === "ERR_CANCELED" ||
+            err?.name === "CanceledError" ||
+            err?.code === "ERR_CANCELED" ||
             controller.signal.aborted
           ) {
             return;
           }
           console.error("Error al buscar clientes:", error);
-          const msg = apiError.response?.data?.message ?? getApiErrorMessage(error, "No se pudieron buscar los clientes.");
+          const msg = err?.response?.data?.message || "No se pudieron buscar los clientes.";
           showError(Array.isArray(msg) ? msg[0] : msg);
         } finally {
           if (!controller.signal.aborted) setLoading(false);
@@ -540,6 +549,16 @@ export function useClients() {
       return;
     }
 
+    // Validar que el tipo de documento sea válido antes de guardar
+    const tipoDocumento = Number(form.tipo);
+    
+    console.log('[DEBUG] Editando cliente - tipo documento:', { formTipo: form.tipo, tipoDocumento, tipoType: typeof form.tipo });
+    
+    if (isNaN(tipoDocumento) || tipoDocumento <= 0 || tipoDocumento > 6) {
+      showError("Por favor seleccione un tipo de documento válido (1-6).");
+      return;
+    }
+
     const clientRoleId = await getClientRoleId();
 
     const userPayload = {
@@ -548,13 +567,15 @@ export function useClients() {
       email: form.correoElectronico.trim(),
       documentnumber: form.documento.trim(),
       phone: form.telefono.replace(/\D/g, ""),
-      typeid: Number(form.tipo),
+      typeid: tipoDocumento,
       stateid: stateMap[form.estado] ?? 1,
       roleid: clientRoleId,
-      image: "",
       customercity: form.ciudad.trim(),
       customerzipcode: form.codigoPostal.trim(),
+      image: "",
     };
+
+    console.log('[DEBUG] Payload enviado al backend:', userPayload);
 
     try {
       await withLoading(async () => {
@@ -562,7 +583,40 @@ export function useClients() {
         showSuccess("Cliente actualizado correctamente.");
       });
 
-      await Promise.all([loadClientsPage(currentPage, search), loadAllClients()]);
+      // Actualizar el tipo de documento a texto para mostrar correctamente
+      // Los IDs de la tabla typeofdocuments son: 1=CC, 2=PPT, 3=NIT, 4=PA, 5=CE, 6=VI
+      const tipoDocumentoTexto = {
+        1: "CC",
+        2: "PPT",
+        3: "NIT",
+        4: "PA",
+        5: "CE",
+        6: "VI",
+      }[tipoDocumento] ?? "CC"; // Valor por defecto si no se encuentra
+
+      setClients((prev) =>
+        prev.map((client) =>
+          client.id === form.id
+            ? {
+              ...client,
+              nombre: form.nombre.trim(),
+              apellido: form.apellido.trim(),
+              tipoId: tipoDocumento,
+              tipo: tipoDocumentoTexto,
+              documento: form.documento.trim(),
+              telefono: form.telefono.replace(/\D/g, ""),
+              correoElectronico: form.correoElectronico.trim(),
+              estado: form.estado,
+              ciudad: form.ciudad.trim(),
+              codigoPostal: form.codigoPostal.trim(),
+            }
+            : client
+        )
+      );
+      
+      // Recargar los datos del servidor para asegurar consistencia
+      await loadAllClients();
+      await loadClientsPage(currentPage, search);
     } catch {
       return;
     } finally {
@@ -639,7 +693,7 @@ export function useClients() {
     loading,
     currentPage,
     totalPages,
-    pageSize: PAGE_SIZE,
+    pageSize,
     search,
     isCreateModalOpen,
     setIsCreateModalOpen,
@@ -650,6 +704,7 @@ export function useClients() {
     handleDeleteClient,
     handlePageChange,
     handleSearchChange,
+    handlePageSizeChange,
     handleView,
     handleEdit,
     closeModals,
@@ -673,20 +728,17 @@ export function useCreateClientForm({
   onSave,
   clients,
 }: UseCreateClientFormProps) {
-  const initialState = useMemo<CreateClientData>(
-    () => ({
-      tipo: 0,
-      documento: "",
-      nombre: "",
-      apellido: "",
-      telefono: "",
-      correoElectronico: "",
-      ciudad: "",
-      codigoPostal: "",
-      estado: "",
-    }),
-    [],
-  );
+  const initialState = useMemo<CreateClientData>(() => ({
+    tipo: 0,
+    documento: "",
+    nombre: "",
+    apellido: "",
+    telefono: "",
+    correoElectronico: "",
+    ciudad: "",
+    codigoPostal: "",
+    estado: "",
+  }), []);
 
   const [formData, setFormData] = useState<CreateClientData>(initialState);
   const [errors, setErrors] = useState<ClientFormErrors>({});
@@ -698,7 +750,7 @@ export function useCreateClientForm({
       setErrors({});
       setTouched({});
     }
-  }, [initialState, isOpen]);
+  }, [isOpen, initialState]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>

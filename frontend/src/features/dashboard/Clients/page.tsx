@@ -40,6 +40,7 @@ export default function ClientsPage() {
     handleEditClient,
     handleDeleteClient,
     handlePageChange,
+    handlePageSizeChange,
     handleSearchChange,
     handleView,
     handleEdit,
@@ -57,7 +58,11 @@ export default function ClientsPage() {
 
   const columns: Column<Client>[] = [
     { key: "id", header: "ID" },
-    { key: "tipo", header: "Tipo" },
+    { 
+      key: "tipo", 
+      header: "Tipo",
+      render: (row: Client) => row.tipo || "-" 
+    },
     { key: "documento", header: "Documento" },
     {
       key: "nombre",
@@ -124,17 +129,20 @@ export default function ClientsPage() {
               data={pagedClients}
               columns={columns}
               pageSize={pageSize}
-              showPageSizeSelector={false}
               serverPagination={{
                 page: currentPage,
+                limit: pageSize,
                 totalPages,
                 onPageChange: handlePageChange,
+                onPageSizeChange: handlePageSizeChange,
               }}
               serverSearch={{
                 value: search,
                 onChange: handleSearchChange,
               }}
               searchableKeys={[
+                "id",
+                "tipo",
                 "nombre",
                 "apellido",
                 "documento",

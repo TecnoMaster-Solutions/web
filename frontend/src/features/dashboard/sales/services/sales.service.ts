@@ -119,6 +119,7 @@ export async function getSales({
     const shouldPaginate = Number.isInteger(page) && Number.isInteger(limit);
     const response = await apiClient.get<PaginatedPayload<ISale> | ISale[]>("/sales", {
         params: {
+            order: "DESC",
             ...(shouldPaginate ? { page, limit } : {}),
             ...(search?.trim() ? { search: search.trim() } : {}),
         },

@@ -86,12 +86,23 @@ export type ClientUI = {
   hasAssociations: boolean;
 };
 
+// Mapa de tipos de documento para mostrar en UI
+// Los IDs de la tabla typeofdocuments son: 1=CC, 2=PPT, 3=NIT, 4=PA, 5=CE, 6=VI
+const documentTypeMap: Record<number, string> = {
+  1: "CC",
+  2: "PPT",
+  3: "NIT",
+  4: "PA",
+  5: "CE",
+  6: "VI",
+};
+
 export const toUiClient = (c: CustomerFromApi): ClientUI => ({
   id: c.customerid,
   userid: c.userid ?? c.users?.userid ?? 0,
   nombre: c.users?.name ?? "",
   apellido: c.users?.lastname ?? "",
-  tipo: c.users?.typeofdocuments?.name ?? "",
+  tipo: c.users?.typeofdocuments?.name ?? (c.users?.typeid ? documentTypeMap[c.users.typeid] ?? "" : ""),
   tipoId:
     c.users?.typeofdocuments?.id ??
     c.users?.typeofdocuments?.typeofdocumentid ??
@@ -111,6 +122,7 @@ type GetClientsParams = {
   page?: number;
   limit?: number;
   search?: string;
+  order?: "ASC" | "DESC";
 };
 
 type ApiErrorShape = {
@@ -135,6 +147,7 @@ export async function getClients({
   page,
   limit,
   search,
+  order = "DESC",
 }: GetClientsParams = {}): Promise<ClientUI[] | ClientsPaginatedResult> {
   const shouldPaginate = Number.isInteger(page) && Number.isInteger(limit);
 
@@ -144,6 +157,7 @@ export async function getClients({
     >("/customers", {
       params: {
         includeRelations: true,
+        order: order,
         ...(shouldPaginate ? { page, limit } : {}),
         ...(search?.trim() ? { search: search.trim() } : {}),
       },
@@ -185,28 +199,28 @@ export async function getClients({
     if (apiError.name === "CanceledError" || apiError.code === "ERR_CANCELED") {
       return shouldPaginate
         ? {
-            data: [],
-            meta: {
-              page: page ?? EMPTY_PAGINATION.page,
-              limit: limit ?? EMPTY_PAGINATION.limit,
-              total: EMPTY_PAGINATION.total,
-              totalPages: EMPTY_PAGINATION.totalPages,
-            },
-          }
+          data: [],
+          meta: {
+            page: page ?? EMPTY_PAGINATION.page,
+            limit: limit ?? EMPTY_PAGINATION.limit,
+            total: EMPTY_PAGINATION.total,
+            totalPages: EMPTY_PAGINATION.totalPages,
+          },
+        }
         : [];
     }
 
     if (apiError.response?.status === 404) {
       return shouldPaginate
         ? {
-            data: [],
-            meta: {
-              page: page ?? EMPTY_PAGINATION.page,
-              limit: limit ?? EMPTY_PAGINATION.limit,
-              total: EMPTY_PAGINATION.total,
-              totalPages: EMPTY_PAGINATION.totalPages,
-            },
-          }
+          data: [],
+          meta: {
+            page: page ?? EMPTY_PAGINATION.page,
+            limit: limit ?? EMPTY_PAGINATION.limit,
+            total: EMPTY_PAGINATION.total,
+            totalPages: EMPTY_PAGINATION.totalPages,
+          },
+        }
         : [];
     }
 

@@ -9,6 +9,8 @@ export type GetPurchasesParams = {
   limit?: number;
   search?: string;
   signal?: AbortSignal;
+  fecha_inicio?: string;
+  fecha_fin?: string;
 };
 
 type PaginatedPurchasesResponse = {
@@ -57,6 +59,8 @@ export const getPurchases = async ({
   limit = 8,
   search = "",
   signal,
+  fecha_inicio,
+  fecha_fin,
 }: GetPurchasesParams = {}): Promise<{
   data: IPurchase[];
   meta: {
@@ -77,6 +81,8 @@ export const getPurchases = async ({
             page,
             limit,
             search: search.trim() || undefined,
+            ...(fecha_inicio ? { fecha_inicio } : {}),
+            ...(fecha_fin ? { fecha_fin } : {}),
           },
           signal,
           timeout: 5000,

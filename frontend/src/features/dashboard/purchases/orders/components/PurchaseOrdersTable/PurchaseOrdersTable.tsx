@@ -101,8 +101,8 @@ export const PurchaseOrdersTable: React.FC<PurchaseOrdersTableProps> = ({
     <DataTable<purchaseOrderForTable>
       data={purchaseOrdersForTable}
       columns={columns}
-      pageSize={10}
-      searchableKeys={["searchQuery"]}
+      pageSize={5}
+      searchableKeys={["id", "numeroOrden", "proveedor", "fecha", "fechaEntrega", "total", "estado"]}
       renderActions={renderActions}
       onCreate={onCreate}
       rightActions={rightActions}

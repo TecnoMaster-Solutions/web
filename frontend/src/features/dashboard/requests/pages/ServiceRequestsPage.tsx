@@ -29,9 +29,11 @@ import {
 } from "@/features/dashboard/requests/utils/schedule";
 import { showError, showSuccess } from "@/shared/utils/notifications";
 import DownloadXLSXButton from "@/features/dashboard/components/DownloadXLSXButton";
+import { exportXlsx } from "@/shared/utils/exportXlsx";
 import { useRequestStates } from "@/features/dashboard/requests/hooks/useRequestStates";
 import { useAuth } from "@/features/auth/authcontext";
 import { usePermissions } from "@/features/auth/hooks/usePermissions";
+import { listServiceRequests } from "@/features/dashboard/requests/services/servicerequests.service";
 import type {
   CreateServiceRequestInput,
   PaginatedResponse,
@@ -42,7 +44,7 @@ import type {
 } from "@/features/dashboard/requests/services/servicerequests.service";
 
 const ICONS = {
-  print: "/icons/printer.svg",
+  print: "/icons/Printer.svg",
 };
 const MODULE_KEY = "servicesrequest";
 
@@ -189,6 +191,81 @@ function extractTechnicianNames(r: ServiceRequestDTO): string[] {
     .filter(Boolean);
 
   return Array.from(new Set(names));
+}
+
+function mapServiceRequestToRow(r: ServiceRequestDTO): Row {
+  const row = r as ServiceRequestRowLike;
+  const id = row?.serviceRequestId ?? row?.id ?? "";
+  const servicio = row?.service?.name ?? row?.serviceType ?? "";
+  const serviceId =
+    row?.service?.serviceid ?? row?.serviceId ?? row?.service?.id ?? undefined;
+
+  const clienteId =
+    row?.clientId ?? row?.customer?.customerid ?? row?.customer?.id ?? "";
+  const nombre = row?.customer?.users?.name ?? row?.customer?.name ?? "";
+  const apellido =
+    row?.customer?.users?.lastname ?? row?.customer?.lastname ?? "";
+  const cliente = [nombre, apellido].filter(Boolean).join(" ");
+
+  const descripcion = row?.description ?? "";
+  const direccion =
+    row?.direccion ?? row?.customer?.customercity ?? row?.address ?? "";
+
+  const tipoRaw = row?.serviceType ?? row?.service?.category ?? "";
+  const lower = String(tipoRaw).toLowerCase();
+  const tipo = lower.includes("instal")
+    ? "Instalacion"
+    : lower.includes("manten")
+    ? "Mantenimiento"
+    : String(tipoRaw || "");
+
+  const tipos: ("Mantenimiento" | "Instalacion")[] =
+    tipo === "Mantenimiento"
+      ? ["Mantenimiento"]
+      : tipo === "Instalacion"
+      ? ["Instalacion"]
+      : [];
+
+  const scheduledAtDate = r?.scheduledAt ? new Date(r.scheduledAt) : null;
+  const scheduledEndAtDate = r?.scheduledEndAt
+    ? new Date(r.scheduledEndAt)
+    : null;
+
+  const programada = scheduledAtDate
+    ? toLocalDateTimeValue(scheduledAtDate)
+    : null;
+  const programadaEnd = scheduledEndAtDate
+    ? toLocalDateTimeValue(scheduledEndAtDate)
+    : null;
+
+  const estado = row?.state?.name ?? row?.status ?? "";
+  const stateId = row?.stateId ?? row?.state?.stateid ?? undefined;
+
+  const fecha = row?.createdAt
+    ? new Date(row.createdAt).toLocaleDateString("es-CO")
+    : "";
+
+  const technicians = extractTechnicianIds(r);
+  const technicianNames = extractTechnicianNames(r);
+
+  return {
+    id,
+    descripcion: String(descripcion),
+    tipo,
+    tipos,
+    servicio: String(servicio),
+    serviceId,
+    cliente: String(cliente),
+    clienteId,
+    direccion: String(direccion),
+    fecha,
+    estado: String(estado),
+    stateId,
+    programada,
+    programadaEnd,
+    technicians,
+    technicianNames,
+  };
 }
 
 function normalizeRoleName(role: unknown) {
@@ -381,80 +458,7 @@ export default function ServiceRequestsPage() {
 
   const rows: Row[] = useMemo(() => {
     const list = Array.isArray(data?.data) ? data.data : [];
-    return list.map((r: ServiceRequestDTO) => {
-      const row = r as ServiceRequestRowLike;
-      const id = row?.serviceRequestId ?? row?.id ?? "";
-      const servicio = row?.service?.name ?? row?.serviceType ?? "";
-      const serviceId =
-        row?.service?.serviceid ?? row?.serviceId ?? row?.service?.id ?? undefined;
-
-      const clienteId =
-        row?.clientId ?? row?.customer?.customerid ?? row?.customer?.id ?? "";
-      const nombre = row?.customer?.users?.name ?? row?.customer?.name ?? "";
-      const apellido =
-        row?.customer?.users?.lastname ?? row?.customer?.lastname ?? "";
-      const cliente = [nombre, apellido].filter(Boolean).join(" ");
-
-      const descripcion = row?.description ?? "";
-      const direccion =
-        row?.direccion ?? row?.customer?.customercity ?? row?.address ?? "";
-
-      const tipoRaw = row?.serviceType ?? row?.service?.category ?? "";
-      const lower = String(tipoRaw).toLowerCase();
-      const tipo = lower.includes("instal")
-        ? "Instalacion"
-        : lower.includes("manten")
-        ? "Mantenimiento"
-        : String(tipoRaw || "");
-
-      const tipos: ("Mantenimiento" | "Instalacion")[] =
-        tipo === "Mantenimiento"
-          ? ["Mantenimiento"]
-          : tipo === "Instalacion"
-          ? ["Instalacion"]
-          : [];
-
-      const scheduledAtDate = r?.scheduledAt ? new Date(r.scheduledAt) : null;
-      const scheduledEndAtDate = r?.scheduledEndAt
-        ? new Date(r.scheduledEndAt)
-        : null;
-
-      const programada = scheduledAtDate
-        ? toLocalDateTimeValue(scheduledAtDate)
-        : null;
-      const programadaEnd = scheduledEndAtDate
-        ? toLocalDateTimeValue(scheduledEndAtDate)
-        : null;
-
-      const estado = row?.state?.name ?? row?.status ?? "";
-      const stateId = row?.stateId ?? row?.state?.stateid ?? undefined;
-
-      const fecha = row?.createdAt
-        ? new Date(row.createdAt).toLocaleDateString("es-CO")
-        : "";
-
-      const technicians = extractTechnicianIds(r);
-      const technicianNames = extractTechnicianNames(r);
-
-      return {
-        id,
-        descripcion: String(descripcion),
-        tipo,
-        tipos,
-        servicio: String(servicio),
-        serviceId,
-        cliente: String(cliente),
-        clienteId,
-        direccion: String(direccion),
-        fecha,
-        estado: String(estado),
-        stateId,
-        programada,
-        programadaEnd,
-        technicians,
-        technicianNames,
-      };
-    });
+    return list.map(mapServiceRequestToRow);
   }, [data]);
 
   const totalPages = data?.meta?.totalPages ?? 1;
@@ -506,7 +510,47 @@ export default function ServiceRequestsPage() {
   const canUpdateRequests = canUpdate(MODULE_KEY);
   const canCancelRequests = canDelete(MODULE_KEY) || has(MODULE_KEY, "deactivate");
   const canPrintRequests = canViewRequests || has(MODULE_KEY, "print");
-  const canExportRequests = canViewRequests || has(MODULE_KEY, "export");
+  const canExportRequests =
+    has(MODULE_KEY, "download_report") || has(MODULE_KEY, "export");
+
+  const handleDownloadReport = useCallback(async () => {
+    const response = await listServiceRequests({
+      search,
+      clientId: isClientRole ? clientIdFromAuth ?? undefined : undefined,
+      technicianId: isTechnicianRole ? technicianIdFromAuth ?? undefined : undefined,
+    });
+    const reportRows = (Array.isArray(response) ? response : response.data)
+      .map(mapServiceRequestToRow)
+      .map((r) => ({
+        Id: r.id,
+        Cliente: r.cliente,
+        Descripcion: r.descripcion,
+        Servicio: r.servicio,
+        Tipo: r.tipo,
+        Direccion: r.direccion,
+        Fecha: r.fecha,
+        Estado: r.estado,
+        Programada: r.programada ?? "",
+        "Programada Fin": r.programadaEnd ?? "",
+        Tecnicos:
+          (r.technicianNames || []).join(", ") ||
+          (r.technicians || []).join(", "),
+      }))
+      .sort((a, b) => Number(b.Id) - Number(a.Id));
+
+    if (!reportRows.length) {
+      showError("No hay solicitudes para descargar.");
+      return;
+    }
+
+    await exportXlsx(reportRows, "reporte_solicitudes.xlsx", "Solicitudes");
+  }, [
+    clientIdFromAuth,
+    isClientRole,
+    isTechnicianRole,
+    search,
+    technicianIdFromAuth,
+  ]);
 
   const optimisticPatch = useCallback((id: number, patch: Partial<Row>) => {
     queryClient.setQueryData<RequestListCache>(["service-requests"], (old) => {
@@ -962,7 +1006,32 @@ export default function ServiceRequestsPage() {
             rightActions={
               canExportRequests ? (
                 <>
-                <div className="hidden md:block">
+                <button
+                  onClick={handleDownloadReport}
+                  className="hidden md:inline-flex relative cursor-pointer h-9 items-center gap-2 overflow-hidden rounded-md px-4 text-sm font-semibold text-white transition-transform duration-200 hover:scale-105 group"
+                  style={{ background: "#B20000" }}
+                  type="button"
+                >
+                  <span className="absolute inset-0 bg-green-800 scale-x-0 origin-left transition-transform duration-300 ease-out group-hover:scale-x-100"></span>
+                  <span className="relative z-10 flex items-center gap-2 group-hover:text-white transition-colors duration-300">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-4 w-4 text-white"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4"
+                      />
+                    </svg>
+                    Descargar Reporte
+                  </span>
+                </button>
+                <div className="hidden">
                   <DownloadXLSXButton
                     id="download-excel-btn"
                     data={xlsxRows as unknown as Record<string, unknown>[]}
@@ -985,11 +1054,7 @@ export default function ServiceRequestsPage() {
                 </div>
 
                 <button
-                  onClick={() =>
-                    document
-                      .querySelector<HTMLButtonElement>("#download-excel-btn")
-                      ?.click()
-                  }
+                  onClick={handleDownloadReport}
                   className="fixed bottom-20 right-6 z-50 flex md:hidden items-center justify-center w-12 h-12 rounded-full shadow-lg text-white transition-transform hover:scale-105"
                   style={{ background: "#04652c" }}
                   type="button"

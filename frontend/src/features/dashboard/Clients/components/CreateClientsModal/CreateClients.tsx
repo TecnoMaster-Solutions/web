@@ -59,9 +59,11 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
             >
               <option value="">Seleccione</option>
               <option value={1}>CC</option>
-              <option value={2}>TI</option>
-              <option value={3}>CE</option>
-              <option value={4}>PPN</option>
+              <option value={2}>PPT</option>
+              <option value={3}>NIT</option>
+              <option value={4}>PA</option>
+              <option value={5}>CE</option>
+              <option value={6}>VI</option>
             </select>
 
             {errors.tipo && touched.tipo && (
