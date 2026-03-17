@@ -29,9 +29,11 @@ import {
 } from "@/features/dashboard/requests/utils/schedule";
 import { showError, showSuccess } from "@/shared/utils/notifications";
 import DownloadXLSXButton from "@/features/dashboard/components/DownloadXLSXButton";
+import { exportXlsx } from "@/shared/utils/exportXlsx";
 import { useRequestStates } from "@/features/dashboard/requests/hooks/useRequestStates";
 import { useAuth } from "@/features/auth/authcontext";
 import { usePermissions } from "@/features/auth/hooks/usePermissions";
+import { listServiceRequests } from "@/features/dashboard/requests/services/servicerequests.service";
 import type {
   CreateServiceRequestInput,
   PaginatedResponse,
@@ -509,6 +511,45 @@ export default function ServiceRequestsPage() {
   const canExportRequests =
     has(MODULE_KEY, "download_report") || has(MODULE_KEY, "export");
 
+  const handleDownloadReport = useCallback(async () => {
+    const response = await listServiceRequests({
+      search,
+      clientId: isClientRole ? clientIdFromAuth ?? undefined : undefined,
+      technicianId: isTechnicianRole ? technicianIdFromAuth ?? undefined : undefined,
+    });
+    const reportRows = (Array.isArray(response) ? response : response.data)
+      .map((raw) => toRow(raw))
+      .map((r) => ({
+        Id: r.id,
+        Cliente: r.cliente,
+        Descripcion: r.descripcion,
+        Servicio: r.servicio,
+        Tipo: r.tipo,
+        Direccion: r.direccion,
+        Fecha: r.fecha,
+        Estado: r.estado,
+        Programada: r.programada ?? "",
+        "Programada Fin": r.programadaEnd ?? "",
+        Tecnicos:
+          (r.technicianNames || []).join(", ") ||
+          (r.technicians || []).join(", "),
+      }))
+      .sort((a, b) => Number(b.Id) - Number(a.Id));
+
+    if (!reportRows.length) {
+      showError("No hay solicitudes para descargar.");
+      return;
+    }
+
+    await exportXlsx(reportRows, "reporte_solicitudes.xlsx", "Solicitudes");
+  }, [
+    clientIdFromAuth,
+    isClientRole,
+    isTechnicianRole,
+    search,
+    technicianIdFromAuth,
+  ]);
+
   const optimisticPatch = useCallback((id: number, patch: Partial<Row>) => {
     queryClient.setQueryData<RequestListCache>(["service-requests"], (old) => {
       if (!Array.isArray(old)) return old;
@@ -963,7 +1004,14 @@ export default function ServiceRequestsPage() {
             rightActions={
               canExportRequests ? (
                 <>
-                <div className="hidden md:block">
+                <button
+                  onClick={handleDownloadReport}
+                  className="hidden md:inline-flex h-9 items-center rounded-md bg-[#04652c] px-4 text-sm font-semibold text-white shadow-sm hover:opacity-90"
+                  type="button"
+                >
+                  Descargar Reporte
+                </button>
+                <div className="hidden">
                   <DownloadXLSXButton
                     id="download-excel-btn"
                     data={xlsxRows as unknown as Record<string, unknown>[]}
@@ -986,11 +1034,7 @@ export default function ServiceRequestsPage() {
                 </div>
 
                 <button
-                  onClick={() =>
-                    document
-                      .querySelector<HTMLButtonElement>("#download-excel-btn")
-                      ?.click()
-                  }
+                  onClick={handleDownloadReport}
                   className="fixed bottom-20 right-6 z-50 flex md:hidden items-center justify-center w-12 h-12 rounded-full shadow-lg text-white transition-transform hover:scale-105"
                   style={{ background: "#04652c" }}
                   type="button"

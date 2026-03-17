@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Swal from "sweetalert2";
 import RequireAuth from "@/features/auth/requireauth";
 import DownloadXLSXButton from "@/features/dashboard/components/DownloadXLSXButton";
+import { exportXlsx } from "@/shared/utils/exportXlsx";
 import { useAuth } from "@/features/auth/authcontext";
 import { usePermissions } from "@/features/auth/hooks/usePermissions";
 import { showError, showSuccess } from "@/shared/utils/notifications";
@@ -315,6 +316,35 @@ export default function ServiceRequestsClientsPage() {
   const canExportRequests =
     has(MODULE_KEY, "download_report") || has(MODULE_KEY, "export");
 
+  const handleDownloadReport = useCallback(async () => {
+    const response = await listServiceRequests({
+      search: query,
+      ...(clientIdFromAuth ? { clientId: clientIdFromAuth } : {}),
+    });
+    const reportRows = (Array.isArray(response) ? response : response.data)
+      .map((raw) => toRow(raw))
+      .map((row) => ({
+        Id: row.id,
+        Cliente: row.cliente,
+        Servicio: row.servicio,
+        Tipo: row.tipo,
+        Fecha: row.fecha,
+        Direccion: row.direccion,
+        Descripcion: row.descripcion,
+        Estado: row.estado,
+        Programada: row.programada ?? "",
+        "Programada Fin": row.programadaEnd ?? "",
+      }))
+      .sort((a, b) => Number(b.Id) - Number(a.Id));
+
+    if (!reportRows.length) {
+      showError("No hay solicitudes para descargar.");
+      return;
+    }
+
+    await exportXlsx(reportRows, "reporte_solicitudes_cliente.xlsx", "Solicitudes");
+  }, [clientIdFromAuth, query]);
+
   const xlsxRows = useMemo(() => {
     return [...rows]
       .sort((a, b) => b.id - a.id)
@@ -501,13 +531,7 @@ export default function ServiceRequestsClientsPage() {
                 )}
                 {canExportRequests && (
                   <button
-                    onClick={() =>
-                      document
-                        .querySelector<HTMLButtonElement>(
-                          "#download-excel-btn-service-requests-client"
-                        )
-                        ?.click()
-                    }
+                    onClick={handleDownloadReport}
                     className="inline-flex h-10 items-center rounded-md bg-[#04652c] px-3 text-sm font-semibold text-white shadow-sm hover:opacity-90 whitespace-nowrap"
                     disabled={busy}
                     type="button"
