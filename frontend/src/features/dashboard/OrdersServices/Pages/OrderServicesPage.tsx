@@ -1338,9 +1338,27 @@ const extraActions = useCallback(
         type="button"
         onClick={downloadAllReport}
         disabled={loading}
-        className="cursor-pointer transition duration-300 hover:bg-[#227a69] hover:text-white hover:scale-105 px-4 py-2 rounded-lg bg-[#2a9781] text-white w-full sm:w-auto disabled:opacity-60 disabled:cursor-not-allowed"
+        className="relative cursor-pointer inline-flex h-9 items-center gap-2 overflow-hidden rounded-md px-4 text-sm font-semibold text-white transition-transform duration-200 hover:scale-105 group disabled:opacity-60 disabled:cursor-not-allowed"
+        style={{ background: "#B20000" }}
       >
-        Descargar Reporte
+        <span className="absolute inset-0 bg-green-800 scale-x-0 origin-left transition-transform duration-300 ease-out group-hover:scale-x-100"></span>
+        <span className="relative z-10 flex items-center gap-2 group-hover:text-white transition-colors duration-300">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-4 w-4 text-white"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4"
+            />
+          </svg>
+          Descargar Reporte
+        </span>
       </button>
     );
   }, [canExportOrders, downloadAllReport, loading]);
