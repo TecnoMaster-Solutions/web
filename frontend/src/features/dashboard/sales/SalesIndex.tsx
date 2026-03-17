@@ -10,9 +10,9 @@ import { showSuccess, showError } from "@/shared/utils/notifications";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Colors from "@/shared/theme/colors";
-import { ISale, ISalesPaginatedResult } from "./types/Sales.type";
+import { ISalesPaginatedResult } from "./types/Sales.type";
 import { getSales, annulSale } from "./services/sales.service";
-import { getSales as getAllSales } from "./api/sales.api";
+import { getSales as getAllSales, ISale } from "./api/sales.api";
 import CreateSaleForm from "./components/CreateSaleForm";
 import SalePaymentsModal from "./components/SalePaymentsModal";
 import { useAuth } from "@/features/auth/authcontext";
@@ -420,7 +420,7 @@ export default function SalesIndex() {
       });
 
       // Transformar los datos para el Excel
-      const salesData = allSales.map((sale: any) => {
+      const salesData = allSales.map((sale: ISale) => {
         const isGatewayPaymentMethod = (method: string) =>
           method === "MercadoPago" || method === "PlaceToPay" || method === "Wompi";
         return {

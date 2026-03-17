@@ -551,6 +551,8 @@ export function useClients() {
     // Validar que el tipo de documento sea válido antes de guardar
     const tipoDocumento = Number(form.tipo);
     
+    console.log('[DEBUG] Editando cliente - tipo documento:', { formTipo: form.tipo, tipoDocumento, tipoType: typeof form.tipo });
+    
     if (isNaN(tipoDocumento) || tipoDocumento <= 0 || tipoDocumento > 6) {
       showError("Por favor seleccione un tipo de documento válido (1-6).");
       return;
@@ -571,6 +573,8 @@ export function useClients() {
       customerzipcode: form.codigoPostal.trim(),
       image: "",
     };
+
+    console.log('[DEBUG] Payload enviado al backend:', userPayload);
 
     try {
       await withLoading(async () => {
