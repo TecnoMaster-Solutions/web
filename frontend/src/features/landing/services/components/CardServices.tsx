@@ -145,8 +145,9 @@ export default function CardServices({
 
     try {
       await createServiceRequest(payload);
-      showSuccess("Hemos recibido tu solicitud. Pronto nos pondremos en contacto.");
-      handleCloseModal();
+      window.setTimeout(() => {
+        showSuccess("Hemos recibido tu solicitud. Pronto nos pondremos en contacto.");
+      }, 0);
     } catch (error: unknown) {
       showError(
         getBackendMessage(error) || "No fue posible registrar la solicitud. Intenta nuevamente."

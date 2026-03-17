@@ -9,6 +9,7 @@ import { CalendarDays } from "lucide-react";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { ToastContainer } from "react-toastify";
+import { useQueryClient } from "@tanstack/react-query";
 
 import AppointmentDetailModal from "./components/AppointmentDetailCard";
 import AppointmentFilters from "./components/AppointmentFilters";
@@ -99,6 +100,7 @@ const TECH_COMPLETE_CONFIRM_TAG = "[TECH_COMPLETE_CONFIRM]";
 type EditRequestModalInitial = React.ComponentProps<typeof EditRequestModal>["initial"];
 
 export default function IndexAppointment() {
+  const queryClient = useQueryClient();
   const { tokenRole, tokenRoleNormalized, clientProfileId, technicianProfileUserId } = useRoleScope();
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
@@ -452,7 +454,12 @@ export default function IndexAppointment() {
         id: requestId,
         payload: payloadBody,
       });
-      await refetch();
+      void queryClient.invalidateQueries({
+        queryKey: ["appointments", "orders-services-requests"],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["requests"],
+      });
     } catch (err) {
       showError("No se pudo actualizar la solicitud.");
       throw err;

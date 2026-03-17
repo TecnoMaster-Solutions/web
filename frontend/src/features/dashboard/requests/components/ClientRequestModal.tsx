@@ -166,17 +166,25 @@ export default function ClientCreateRequestModal({
     return list.filter((s) => s.typeofserviceid === serviceTypeId);
   }, [finalServicios, serviceTypeId]);
 
+  const selectedService = useMemo(
+    () =>
+      serviceId !== ""
+        ? filteredServicios.find((s) => Number(s.id) === Number(serviceId)) || null
+        : null,
+    [filteredServicios, serviceId]
+  );
+
   function validateDireccion(v: string) {
     const dir = (v ?? "").trim();
-    if (dir.length < 3) return "Mínimo 3 caracteres.";
-    if (dir.length > 255) return "Máximo 255 caracteres.";
+    if (dir.length < 3) return "Minimo 3 caracteres.";
+    if (dir.length > 255) return "Maximo 255 caracteres.";
     if (hasInvalidRequestCharacters(dir)) return "Contiene caracteres no permitidos.";
     return null;
   }
 
   function validateDescription(v: string) {
     const d = (v ?? "").trim();
-    if (d.length < 3) return "Mínimo 3 caracteres.";
+    if (d.length < 3) return "Minimo 3 caracteres.";
     if (hasInvalidRequestCharacters(d)) return "Contiene caracteres no permitidos.";
     return null;
   }
@@ -270,13 +278,13 @@ export default function ClientCreateRequestModal({
     if (!initialServiceId) return;
     if (!finalServicios.length) return;
 
-      const found = finalServicios.find(
-        (s) => Number(s?.id) === Number(initialServiceId)
-      );
-      if (!found) return;
+    const found = finalServicios.find(
+      (s) => Number(s?.id) === Number(initialServiceId)
+    );
+    if (!found) return;
 
-      const sid = Number(found.id);
-      if (Number.isFinite(sid) && sid > 0) setServiceId(sid);
+    const sid = Number(found.id);
+    if (Number.isFinite(sid) && sid > 0) setServiceId(sid);
 
     const tid = Number(found.typeofserviceid);
     if (Number.isFinite(tid) && tid > 0) setServiceTypeId(tid);
@@ -295,7 +303,7 @@ export default function ClientCreateRequestModal({
       ).trim();
 
       if (!city || !zone || !streetType || !streetNumber || !secondaryNumber) {
-        showInfo("Completa los datos de dirección.");
+        showInfo("Completa los datos de direccion.");
         return;
       }
     }
@@ -314,7 +322,7 @@ export default function ClientCreateRequestModal({
 
     const sid = Number(serviceId);
     if (!Number.isFinite(sid) || sid <= 0) {
-      showInfo("Selecciona un servicio válido.");
+      showInfo("Selecciona un servicio valido.");
       return;
     }
 
@@ -349,8 +357,13 @@ export default function ClientCreateRequestModal({
 
       const fromPayloadState = Number(basePayload.stateId);
       const stateIdToSend =
-        (Number.isFinite(fromPayloadState) && fromPayloadState > 0 && fromPayloadState) ||
-        (pendingStateId && Number.isFinite(pendingStateId) && pendingStateId > 0 && pendingStateId) ||
+        (Number.isFinite(fromPayloadState) &&
+          fromPayloadState > 0 &&
+          fromPayloadState) ||
+        (pendingStateId &&
+          Number.isFinite(pendingStateId) &&
+          pendingStateId > 0 &&
+          pendingStateId) ||
         5;
 
       const payload: CreateRequestPayload = {
@@ -369,6 +382,11 @@ export default function ClientCreateRequestModal({
     }
   }
 
+  const fieldLabelClass =
+    "mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500";
+  const inputBaseClass =
+    "w-full rounded-2xl border bg-white px-4 text-sm text-slate-900 shadow-sm transition outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:opacity-60";
+
   return (
     <Modal
       title={title}
@@ -376,11 +394,11 @@ export default function ClientCreateRequestModal({
       onClose={onClose}
       widthClass="md:max-w-5xl"
       footer={
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex w-full flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+            className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:opacity-60"
             disabled={saving}
           >
             Cancelar
@@ -388,7 +406,7 @@ export default function ClientCreateRequestModal({
           <button
             type="button"
             onClick={submit}
-            className="rounded-lg bg-[#2a9781] px-3 py-2 text-sm font-semibold text-white hover:bg-[#227a69] disabled:opacity-60"
+            className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-60"
             disabled={saving || loadingLookups}
             title={loadingLookups ? "Cargando servicios..." : undefined}
           >
@@ -397,335 +415,384 @@ export default function ClientCreateRequestModal({
         </div>
       }
     >
-      <div className="grid gap-2 md:grid-cols-2 md:items-start">
-        <div className="order-2 grid gap-2 md:order-1">
-        {clientLabel && (
-          <div className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
-            <p className="text-[11px] font-medium text-gray-500">Cliente</p>
-            <p className="text-sm font-semibold text-gray-900">{clientLabel}</p>
-            {clientDocumentLabel && (
-              <>
-                <p className="mt-2 text-[11px] font-medium text-gray-500">
-                  Cédula
-                </p>
-                <p className="text-sm font-semibold text-gray-900">
-                  {clientDocumentLabel}
-                </p>
-              </>
-            )}
-          </div>
-        )}
-
-        {initialAddressFields && (
-          <div className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-3">
-            <p className="text-[11px] font-medium text-gray-500 mb-2">
-              Dirección de envío (carrito)
+      <div className="grid gap-5 lg:grid-cols-[minmax(260px,320px)_minmax(0,1fr)]">
+        <aside className="space-y-4">
+          <div className="rounded-[28px] border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-slate-50 p-5 shadow-sm">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
+              Resumen
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              <div className="rounded-md border border-gray-200 bg-white px-2 py-1.5">
-                <p className="text-[10px] text-gray-500">Ciudad</p>
-                <p className="text-xs font-medium text-gray-900">
-                  {initialAddressFields.city || "-"}
-                </p>
-              </div>
-              <div className="rounded-md border border-gray-200 bg-white px-2 py-1.5">
-                <p className="text-[10px] text-gray-500">Zona / Barrio</p>
-                <p className="text-xs font-medium text-gray-900">
-                  {initialAddressFields.zone || "-"}
-                </p>
-              </div>
-              <div className="rounded-md border border-gray-200 bg-white px-2 py-1.5">
-                <p className="text-[10px] text-gray-500">Tipo de vía</p>
-                <p className="text-xs font-medium text-gray-900">
-                  {initialAddressFields.streetType || "-"}
-                </p>
-              </div>
-              <div className="rounded-md border border-gray-200 bg-white px-2 py-1.5">
-                <p className="text-[10px] text-gray-500">Número</p>
-                <p className="text-xs font-medium text-gray-900">
-                  {initialAddressFields.streetNumber || "-"}
-                </p>
-              </div>
-              <div className="rounded-md border border-gray-200 bg-white px-2 py-1.5 md:col-span-2">
-                <p className="text-[10px] text-gray-500"># secundaria</p>
-                <p className="text-xs font-medium text-gray-900">
-                  {initialAddressFields.secondaryNumber || "-"}
-                </p>
-              </div>
-              <div className="rounded-md border border-gray-200 bg-white px-2 py-1.5 md:col-span-2">
-                <p className="text-[10px] text-gray-500">Complemento</p>
-                <p className="text-xs font-medium text-gray-900">
-                  {initialAddressFields.complement || "-"}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-        </div>
-
-        <div className="order-1 grid gap-2 md:order-2">
-        <div>
-          <div className="mb-1 flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-gray-900">
-              Tipo de servicio
+            <h3 className="mt-2 text-lg font-semibold text-slate-900">
+              Agenda una visita de soporte
             </h3>
-            <span className="text-[11px] text-gray-500">
-              {loadingLookups
-                ? "Cargando tipos..."
-                : serviceTypes.length
-                ? "Selecciona uno"
-                : "No hay tipos disponibles"}
-            </span>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Completa los datos principales y deja claro que necesitas para
+              que el equipo prepare la atencion.
+            </p>
+
+            <div className="mt-5 space-y-3">
+              {clientLabel && (
+                <div className="rounded-2xl border border-white/80 bg-white/90 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                    Cliente
+                  </p>
+                  <p className="mt-2 text-sm font-semibold text-slate-900">
+                    {clientLabel}
+                  </p>
+                  {clientDocumentLabel && (
+                    <p className="mt-1 text-sm text-slate-600">
+                      {clientDocumentLabel}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <div className="rounded-2xl border border-white/80 bg-slate-900 p-4 text-white shadow-sm">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-200">
+                  Seleccion actual
+                </p>
+                <p className="mt-2 text-sm font-semibold">
+                  {selectedType?.label || "Elige un tipo de servicio"}
+                </p>
+                <p className="mt-1 text-sm text-slate-300">
+                  {selectedService?.label ||
+                    "Luego selecciona el servicio especifico"}
+                </p>
+              </div>
+            </div>
           </div>
 
-          {serviceTypes.length ? (
-            <div className="inline-grid grid-cols-2 gap-2">
-              {serviceTypes.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => {
-                    markTouched("tipo");
-                    setServiceTypeId(t.id);
-                  }}
-                  className={[
-                    "inline-flex items-center justify-center rounded-full px-3 py-1.5 text-xs border transition min-w-36",
-                    serviceTypeId === t.id
-                      ? "bg-black text-white border-black"
-                      : "bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-200",
-                  ].join(" ")}
-                  disabled={saving || loadingLookups}
-                >
-                  {t.label}
-                </button>
-              ))}
+          {initialAddressFields && (
+            <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                Direccion del carrito
+              </p>
+              <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <div className="rounded-2xl border border-slate-200 bg-white px-3 py-2.5">
+                  <p className="text-[10px] uppercase tracking-[0.14em] text-slate-400">
+                    Ciudad
+                  </p>
+                  <p className="mt-1 text-sm font-medium text-slate-900">
+                    {initialAddressFields.city || "-"}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-white px-3 py-2.5">
+                  <p className="text-[10px] uppercase tracking-[0.14em] text-slate-400">
+                    Zona
+                  </p>
+                  <p className="mt-1 text-sm font-medium text-slate-900">
+                    {initialAddressFields.zone || "-"}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-white px-3 py-2.5">
+                  <p className="text-[10px] uppercase tracking-[0.14em] text-slate-400">
+                    Tipo de via
+                  </p>
+                  <p className="mt-1 text-sm font-medium text-slate-900">
+                    {initialAddressFields.streetType || "-"}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-white px-3 py-2.5">
+                  <p className="text-[10px] uppercase tracking-[0.14em] text-slate-400">
+                    Numero
+                  </p>
+                  <p className="mt-1 text-sm font-medium text-slate-900">
+                    {initialAddressFields.streetNumber || "-"}
+                  </p>
+                </div>
+              </div>
             </div>
-          ) : (
-            <p className="text-xs text-gray-500">
-              No hay tipos de servicio configurados por el administrador.
-            </p>
           )}
+        </aside>
 
-          {shouldShowError("tipo") && errors.tipo && (
-            <p className="mt-1 text-xs text-red-600">{errors.tipo}</p>
-          )}
-        </div>
-
-        <div className="grid grid-cols-1 gap-3">
-          <div>
-            <label className="mb-1 block text-xs font-medium text-gray-900">
-              Servicio
-            </label>
-            <div className="relative">
-              <select
-                value={serviceId === "" ? "" : String(serviceId)}
-                onChange={(e) => {
-                  markTouched("serviceId");
-                  const v = e.target.value ? Number(e.target.value) : "";
-                  setServiceId(v);
-                }}
-                onBlur={() => markTouched("serviceId")}
-                disabled={saving || loadingLookups}
-                className={[
-                  "w-full appearance-none rounded-lg border bg-gray-50 h-10 px-3 pr-8 text-sm focus:bg-white focus:ring-2 focus:ring-black/15 disabled:opacity-60",
-                  shouldShowError("serviceId") && errors.serviceId
-                    ? "border-red-500"
-                    : "border-gray-300",
-                ].join(" ")}
-              >
-                <option value="">
-                  {loadingLookups
-                    ? "Cargando servicios..."
-                    : filteredServicios.length
-                    ? "Selecciona el servicio"
-                    : serviceTypeId
-                    ? "No hay servicios para este tipo"
-                    : "No hay servicios"}
-                </option>
-                {filteredServicios.map((s) => (
-                  <option key={s.id} value={String(s.id)}>
-                    {s.label}
-                  </option>
-                ))}
-              </select>
-              <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-gray-500">
-                ▼
+        <div className="space-y-4">
+          <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex flex-col gap-2 border-b border-slate-100 pb-4 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                  Paso 1
+                </p>
+                <h3 className="mt-1 text-lg font-semibold text-slate-900">
+                  Tipo y servicio
+                </h3>
+              </div>
+              <span className="text-xs text-slate-500">
+                {loadingLookups
+                  ? "Cargando tipos..."
+                  : serviceTypes.length
+                    ? "Selecciona una opcion"
+                    : "No hay tipos disponibles"}
               </span>
             </div>
 
-            {shouldShowError("serviceId") && errors.serviceId && (
-              <p className="mt-1 text-xs text-red-600">{errors.serviceId}</p>
-            )}
-          </div>
-        </div>
+            <div className="mt-4 space-y-5">
+              <div>
+                <label className={fieldLabelClass}>Tipo de servicio</label>
+                {serviceTypes.length ? (
+                  <div className="flex flex-wrap gap-2.5">
+                    {serviceTypes.map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => {
+                          markTouched("tipo");
+                          setServiceTypeId(t.id);
+                        }}
+                        className={[
+                          "inline-flex min-h-11 items-center justify-center rounded-2xl border px-4 py-2 text-sm font-medium transition",
+                          serviceTypeId === t.id
+                            ? "border-emerald-600 bg-emerald-600 text-white shadow-sm"
+                            : "border-slate-200 bg-slate-50 text-slate-700 hover:border-emerald-200 hover:bg-emerald-50",
+                        ].join(" ")}
+                        disabled={saving || loadingLookups}
+                      >
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-500">
+                    No hay tipos de servicio configurados por el administrador.
+                  </p>
+                )}
+                {shouldShowError("tipo") && errors.tipo && (
+                  <p className="mt-2 text-xs text-red-600">{errors.tipo}</p>
+                )}
+              </div>
 
-        {initialAddressFields && onInitialAddressFieldsChange && (
-          <div className="grid gap-3 rounded-lg border border-gray-100 bg-gray-50 p-3">
-            <p className="text-xs font-semibold text-gray-900">
-              Dirección de envío
-            </p>
+              <div>
+                <label className={fieldLabelClass}>Servicio</label>
+                <div className="relative">
+                  <select
+                    value={serviceId === "" ? "" : String(serviceId)}
+                    onChange={(e) => {
+                      markTouched("serviceId");
+                      const v = e.target.value ? Number(e.target.value) : "";
+                      setServiceId(v);
+                    }}
+                    onBlur={() => markTouched("serviceId")}
+                    disabled={saving || loadingLookups}
+                    className={[
+                      inputBaseClass,
+                      "h-12 appearance-none pr-10",
+                      shouldShowError("serviceId") && errors.serviceId
+                        ? "border-red-500"
+                        : "border-slate-200",
+                    ].join(" ")}
+                  >
+                    <option value="">
+                      {loadingLookups
+                        ? "Cargando servicios..."
+                        : filteredServicios.length
+                          ? "Selecciona el servicio"
+                          : serviceTypeId
+                            ? "No hay servicios para este tipo"
+                            : "No hay servicios"}
+                    </option>
+                    {filteredServicios.map((s) => (
+                      <option key={s.id} value={String(s.id)}>
+                        {s.label}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm text-slate-400">
+                    ▼
+                  </span>
+                </div>
+                {shouldShowError("serviceId") && errors.serviceId && (
+                  <p className="mt-2 text-xs text-red-600">{errors.serviceId}</p>
+                )}
+              </div>
+            </div>
+          </section>
 
-            <input
-              value={String(initialAddressFields.city || "")}
-              onChange={(e) =>
-                onInitialAddressFieldsChange({
-                  city: e.target.value,
-                  zone: String(initialAddressFields.zone || ""),
-                  streetType: String(initialAddressFields.streetType || ""),
-                  streetNumber: String(initialAddressFields.streetNumber || ""),
-                  secondaryNumber: String(initialAddressFields.secondaryNumber || ""),
-                  complement: String(initialAddressFields.complement || ""),
-                })
-              }
-              placeholder="Ciudad"
-              className="w-full rounded-lg border border-gray-300 bg-white h-10 px-3 text-sm"
-              disabled={saving}
-            />
-
-            <input
-              value={String(initialAddressFields.zone || "")}
-              onChange={(e) =>
-                onInitialAddressFieldsChange({
-                  city: String(initialAddressFields.city || ""),
-                  zone: e.target.value,
-                  streetType: String(initialAddressFields.streetType || ""),
-                  streetNumber: String(initialAddressFields.streetNumber || ""),
-                  secondaryNumber: String(initialAddressFields.secondaryNumber || ""),
-                  complement: String(initialAddressFields.complement || ""),
-                })
-              }
-              placeholder="Zona / Barrio"
-              className="w-full rounded-lg border border-gray-300 bg-white h-10 px-3 text-sm"
-              disabled={saving}
-            />
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              <input
-                value={String(initialAddressFields.streetType || "")}
-                onChange={(e) =>
-                  onInitialAddressFieldsChange({
-                    city: String(initialAddressFields.city || ""),
-                    zone: String(initialAddressFields.zone || ""),
-                    streetType: e.target.value,
-                    streetNumber: String(initialAddressFields.streetNumber || ""),
-                    secondaryNumber: String(initialAddressFields.secondaryNumber || ""),
-                    complement: String(initialAddressFields.complement || ""),
-                  })
-                }
-                placeholder="Tipo"
-                className="w-full rounded-lg border border-gray-300 bg-white h-10 px-3 text-sm"
-                disabled={saving}
-              />
-
-              <input
-                value={String(initialAddressFields.streetNumber || "")}
-                onChange={(e) =>
-                  onInitialAddressFieldsChange({
-                    city: String(initialAddressFields.city || ""),
-                    zone: String(initialAddressFields.zone || ""),
-                    streetType: String(initialAddressFields.streetType || ""),
-                    streetNumber: e.target.value,
-                    secondaryNumber: String(initialAddressFields.secondaryNumber || ""),
-                    complement: String(initialAddressFields.complement || ""),
-                  })
-                }
-                placeholder="Número"
-                className="w-full rounded-lg border border-gray-300 bg-white h-10 px-3 text-sm"
-                disabled={saving}
-              />
+          <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="border-b border-slate-100 pb-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                Paso 2
+              </p>
+              <h3 className="mt-1 text-lg font-semibold text-slate-900">
+                Datos de atencion
+              </h3>
             </div>
 
-            <input
-              value={String(initialAddressFields.secondaryNumber || "")}
-              onChange={(e) =>
-                onInitialAddressFieldsChange({
-                  city: String(initialAddressFields.city || ""),
-                  zone: String(initialAddressFields.zone || ""),
-                  streetType: String(initialAddressFields.streetType || ""),
-                  streetNumber: String(initialAddressFields.streetNumber || ""),
-                  secondaryNumber: e.target.value,
-                  complement: String(initialAddressFields.complement || ""),
-                })
-              }
-              placeholder="# secundaria (ej: 23-18)"
-              className="w-full rounded-lg border border-gray-300 bg-white h-10 px-3 text-sm"
-              disabled={saving}
-            />
+            <div className="mt-4 space-y-4">
+              {initialAddressFields && onInitialAddressFieldsChange ? (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className={fieldLabelClass}>Ciudad</label>
+                    <input
+                      value={String(initialAddressFields.city || "")}
+                      onChange={(e) =>
+                        onInitialAddressFieldsChange({
+                          city: e.target.value,
+                          zone: String(initialAddressFields.zone || ""),
+                          streetType: String(initialAddressFields.streetType || ""),
+                          streetNumber: String(initialAddressFields.streetNumber || ""),
+                          secondaryNumber: String(initialAddressFields.secondaryNumber || ""),
+                          complement: String(initialAddressFields.complement || ""),
+                        })
+                      }
+                      placeholder="Ciudad"
+                      className={`${inputBaseClass} h-12 border-slate-200`}
+                      disabled={saving}
+                    />
+                  </div>
 
-            <input
-              value={String(initialAddressFields.complement || "")}
-              onChange={(e) =>
-                onInitialAddressFieldsChange({
-                  city: String(initialAddressFields.city || ""),
-                  zone: String(initialAddressFields.zone || ""),
-                  streetType: String(initialAddressFields.streetType || ""),
-                  streetNumber: String(initialAddressFields.streetNumber || ""),
-                  secondaryNumber: String(initialAddressFields.secondaryNumber || ""),
-                  complement: e.target.value,
-                })
-              }
-              placeholder="Complemento (Apto, Casa, Torre...)"
-              className="w-full rounded-lg border border-gray-300 bg-white h-10 px-3 text-sm"
-              disabled={saving}
-            />
-          </div>
-        )}
+                  <div>
+                    <label className={fieldLabelClass}>Zona o barrio</label>
+                    <input
+                      value={String(initialAddressFields.zone || "")}
+                      onChange={(e) =>
+                        onInitialAddressFieldsChange({
+                          city: String(initialAddressFields.city || ""),
+                          zone: e.target.value,
+                          streetType: String(initialAddressFields.streetType || ""),
+                          streetNumber: String(initialAddressFields.streetNumber || ""),
+                          secondaryNumber: String(initialAddressFields.secondaryNumber || ""),
+                          complement: String(initialAddressFields.complement || ""),
+                        })
+                      }
+                      placeholder="Zona / Barrio"
+                      className={`${inputBaseClass} h-12 border-slate-200`}
+                      disabled={saving}
+                    />
+                  </div>
 
-        <div
-          className={
-            initialAddressFields && onInitialAddressFieldsChange
-              ? "hidden"
-              : "grid grid-cols-1 md:grid-cols-2 gap-3"
-          }
-        >
-          <div>
-            <label className="mb-1 block text-xs font-medium text-gray-900">
-              Dirección
-            </label>
-            <input
-              value={direccion}
-              onChange={(e) => {
-                markTouched("direccion");
-                setDireccion(e.target.value);
-              }}
-              onBlur={() => markTouched("direccion")}
-              placeholder="Ej. Calle 123 #45-67"
-              className={[
-                "w-full rounded-lg border bg-gray-50 h-10 px-3 text-sm focus:bg-white focus:ring-2 focus:ring-black/15",
-                shouldShowError("direccion") && errors.direccion
-                  ? "border-red-500"
-                  : "border-gray-300",
-              ].join(" ")}
-            />
-            {shouldShowError("direccion") && errors.direccion && (
-              <p className="mt-1 text-xs text-red-600">{errors.direccion}</p>
-            )}
-          </div>
-        </div>
+                  <div>
+                    <label className={fieldLabelClass}>Tipo de via</label>
+                    <input
+                      value={String(initialAddressFields.streetType || "")}
+                      onChange={(e) =>
+                        onInitialAddressFieldsChange({
+                          city: String(initialAddressFields.city || ""),
+                          zone: String(initialAddressFields.zone || ""),
+                          streetType: e.target.value,
+                          streetNumber: String(initialAddressFields.streetNumber || ""),
+                          secondaryNumber: String(initialAddressFields.secondaryNumber || ""),
+                          complement: String(initialAddressFields.complement || ""),
+                        })
+                      }
+                      placeholder="Tipo"
+                      className={`${inputBaseClass} h-12 border-slate-200`}
+                      disabled={saving}
+                    />
+                  </div>
 
-        <div>
-          <label className="mb-1 block text-xs font-medium text-gray-900">
-            Descripción
-          </label>
-          <textarea
-            value={description}
-            onChange={(e) => {
-              markTouched("description");
-              setDescription(e.target.value);
-            }}
-            onBlur={() => markTouched("description")}
-            rows={3}
-            className={[
-              "w-full rounded-lg border bg-gray-50 px-3 py-2 text-sm focus:bg-white focus:ring-2 focus:ring-black/15",
-              shouldShowError("description") && errors.description
-                ? "border-red-500"
-                : "border-gray-300",
-            ].join(" ")}
-          />
-          {shouldShowError("description") && errors.description && (
-            <p className="mt-1 text-xs text-red-600">{errors.description}</p>
-          )}
-        </div>
+                  <div>
+                    <label className={fieldLabelClass}>Numero</label>
+                    <input
+                      value={String(initialAddressFields.streetNumber || "")}
+                      onChange={(e) =>
+                        onInitialAddressFieldsChange({
+                          city: String(initialAddressFields.city || ""),
+                          zone: String(initialAddressFields.zone || ""),
+                          streetType: String(initialAddressFields.streetType || ""),
+                          streetNumber: e.target.value,
+                          secondaryNumber: String(initialAddressFields.secondaryNumber || ""),
+                          complement: String(initialAddressFields.complement || ""),
+                        })
+                      }
+                      placeholder="Numero"
+                      className={`${inputBaseClass} h-12 border-slate-200`}
+                      disabled={saving}
+                    />
+                  </div>
+
+                  <div>
+                    <label className={fieldLabelClass}>Numero secundario</label>
+                    <input
+                      value={String(initialAddressFields.secondaryNumber || "")}
+                      onChange={(e) =>
+                        onInitialAddressFieldsChange({
+                          city: String(initialAddressFields.city || ""),
+                          zone: String(initialAddressFields.zone || ""),
+                          streetType: String(initialAddressFields.streetType || ""),
+                          streetNumber: String(initialAddressFields.streetNumber || ""),
+                          secondaryNumber: e.target.value,
+                          complement: String(initialAddressFields.complement || ""),
+                        })
+                      }
+                      placeholder="Ej: 23-18"
+                      className={`${inputBaseClass} h-12 border-slate-200`}
+                      disabled={saving}
+                    />
+                  </div>
+
+                  <div>
+                    <label className={fieldLabelClass}>Complemento</label>
+                    <input
+                      value={String(initialAddressFields.complement || "")}
+                      onChange={(e) =>
+                        onInitialAddressFieldsChange({
+                          city: String(initialAddressFields.city || ""),
+                          zone: String(initialAddressFields.zone || ""),
+                          streetType: String(initialAddressFields.streetType || ""),
+                          streetNumber: String(initialAddressFields.streetNumber || ""),
+                          secondaryNumber: String(initialAddressFields.secondaryNumber || ""),
+                          complement: e.target.value,
+                        })
+                      }
+                      placeholder="Apto, casa, torre..."
+                      className={`${inputBaseClass} h-12 border-slate-200`}
+                      disabled={saving}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label className={fieldLabelClass}>Direccion</label>
+                  <input
+                    value={direccion}
+                    onChange={(e) => {
+                      markTouched("direccion");
+                      setDireccion(e.target.value);
+                    }}
+                    onBlur={() => markTouched("direccion")}
+                    placeholder="Ej. Calle 123 #45-67"
+                    className={[
+                      inputBaseClass,
+                      "h-12 border-slate-200",
+                      shouldShowError("direccion") && errors.direccion
+                        ? "border-red-500"
+                        : "",
+                    ].join(" ")}
+                  />
+                  {shouldShowError("direccion") && errors.direccion && (
+                    <p className="mt-2 text-xs text-red-600">{errors.direccion}</p>
+                  )}
+                </div>
+              )}
+
+              <div>
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <label className={`${fieldLabelClass} mb-0`}>Descripcion</label>
+                  <span className="text-xs text-slate-400">
+                    {description.trim().length} caracteres
+                  </span>
+                </div>
+                <textarea
+                  value={description}
+                  onChange={(e) => {
+                    markTouched("description");
+                    setDescription(e.target.value);
+                  }}
+                  onBlur={() => markTouched("description")}
+                  rows={5}
+                  placeholder="Describe brevemente el problema o el servicio que necesitas."
+                  className={[
+                    inputBaseClass,
+                    "min-h-[132px] resize-y border-slate-200 py-3",
+                    shouldShowError("description") && errors.description
+                      ? "border-red-500"
+                      : "",
+                  ].join(" ")}
+                />
+                {shouldShowError("description") && errors.description && (
+                  <p className="mt-2 text-xs text-red-600">{errors.description}</p>
+                )}
+              </div>
+            </div>
+          </section>
         </div>
       </div>
     </Modal>

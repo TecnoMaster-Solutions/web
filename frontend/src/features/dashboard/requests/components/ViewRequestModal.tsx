@@ -29,9 +29,10 @@ type Props = {
 function estadoClass(v: string) {
   const s = (v || "").toLowerCase();
   if (s.includes("aprob")) return "text-green-600 bg-green-50 border-green-200";
-  if (s.includes("anul") || s.includes("cancel")) return "text-green-600 bg-green-50 border-green-200";
+  if (s.includes("anul") || s.includes("cancel")) return "text-red-700 bg-red-50 border-red-200";
   if (s.includes("pend")) return "text-yellow-700 bg-yellow-50 border-yellow-200";
-  if (s.includes("activo")) return "text-emerald-700 bg-emerald-50 border-emerald-200";
+  if (s.includes("agend")) return "text-blue-700 bg-blue-50 border-blue-200";
+  if (s.includes("final")) return "text-emerald-700 bg-emerald-50 border-emerald-200";
   return "text-gray-700 bg-gray-50 border-gray-200";
 }
 
@@ -208,4 +209,3 @@ export default function ViewRequestModal({
     </Modal>
   );
 }
-
