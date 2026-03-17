@@ -131,9 +131,10 @@ function Loader() {
 function estadoClass(v: string) {
   const s = (v || "").toLowerCase();
   if (s.includes("aprob")) return "text-green-600";
-  if (s.includes("anul") || s.includes("cancel")) return "text-green-600";
+  if (s.includes("anul") || s.includes("cancel")) return "text-red-600";
   if (s.includes("pend")) return "text-yellow-600";
-  if (s.includes("activo")) return "text-green-600";
+  if (s.includes("agend")) return "text-blue-600";
+  if (s.includes("final")) return "text-emerald-700";
   return "text-gray-700";
 }
 
