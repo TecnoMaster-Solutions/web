@@ -5,7 +5,7 @@ import { ChevronDown } from "lucide-react";
 import Colors from "@/shared/theme/colors";
 import { SearchIcon } from "./icons/SearchIcon";
 import { PlusIcon } from "./icons/PlusIcon";
-import { DataTableProps, DataTableFilters, FilterOption, DateFilter } from "./types/datatable.types";
+import { DataTableProps, DataTableFilters, DateFilter } from "./types/datatable.types";
 import { MobileCardComponent } from "./ui/mobile/MobileCardComponent";
 import { ActionButtonsComponent } from "./ui/ActionButtonsComponent";
 import { ActionButtonComponent } from "./ui/ActionButtonComponent";
@@ -17,6 +17,7 @@ import { usePermissions } from "@/features/auth/hooks/usePermissions";
 const ROW_HEIGHT = 60;
 const VISIBLE_ROWS = 10;
 const ACTIONS_COL_WIDTH = "230px";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const SERVER_SEARCH_DEBOUNCE_MS = 300;
 
 /* ================================

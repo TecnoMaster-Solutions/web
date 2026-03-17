@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   getClients,
   deleteClient,
@@ -10,7 +10,6 @@ import { api } from "@/shared/utils/apiClient";
 
 import {
   Client,
-  ClientsPaginatedResult,
   CreateClientData,
   EditClientData,
   ClientFormErrors,
@@ -18,8 +17,6 @@ import {
 } from "../types/typeClients";
 
 import { showSuccess, showError } from "@/shared/utils/notifications";
-
-import { fieldValidators } from "../validations/clientsValidations";
 
 const MIN_LOADER_MS = 200;
 
@@ -51,7 +48,7 @@ const getClientRoleId = async (): Promise<number> => {
         : [];
 
   const clientRole = roles.find(
-    (role: any) => normalizeText(String(role?.name ?? "")) === "cliente"
+    (role: { name?: string; roleid?: number; id?: number }) => normalizeText(String(role?.name ?? "")) === "cliente"
   );
   const roleId = Number(clientRole?.roleid ?? clientRole?.id);
 
@@ -351,9 +348,10 @@ export function useClients() {
     startLoading();
     try {
       await fn();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string | string[] } }; message?: string };
       console.error("Hook Error:", error);
-      const msg = error.response?.data?.message || "Ocurrió un error inesperado.";
+      const msg = err.response?.data?.message || err.message || "Ocurrió un error inesperado.";
       showError(Array.isArray(msg) ? msg[0] : msg);
       throw error; // Re-lanzar para que el flujo externo sepa que falló
     } finally {
@@ -431,16 +429,17 @@ export function useClients() {
       setLoading(true);
       try {
         await loadClientsPage(nextPage, search, controller.signal);
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const err = error as { name?: string; code?: string; response?: { data?: { message?: string | string[] } } };
         if (
-          error?.name === "CanceledError" ||
-          error?.code === "ERR_CANCELED" ||
+          err?.name === "CanceledError" ||
+          err?.code === "ERR_CANCELED" ||
           controller.signal.aborted
         ) {
           return;
         }
         console.error("Error al cambiar de pagina en clientes:", error);
-        const msg = error?.response?.data?.message || "No se pudo cargar la pagina de clientes.";
+        const msg = err?.response?.data?.message || "No se pudo cargar la pagina de clientes.";
         showError(Array.isArray(msg) ? msg[0] : msg);
       } finally {
         if (!controller.signal.aborted) setLoading(false);
@@ -459,16 +458,17 @@ export function useClients() {
       setLoading(true);
       try {
         await loadClientsPage(1, search, controller.signal, limit);
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const err = error as { name?: string; code?: string; response?: { data?: { message?: string | string[] } } };
         if (
-          error?.name === "CanceledError" ||
-          error?.code === "ERR_CANCELED" ||
+          err?.name === "CanceledError" ||
+          err?.code === "ERR_CANCELED" ||
           controller.signal.aborted
         ) {
           return;
         }
         console.error("Error al cambiar tamaño de pagina en clientes:", error);
-        const msg = error?.response?.data?.message || "No se pudo cargar la pagina de clientes.";
+        const msg = err?.response?.data?.message || "No se pudo cargar la pagina de clientes.";
         showError(Array.isArray(msg) ? msg[0] : msg);
       } finally {
         if (!controller.signal.aborted) setLoading(false);
@@ -491,16 +491,17 @@ export function useClients() {
         setLoading(true);
         try {
           await loadClientsPage(1, value, controller.signal);
-        } catch (error: any) {
+        } catch (error: unknown) {
+          const err = error as { name?: string; code?: string; response?: { data?: { message?: string | string[] } } };
           if (
-            error?.name === "CanceledError" ||
-            error?.code === "ERR_CANCELED" ||
+            err?.name === "CanceledError" ||
+            err?.code === "ERR_CANCELED" ||
             controller.signal.aborted
           ) {
             return;
           }
           console.error("Error al buscar clientes:", error);
-          const msg = error?.response?.data?.message || "No se pudieron buscar los clientes.";
+          const msg = err?.response?.data?.message || "No se pudieron buscar los clientes.";
           showError(Array.isArray(msg) ? msg[0] : msg);
         } finally {
           if (!controller.signal.aborted) setLoading(false);
@@ -727,7 +728,7 @@ export function useCreateClientForm({
   onSave,
   clients,
 }: UseCreateClientFormProps) {
-  const initialState: CreateClientData = {
+  const initialState = useMemo<CreateClientData>(() => ({
     tipo: 0,
     documento: "",
     nombre: "",
@@ -737,7 +738,7 @@ export function useCreateClientForm({
     ciudad: "",
     codigoPostal: "",
     estado: "",
-  };
+  }), []);
 
   const [formData, setFormData] = useState<CreateClientData>(initialState);
   const [errors, setErrors] = useState<ClientFormErrors>({});
@@ -749,7 +750,7 @@ export function useCreateClientForm({
       setErrors({});
       setTouched({});
     }
-  }, [isOpen]);
+  }, [isOpen, initialState]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>

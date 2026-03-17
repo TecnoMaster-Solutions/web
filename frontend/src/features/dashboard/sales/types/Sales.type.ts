@@ -31,6 +31,7 @@ export interface ICustomer {
     userid: number;
     customercity: string | null;
     customerzipcode: string | null;
+    customername?: string; // Optional for backwards compatibility
     users?: {
         userid: number;
         name: string;
