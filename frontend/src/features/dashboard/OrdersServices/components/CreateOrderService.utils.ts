@@ -20,7 +20,7 @@ export type QuoteNormalized = {
   technicians?: number[];
   description?: string;
   services?: Array<{ serviceid: number; cantidad: number; unitprice: number }>;
-  products?: Array<{ productid: number; cantidad: number; unitprice?: number }>;
+  products?: Array<{ productid: number; cantidad: number; unitprice?: number; nombre?: string }>;
 };
 
 export const SCHEDULE_MIN = 7 * 60;
@@ -465,13 +465,22 @@ export function normalizeQuote(q: QuoteLike): QuoteNormalized {
       const cantidad = pickNumber(p?.cantidad, p?.quantity, p?.qty) ?? 1;
       const unitprice = pickNumber(p?.unitprice, p?.price, p?.unitPrice, p?.valor, p?.subtotal);
       if (!productid) return null;
+      const nombre = pickString(
+        p?.productname,
+        p?.name,
+        p?.product?.productname,
+        p?.product?.name,
+        p?.products?.productname,
+        p?.products?.name
+      );
       return {
         productid,
         cantidad: Math.max(1, Math.round(cantidad)),
         unitprice: unitprice == null ? undefined : Math.max(0, Math.round(unitprice)),
+        nombre: nombre || undefined,
       };
     })
-    .filter(Boolean) as Array<{ productid: number; cantidad: number; unitprice?: number }>;
+    .filter(Boolean) as Array<{ productid: number; cantidad: number; unitprice?: number; nombre?: string }>;
 
   return {
     saleid,
@@ -495,4 +504,3 @@ export function normalizeQuote(q: QuoteLike): QuoteNormalized {
     products,
   };
 }
-

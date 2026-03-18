@@ -1619,10 +1619,12 @@ const {
         if (used.has(pid)) continue;
         used.add(pid);
         const rec = productsCatalog.find((x) => x.productid === pid) || null;
-        if (!rec) continue;
-        const precio = p.unitprice != null ? Math.max(0, Math.round(Number(p.unitprice))) : rec.productpriceofsale ?? 0;
+        const nombre = String(rec?.productname ?? p.nombre ?? `Producto #${pid}`).trim();
+        const precio = p.unitprice != null
+          ? Math.max(0, Math.round(Number(p.unitprice)))
+          : rec?.productpriceofsale ?? 0;
         const cantidad = Math.max(1, Math.round(Number(p.cantidad ?? 1)));
-        matItems.push({ id: uid(), nombre: rec.productname, precio, cantidad });
+        matItems.push({ id: uid(), nombre, precio, cantidad });
       }
     }
     setMateriales(matItems);
