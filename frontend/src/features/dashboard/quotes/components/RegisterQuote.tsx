@@ -50,6 +50,7 @@ type ProductFromApi = {
   productdescription: string | null;
   productpriceofsale: number;
   productstock: number;
+  stockTracked: boolean;
   isactive: boolean;
 };
 
@@ -279,7 +280,13 @@ export default function RegisterQuoteForm({ onSave }: Props) {
         setServiceRequests(normalizedRequests);
 
         const [productsResponse, servicesResponse] = await Promise.all([
-          api.get("/products?status=all"),
+          api.get("/products", {
+            params: {
+              page: 1,
+              limit: 1000,
+              status: "all",
+            },
+          }),
           api.get("/services"),
         ]);
         const productsData = unwrapArray(productsResponse?.data)
@@ -288,6 +295,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
               typeof productRaw === "object" && productRaw !== null
                 ? (productRaw as Record<string, unknown>)
                 : {};
+            const rawStock = product.productstock ?? product.stock;
 
             return {
               productid: Number(product.productid ?? product.id),
@@ -304,7 +312,11 @@ export default function RegisterQuoteForm({ onSave }: Props) {
                   product.saleprice ??
                   0,
               ),
-              productstock: Number(product.productstock ?? product.stock ?? 0),
+              productstock: Number(rawStock ?? 0),
+              stockTracked:
+                rawStock !== undefined &&
+                rawStock !== null &&
+                Number.isFinite(Number(rawStock)),
               isactive:
                 typeof product.isactive === "boolean"
                   ? product.isactive
@@ -469,8 +481,11 @@ export default function RegisterQuoteForm({ onSave }: Props) {
     () => (Array.isArray(products) ? products : []).filter((p) => p.isactive !== false),
     [products],
   );
-  const inStockProducts = useMemo(
-    () => activeProducts.filter((p) => Number(p.productstock) > 0),
+  const selectableProducts = useMemo(
+    () =>
+      activeProducts.some((p) => p.stockTracked)
+        ? activeProducts.filter((p) => p.stockTracked && Number(p.productstock) > 0)
+        : activeProducts,
     [activeProducts],
   );
 
@@ -620,7 +635,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
         .filter((id): id is number => Number.isFinite(id as number)),
     );
     if (currentProductId !== null) used.delete(currentProductId);
-    return inStockProducts.filter((p) => !used.has(p.productid));
+    return selectableProducts.filter((p) => !used.has(p.productid));
   };
 
   const addProductRow = () => {
@@ -629,7 +644,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
         .map((d) => d.productid)
         .filter((id): id is number => Number.isFinite(id as number)),
     );
-    const first = inStockProducts.find((p) => !used.has(p.productid));
+    const first = selectableProducts.find((p) => !used.has(p.productid));
     if (!first) {
       showError("No hay más productos disponibles para agregar");
       return;
@@ -638,7 +653,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
   };
 
   const selectProductForRow = (index: number, productId: number) => {
-    const product = inStockProducts.find((p) => p.productid === productId);
+    const product = selectableProducts.find((p) => p.productid === productId);
     if (!product) {
       showError("Producto no disponible");
       return;
@@ -675,7 +690,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
       let qty = Math.max(1, Number(newQty) || 1);
 
       const prod = products.find((p) => p.productid === current.productid);
-      if (prod && current.productid !== null) {
+      if (prod && current.productid !== null && prod.stockTracked) {
         const stock = Math.max(0, Number(prod.productstock) || 0);
         if (stock === 0) {
           showError("Este producto ya no tiene stock disponible");
@@ -1466,14 +1481,14 @@ export default function RegisterQuoteForm({ onSave }: Props) {
               type="button"
               onClick={handleAddDetail}
               className="h-9 w-full rounded-md border bg-gray-100 text-xs hover:bg-gray-50 disabled:opacity-60"
-              disabled={form.details.length >= inStockProducts.length || inStockProducts.length === 0}
+              disabled={form.details.length >= selectableProducts.length || selectableProducts.length === 0}
               title={
-                form.details.length >= inStockProducts.length
+                form.details.length >= selectableProducts.length
                   ? "Ya agregaste todos los productos disponibles."
                   : undefined
               }
             >
-              {form.details.length >= inStockProducts.length
+              {form.details.length >= selectableProducts.length
                 ? "No hay más productos disponibles"
                 : "Añadir producto"}
             </button>
