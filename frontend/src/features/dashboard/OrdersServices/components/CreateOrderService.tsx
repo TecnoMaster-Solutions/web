@@ -1799,6 +1799,14 @@ const {
         const sr = getServiceRequestIdFromQuoteLike(quotePayload);
         const quoteServiceType = String(quotePayload?.servicetype ?? "").trim();
         if (quoteServiceType && !nq.typeofservicename) nq.typeofservicename = quoteServiceType;
+        const quoteViaticos = pickNumber(
+          quotePayload?.viaticos,
+          quotePayload?.quote?.viaticos,
+          quotePayload?.data?.viaticos
+        );
+        if (quoteViaticos != null && (!Number.isFinite(Number(nq.viaticos)) || Number(nq.viaticos) <= 0)) {
+          nq.viaticos = Math.max(0, Math.round(Number(quoteViaticos)));
+        }
 
         if ((!nq.services || nq.services.length === 0) && quotePayload) {
           const details: ApiRecord[] = Array.isArray(quotePayload?.details) ? (quotePayload.details as ApiRecord[]) : [];
@@ -3573,4 +3581,3 @@ setNavigating(true);
     </RequireAuth>
   );
 }
-

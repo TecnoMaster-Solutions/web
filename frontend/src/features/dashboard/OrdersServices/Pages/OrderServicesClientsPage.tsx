@@ -722,7 +722,7 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
       <div class="h">Orden de servicio #${row.id}</div>
       <div class="sub">Codigo: <span class="mono">OS-${String(row.id).padStart(6, "0")}</span></div>
     </div>
-    <div class="badge"><span class="dot"></span><span style="font-weight:700">Vertecx</span></div>
+    <div class="badge"><span class="dot"></span><span style="font-weight:700">Tecnomaster</span></div>
   </div>
 
   <div class="grid">
@@ -985,7 +985,7 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
                     <button
                       onClick={downloadAllReport}
                       className="hidden md:inline-flex relative cursor-pointer h-9 items-center gap-2 overflow-hidden rounded-md px-4 text-sm font-semibold text-white transition-transform duration-200 hover:scale-105 group"
-                      style={{ background: "#B20000" }}
+                      style={{ background: "#04652c" }}
                       type="button"
                     >
                       <span className="absolute inset-0 bg-green-800 scale-x-0 origin-left transition-transform duration-300 ease-out group-hover:scale-x-100"></span>
