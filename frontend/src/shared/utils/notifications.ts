@@ -3,6 +3,7 @@ import { toast, ToastOptions, Id } from "react-toastify";
 export const APP_TOAST_ID = "app";
 
 const defaultToastOptions: ToastOptions = {
+  containerId: APP_TOAST_ID,
   position: "bottom-right",
   autoClose: 3000,
   hideProgressBar: false,
