@@ -1017,7 +1017,7 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
       <div class="h">Orden de servicio #${row.id}</div>
       <div class="sub">Código: <span class="mono">OS-${String(row.id).padStart(6, "0")}</span></div>
     </div>
-    <div class="badge"><span class="dot"></span><span style="font-weight:700">Vertecx</span></div>
+    <div class="badge"><span class="dot"></span><span style="font-weight:700">Tecnomaster</span></div>
   </div>
 
   <div class="grid">
@@ -1148,7 +1148,7 @@ body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvet
     const ExcelJS = ("default" in mod ? mod.default : mod) as typeof import("exceljs");
 
     const wb = new ExcelJS.Workbook();
-    wb.creator = "Vertecx";
+    wb.creator = "Tecnomaster";
     wb.created = new Date();
 
     const ws = wb.addWorksheet("Órdenes de servicio");

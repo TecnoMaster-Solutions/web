@@ -95,7 +95,7 @@ export default function ForgotPasswordPage() {
             <div className="relative h-16 w-16 rounded-2xl border border-neutral-200 bg-white shadow-sm">
               <Image
                 src="/assets/imgs/preview.png"
-                alt="Logo Vertecx"
+                alt="Logo Tecnomaster"
                 fill
                 className="object-contain p-1 rounded-2xl"
                 priority
@@ -163,7 +163,7 @@ export default function ForgotPasswordPage() {
         </div>
 
         <p className="mt-6 text-center text-xs text-neutral-400">
-          © {new Date().getFullYear()} Vertecx
+          © {new Date().getFullYear()} Tecnomaster
         </p>
       </div>
     </div>
