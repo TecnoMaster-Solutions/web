@@ -15,7 +15,7 @@ export default function AuthShell({ mode = "login", children }: Props) {
           <aside className="hidden border-r border-slate-200 bg-slate-50 p-8 md:flex md:flex-col md:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-red-700">
-                Vertecx
+                Tecnomaster
               </p>
               <h1 className="mt-2 text-2xl font-semibold text-slate-900">
                 {mode === "register" ? "Crear cuenta" : "Iniciar sesión"}
@@ -32,4 +32,3 @@ export default function AuthShell({ mode = "login", children }: Props) {
     </main>
   );
 }
-
