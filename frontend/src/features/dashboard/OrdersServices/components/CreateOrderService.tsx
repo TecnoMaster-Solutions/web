@@ -1619,10 +1619,12 @@ const {
         if (used.has(pid)) continue;
         used.add(pid);
         const rec = productsCatalog.find((x) => x.productid === pid) || null;
-        if (!rec) continue;
-        const precio = p.unitprice != null ? Math.max(0, Math.round(Number(p.unitprice))) : rec.productpriceofsale ?? 0;
+        const nombre = String(rec?.productname ?? p.nombre ?? `Producto #${pid}`).trim();
+        const precio = p.unitprice != null
+          ? Math.max(0, Math.round(Number(p.unitprice)))
+          : rec?.productpriceofsale ?? 0;
         const cantidad = Math.max(1, Math.round(Number(p.cantidad ?? 1)));
-        matItems.push({ id: uid(), nombre: rec.productname, precio, cantidad });
+        matItems.push({ id: uid(), nombre, precio, cantidad });
       }
     }
     setMateriales(matItems);
@@ -1735,6 +1737,28 @@ const {
       : [];
     quotesForLinkingRef.current = list;
     return list;
+  }, []);
+
+  const getSaleForPrefill = useCallback(async (
+    saleId: number,
+    fallback?: QuoteLikeRecord | null
+  ): Promise<QuoteLikeRecord> => {
+    if (!Number.isFinite(saleId) || saleId <= 0) {
+      if (fallback) return fallback;
+      throw new Error("Venta invalida para precargar.");
+    }
+
+    try {
+      const { data } = await api.get(`sales/${saleId}`);
+      const payload =
+        (data?.sale as QuoteLikeRecord | undefined) ??
+        (data?.data as QuoteLikeRecord | undefined) ??
+        (data as QuoteLikeRecord | undefined);
+      if (payload && typeof payload === "object") return payload;
+    } catch {}
+
+    if (fallback) return fallback;
+    throw new Error(`No se pudo cargar el detalle completo de la venta #${saleId}.`);
   }, []);
 
   const resolveServiceRequestIdFromSale = useCallback(async (
@@ -1987,9 +2011,12 @@ const {
         if (quotesIdFromUrl) {
           raw = quoteMapById.get(quotesIdFromUrl) ?? null;
           if (!raw) throw new Error(`No se encontro la venta #${quotesIdFromUrl} en /sales`);
+          raw = await getSaleForPrefill(quotesIdFromUrl, raw);
         } else if (quoteDataParam) {
           raw = parseQuoteParam(String(quoteDataParam || ""));
           if (!raw) throw new Error("No se pudo leer la venta desde la URL.");
+          const parsedSaleId = pickNumber(raw?.saleid, raw?.salesid, raw?.id);
+          if (parsedSaleId) raw = await getSaleForPrefill(parsedSaleId, raw);
         }
 
         const rawQuote = raw as QuoteLikeRecord;
@@ -2029,6 +2056,7 @@ const {
     quoteAppliedKey,
     quoteMapById,
     applyNormalizedQuote,
+    getSaleForPrefill,
     resolveServiceRequestIdFromSale,
   ]);
 
@@ -2056,7 +2084,7 @@ const {
       setQuoteApplyError(null);
       setQuoteLoadingApply(true);
       try {
-        const rawQuote = raw as QuoteLikeRecord;
+        const rawQuote = await getSaleForPrefill(id, raw as QuoteLikeRecord);
         const nq = normalizeQuote(rawQuote);
         const srId = await resolveServiceRequestIdFromSale(rawQuote, nq);
         if (srId) {
@@ -2089,6 +2117,7 @@ const {
     quoteAppliedKey,
     quoteMapById,
     applyNormalizedQuote,
+    getSaleForPrefill,
     resolveServiceRequestIdFromSale,
   ]);
 

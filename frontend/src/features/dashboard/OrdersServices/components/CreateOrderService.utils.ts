@@ -20,7 +20,7 @@ export type QuoteNormalized = {
   technicians?: number[];
   description?: string;
   services?: Array<{ serviceid: number; cantidad: number; unitprice: number }>;
-  products?: Array<{ productid: number; cantidad: number; unitprice?: number }>;
+  products?: Array<{ productid: number; cantidad: number; unitprice?: number; nombre?: string }>;
 };
 
 export const SCHEDULE_MIN = 7 * 60;
@@ -290,7 +290,15 @@ export function normalizeQuote(q: QuoteLike): QuoteNormalized {
   const horainicio = pickString(root?.horainicio, root?.timeStart, root?.starttime, root?.startTime);
   const horafin = pickString(root?.horafin, root?.timeEnd, root?.endtime, root?.endTime);
 
-  const viaticos = pickNumber(root?.viaticos, root?.travelExpenses, root?.travel, root?.transport) ?? 0;
+  const notesText = pickString(root?.notes, root?.observation, root?.observations, root?.description);
+  const viaticosFromNotesMatch =
+    notesText.match(/\bviaticos\b\s*[:=]\s*(\d+(?:[.,]\d+)?)/i) ||
+    notesText.match(/\bvi[aá]ticos\b\s*[:=]\s*(\d+(?:[.,]\d+)?)/i);
+  const viaticosFromNotes = viaticosFromNotesMatch?.[1]
+    ? Number(String(viaticosFromNotesMatch[1]).replace(/\./g, "").replace(",", "."))
+    : undefined;
+  const viaticos =
+    pickNumber(root?.viaticos, root?.travelExpenses, root?.travel, root?.transport, viaticosFromNotes) ?? 0;
   const direccion = pickString(
     root?.direccion,
     root?.address,
@@ -457,13 +465,22 @@ export function normalizeQuote(q: QuoteLike): QuoteNormalized {
       const cantidad = pickNumber(p?.cantidad, p?.quantity, p?.qty) ?? 1;
       const unitprice = pickNumber(p?.unitprice, p?.price, p?.unitPrice, p?.valor, p?.subtotal);
       if (!productid) return null;
+      const nombre = pickString(
+        p?.productname,
+        p?.name,
+        p?.product?.productname,
+        p?.product?.name,
+        p?.products?.productname,
+        p?.products?.name
+      );
       return {
         productid,
         cantidad: Math.max(1, Math.round(cantidad)),
         unitprice: unitprice == null ? undefined : Math.max(0, Math.round(unitprice)),
+        nombre: nombre || undefined,
       };
     })
-    .filter(Boolean) as Array<{ productid: number; cantidad: number; unitprice?: number }>;
+    .filter(Boolean) as Array<{ productid: number; cantidad: number; unitprice?: number; nombre?: string }>;
 
   return {
     saleid,
@@ -487,5 +504,3 @@ export function normalizeQuote(q: QuoteLike): QuoteNormalized {
     products,
   };
 }
-
-
