@@ -67,7 +67,7 @@ const parseCategoryPayload = (payload: unknown): Category | null => {
   const id =
     typeof idValue === "number" ? idValue : Number.isFinite(numericId) ? numericId : null;
 
-  if (id === null) return null;
+  if (id === null || id <= 0) return null;
 
   return {
     id,
