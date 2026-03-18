@@ -290,7 +290,15 @@ export function normalizeQuote(q: QuoteLike): QuoteNormalized {
   const horainicio = pickString(root?.horainicio, root?.timeStart, root?.starttime, root?.startTime);
   const horafin = pickString(root?.horafin, root?.timeEnd, root?.endtime, root?.endTime);
 
-  const viaticos = pickNumber(root?.viaticos, root?.travelExpenses, root?.travel, root?.transport) ?? 0;
+  const notesText = pickString(root?.notes, root?.observation, root?.observations, root?.description);
+  const viaticosFromNotesMatch =
+    notesText.match(/\bviaticos\b\s*[:=]\s*(\d+(?:[.,]\d+)?)/i) ||
+    notesText.match(/\bvi[aá]ticos\b\s*[:=]\s*(\d+(?:[.,]\d+)?)/i);
+  const viaticosFromNotes = viaticosFromNotesMatch?.[1]
+    ? Number(String(viaticosFromNotesMatch[1]).replace(/\./g, "").replace(",", "."))
+    : undefined;
+  const viaticos =
+    pickNumber(root?.viaticos, root?.travelExpenses, root?.travel, root?.transport, viaticosFromNotes) ?? 0;
   const direccion = pickString(
     root?.direccion,
     root?.address,
@@ -487,5 +495,4 @@ export function normalizeQuote(q: QuoteLike): QuoteNormalized {
     products,
   };
 }
-
 
