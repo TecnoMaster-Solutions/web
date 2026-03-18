@@ -141,8 +141,9 @@ export default function CategoriesPage() {
               onClose={closeModals}
               onSave={(categoryData: EditCategoryData) => {
                 if (editingCategory) {
-                  handleEditCategory(editingCategory.id, categoryData);
+                  return handleEditCategory(editingCategory.id, categoryData);
                 }
+                return Promise.resolve();
               }}
               categories={categories}
             />

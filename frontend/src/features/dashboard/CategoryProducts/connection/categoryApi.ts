@@ -49,6 +49,26 @@ const normalizeCategory = (category: CategoryApiShape): Category => ({
   icon: category.icon ?? null,
 });
 
+const resolvePayloadData = (value: unknown): unknown => {
+  if (!value || typeof value !== "object") return value;
+  if ("data" in value) return resolvePayloadData((value as { data?: unknown }).data);
+  return value;
+};
+
+const parseCategoryResponse = (value: unknown): Category => {
+  const resolved = resolvePayloadData(value);
+  if (!resolved || typeof resolved !== "object") {
+    throw new Error("Respuesta invalida al procesar categoria.");
+  }
+
+  const normalized = normalizeCategory(resolved as CategoryApiShape);
+  if (!Number.isFinite(normalized.id) || normalized.id <= 0) {
+    throw new Error("Respuesta invalida: categoria sin ID.");
+  }
+
+  return normalized;
+};
+
 // Obtener categorias (paginado opcional)
 export function getCategories(): Promise<Category[]>;
 export function getCategories(
@@ -227,8 +247,8 @@ export const getActiveCategories = async (signal?: AbortSignal): Promise<Categor
 // Obtener categoria por ID
 export const getCategoryById = async (id: number): Promise<Category> => {
   try {
-    const { data } = await api.get<CategoryApiShape>(`/products-categories/${id}`);
-    return normalizeCategory(data);
+    const { data } = await api.get<unknown>(`/products-categories/${id}`);
+    return parseCategoryResponse(data);
   } catch (error) {
     console.error("Error al obtener categoria:", error);
     showError("No se pudo obtener la categoria.");
@@ -244,14 +264,14 @@ export const createCategory = async (category: CreateCategoryData) => {
       throw new Error("Nombre requerido");
     }
 
-    const { data } = await api.post<CategoryApiShape>("/products-categories", {
+    const { data } = await api.post<unknown>("/products-categories", {
       name: category.name.trim(),
       description: category.description?.trim() ?? null,
       icon: category.icon ?? null,
       status: true,
     });
 
-    return normalizeCategory(data);
+    return parseCategoryResponse(data);
   } catch (error: unknown) {
     const message = getApiErrorMessage(error, "No se pudo crear la categoria.");
     showError(message);
@@ -267,7 +287,7 @@ export const updateCategory = async (id: number, category: EditCategoryData) => 
       throw new Error("Nombre requerido");
     }
 
-    const { data } = await api.patch<CategoryApiShape>(
+    const { data } = await api.patch<unknown>(
         `/products-categories/${id}`,
       {
         name: category.name.trim(),
@@ -277,7 +297,7 @@ export const updateCategory = async (id: number, category: EditCategoryData) => 
       },
     );
 
-    return normalizeCategory(data);
+    return parseCategoryResponse(data);
   } catch (error: unknown) {
     const message = getApiErrorMessage(error, "No se pudo actualizar la categoria.");
     showError(message);

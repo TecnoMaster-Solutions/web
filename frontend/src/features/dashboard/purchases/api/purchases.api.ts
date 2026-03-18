@@ -42,6 +42,16 @@ export type PurchaseProductApi = {
   stateid?: number;
 };
 
+type PaginatedProductsResponse = {
+  data?: PurchaseProductApi[];
+  meta?: {
+    total?: number;
+    page?: number;
+    limit?: number;
+    totalPages?: number;
+  };
+};
+
 export type PurchaseSupplierApi = {
   supplierid: number;
   name: string;
@@ -236,8 +246,34 @@ export const cancelPurchase = async (id: number, observation?: string) => {
 };
 
 export const getProductsForPurchase = async (): Promise<PurchaseProductApi[]> => {
-  const { data } = await api.get<PurchaseProductApi[] | { data?: PurchaseProductApi[] }>("/products");
-  return Array.isArray(data) ? data : data.data ?? [];
+  const limit = 1000;
+  let page = 1;
+  let totalPages = 1;
+  const allProducts: PurchaseProductApi[] = [];
+
+  do {
+    const { data } = await api.get<PaginatedProductsResponse | PurchaseProductApi[]>(
+      "/products",
+      {
+        params: {
+          page,
+          limit,
+          status: "all",
+        },
+      }
+    );
+
+    if (Array.isArray(data)) {
+      return data;
+    }
+
+    const rows = Array.isArray(data?.data) ? data.data : [];
+    allProducts.push(...rows);
+    totalPages = Number(data?.meta?.totalPages ?? 1);
+    page += 1;
+  } while (page <= totalPages);
+
+  return allProducts;
 };
 
 export const getSuppliersForPurchase = async (): Promise<PurchaseSupplierApi[]> => {
