@@ -4,7 +4,6 @@ import { FormEvent, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { api } from "@/lib/api";
-import Nav from "@/features/landing/layout/Nav";
 import { routes } from "@/shared/routes";
 import { showError, showSuccess } from "@/shared/utils/notifications";
 import { getApiErrorMessage } from "@/features/auth/utils/authUser";
@@ -89,41 +88,46 @@ export default function ForgotPasswordPage() {
   const emailHasError = !!errors.email && touched.email;
 
   return (
-    <div className="min-h-screen w-full flex flex-col bg-[#f6f3f3] overflow-hidden">
-      <Nav />
+    <div className="min-h-screen bg-[#f6f3f3] flex items-center justify-center px-4 py-10">
+      <div className="w-full max-w-md">
+        <div className="mb-6 text-center">
+          <div className="flex flex-col items-center gap-2">
+            <div className="relative h-16 w-16 rounded-2xl border border-[#d9e6dd] bg-white shadow-sm">
+              <Image
+                src="/assets/imgs/preview.png"
+                alt="Logo Tecnomaster"
+                fill
+                className="object-contain p-1 rounded-2xl"
+                priority
+              />
+            </div>
+          </div>
 
-      <div className="flex flex-col lg:flex-row flex-1 px-6 lg:px-20 items-center justify-center gap-20 py-10">
-        <div className="w-full lg:w-[45%] max-w-lg flex flex-col justify-center">
-          <h1 className="text-[1.85rem] font-extrabold tracking-tight mb-1 text-center lg:text-left bg-gradient-to-r from-[#04652c] via-[#06a646] to-[#2a9781] bg-clip-text text-transparent">
+          <h1 className="mt-4 text-2xl font-semibold tracking-tight bg-gradient-to-r from-[#04652c] via-[#06a646] to-[#2a9781] bg-clip-text text-transparent">
             Recuperar contrasena
           </h1>
 
-          <h2 className="text-sm font-medium text-[#3b5f73] mb-6">
-            Recupera el acceso a tu cuenta
-          </h2>
-
-          <p className="text-sm font-medium text-[#3b5f73] mb-6 text-center lg:text-left">
-            Ingresa tu correo y te enviaremos un enlace para restablecer tu
-            contrasena.
+          <p className="mt-2 text-sm text-[#3b5f73]">
+            Ingresa tu correo y te enviaremos un enlace para restablecerla.
           </p>
+        </div>
 
-          <form noValidate onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label
-                htmlFor="email"
-                className="font-semibold text-sm text-neutral-900"
-              >
-                Correo electronico
-              </label>
+        <div className="rounded-2xl border border-[#d9e6dd] bg-white shadow-sm">
+          <form noValidate onSubmit={handleSubmit} className="p-6">
+            <label className="block text-sm font-medium text-neutral-800 mb-2">
+              Correo electronico
+            </label>
+            <div className="relative">
               <input
                 id="email"
                 type="text"
                 inputMode="email"
-                className={`w-full h-11 mt-1 px-4 rounded-lg border bg-white outline-none ${
+                className={[
+                  "w-full rounded-xl border bg-white px-4 py-3 text-sm text-neutral-900 outline-none transition",
                   emailHasError
-                    ? "border-red-500 focus:ring-2 focus:ring-red-400"
-                    : "focus:ring-2 focus:ring-[#06a646]"
-                }`}
+                    ? "border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-500/15"
+                    : "border-[#d9e6dd] focus:border-[#06a646] focus:ring-4 focus:ring-[#06a646]/15",
+                ].join(" ")}
                 value={form.email}
                 onChange={(e) => setField("email", e.target.value)}
                 onBlur={() => touchField("email")}
@@ -134,7 +138,7 @@ export default function ForgotPasswordPage() {
               />
 
               {emailHasError ? (
-                <p id="email-error" className="mt-1 text-xs text-red-600">
+                <p id="email-error" className="mt-2 text-xs text-red-600">
                   {errors.email}
                 </p>
               ) : null}
@@ -143,42 +147,25 @@ export default function ForgotPasswordPage() {
             <button
               type="submit"
               disabled={loading}
-              className={`w-full h-11 rounded-lg text-white font-semibold ${
-                loading
-                  ? "bg-[#6ecf94] cursor-not-allowed"
-                  : "bg-[#06a646] hover:bg-[#058a3c]"
-              }`}
+              className="mt-5 w-full rounded-xl bg-[#06a646] px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#058a3c] active:bg-[#04652c] disabled:opacity-60 disabled:hover:bg-[#06a646]"
             >
               {loading ? "Enviando..." : "Enviar enlace"}
             </button>
-
-            <p className="text-center text-sm">
-              <Link
-                href={routes.auth.login}
-                className="text-gray-500 hover:text-[#04652c] hover:underline underline-offset-4 transition-colors duration-200"
-              >
-                Volver al inicio de sesion
-              </Link>
-            </p>
           </form>
 
-          <p className="mt-8 text-center lg:text-left text-xs text-neutral-400">
-            &copy; {new Date().getFullYear()} Tecnomaster
-          </p>
-        </div>
-
-        <div className="hidden lg:flex w-[48%] justify-center p-2">
-          <div className="relative w-full max-w-[860px]">
-            <div className="absolute inset-0 rounded-[2rem] bg-gradient-to-br from-[#06a646]/10 via-transparent to-[#2a9781]/15 blur-2xl" />
-            <Image
-              src="/assets/imgs/ImageLogin.png"
-              alt="Imagen de apoyo"
-              width={860}
-              height={860}
-              className="relative rounded-xl object-contain"
-            />
+          <div className="border-t border-[#d9e6dd] px-6 py-4 text-center">
+            <Link
+              href={routes.auth.login}
+              className="text-sm font-medium text-[#04652c] hover:text-[#058a3c] hover:underline"
+            >
+              Volver al inicio de sesion
+            </Link>
           </div>
         </div>
+
+        <p className="mt-6 text-center text-xs text-neutral-400">
+            &copy; {new Date().getFullYear()} Tecnomaster
+        </p>
       </div>
     </div>
   );
