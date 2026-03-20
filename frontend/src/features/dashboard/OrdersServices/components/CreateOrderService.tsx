@@ -46,7 +46,7 @@ import {
 } from "@/features/dashboard/shared/technicianAvailability";
 
 type ServiceLineItem = { id: string; nombre: string; precio: number; tipoId: number; serviceid?: number };
-type MaterialLineItem = { id: string; nombre: string; precio: number; cantidad: number };
+type MaterialLineItem = { id: string; nombre: string; precio: number; cantidad: number; productid?: number };
 
 type CustomerOption = {
   customerid: number;
@@ -989,14 +989,19 @@ const {
     return Array.from(map.values());
   }, [materiales]);
 
-  const materialesSelectedNames = useMemo(
-    () => new Set(materiales.map((m) => String(m.nombre || "").trim()).filter(Boolean)),
+  const materialesSelectedIds = useMemo(
+    () =>
+      new Set(
+        materiales
+          .map((m) => Number(m.productid))
+          .filter((id) => Number.isFinite(id) && id > 0)
+      ),
     [materiales]
   );
 
   const availableProducts = useMemo(() => {
-    return productsCatalog.filter((p) => !materialesSelectedNames.has(p.productname));
-  }, [productsCatalog, materialesSelectedNames]);
+    return productsCatalog.filter((p) => !materialesSelectedIds.has(p.productid));
+  }, [productsCatalog, materialesSelectedIds]);
 
   function findProductByName(nombre: string) {
     const q = normalizeText(nombre);
@@ -1004,16 +1009,31 @@ const {
     return productsCatalog.find((x) => normalizeText(x.productname) === q) || null;
   }
 
-  function isProductAlreadyAdded(rowId: string, productName: string) {
-    const nameNorm = normalizeText(productName);
-    if (!nameNorm) return false;
-    return materiales.some((m) => m.id !== rowId && normalizeText(String(m.nombre || "")) === nameNorm);
+  function isProductAlreadyAdded(rowId: string, product: ProductOption) {
+    return materiales.some((m) => {
+      if (m.id === rowId) return false;
+      const pid = Number(m.productid);
+      if (Number.isFinite(pid) && pid > 0) return pid === product.productid;
+      return normalizeText(String(m.nombre || "")) === normalizeText(product.productname);
+    });
   }
 
-  function materialOptionsForRow(currentName: string, query = "") {
-    const used = new Set(materiales.map((m) => String(m.nombre || "").trim()).filter(Boolean));
-    if (currentName) used.delete(currentName);
-    const base = productsCatalog.filter((p) => !used.has(p.productname));
+  function materialOptionsForRow(current: MaterialLineItem, query = "") {
+    const usedIds = new Set(
+      materiales
+        .filter((m) => m.id !== current.id)
+        .map((m) => Number(m.productid))
+        .filter((id) => Number.isFinite(id) && id > 0)
+    );
+    const usedNamesNoId = new Set(
+      materiales
+        .filter((m) => m.id !== current.id && !(Number.isFinite(Number(m.productid)) && Number(m.productid) > 0))
+        .map((m) => normalizeText(String(m.nombre || "")))
+        .filter(Boolean)
+    );
+    const base = productsCatalog.filter(
+      (p) => !usedIds.has(p.productid) && !usedNamesNoId.has(normalizeText(p.productname))
+    );
     const q = normalizeText(query);
     // If the input currently matches an existing product exactly, show full list.
     // This keeps the dropdown useful after selecting an item.
@@ -1034,13 +1054,13 @@ const {
 
   function selectMaterialForRow(rowId: string, product: ProductOption) {
     if (itemsLockedByQuote) return;
-    if (isProductAlreadyAdded(rowId, product.productname)) {
+    if (isProductAlreadyAdded(rowId, product)) {
       showWarning(`El producto "${product.productname}" ya esta agregado.`);
       return;
     }
     patchItem<MaterialLineItem>(
       rowId,
-      { nombre: product.productname, precio: product.productpriceofsale },
+      { productid: product.productid, nombre: product.productname, precio: product.productpriceofsale },
       setMateriales
     );
     setErrors((prev) => ({ ...prev, materiales: undefined }));
@@ -1056,7 +1076,7 @@ const {
     }
     setMateriales((prev) => [
       ...prev,
-      { id: uid(), nombre: first.productname, precio: first.productpriceofsale, cantidad: 1 },
+      { id: uid(), productid: first.productid, nombre: first.productname, precio: first.productpriceofsale, cantidad: 1 },
     ]);
     setErrors((prev) => ({ ...prev, materiales: undefined }));
   }
@@ -1624,7 +1644,7 @@ const {
           ? Math.max(0, Math.round(Number(p.unitprice)))
           : rec?.productpriceofsale ?? 0;
         const cantidad = Math.max(1, Math.round(Number(p.cantidad ?? 1)));
-        matItems.push({ id: uid(), nombre, precio, cantidad });
+        matItems.push({ id: uid(), productid: rec?.productid, nombre, precio, cantidad });
       }
     }
     setMateriales(matItems);
@@ -2182,15 +2202,20 @@ const {
       return;
     }
 
-    const findProductRecord = (name: string) => {
-      const normalizedName = normalizeText(name);
+    const findProductRecord = (material: MaterialLineItem) => {
+      const pid = Number(material.productid);
+      if (Number.isFinite(pid) && pid > 0) {
+        const byId = productsCatalog.find((p) => p.productid === pid) || null;
+        if (byId) return byId;
+      }
+      const normalizedName = normalizeText(material.nombre);
       if (!normalizedName) return null;
       return productsCatalog.find((p) => normalizeText(p.productname) === normalizedName) || null;
     };
 
     const productQtyById = new Map<number, number>();
     for (const m of materiales) {
-      const rec = findProductRecord(m.nombre);
+      const rec = findProductRecord(m);
       if (!rec) {
         const next = { ...er, materiales: `El producto "${m.nombre}" no existe en la BD. Vuelve a seleccionarlo.` };
         setErrors(next);
@@ -3348,7 +3373,7 @@ setNavigating(true);
                         </div>
                       ) : (
                         materiales.map((m) => {
-                          const rowMaterialOptions = materialOptionsForRow(m.nombre, m.nombre);
+                          const rowMaterialOptions = materialOptionsForRow(m, m.nombre);
                           return (
                             <div key={m.id} className="rounded-md border bg-gray-50 p-2 space-y-1.5">
                               <label className="block text-[10px] text-gray-600">Producto</label>
@@ -3358,9 +3383,9 @@ setNavigating(true);
                                   const next = e.relatedTarget as Node | null;
                                   if (next && (e.currentTarget as HTMLElement).contains(next)) return;
                                   const match = findProductByName(m.nombre);
-                                  if (match && isProductAlreadyAdded(m.id, match.productname)) {
+                                  if (match && isProductAlreadyAdded(m.id, match)) {
                                     showWarning(`El producto "${match.productname}" ya esta agregado.`);
-                                    patchItem<MaterialLineItem>(m.id, { nombre: "", precio: 0 }, setMateriales);
+                                    patchItem<MaterialLineItem>(m.id, { productid: undefined, nombre: "", precio: 0 }, setMateriales);
                                     setMaterialOpenId((curr) => (curr === m.id ? null : curr));
                                     runBlurValidation("materiales");
                                     return;
@@ -3368,6 +3393,7 @@ setNavigating(true);
                                   patchItem<MaterialLineItem>(
                                     m.id,
                                     {
+                                      productid: match?.productid,
                                       nombre: match?.productname ?? String(m.nombre || "").trim(),
                                       precio: match?.productpriceofsale ?? 0,
                                     },
@@ -3384,7 +3410,7 @@ setNavigating(true);
                                   onChange={(e) => {
                                     if (itemsLockedByQuote) return;
                                     const n = e.target.value;
-                                    patchItem<MaterialLineItem>(m.id, { nombre: n }, setMateriales);
+                                    patchItem<MaterialLineItem>(m.id, { productid: undefined, nombre: n }, setMateriales);
                                     setMaterialOpenId(m.id);
                                     if (errors.materiales) setErrors((prev) => ({ ...prev, materiales: undefined }));
                                   }}
