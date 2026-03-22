@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import Colors from "@/shared/theme/colors";
 import { showError, showSuccess, showWarning } from "@/shared/utils/notifications";
 import { QuoteCreatePayload, QuoteDetailPayload } from "../types/Quote.type";
@@ -208,6 +208,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
   const [selectedServiceTypeId, setSelectedServiceTypeId] = useState<number | null>(null);
   const [errors, setErrors] = useState<QuoteFormErrors>({});
   const [submitAttempted, setSubmitAttempted] = useState(false);
+  const summaryRef = useRef<HTMLDivElement>(null);
 
   /* ================================
    * CARGA DE DATOS INICIAL
@@ -645,6 +646,33 @@ export default function RegisterQuoteForm({ onSave }: Props) {
     [errors, submitAttempted],
   );
 
+  const hasErrors = useMemo(
+    () => Object.values(errors).some((value) => typeof value === "string" && value.trim().length > 0),
+    [errors],
+  );
+
+  const focusFirstError = useCallback((currentErrors: QuoteFormErrors) => {
+    const order: Array<keyof QuoteFormErrors> = [
+      "client",
+      "serviceType",
+      "viaticos",
+      "servicios",
+      "materiales",
+      "observation",
+    ];
+    const firstKey = order.find((key) => currentErrors[key]);
+    if (!firstKey) return;
+
+    const el = document.getElementById(`field-${firstKey}`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      (el as HTMLElement).focus?.();
+      return;
+    }
+
+    summaryRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
+
   /* ================================
    * TOTALES
    * ================================ */
@@ -941,6 +969,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
     setErrors(formErrors);
     if (Object.keys(formErrors).length > 0) {
       showWarning("Revisa los campos marcados en rojo.");
+      focusFirstError(formErrors);
       return;
     }
 
@@ -1100,6 +1129,23 @@ export default function RegisterQuoteForm({ onSave }: Props) {
       className="mx-auto grid w-full max-w-[1500px] grid-cols-1 gap-4 p-3 text-sm xl:grid-cols-12"
     >
       <div className="space-y-4 xl:col-span-8">
+      {submitAttempted && hasErrors && (
+        <div
+          ref={summaryRef}
+          className="rounded-md border border-green-300 bg-green-50 p-3 text-sm text-green-800"
+        >
+          <strong className="mb-1 block">Hay errores en el formulario:</strong>
+          <ul className="list-disc space-y-1 pl-5">
+            {errors.client && <li>{errors.client}</li>}
+            {errors.serviceType && <li>{errors.serviceType}</li>}
+            {errors.viaticos && <li>{errors.viaticos}</li>}
+            {errors.servicios && <li>{errors.servicios}</li>}
+            {errors.materiales && <li>{errors.materiales}</li>}
+            {errors.observation && <li>{errors.observation}</li>}
+          </ul>
+        </div>
+      )}
+
       {/* SOLICITUD DE SERVICIO (OPCIONAL) */}
       <section className="rounded-lg border bg-white shadow-sm">
         <header className="border-b px-3 py-2.5">
@@ -1137,7 +1183,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
 
       {/* INFO AUTOMÁTICA DEL SERVICE REQUEST */}
       {selectedServiceRequest && (
-        <section className="rounded-lg border bg-white shadow-sm">
+        <section id="field-client" className="rounded-lg border bg-white shadow-sm">
           <header className="border-b px-3 py-2.5">
             <h3 className="text-sm font-semibold text-gray-800">
               Información de la solicitud seleccionada
@@ -1230,7 +1276,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
 
       {/* CLIENTE NUEVO (solo si NO hay solicitud seleccionada) */}
       {!selectedServiceRequest && (
-        <section className="rounded-lg border bg-white shadow-sm">
+        <section id="field-client" className="rounded-lg border bg-white shadow-sm">
           <header className="border-b px-3 py-2.5 flex items-center justify-between gap-3">
             <h3 className="text-sm font-semibold text-gray-800">Cliente</h3>
           </header>
@@ -1360,8 +1406,8 @@ export default function RegisterQuoteForm({ onSave }: Props) {
             Añadir servicio
           </button>
         </header>
-        <div className="grid grid-cols-1 gap-3 p-3 md:grid-cols-12">
-          <div className="md:col-span-12">
+          <div className="grid grid-cols-1 gap-3 p-3 md:grid-cols-12">
+          <div id="field-serviceType" className="md:col-span-12">
             <span className="block text-xs text-gray-700 mb-2">Tipo de servicio</span>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {serviceTypes.length === 0 ? (
@@ -1417,7 +1463,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
             )}
           </div>
 
-          <div className="md:col-span-12">
+          <div id="field-viaticos" className="md:col-span-12">
             <label className="block text-xs text-gray-700 mb-1">Viaticos</label>
             <input
               type="number"
@@ -1444,7 +1490,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
             )}
           </div>
 
-          <div className="md:col-span-12">
+          <div id="field-servicios" className="md:col-span-12">
             <div className="flex items-center justify-between gap-2 mb-2">
               <div className="text-xs text-gray-500">
                 Cantidad fija 1 por servicio, editable en precio y sin duplicados.
@@ -1532,7 +1578,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
             )}
           </div>
 
-          <div className="md:col-span-12">
+          <div id="field-observation" className="md:col-span-12">
             <label className="block text-xs text-gray-700 mb-1">Observación</label>
             <textarea
               placeholder="Describe alcance, observaciones o condiciones de la cotización"
@@ -1574,7 +1620,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
       </section>
 
             {/* DETALLES DE PRODUCTOS */}
-      <section className="rounded-lg border bg-white shadow-sm">
+      <section id="field-materiales" className="rounded-lg border bg-white shadow-sm">
         <header className="border-b px-3 py-2.5 flex items-center justify-between">
           <div>
             <h3 className="text-sm font-semibold text-gray-800">Productos (Materiales)</h3>
