@@ -2,10 +2,17 @@
 
 import { useState, useMemo, useEffect, useCallback } from "react";
 import Colors from "@/shared/theme/colors";
-import { showError, showSuccess } from "@/shared/utils/notifications";
+import { showError, showSuccess, showWarning } from "@/shared/utils/notifications";
 import { QuoteCreatePayload, QuoteDetailPayload } from "../types/Quote.type";
 import { api } from "@/shared/utils/apiClient";
 import { getServicesRequestsForQuote, type QuoteServiceRequestApi } from "../api/quotes.api";
+import {
+  QUOTE_OBSERVATION_MAX,
+  type QuoteFormErrors,
+  validateObservation,
+  validateQuoteField,
+  validateQuoteForm,
+} from "../validations/quotesValidations";
 
 /* ================================
  * TIPOS
@@ -154,6 +161,9 @@ interface Props {
 }
 
 export default function RegisterQuoteForm({ onSave }: Props) {
+  const errorText = "mt-1 text-xs text-red-600";
+  const errorRing = "border-red-500 ring-1 ring-red-500";
+
   /* ================================
    * STATE PRINCIPAL
    * ================================ */
@@ -196,6 +206,8 @@ export default function RegisterQuoteForm({ onSave }: Props) {
   const [services, setServices] = useState<ServiceFromApi[]>([]);
   const [serviceLines, setServiceLines] = useState<QuoteServiceLine[]>([]);
   const [selectedServiceTypeId, setSelectedServiceTypeId] = useState<number | null>(null);
+  const [errors, setErrors] = useState<QuoteFormErrors>({});
+  const [submitAttempted, setSubmitAttempted] = useState(false);
 
   /* ================================
    * CARGA DE DATOS INICIAL
@@ -403,6 +415,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
       setServiceLines([]);
       // si no hay solicitud, por defecto habilitamos creación de cliente
       setCreateNewClientEnabled(false);
+      setErrors((prev) => ({ ...prev, client: undefined, serviceType: undefined }));
       return;
     }
 
@@ -472,6 +485,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
 
     // si hay solicitud, no necesitamos crear cliente aquí
     setCreateNewClientEnabled(false);
+    setErrors((prev) => ({ ...prev, client: undefined, serviceType: undefined }));
   };
 
   /* ================================
@@ -585,6 +599,52 @@ export default function RegisterQuoteForm({ onSave }: Props) {
     return available.length > 0;
   }, [getServicesForTipo, selectedServiceTypeId, serviceLines]);
 
+  const validationContext = useMemo(
+    () => ({
+      hasServiceRequest: !!form.serviceRequestId,
+      createClientInlineEnabled: createNewClientEnabled,
+      clientDraft: {
+        documento: clientForm.documento,
+        nombre: clientForm.nombre,
+        telefono: clientForm.telefono,
+        correo: clientForm.correo,
+      },
+      servicetype: form.servicetype,
+      viaticosValue: Number(form.viaticos),
+      observation: form.observation,
+      serviceLines,
+      servicesCatalog: services.map((service) => ({
+        name: service.name,
+        typeofserviceid: service.typeofserviceid ?? service.typeofservice?.typeofserviceid,
+      })),
+      details: form.details,
+      productsCatalog: selectableProducts.map((product) => ({
+        productid: product.productid,
+        productname: product.productname,
+      })),
+    }),
+    [
+      clientForm.correo,
+      clientForm.documento,
+      clientForm.nombre,
+      clientForm.telefono,
+      createNewClientEnabled,
+      form.details,
+      form.observation,
+      form.serviceRequestId,
+      form.servicetype,
+      form.viaticos,
+      selectableProducts,
+      serviceLines,
+      services,
+    ],
+  );
+
+  const showFieldError = useCallback(
+    (key: keyof QuoteFormErrors) => submitAttempted && !!errors[key],
+    [errors, submitAttempted],
+  );
+
   /* ================================
    * TOTALES
    * ================================ */
@@ -650,6 +710,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
       return;
     }
     setForm((prev) => ({ ...prev, details: [...prev.details, mapProductToDetail(first)] }));
+    setErrors((prev) => ({ ...prev, materiales: undefined }));
   };
 
   const selectProductForRow = (index: number, productId: number) => {
@@ -663,6 +724,15 @@ export default function RegisterQuoteForm({ onSave }: Props) {
       const current = updated[index];
       if (!current) return prev;
       updated[index] = mapProductToDetail(product, current.quantity);
+      if (submitAttempted) {
+        setErrors((prevErrors) => ({
+          ...prevErrors,
+          materiales: validateQuoteField("materiales", {
+            ...validationContext,
+            details: updated,
+          }),
+        }));
+      }
       return { ...prev, details: updated };
     });
   };
@@ -679,6 +749,12 @@ export default function RegisterQuoteForm({ onSave }: Props) {
       ...prev,
       details: prev.details.filter((_, i) => i !== index),
     }));
+    if (submitAttempted) {
+      setErrors((prev) => ({
+        ...prev,
+        materiales: undefined,
+      }));
+    }
   };
 
   const updateDetailQuantity = (index: number, newQty: number) => {
@@ -704,6 +780,15 @@ export default function RegisterQuoteForm({ onSave }: Props) {
         quantity: qty,
         subtotal: qty * current.unitprice,
       };
+      if (submitAttempted) {
+        setErrors((prevErrors) => ({
+          ...prevErrors,
+          materiales: validateQuoteField("materiales", {
+            ...validationContext,
+            details: updated,
+          }),
+        }));
+      }
       return { ...prev, details: updated };
     });
   };
@@ -755,16 +840,30 @@ export default function RegisterQuoteForm({ onSave }: Props) {
         tipoId: selectedServiceTypeId,
       },
     ]);
+    setErrors((prev) => ({ ...prev, servicios: undefined }));
   };
 
   const updateServiceLine = (id: string, patch: Partial<QuoteServiceLine>) => {
-    setServiceLines((prev) =>
-      prev.map((line) => (line.id === id ? { ...line, ...patch } : line)),
-    );
+    setServiceLines((prev) => {
+      const updated = prev.map((line) => (line.id === id ? { ...line, ...patch } : line));
+      if (submitAttempted) {
+        setErrors((prevErrors) => ({
+          ...prevErrors,
+          servicios: validateQuoteField("servicios", {
+            ...validationContext,
+            serviceLines: updated,
+          }),
+        }));
+      }
+      return updated;
+    });
   };
 
   const removeServiceLine = (id: string) => {
     setServiceLines((prev) => prev.filter((line) => line.id !== id));
+    if (submitAttempted) {
+      setErrors((prev) => ({ ...prev, servicios: undefined }));
+    }
   };
 
   const createCustomerForDirectQuote = async (): Promise<number> => {
@@ -837,6 +936,13 @@ export default function RegisterQuoteForm({ onSave }: Props) {
    * ================================ */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitAttempted(true);
+    const formErrors = validateQuoteForm(validationContext);
+    setErrors(formErrors);
+    if (Object.keys(formErrors).length > 0) {
+      showWarning("Revisa los campos marcados en rojo.");
+      return;
+    }
 
     // 1) Ya NO exigimos solicitud. Sí­ exigimos tipo de servicio.
     if (!form.servicetype) {
@@ -871,7 +977,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
 
     // Preparar el payload según la especificación del endpoint
     let directCustomerId: number | undefined;
-    if (!form.serviceRequestId && createNewClientEnabled) {
+    if (!form.serviceRequestId) {
       try {
         directCustomerId = await createCustomerForDirectQuote();
       } catch (error) {
@@ -939,6 +1045,8 @@ export default function RegisterQuoteForm({ onSave }: Props) {
       setSelectedServiceRequest(null);
       setSelectedServiceTypeId(null);
       setCreateNewClientEnabled(false);
+      setErrors({});
+      setSubmitAttempted(false);
       setClientForm({
         tipo: "CC",
         documento: "",
@@ -980,10 +1088,11 @@ export default function RegisterQuoteForm({ onSave }: Props) {
 
   const canSubmit =
     !!form.servicetype &&
-    (form.details.length > 0 || serviceLines.length > 0) &&
+    form.details.length > 0 &&
+    serviceLines.length > 0 &&
     (form.serviceRequestId
       ? true
-      : !createNewClientEnabled || hasRequiredNewClientData);
+      : createNewClientEnabled && hasRequiredNewClientData);
 
   return (
     <form
@@ -1131,9 +1240,21 @@ export default function RegisterQuoteForm({ onSave }: Props) {
               <input
                 type="checkbox"
                 checked={createNewClientEnabled}
-                onChange={(e) => setCreateNewClientEnabled(e.target.checked)}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setCreateNewClientEnabled(checked);
+                  if (submitAttempted) {
+                    setErrors((prev) => ({
+                      ...prev,
+                      client: validateQuoteField("client", {
+                        ...validationContext,
+                        createClientInlineEnabled: checked,
+                      }),
+                    }));
+                  }
+                }}
               />
-              Crear cliente nuevo (opcional)
+              Crear cliente nuevo
             </label>
           </div>
 
@@ -1162,7 +1283,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
                   onChange={(e) =>
                     setClientForm((p) => ({ ...p, documento: e.target.value }))
                   }
-                  className="h-9 w-full rounded-md border px-2.5"
+                  className={`h-9 w-full rounded-md border px-2.5 ${showFieldError("client") ? errorRing : ""}`}
                 />
               </div>
 
@@ -1173,7 +1294,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
                   onChange={(e) =>
                     setClientForm((p) => ({ ...p, nombre: e.target.value }))
                   }
-                  className="h-9 w-full rounded-md border px-2.5"
+                  className={`h-9 w-full rounded-md border px-2.5 ${showFieldError("client") ? errorRing : ""}`}
                 />
               </div>
 
@@ -1195,7 +1316,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
                   onChange={(e) =>
                     setClientForm((p) => ({ ...p, telefono: e.target.value }))
                   }
-                  className="h-9 w-full rounded-md border px-2.5"
+                  className={`h-9 w-full rounded-md border px-2.5 ${showFieldError("client") ? errorRing : ""}`}
                 />
               </div>
 
@@ -1207,7 +1328,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
                   onChange={(e) =>
                     setClientForm((p) => ({ ...p, correo: e.target.value }))
                   }
-                  className="h-9 w-full rounded-md border px-2.5"
+                  className={`h-9 w-full rounded-md border px-2.5 ${showFieldError("client") ? errorRing : ""}`}
                 />
               </div>
             </div>
@@ -1215,6 +1336,9 @@ export default function RegisterQuoteForm({ onSave }: Props) {
             <div className="text-sm text-blue-800 bg-blue-50 border border-blue-200 rounded p-3">
               Esta cotización se guardará sin cliente asociado.
             </div>
+          )}
+          {showFieldError("client") && errors.client && (
+            <p className={errorText}>{errors.client}</p>
           )}
           </div>
         </section>
@@ -1250,7 +1374,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
                       key={type.typeofserviceid}
                       className={`flex items-center gap-2 rounded-md border bg-white px-2.5 py-2 ${
                         selectedServiceRequest ? "cursor-not-allowed opacity-80" : "cursor-pointer hover:bg-gray-50"
-                      } ${isSelected ? "ring-2 ring-red-200 border-red-200" : ""}`}
+                      } ${isSelected ? "ring-2 ring-red-200 border-red-200" : ""} ${showFieldError("serviceType") ? errorRing : ""}`}
                     >
                       <input
                         type="radio"
@@ -1267,6 +1391,13 @@ export default function RegisterQuoteForm({ onSave }: Props) {
                             servicetype: selectedType?.payloadValue ?? "",
                           }));
                           setServiceLines([]);
+                          if (submitAttempted) {
+                            setErrors((prev) => ({
+                              ...prev,
+                              serviceType: selectedType?.payloadValue ? undefined : prev.serviceType,
+                              servicios: undefined,
+                            }));
+                          }
                         }}
                         className="h-4 w-4"
                       />
@@ -1281,6 +1412,9 @@ export default function RegisterQuoteForm({ onSave }: Props) {
                 ? "Este campo se completa automáticamente desde la solicitud de servicio."
                 : "Selecciona un tipo para habilitar la carga de servicios."}
             </p>
+            {showFieldError("serviceType") && errors.serviceType && (
+              <p className={errorText}>{errors.serviceType}</p>
+            )}
           </div>
 
           <div className="md:col-span-12">
@@ -1290,9 +1424,24 @@ export default function RegisterQuoteForm({ onSave }: Props) {
               min={0}
               step={1000}
               value={form.viaticos}
-              onChange={(e) => setForm((prev) => ({ ...prev, viaticos: e.target.value }))}
-              className="h-9 w-full rounded-md border border-gray-300 bg-white px-2.5 text-right text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+              onChange={(e) => {
+                const nextValue = e.target.value;
+                setForm((prev) => ({ ...prev, viaticos: nextValue }));
+                if (submitAttempted) {
+                  setErrors((prev) => ({
+                    ...prev,
+                    viaticos: validateQuoteField("viaticos", {
+                      ...validationContext,
+                      viaticosValue: Number(nextValue),
+                    }),
+                  }));
+                }
+              }}
+              className={`h-9 w-full rounded-md border border-gray-300 bg-white px-2.5 text-right text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 ${showFieldError("viaticos") ? errorRing : ""}`}
             />
+            {showFieldError("viaticos") && errors.viaticos && (
+              <p className={errorText}>{errors.viaticos}</p>
+            )}
           </div>
 
           <div className="md:col-span-12">
@@ -1378,6 +1527,9 @@ export default function RegisterQuoteForm({ onSave }: Props) {
             </tbody>
           </table>
             </div>
+            {showFieldError("servicios") && errors.servicios && (
+              <p className={`${errorText} mt-2`}>{errors.servicios}</p>
+            )}
           </div>
 
           <div className="md:col-span-12">
@@ -1385,11 +1537,39 @@ export default function RegisterQuoteForm({ onSave }: Props) {
             <textarea
               placeholder="Describe alcance, observaciones o condiciones de la cotización"
               value={form.observation}
-              onChange={(e) => setForm({ ...form, observation: e.target.value })}
-              className="w-full rounded-md border border-gray-300 bg-white px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+              onChange={(e) => {
+                const nextValue = e.target.value;
+                setForm({ ...form, observation: nextValue });
+                if (submitAttempted) {
+                  setErrors((prev) => ({
+                    ...prev,
+                    observation: validateObservation(nextValue),
+                  }));
+                }
+              }}
+              className={`w-full rounded-md border border-gray-300 bg-white px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 ${showFieldError("observation") ? errorRing : ""}`}
               rows={2}
             />
+            <div className="mt-1 flex items-center justify-between gap-2">
+              {showFieldError("observation") && errors.observation ? (
+                <p className={errorText}>{errors.observation}</p>
+              ) : (
+                <span />
+              )}
+              <span
+                className={`text-xs ${
+                  String(form.observation || "").trim().length > QUOTE_OBSERVATION_MAX
+                    ? "text-red-600"
+                    : "text-gray-500"
+                }`}
+              >
+                {String(form.observation || "").trim().length}/{QUOTE_OBSERVATION_MAX}
+              </span>
+            </div>
           </div>
+          {showFieldError("materiales") && errors.materiales && (
+            <p className={`${errorText} mt-2`}>{errors.materiales}</p>
+          )}
         </div>
       </section>
 
