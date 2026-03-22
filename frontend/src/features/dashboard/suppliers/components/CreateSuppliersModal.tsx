@@ -7,6 +7,20 @@ import { showError, showWarning } from "@/shared/utils/notifications";
 import { uploadImageToCloudinary } from "@/shared/utils/cloudinary";
 import { getProducts } from "@/features/dashboard/products/api/products.api";
 import type { Product } from "@/features/dashboard/products/types/typesProducts";
+import {
+  hasMissingRequiredSupplierFields,
+  mapSupplierApiErrors,
+  sanitizeSupplierContact,
+  sanitizeSupplierName,
+  sanitizeSupplierNit,
+  sanitizeSupplierPhone,
+  sanitizeSupplierRating,
+  type SupplierErrorKey,
+  type SupplierErrorMap,
+  type SupplierFormValidationFields,
+  validateAllSupplierFields,
+  validateSupplierField,
+} from "@/features/dashboard/suppliers/utils/supplierFormValidation";
 
 export type SupplierSubmitPayload = {
   name: string;
@@ -19,7 +33,7 @@ export type SupplierSubmitPayload = {
   rating: number;
   imageFile: File | null;
   imageUrl: string | null;
-  supplierid?: number; // ID del proveedor para cargar productos desde API
+  supplierid?: number;
   productos?: Array<{
     productoId: number;
     productName?: string;
@@ -28,17 +42,7 @@ export type SupplierSubmitPayload = {
   }>;
 };
 
-type SupplierForm = {
-  name: string;
-  nit: string;
-  phone: string;
-  email: string;
-  address: string;
-  rating: number;
-  contactName: string;
-  imageFile: File | null;
-  imageUrl: string | null;
-};
+type SupplierForm = SupplierFormValidationFields;
 
 type Props = {
   isOpen: boolean;
@@ -46,8 +50,6 @@ type Props = {
   onSave: (data: SupplierSubmitPayload) => void | Promise<void>;
   title?: string;
 };
-
-const MAX_IMG_MB = 2;
 
 const initialForm: SupplierForm = {
   name: "",
@@ -61,16 +63,11 @@ const initialForm: SupplierForm = {
   imageUrl: null,
 };
 
-function sanitizeRating(v: string | number) {
-  const n = typeof v === "number" ? v : parseFloat(v || "0");
-  if (Number.isNaN(n)) return 0;
-  const clamped = Math.max(0, Math.min(5, n));
-  return Number(clamped.toFixed(1));
-}
 function roundToStep(n: number, step = 0.1) {
-  const r = Math.round(n / step) * step;
-  return Number(Math.max(0, Math.min(5, r)).toFixed(1));
+  const rounded = Math.round(n / step) * step;
+  return Number(Math.max(0, Math.min(5, rounded)).toFixed(1));
 }
+
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
@@ -107,12 +104,10 @@ function DecimalStarRating({
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (disabled) return;
-    const v = pickValueFromClientX(e.clientX);
-    setHover(v);
-    if (e.buttons === 1) onChange(v);
+    const nextValue = pickValueFromClientX(e.clientX);
+    setHover(nextValue);
+    if (e.buttons === 1) onChange(nextValue);
   };
-
-  const handlePointerLeave = () => setHover(null);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (disabled) return;
@@ -144,11 +139,11 @@ function DecimalStarRating({
         }`}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
-        onPointerLeave={handlePointerLeave}
+        onPointerLeave={() => setHover(null)}
         onKeyDown={handleKeyDown}
         role="slider"
         tabIndex={disabled ? -1 : 0}
-        aria-label="Calificación"
+        aria-label="Calificacion"
         aria-valuemin={0}
         aria-valuemax={5}
         aria-valuenow={Number(value.toFixed(1))}
@@ -174,114 +169,35 @@ function DecimalStarRating({
   );
 }
 
-function sanitizeName(v: string) {
-  return v.replace(/[^A-Za-z0-9ÁÉÍÓÚÜÑáéíóúüñ'’.\- ]/g, "").replace(/\s{2,}/g, " ").slice(0, 80);
-}
-function sanitizeContact(v: string) {
-  return v.replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ'’.\- ]/g, "").replace(/\s{2,}/g, " ").slice(0, 80);
-}
-function sanitizePhone(v: string) {
-  let s = v.replace(/[^\d+]/g, "");
-  if (s.includes("+")) s = "+" + s.replace(/\+/g, "");
-  if (s.startsWith("+")) s = "+" + s.slice(1).replace(/[^\d]/g, "");
-  return s.slice(0, 16);
-}
-function sanitizeNITBaseOnly(v: string) {
-  return String(v ?? "").replace(/[^\d]/g, "").slice(0, 12);
-}
-
-type ErrorMap = Partial<Record<keyof SupplierForm | "image", string | null>>;
-
-type SupplierValidationKey = keyof SupplierForm | "image";
-type SupplierValidationValue = SupplierForm[keyof SupplierForm] | File | null;
-
-const validators: Record<
-  SupplierValidationKey,
-  (value: SupplierValidationValue, form: SupplierForm) => string | null
-> = {
-  name: (v) => {
-    const s = String(v ?? "").trim();
-    if (s.length < 3) return "Mínimo 3 caracteres.";
-    if (!/^[A-Za-z0-9ÁÉÍÓÚÜÑáéíóúüñ'’.\- ]+$/.test(s)) return "Solo letras, números y espacios.";
-    return null;
-  },
-  nit: (v) => {
-    const raw = String(v ?? "").replace(/[^\d]/g, "");
-    if (!/^\d{5,12}$/.test(raw)) return "Debe tener entre 5 y 12 dígitos (solo números).";
-    return null;
-  },
-  phone: (v) => {
-    const s = String(v ?? "").replace(/[^\d+]/g, "");
-    const digits = s.startsWith("+") ? s.slice(1) : s;
-    if (digits.length < 7 || digits.length > 15) return "7–15 dígitos.";
-    if (!/^\+?\d+$/.test(s)) return "Solo números.";
-    return null;
-  },
-  email: (v) => {
-    const s = String(v ?? "").trim();
-    if (!s) return "Correo requerido.";
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s)) return "Correo inválido.";
-    return null;
-  },
-  address: (v) => {
-    const s = String(v ?? "").trim();
-    if (!s) return "Campo obligatorio.";
-    return null;
-  },
-  contactName: (v) => {
-    const s = String(v ?? "").trim();
-    if (s.length < 3) return "Mínimo 3 caracteres.";
-    if (!/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ'’.\- ]+$/.test(s)) return "Solo letras y espacios.";
-    return null;
-  },
-  rating: () => null,
-  imageFile: () => null,
-  imageUrl: () => null,
-  image: (value) => {
-    const file = value instanceof File ? value : null;
-    if (!file) return "Imagen requerida.";
-    if (!file.type.startsWith("image/")) return "Archivo no es una imagen.";
-    if (file.size > MAX_IMG_MB * 1024 * 1024) return `Máx ${MAX_IMG_MB}MB.`;
-    return null;
-  },
-};
-function validateAllFields(form: SupplierForm): ErrorMap {
-  const e: ErrorMap = {};
-  e.name = validators.name(form.name, form);
-  e.nit = validators.nit(form.nit, form);
-  e.phone = validators.phone(form.phone, form);
-  e.email = validators.email(form.email, form);
-  e.address = validators.address(form.address, form);
-  e.contactName = validators.contactName(form.contactName, form);
-  e.image = validators.image(form.imageFile, form);
-  return e;
-}
-
-export default function CreateSuppliersModal({ isOpen, onClose, onSave, title = "Crear Proveedor" }: Props) {
+export default function CreateSuppliersModal({
+  isOpen,
+  onClose,
+  onSave,
+  title = "Crear Proveedor",
+}: Props) {
   const [form, setForm] = useState<SupplierForm>(initialForm);
   const [saving, setSaving] = useState(false);
-  const [errors, setErrors] = useState<ErrorMap>({});
+  const [errors, setErrors] = useState<SupplierErrorMap>({});
   const fileRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  
-  // Estado para productos asociados
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [productSearch, setProductSearch] = useState("");
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [supplierProducts, setSupplierProducts] = useState<Array<{
-    productoId: number;
-    productName: string;
-    precioUnitario: number;
-  }>>([]);
+  const [supplierProducts, setSupplierProducts] = useState<
+    Array<{
+      productoId: number;
+      productName: string;
+      precioUnitario: number;
+    }>
+  >([]);
 
-  // Función para filtrar productos
-  const filteredProducts = allProducts.filter((p) =>
-    !supplierProducts.some((sp) => sp.productoId === p.id) &&
-    p.name.toLowerCase().includes(productSearch.toLowerCase())
+  const filteredProducts = allProducts.filter(
+    (p) =>
+      !supplierProducts.some((sp) => sp.productoId === p.id) &&
+      p.name.toLowerCase().includes(productSearch.toLowerCase())
   );
 
-  // Función para agregar producto
   const handleAddProduct = (product: Product) => {
     setSupplierProducts((prev) => [
       ...prev,
@@ -295,19 +211,16 @@ export default function CreateSuppliersModal({ isOpen, onClose, onSave, title = 
     setDropdownOpen(false);
   };
 
-  // Función para eliminar producto
   const handleRemoveProduct = (productoId: number) => {
     setSupplierProducts((prev) => prev.filter((p) => p.productoId !== productoId));
   };
 
-  // Función para actualizar precio
   const handleUpdateProductPrice = (productoId: number, precioUnitario: number) => {
     setSupplierProducts((prev) =>
       prev.map((p) => (p.productoId === productoId ? { ...p, precioUnitario } : p))
     );
   };
 
-  // Cerrar dropdown al hacer click fuera
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -325,48 +238,41 @@ export default function CreateSuppliersModal({ isOpen, onClose, onSave, title = 
       setSupplierProducts([]);
       setProductSearch("");
       if (fileRef.current) fileRef.current.value = "";
-    } else {
-      // Cargar productos del sistema
-      setLoadingProducts(true);
-      getProducts({ status: "active", page: 1, limit: 1000 })
-        .then((response) => setAllProducts(response.data))
-        .catch(() => showError("Error al cargar productos."))
-        .finally(() => setLoadingProducts(false));
+      return;
     }
+
+    setLoadingProducts(true);
+    getProducts({ status: "active", page: 1, limit: 1000 })
+      .then((response) => setAllProducts(response.data))
+      .catch(() => showError("Error al cargar productos."))
+      .finally(() => setLoadingProducts(false));
   }, [isOpen]);
 
-  const validateAndSet = <K extends SupplierValidationKey>(
-    key: K,
-    nextForm: SupplierForm
-  ) => {
-    const value: SupplierValidationValue =
-      key === "image"
-        ? nextForm.imageFile
-        : nextForm[key as keyof SupplierForm];
-    const msg = validators[key](value, nextForm);
-    setErrors((er) => ({ ...er, [key]: msg }));
-    return msg;
+  const validateAndSet = (key: SupplierErrorKey, nextForm: SupplierForm) => {
+    const message = validateSupplierField(key, nextForm, { imageRequired: true });
+    setErrors((current) => ({ ...current, [key]: message }));
+    return message;
   };
 
-  const update = <K extends keyof SupplierForm>(k: K, v: SupplierForm[K]) => {
+  const update = <K extends keyof SupplierForm>(key: K, value: SupplierForm[K]) => {
     setForm((prev) => {
-      const next = { ...prev, [k]: v };
-      if (k === "name") validateAndSet("name", next);
-      if (k === "nit") validateAndSet("nit", next);
-      if (k === "phone") validateAndSet("phone", next);
-      if (k === "email") validateAndSet("email", next);
-      if (k === "address") validateAndSet("address", next);
-      if (k === "contactName") validateAndSet("contactName", next);
-      if (k === "rating") validateAndSet("rating", next);
+      const next = { ...prev, [key]: value };
+      if (key === "name") validateAndSet("name", next);
+      if (key === "nit") validateAndSet("nit", next);
+      if (key === "phone") validateAndSet("phone", next);
+      if (key === "email") validateAndSet("email", next);
+      if (key === "address") validateAndSet("address", next);
+      if (key === "contactName") validateAndSet("contactName", next);
+      if (key === "rating") validateAndSet("rating", next);
       return next;
     });
   };
 
-  function handlePickFile() {
+  const handlePickFile = () => {
     fileRef.current?.click();
-  }
+  };
 
-  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
 
     setForm((prev) => {
@@ -375,38 +281,33 @@ export default function CreateSuppliersModal({ isOpen, onClose, onSave, title = 
         imageFile: file,
         imageUrl: file ? URL.createObjectURL(file) : null,
       };
-      const err = validators.image(file, next);
-      setErrors((er) => ({ ...er, image: err }));
-      if (err) showError(err);
+      const message = validateSupplierField("image", next, { imageRequired: true });
+      setErrors((current) => ({ ...current, image: message }));
+      if (message) showError(message);
       return next;
     });
-  }
+  };
 
-  function validateAll() {
-    const e = validateAllFields(form);
-    setErrors(e);
+  const validateAll = () => {
+    const nextErrors = validateAllSupplierFields(form, { imageRequired: true });
+    setErrors(nextErrors);
 
-    const hasErrors = Object.values(e).some((v) => Boolean(v));
-    if (hasErrors) showWarning("Todos los campos deben estar llenos.");
+    const hasErrors = Object.values(nextErrors).some(Boolean);
+    if (hasErrors && hasMissingRequiredSupplierFields(form, { imageRequired: true })) {
+      showWarning("Completa los campos obligatorios.");
+    }
 
     return !hasErrors;
-  }
+  };
 
-  async function handleSubmit(evt: React.FormEvent) {
+  const handleSubmit = async (evt: React.FormEvent) => {
     evt.preventDefault();
     if (!validateAll()) return;
 
-    const nitBase = String(form.nit ?? "").replace(/[^\d]/g, "");
-    if (!/^\d{5,12}$/.test(nitBase)) {
-      showError("NIT inválido. Debe tener entre 5 y 12 dígitos (solo números).");
-      setErrors((er) => ({ ...er, nit: "Debe tener entre 5 y 12 dígitos (solo números)." }));
-      return;
-    }
-
-    const imgErr = validators.image(form.imageFile, form);
-    if (imgErr) {
-      setErrors((er) => ({ ...er, image: imgErr }));
-      showError(imgErr);
+    const imageError = validateSupplierField("image", form, { imageRequired: true });
+    if (imageError) {
+      setErrors((current) => ({ ...current, image: imageError }));
+      showError(imageError);
       return;
     }
 
@@ -416,33 +317,37 @@ export default function CreateSuppliersModal({ isOpen, onClose, onSave, title = 
       let finalImageUrl: string | null = form.imageUrl;
       if (form.imageFile) finalImageUrl = await uploadImageToCloudinary(form.imageFile);
 
-      const payload: SupplierSubmitPayload = {
+      await onSave({
         name: form.name.trim(),
-        nit: nitBase,
-        phone: sanitizePhone(form.phone),
+        nit: form.nit.trim(),
+        phone: sanitizeSupplierPhone(form.phone),
         email: form.email.trim(),
         address: form.address.trim(),
         contactName: form.contactName.trim(),
         status: "Activo",
-        rating: sanitizeRating(form.rating),
+        rating: sanitizeSupplierRating(form.rating),
         imageFile: null,
         imageUrl: finalImageUrl ?? null,
         productos: supplierProducts.map((p) => ({
           productoId: p.productoId,
           precioUnitario: p.precioUnitario,
         })),
-      };
-
-      await onSave(payload);
+      });
 
       setForm(initialForm);
       setErrors({});
       if (fileRef.current) fileRef.current.value = "";
       onClose();
+    } catch (error) {
+      const { errors: apiErrors, notificationMessage } = mapSupplierApiErrors(error);
+      if (Object.keys(apiErrors).length > 0) {
+        setErrors((current) => ({ ...current, ...apiErrors }));
+      }
+      showError(notificationMessage);
     } finally {
       setSaving(false);
     }
-  }
+  };
 
   const footer = (
     <div className="flex justify-end gap-2">
@@ -474,7 +379,7 @@ export default function CreateSuppliersModal({ isOpen, onClose, onSave, title = 
           </label>
           <input
             value={form.name}
-            onChange={(e) => update("name", sanitizeName(e.target.value))}
+            onChange={(e) => update("name", sanitizeSupplierName(e.target.value))}
             onBlur={() => validateAndSet("name", form)}
             placeholder="Ingrese el nombre"
             className="w-full px-2 py-1 border rounded-md"
@@ -488,11 +393,10 @@ export default function CreateSuppliersModal({ isOpen, onClose, onSave, title = 
           </label>
           <input
             value={form.nit}
-            onChange={(e) => update("nit", sanitizeNITBaseOnly(e.target.value))}
+            onChange={(e) => update("nit", sanitizeSupplierNit(e.target.value))}
             onBlur={() => validateAndSet("nit", form)}
             placeholder="900123456"
-            inputMode="numeric"
-            pattern="\d*"
+            inputMode="text"
             className="w-full px-2 py-1 border rounded-md"
           />
           {errors.nit && <p className="text-xs text-red-600 mt-1">{errors.nit}</p>}
@@ -500,11 +404,11 @@ export default function CreateSuppliersModal({ isOpen, onClose, onSave, title = 
 
         <div>
           <label className="block text-sm font-medium mb-1">
-            Teléfono <span className="text-green-500">*</span>
+            Telefono <span className="text-green-500">*</span>
           </label>
           <input
             value={form.phone}
-            onChange={(e) => update("phone", sanitizePhone(e.target.value))}
+            onChange={(e) => update("phone", sanitizeSupplierPhone(e.target.value))}
             onBlur={() => validateAndSet("phone", form)}
             placeholder="+57 3001234567"
             inputMode="tel"
@@ -530,7 +434,7 @@ export default function CreateSuppliersModal({ isOpen, onClose, onSave, title = 
 
         <div className="col-span-2">
           <label className="block text-sm font-medium mb-1">
-            Dirección <span className="text-green-500">*</span>
+            Direccion <span className="text-green-500">*</span>
           </label>
           <input
             value={form.address}
@@ -548,7 +452,7 @@ export default function CreateSuppliersModal({ isOpen, onClose, onSave, title = 
           </label>
           <input
             value={form.contactName}
-            onChange={(e) => update("contactName", sanitizeContact(e.target.value))}
+            onChange={(e) => update("contactName", sanitizeSupplierContact(e.target.value))}
             onBlur={() => validateAndSet("contactName", form)}
             placeholder="Nombre del contacto"
             className="w-full px-2 py-1 border rounded-md"
@@ -581,7 +485,7 @@ export default function CreateSuppliersModal({ isOpen, onClose, onSave, title = 
             <input
               ref={fileRef}
               type="file"
-              accept="image/*"
+              accept="image/jpeg,image/jpg,image/png,image/webp"
               className="hidden"
               onChange={handleFile}
               onBlur={() => validateAndSet("image", form)}
@@ -591,22 +495,18 @@ export default function CreateSuppliersModal({ isOpen, onClose, onSave, title = 
         </div>
 
         <div className="col-span-2">
-          <label className="block text-sm font-medium mb-1">Calificación</label>
+          <label className="block text-sm font-medium mb-1">Calificacion</label>
           <DecimalStarRating
-            value={sanitizeRating(form.rating)}
-            onChange={(v) => update("rating", v)}
+            value={sanitizeSupplierRating(form.rating)}
+            onChange={(value) => update("rating", value)}
             disabled={saving}
             step={0.1}
           />
         </div>
 
-        {/* PRODUCTOS ASOCIADOS */}
         <div className="col-span-2 mt-4">
-          <label className="block text-sm font-medium mb-2">
-            Productos Asociados
-          </label>
-          
-          {/* Buscador de productos */}
+          <label className="block text-sm font-medium mb-2">Productos Asociados</label>
+
           <div className="relative" ref={dropdownRef}>
             <input
               type="text"
@@ -618,7 +518,6 @@ export default function CreateSuppliersModal({ isOpen, onClose, onSave, title = 
               }}
               onFocus={() => {
                 setDropdownOpen(true);
-                // Si no hay productos cargados, recargar
                 if (allProducts.length === 0 && !loadingProducts) {
                   setLoadingProducts(true);
                   getProducts({ status: "active", page: 1, limit: 1000 })
@@ -630,8 +529,7 @@ export default function CreateSuppliersModal({ isOpen, onClose, onSave, title = 
               disabled={loadingProducts}
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
             />
-            
-            {/* Mostrar dropdown cuando está abierto */}
+
             {dropdownOpen && (
               <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto z-50">
                 {loadingProducts ? (
@@ -658,7 +556,6 @@ export default function CreateSuppliersModal({ isOpen, onClose, onSave, title = 
             )}
           </div>
 
-          {/* Lista de productos asociados */}
           {supplierProducts.length > 0 && (
             <div className="mt-3 space-y-2">
               {supplierProducts.map((product) => (
@@ -674,7 +571,9 @@ export default function CreateSuppliersModal({ isOpen, onClose, onSave, title = 
                     <input
                       type="number"
                       value={product.precioUnitario}
-                      onChange={(e) => handleUpdateProductPrice(product.productoId, Number(e.target.value))}
+                      onChange={(e) =>
+                        handleUpdateProductPrice(product.productoId, Number(e.target.value))
+                      }
                       className="w-24 px-2 py-1 text-sm border border-gray-300 rounded"
                       min={0}
                       step={0.01}
@@ -697,7 +596,7 @@ export default function CreateSuppliersModal({ isOpen, onClose, onSave, title = 
 
           {supplierProducts.length === 0 && (
             <p className="text-xs text-gray-500 mt-2">
-              No hay productos asociados. Puede agregar productos para filtrarlos en órdenes de compra.
+              No hay productos asociados. Puede agregar productos para filtrarlos en ordenes de compra.
             </p>
           )}
         </div>
@@ -705,4 +604,3 @@ export default function CreateSuppliersModal({ isOpen, onClose, onSave, title = 
     </Modal>
   );
 }
-

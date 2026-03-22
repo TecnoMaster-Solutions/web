@@ -32,7 +32,7 @@ export type AuthProfile = AuthIdentityLike;
 type ErrorWithMessage = {
   response?: {
     data?: {
-      message?: string;
+      message?: string | string[];
     };
   };
 };
@@ -79,5 +79,16 @@ export function normalizeRoleName(role?: string | null): string {
 
 export function getApiErrorMessage(error: unknown, fallback: string): string {
   const candidate = (error as ErrorWithMessage | null)?.response?.data?.message;
-  return typeof candidate === "string" && candidate.trim() ? candidate : fallback;
+  if (typeof candidate === "string" && candidate.trim()) {
+    return candidate;
+  }
+
+  if (Array.isArray(candidate)) {
+    const firstMessage = candidate.find(
+      (message): message is string => typeof message === "string" && message.trim().length > 0
+    );
+    if (firstMessage) return firstMessage;
+  }
+
+  return fallback;
 }

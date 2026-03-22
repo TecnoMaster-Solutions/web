@@ -36,6 +36,7 @@ type Row = {
   clienteId?: number;
   servicio: string;
   serviceId?: number;
+  technicians: number[];
   tipo: string;
   fecha: string;
   direccion: string;
@@ -64,6 +65,21 @@ type AuthEntity = {
 type ServiceRequestRowLike = ServiceRequestDTO & {
   status?: string | null;
   address?: string | null;
+  technicianid?: number | null;
+  technicianId?: number | null;
+  technician?: { technicianid?: number | null; id?: number | null } | null;
+  technicians?: Array<{
+    technicianid?: number | null;
+    technicianId?: number | null;
+    id?: number | null;
+  }> | null;
+  techniciansMap?: Array<{
+    technicianId?: number | null;
+    technician?: {
+      technicianid?: number | null;
+      id?: number | null;
+    } | null;
+  }> | null;
   customer?: (ServiceRequestDTO["customer"] & {
     id?: number | null;
   }) | null;
@@ -174,6 +190,41 @@ function tipoToBackend(tipo?: string | null) {
   return "MANTENIMIENTO";
 }
 
+function extractTechnicianIds(request: ServiceRequestRowLike): number[] {
+  const direct = [
+    request?.technicianid,
+    request?.technicianId,
+    request?.technician?.technicianid,
+    request?.technician?.id,
+  ]
+    .map((value) => toPositiveId(value))
+    .filter((value): value is number => value != null);
+
+  const fromList = (request?.technicians ?? [])
+    .map((tech) => {
+      const row = tech as {
+        technicianid?: number | null;
+        technicianId?: number | null;
+        id?: number | null;
+      };
+      return toPositiveId(row?.technicianid ?? row?.technicianId ?? row?.id);
+    })
+    .filter((value): value is number => value != null);
+
+  const fromMap = (request?.techniciansMap ?? [])
+    .map((entry) => {
+      const technician = entry?.technician as {
+        technicianid?: number | null;
+        technicianId?: number | null;
+        id?: number | null;
+      } | null;
+      return toPositiveId(entry?.technicianId ?? technician?.technicianid ?? technician?.technicianId ?? technician?.id);
+    })
+    .filter((value): value is number => value != null);
+
+  return Array.from(new Set([...direct, ...fromList, ...fromMap]));
+}
+
 function toRow(r: ServiceRequestDTO): Row {
   const anyR = r as ServiceRequestRowLike;
   const id = Number(anyR?.serviceRequestId ?? anyR?.servicerequestid ?? anyR?.id ?? 0);
@@ -188,6 +239,7 @@ function toRow(r: ServiceRequestDTO): Row {
     clienteId: toPositiveId(anyR?.clientId ?? anyR?.customer?.customerid ?? anyR?.customer?.id) ?? undefined,
     servicio: String(anyR?.service?.name ?? anyR?.service?.servicename ?? "-"),
     serviceId: toPositiveId(anyR?.service?.serviceid ?? anyR?.serviceId ?? anyR?.service?.id) ?? undefined,
+    technicians: extractTechnicianIds(anyR),
     tipo: mapTipo(anyR?.serviceType ?? anyR?.servicetype ?? null),
     fecha: formatDate(anyR?.createdAt ?? anyR?.createdat ?? null),
     direccion: String(anyR?.direccion ?? anyR?.address ?? anyR?.customer?.customercity ?? "-"),
@@ -421,6 +473,12 @@ export default function ServiceRequestsClientsPage() {
       if ((endParts.date ?? startParts.date) && endParts.time) {
         payload.scheduledEndAt = buildScheduledAt(endParts.date ?? startParts.date, endParts.time, null);
       }
+
+      payload.technicians = Array.isArray(values.technicians)
+        ? values.technicians
+        : Array.isArray(selected.technicians)
+        ? selected.technicians
+        : [];
 
       await updateServiceRequest(selected.id, payload);
       setOpenEdit(false);
@@ -763,22 +821,22 @@ export default function ServiceRequestsClientsPage() {
                     null,
                   )
                 : null,
-            scheduledEndAt:
-              splitDateTime(selected.programadaEnd ?? null).date &&
-              splitDateTime(selected.programadaEnd ?? null).time
-                ? buildScheduledAt(
+             scheduledEndAt:
+               splitDateTime(selected.programadaEnd ?? null).date &&
+               splitDateTime(selected.programadaEnd ?? null).time
+                 ? buildScheduledAt(
                     splitDateTime(selected.programadaEnd ?? null).date,
                     splitDateTime(selected.programadaEnd ?? null).time,
                     null,
                   )
                 : null,
-            estado: selected.stateId ? String(selected.stateId) : undefined,
-            stateId: selected.stateId,
-            technicians: [],
-          }}
-          servicios={serviceOptions}
-          clientes={customerOptions}
-          onSave={handleUpdate}
+             estado: selected.stateId ? String(selected.stateId) : undefined,
+             stateId: selected.stateId,
+             technicians: selected.technicians ?? [],
+           }}
+           servicios={serviceOptions}
+           clientes={customerOptions}
+           onSave={handleUpdate}
           title="Editar Solicitud"
         />
       )}

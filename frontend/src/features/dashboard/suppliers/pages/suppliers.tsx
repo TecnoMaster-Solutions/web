@@ -135,7 +135,7 @@ export default function SuppliersPage() {
       render: (r) => (
         <span
           className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-            r.status === "Activo" ? "text-green-600" : "text-green-600"
+            r.status === "Activo" ? "text-green-600" : "text-red-600"
           }`}
         >
           {r.status}
@@ -229,7 +229,6 @@ export default function SuppliersPage() {
       setOpenCreate(false);
       showSuccess("Proveedor creado correctamente.");
     } catch (e: unknown) {
-      showError(getErrorMessage(e));
       throw e;
     } finally {
       setActionLoading(false);
@@ -267,7 +266,6 @@ export default function SuppliersPage() {
       setOpenEdit(false);
       showSuccess("Proveedor actualizado correctamente.");
     } catch (e: unknown) {
-      showError(getErrorMessage(e));
       throw e;
     } finally {
       setActionLoading(false);
