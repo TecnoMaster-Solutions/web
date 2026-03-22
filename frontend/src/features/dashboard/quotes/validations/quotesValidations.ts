@@ -13,7 +13,6 @@ type ClientDraftInput = {
 };
 
 export type QuoteFormErrors = Partial<{
-  client: string;
   serviceType: string;
   viaticos: string;
   servicios: string;
@@ -47,24 +46,6 @@ export function validateObservation(observation: string): string | undefined {
   if (text.length > QUOTE_OBSERVATION_MAX) {
     return `La observacion no puede superar ${QUOTE_OBSERVATION_MAX} caracteres.`;
   }
-  return undefined;
-}
-
-function validateClient(ctx: QuoteValidationContext): string | undefined {
-  if (ctx.hasServiceRequest) return undefined;
-  if (!ctx.createClientInlineEnabled) {
-    return "Debes asociar una solicitud o crear un cliente para la cotizacion.";
-  }
-
-  const { documento, nombre, telefono, correo } = ctx.clientDraft;
-  if (!String(documento || "").trim()) return "El documento del cliente es obligatorio.";
-  if (!String(nombre || "").trim()) return "El nombre del cliente es obligatorio.";
-  if (!String(telefono || "").trim()) return "El telefono del cliente es obligatorio.";
-
-  const email = String(correo || "").trim();
-  if (!email) return "El correo del cliente es obligatorio.";
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return "El correo del cliente no es valido.";
-
   return undefined;
 }
 
@@ -152,8 +133,6 @@ export function validateQuoteField(
   key: keyof QuoteFormErrors,
   ctx: QuoteValidationContext,
 ): string | undefined {
-  if (key === "client") return validateClient(ctx);
-
   if (key === "serviceType") {
     return String(ctx.servicetype || "").trim()
       ? undefined
@@ -183,9 +162,6 @@ export function validateQuoteField(
 
 export function validateQuoteForm(ctx: QuoteValidationContext): QuoteFormErrors {
   const errors: QuoteFormErrors = {};
-
-  const clientError = validateClient(ctx);
-  if (clientError) errors.client = clientError;
 
   if (!String(ctx.servicetype || "").trim()) {
     errors.serviceType = "Selecciona el tipo de servicio.";

@@ -653,7 +653,6 @@ export default function RegisterQuoteForm({ onSave }: Props) {
 
   const focusFirstError = useCallback((currentErrors: QuoteFormErrors) => {
     const order: Array<keyof QuoteFormErrors> = [
-      "client",
       "serviceType",
       "viaticos",
       "servicios",
@@ -1006,7 +1005,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
 
     // Preparar el payload según la especificación del endpoint
     let directCustomerId: number | undefined;
-    if (!form.serviceRequestId) {
+    if (!form.serviceRequestId && createNewClientEnabled && hasRequiredNewClientData) {
       try {
         directCustomerId = await createCustomerForDirectQuote();
       } catch (error) {
@@ -1118,10 +1117,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
   const canSubmit =
     !!form.servicetype &&
     form.details.length > 0 &&
-    serviceLines.length > 0 &&
-    (form.serviceRequestId
-      ? true
-      : createNewClientEnabled && hasRequiredNewClientData);
+    serviceLines.length > 0;
 
   return (
     <form
@@ -1136,7 +1132,6 @@ export default function RegisterQuoteForm({ onSave }: Props) {
         >
           <strong className="mb-1 block">Hay errores en el formulario:</strong>
           <ul className="list-disc space-y-1 pl-5">
-            {errors.client && <li>{errors.client}</li>}
             {errors.serviceType && <li>{errors.serviceType}</li>}
             {errors.viaticos && <li>{errors.viaticos}</li>}
             {errors.servicios && <li>{errors.servicios}</li>}
@@ -1183,7 +1178,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
 
       {/* INFO AUTOMÁTICA DEL SERVICE REQUEST */}
       {selectedServiceRequest && (
-        <section id="field-client" className="rounded-lg border bg-white shadow-sm">
+        <section className="rounded-lg border bg-white shadow-sm">
           <header className="border-b px-3 py-2.5">
             <h3 className="text-sm font-semibold text-gray-800">
               Información de la solicitud seleccionada
@@ -1276,7 +1271,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
 
       {/* CLIENTE NUEVO (solo si NO hay solicitud seleccionada) */}
       {!selectedServiceRequest && (
-        <section id="field-client" className="rounded-lg border bg-white shadow-sm">
+        <section className="rounded-lg border bg-white shadow-sm">
           <header className="border-b px-3 py-2.5 flex items-center justify-between gap-3">
             <h3 className="text-sm font-semibold text-gray-800">Cliente</h3>
           </header>
@@ -1289,15 +1284,6 @@ export default function RegisterQuoteForm({ onSave }: Props) {
                 onChange={(e) => {
                   const checked = e.target.checked;
                   setCreateNewClientEnabled(checked);
-                  if (submitAttempted) {
-                    setErrors((prev) => ({
-                      ...prev,
-                      client: validateQuoteField("client", {
-                        ...validationContext,
-                        createClientInlineEnabled: checked,
-                      }),
-                    }));
-                  }
                 }}
               />
               Crear cliente nuevo
@@ -1329,7 +1315,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
                   onChange={(e) =>
                     setClientForm((p) => ({ ...p, documento: e.target.value }))
                   }
-                  className={`h-9 w-full rounded-md border px-2.5 ${showFieldError("client") ? errorRing : ""}`}
+                  className="h-9 w-full rounded-md border px-2.5"
                 />
               </div>
 
@@ -1340,7 +1326,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
                   onChange={(e) =>
                     setClientForm((p) => ({ ...p, nombre: e.target.value }))
                   }
-                  className={`h-9 w-full rounded-md border px-2.5 ${showFieldError("client") ? errorRing : ""}`}
+                  className="h-9 w-full rounded-md border px-2.5"
                 />
               </div>
 
@@ -1362,7 +1348,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
                   onChange={(e) =>
                     setClientForm((p) => ({ ...p, telefono: e.target.value }))
                   }
-                  className={`h-9 w-full rounded-md border px-2.5 ${showFieldError("client") ? errorRing : ""}`}
+                  className="h-9 w-full rounded-md border px-2.5"
                 />
               </div>
 
@@ -1374,7 +1360,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
                   onChange={(e) =>
                     setClientForm((p) => ({ ...p, correo: e.target.value }))
                   }
-                  className={`h-9 w-full rounded-md border px-2.5 ${showFieldError("client") ? errorRing : ""}`}
+                  className="h-9 w-full rounded-md border px-2.5"
                 />
               </div>
             </div>
@@ -1382,9 +1368,6 @@ export default function RegisterQuoteForm({ onSave }: Props) {
             <div className="text-sm text-blue-800 bg-blue-50 border border-blue-200 rounded p-3">
               Esta cotización se guardará sin cliente asociado.
             </div>
-          )}
-          {showFieldError("client") && errors.client && (
-            <p className={errorText}>{errors.client}</p>
           )}
           </div>
         </section>
