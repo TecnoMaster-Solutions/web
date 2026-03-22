@@ -28,6 +28,15 @@ type SaleState =
   | { kind: "done"; sale: SalePaymentStatusResponse }
   | { kind: "error"; message: string };
 
+function mapMercadoPagoStatusToSaleStatus(
+  status?: string | null
+): SalePaymentStatusResponse["status"] {
+  const normalized = String(status ?? "").trim().toLowerCase();
+  if (normalized === "approved") return "PAID";
+  if (normalized === "rejected" || normalized === "cancelled") return "REJECTED";
+  return "PENDING";
+}
+
 export default function PaymentSuccessPageContent() {
   const searchParams = useSearchParams();
   const [verifyState, setVerifyState] = useState<VerifyState>({ kind: "idle" });
@@ -98,6 +107,49 @@ export default function PaymentSuccessPageContent() {
         }
       } catch (error) {
         if (cancelled) return;
+        if (
+          error instanceof Error &&
+          error.message === "NO_REFRESH_TOKEN" &&
+          paymentId
+        ) {
+          try {
+            const verify = await verifyMercadoPagoPayment(paymentId);
+            if (cancelled) return;
+
+            const inferredStatus = mapMercadoPagoStatusToSaleStatus(
+              typeof verify.status === "string" ? verify.status : null
+            );
+
+            setSaleState({
+              kind: "done",
+              sale: {
+                saleId,
+                status: inferredStatus,
+                totalAmount: 0,
+                currency: "COP",
+                mpPreferenceId: null,
+                mpPaymentId: paymentId,
+                externalReference:
+                  (typeof verify.externalReference === "string"
+                    ? verify.externalReference
+                    : null) ?? externalReference,
+                rawSaleStatus:
+                  typeof verify.status === "string" ? verify.status : null,
+                mpPaymentStatus:
+                  typeof verify.status === "string" ? verify.status : null,
+              },
+            });
+
+            if (inferredStatus !== "PAID" && attempts < maxAttempts) {
+              setTimeout(() => {
+                if (!cancelled) void poll();
+              }, 2000);
+            }
+            return;
+          } catch {
+            // continua al manejo de error normal
+          }
+        }
         const message =
           error instanceof Error
             ? error.message
@@ -111,7 +163,7 @@ export default function PaymentSuccessPageContent() {
     return () => {
       cancelled = true;
     };
-  }, [verifyState]);
+  }, [verifyState, paymentId, externalReference]);
 
   const ui = useMemo(() => {
     if (saleState.kind === "done") {

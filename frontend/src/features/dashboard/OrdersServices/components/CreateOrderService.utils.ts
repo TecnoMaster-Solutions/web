@@ -456,7 +456,8 @@ export function normalizeQuote(q: QuoteLike): QuoteNormalized {
     .map((p: any) => {
       const productid = pickNumber(
         p?.productid,
-        p?.id,
+        p?.productId,
+        p?.product_id,
         p?.product?.productid,
         p?.product?.id,
         p?.products?.productid,

@@ -21,6 +21,56 @@ function asList(payload: unknown): LookupRecord[] {
   return [];
 }
 
+function getMeta(payload: unknown): { page: number; totalPages: number } | null {
+  const source = payload as { meta?: { page?: unknown; totalPages?: unknown } } | null | undefined;
+  const page = Number(source?.meta?.page);
+  const totalPages = Number(source?.meta?.totalPages);
+  if (!Number.isFinite(page) || !Number.isFinite(totalPages)) return null;
+  return { page, totalPages };
+}
+
+function dedupeByProductId(list: LookupRecord[]) {
+  const byId = new Map<number, LookupRecord>();
+  for (const item of list) {
+    const id = Number(item.productid ?? item.id);
+    if (!Number.isFinite(id) || id <= 0) continue;
+    if (!byId.has(id)) byId.set(id, item);
+  }
+  return Array.from(byId.values());
+}
+
+async function fetchAllProducts(signal: AbortSignal): Promise<LookupRecord[]> {
+  const limit = 200;
+  const maxPages = 200;
+  const all: LookupRecord[] = [];
+  let page = 1;
+
+  while (page <= maxPages) {
+    const res = await api.get("/products", {
+      signal,
+      params: {
+        page,
+        limit,
+        status: "all",
+      },
+    });
+    const chunk = asList(res.data);
+    all.push(...chunk);
+
+    const meta = getMeta(res.data);
+    if (meta) {
+      if (meta.page >= meta.totalPages) break;
+      page += 1;
+      continue;
+    }
+
+    if (chunk.length < limit) break;
+    page += 1;
+  }
+
+  return dedupeByProductId(all);
+}
+
 function pickErrorMessage(e: unknown) {
   const err = e as { response?: { data?: { message?: string } }; message?: string } | null;
   return err?.response?.data?.message || err?.message || "Error cargando datos.";
@@ -85,7 +135,7 @@ export function useOrdersServicesLookups() {
         params: { includeRelations: true },
       }),
       api.get("/technicians", { signal: controller.signal }),
-      api.get("/products", { signal: controller.signal }),
+      fetchAllProducts(controller.signal),
       api.get("/services", { signal: controller.signal }),
       api.get("/services/types", { signal: controller.signal }),
       api.get("/service-requests/states/all", { signal: controller.signal }),
@@ -110,7 +160,7 @@ export function useOrdersServicesLookups() {
     }
 
     const pRes = reqs[2];
-    if (pRes.status === "fulfilled") setProducts(asList(pRes.value.data));
+    if (pRes.status === "fulfilled") setProducts(pRes.value);
     else {
       setProducts([]);
       failed.push("productos");

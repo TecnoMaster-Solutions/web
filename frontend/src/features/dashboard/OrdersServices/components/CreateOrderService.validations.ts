@@ -1,4 +1,4 @@
-import { isAllowedDate, isAllowedTime, parseYMD, timeToMinutes } from "./CreateOrderService.utils";
+import { isAllowedDate, isAllowedTime, normalizeText, parseYMD, timeToMinutes } from "./CreateOrderService.utils";
 
 export const DESC_MIN = 5;
 export const DESC_MAX = 500;
@@ -17,9 +17,9 @@ export type OrderServiceFormErrors = Partial<{
 }>;
 
 type ServiceLineItemInput = { nombre: string; precio: number; tipoId: number };
-type MaterialLineItemInput = { nombre: string; cantidad: number };
+type MaterialLineItemInput = { nombre: string; cantidad: number; productid?: number };
 type ServiceOptionInput = { name: string; typeofserviceid: number };
-type ProductOptionInput = { productname: string };
+type ProductOptionInput = { productid: number; productname: string };
 
 type ValidationContext = {
   clientId: number | string;
@@ -124,15 +124,31 @@ function collectMaterialErrors(
   collectAll: boolean
 ): string | undefined {
   const errors: string[] = [];
+  const catalogIds = new Set(productsCatalog.map((p) => Number(p.productid)).filter((id) => Number.isFinite(id) && id > 0));
+  const catalogNames = new Set(productsCatalog.map((p) => normalizeText(p.productname)).filter(Boolean));
 
   if (!productsCatalog.length) errors.push("No hay productos cargados desde la BD.");
   if (!materiales.length) errors.push("Debes anadir al menos un producto (material).");
 
-  const dupMat =
-    materiales.length > 1 && new Set(materiales.map((m) => String(m.nombre || "").trim())).size !== materiales.length;
+  const materialKeys = materiales
+    .map((m) => {
+      const pid = Number(m.productid);
+      if (Number.isFinite(pid) && pid > 0 && catalogIds.has(pid)) return `id:${pid}`;
+      const name = normalizeText(m.nombre);
+      return name ? `name:${name}` : "";
+    })
+    .filter(Boolean);
+  const dupMat = materialKeys.length > 1 && new Set(materialKeys).size !== materialKeys.length;
   if (dupMat) errors.push("No puedes repetir el mismo producto.");
 
-  if (materiales.some((m) => !productsCatalog.some((p) => p.productname === m.nombre))) {
+  if (
+    materiales.some((m) => {
+      const pid = Number(m.productid);
+      if (Number.isFinite(pid) && pid > 0 && catalogIds.has(pid)) return false;
+      const name = normalizeText(m.nombre);
+      return !name || !catalogNames.has(name);
+    })
+  ) {
     errors.push("Hay productos invalidos. Vuelve a seleccionarlos.");
   }
 
