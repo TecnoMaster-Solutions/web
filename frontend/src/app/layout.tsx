@@ -3,8 +3,25 @@ import type { ReactNode } from 'react';
 import Script from 'next/script';
 import AppProviders from './providers';
 
+function resolveMetadataBase() {
+  const publicUrl =
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.RENDER_EXTERNAL_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined);
+
+  if (!publicUrl) {
+    return undefined;
+  }
+
+  try {
+    return new URL(publicUrl);
+  } catch {
+    return undefined;
+  }
+}
+
 export const metadata = {
-  metadataBase: new URL('http://localhost:3000'),
+  metadataBase: resolveMetadataBase(),
   title: 'TecnoMaster',
   description: 'Dashboard TecnoMaster',
   openGraph: { images: ['/assets/imgs/favico.ico'] },
