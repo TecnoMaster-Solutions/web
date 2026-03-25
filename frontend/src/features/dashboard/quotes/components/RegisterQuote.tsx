@@ -185,6 +185,11 @@ export default function RegisterQuoteForm({ onSave }: Props) {
   const [selectedServiceRequest, setSelectedServiceRequest] =
     useState<ServiceRequestFromApi | null>(null);
   const [isLoadingRequests, setIsLoadingRequests] = useState(true);
+  const [serviceRequestQuery, setServiceRequestQuery] = useState("");
+  const [serviceRequestOpen, setServiceRequestOpen] = useState(false);
+  const [serviceRequestActiveIndex, setServiceRequestActiveIndex] = useState(0);
+  const serviceRequestBoxRef = useRef<HTMLDivElement>(null);
+  const serviceRequestInputRef = useRef<HTMLInputElement>(null);
 
   /* ================================
    * CLIENTE NUEVO (solo si no hay solicitud)
@@ -487,6 +492,78 @@ export default function RegisterQuoteForm({ onSave }: Props) {
     // si hay solicitud, no necesitamos crear cliente aquí
     setCreateNewClientEnabled(false);
     setErrors((prev) => ({ ...prev, client: undefined, serviceType: undefined }));
+  };
+
+  useEffect(() => {
+    if (!serviceRequestOpen) return;
+    const onDown = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (!serviceRequestBoxRef.current) return;
+      if (!serviceRequestBoxRef.current.contains(target)) {
+        setServiceRequestOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [serviceRequestOpen]);
+
+  const serviceRequestOptions = useMemo(
+    () =>
+      serviceRequests.map((request) => {
+        const customerName = request.customer?.users
+          ? `${request.customer.users.name} ${request.customer.users.lastname}`.trim()
+          : "Cliente no disponible";
+        return {
+          id: request.serviceRequestId,
+          label: `#${request.serviceRequestId} - ${customerName} - ${request.serviceType}`,
+          request,
+        };
+      }),
+    [serviceRequests],
+  );
+
+  const selectedServiceRequestOption = useMemo(() => {
+    if (!form.serviceRequestId) return null;
+    return (
+      serviceRequestOptions.find(
+        (option) => option.id === Number(form.serviceRequestId),
+      ) ?? null
+    );
+  }, [form.serviceRequestId, serviceRequestOptions]);
+
+  const serviceRequestSearchOptions = useMemo(() => {
+    const query = normalizeText(serviceRequestQuery);
+    if (!query) return serviceRequestOptions.slice(0, 10);
+    const scored = serviceRequestOptions
+      .map((option) => {
+        const label = normalizeText(option.label);
+        const idLabel = String(option.id);
+        let score = 0;
+        if (idLabel.startsWith(query)) score += 3;
+        if (label.includes(query)) score += 2;
+        if (label.startsWith(query)) score += 1;
+        return { option, score };
+      })
+      .filter((item) => item.score > 0)
+      .sort((a, b) => b.score - a.score || b.option.id - a.option.id);
+    return scored.slice(0, 10).map((item) => item.option);
+  }, [serviceRequestOptions, serviceRequestQuery]);
+
+  useEffect(() => {
+    setServiceRequestActiveIndex(0);
+  }, [serviceRequestOpen, serviceRequestQuery]);
+
+  const pickServiceRequest = (serviceRequestId: number) => {
+    handleServiceRequestChange(serviceRequestId);
+    setServiceRequestQuery("");
+    setServiceRequestOpen(false);
+  };
+
+  const clearServiceRequestSelection = () => {
+    handleServiceRequestChange(0);
+    setServiceRequestQuery("");
+    setServiceRequestOpen(false);
+    serviceRequestInputRef.current?.focus();
   };
 
   /* ================================
@@ -1084,6 +1161,8 @@ export default function RegisterQuoteForm({ onSave }: Props) {
         correo: "",
       });
       setServiceLines([]);
+      setServiceRequestQuery("");
+      setServiceRequestOpen(false);
     } catch (error) {
       const axiosError = error as {
         response?: { data?: { message?: string | string[] } };
@@ -1139,7 +1218,7 @@ export default function RegisterQuoteForm({ onSave }: Props) {
             {errors.observation && <li>{errors.observation}</li>}
           </ul>
         </div>
-      )}
+        )}
 
       {/* SOLICITUD DE SERVICIO (OPCIONAL) */}
       <section className="rounded-lg border bg-white shadow-sm">
@@ -1151,28 +1230,112 @@ export default function RegisterQuoteForm({ onSave }: Props) {
         <label className="block mb-1 font-medium">
           Solicitud de servicio (opcional)
         </label>
-        <select
-          value={form.serviceRequestId}
-          onChange={(e) => handleServiceRequestChange(Number(e.target.value))}
-          className="h-9 w-full rounded-md border px-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="">Sin solicitud (cotización directa)</option>
-          {serviceRequests.map((request) => {
-            const customerLabel = request.customer?.users
-              ? `${request.customer.users.name} ${request.customer.users.lastname}`
-              : "Cliente no disponible";
-
-            return (
-              <option
-                key={request.serviceRequestId}
-                value={request.serviceRequestId}
-              >
-                #{request.serviceRequestId} - {customerLabel} -{" "}
-                {request.serviceType}
-              </option>
-            );
-          })}
-        </select>
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <span className="text-xs text-gray-500">
+            {serviceRequests.length} disponibles
+          </span>
+          {!selectedServiceRequest && (
+            <button
+              type="button"
+              onClick={clearServiceRequestSelection}
+              className="text-xs text-blue-700 underline underline-offset-2"
+            >
+              Continuar sin solicitud
+            </button>
+          )}
+        </div>
+        {selectedServiceRequestOption && (
+          <div className="mb-2 flex items-center justify-between gap-2 rounded-lg border bg-gray-50 px-3 py-2">
+            <div className="min-w-0">
+              <div className="truncate text-sm font-medium text-gray-900">
+                {selectedServiceRequestOption.label}
+              </div>
+              <div className="text-xs text-gray-500">
+                Solicitud seleccionada para precargar la cotizacion
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={clearServiceRequestSelection}
+              className="h-8 rounded-md border bg-white px-2.5 text-xs hover:bg-gray-50"
+            >
+              Quitar
+            </button>
+          </div>
+        )}
+        <div ref={serviceRequestBoxRef} className="relative mb-2">
+          <input
+            id="field-service-request-search"
+            ref={serviceRequestInputRef}
+            value={serviceRequestQuery}
+            onChange={(e) => {
+              setServiceRequestQuery(e.target.value);
+              setServiceRequestOpen(true);
+            }}
+            onFocus={() => setServiceRequestOpen(true)}
+            onKeyDown={(e) => {
+              if (!serviceRequestOpen) return;
+              if (e.key === "ArrowDown") {
+                e.preventDefault();
+                setServiceRequestActiveIndex((index) =>
+                  Math.min(index + 1, Math.max(0, serviceRequestSearchOptions.length - 1)),
+                );
+              } else if (e.key === "ArrowUp") {
+                e.preventDefault();
+                setServiceRequestActiveIndex((index) => Math.max(index - 1, 0));
+              } else if (e.key === "Enter") {
+                if (serviceRequestSearchOptions[serviceRequestActiveIndex]) {
+                  e.preventDefault();
+                  pickServiceRequest(serviceRequestSearchOptions[serviceRequestActiveIndex].id);
+                }
+              } else if (e.key === "Escape") {
+                setServiceRequestOpen(false);
+              }
+            }}
+            placeholder={
+              serviceRequests.length
+                ? "Buscar por #ID, cliente o tipo de servicio..."
+                : "No hay solicitudes disponibles"
+            }
+            className="h-9 w-full rounded-md border px-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={serviceRequests.length === 0}
+            aria-controls="service-request-suggest"
+            aria-autocomplete="list"
+          />
+          {serviceRequestOpen && serviceRequests.length > 0 && (
+            <div
+              id="service-request-suggest"
+              className="absolute z-20 mt-2 w-full overflow-hidden rounded-lg border bg-white shadow-sm"
+            >
+              {serviceRequestSearchOptions.length === 0 ? (
+                <div className="px-3 py-2 text-xs text-gray-500">
+                  No hay coincidencias.
+                </div>
+              ) : (
+                <ul className="max-h-60 overflow-auto">
+                  {serviceRequestSearchOptions.map((option, index) => (
+                    <li key={option.id}>
+                      <button
+                        type="button"
+                        onMouseDown={(ev) => ev.preventDefault()}
+                        onClick={() => pickServiceRequest(option.id)}
+                        onMouseEnter={() => setServiceRequestActiveIndex(index)}
+                        className={`w-full px-3 py-2 text-left text-sm ${index === serviceRequestActiveIndex ? "bg-gray-100" : "bg-white"}`}
+                      >
+                        <span className="block truncate font-medium">
+                          {option.label}
+                        </span>
+                        <span className="block text-xs text-gray-500">
+                          {option.request.description || "Sin descripcion"}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+        </div>
         </div>
       </section>
 
@@ -1761,3 +1924,4 @@ export default function RegisterQuoteForm({ onSave }: Props) {
     </form>
   );
 }
+
