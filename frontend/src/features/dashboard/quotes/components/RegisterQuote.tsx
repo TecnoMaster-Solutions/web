@@ -1224,7 +1224,6 @@ export default function RegisterQuoteForm({ onSave }: Props) {
       <section className="rounded-lg border bg-white shadow-sm">
         <header className="border-b px-3 py-2.5">
           <h3 className="text-sm font-semibold text-gray-800">Solicitud de servicio</h3>
-          <p className="text-xs text-gray-500">Puedes cotizar con o sin solicitud asociada.</p>
         </header>
         <div className="p-3">
         <label className="block mb-1 font-medium">
@@ -1234,15 +1233,6 @@ export default function RegisterQuoteForm({ onSave }: Props) {
           <span className="text-xs text-gray-500">
             {serviceRequests.length} disponibles
           </span>
-          {!selectedServiceRequest && (
-            <button
-              type="button"
-              onClick={clearServiceRequestSelection}
-              className="text-xs text-blue-700 underline underline-offset-2"
-            >
-              Continuar sin solicitud
-            </button>
-          )}
         </div>
         {selectedServiceRequestOption && (
           <div className="mb-2 flex items-center justify-between gap-2 rounded-lg border bg-gray-50 px-3 py-2">
