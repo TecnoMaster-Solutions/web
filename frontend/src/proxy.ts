@@ -23,6 +23,15 @@ function unique(values: Array<string | null | undefined>) {
   return [...new Set(values.filter((value): value is string => Boolean(value)))];
 }
 
+function applySecurityHeaders(response: NextResponse, csp: string) {
+  response.headers.set("Content-Security-Policy", csp);
+  response.headers.set("X-Frame-Options", "DENY");
+  response.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
+  response.headers.set("X-Content-Type-Options", "nosniff");
+  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  return response;
+}
+
 function buildCsp(request: NextRequest, nonce: string) {
   const isDev = process.env.NODE_ENV !== "production";
   const apiOrigin = asOrigin(process.env.NEXT_PUBLIC_API_URL);
@@ -56,7 +65,7 @@ function buildCsp(request: NextRequest, nonce: string) {
   const styleSrc = unique([
     "'self'",
     `'nonce-${nonce}'`,
-    "https:",
+    "https://fonts.googleapis.com",
   ]);
 
   const directives = [
@@ -93,8 +102,15 @@ function buildResponse(request: NextRequest) {
     },
   });
 
-  response.headers.set("Content-Security-Policy", csp);
-  return response;
+  return applySecurityHeaders(response, csp);
+}
+
+function buildRedirectResponse(request: NextRequest, destination: URL) {
+  const nonce = crypto.randomUUID().replace(/-/g, "");
+  const response = NextResponse.redirect(destination);
+  const csp = buildCsp(request, nonce);
+  response.headers.set("x-nonce", nonce);
+  return applySecurityHeaders(response, csp);
 }
 
 export function proxy(request: NextRequest) {
@@ -107,11 +123,11 @@ export function proxy(request: NextRequest) {
   if (isDashboard && !token) {
     const url = new URL("/auth/login", request.url);
     url.searchParams.set("next", pathname);
-    return NextResponse.redirect(url);
+    return buildRedirectResponse(request, url);
   }
 
   if (isPublic && token) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    return buildRedirectResponse(request, new URL("/dashboard", request.url));
   }
 
   return buildResponse(request);
