@@ -65,8 +65,6 @@ export default function PurchasesIndex() {
     search,
     setPage,
     setSearch,
-    dateRange,
-    handleFilterChange,
   } = purchasesHook;
 
   const overlayLoading = loading || saving;
@@ -322,11 +320,6 @@ const columns: Column<IPurchase>[] = useMemo(
             value: search,
             onChange: setSearch,
           }}
-          serverFilters={{
-            filters: { dateRange },
-            onFilterChange: handleFilterChange,
-          }}
-          dateFilterField="createdat"
           onCancel={confirmCancelPurchase}
           onCreate={handleCreate}
           onView={handleView}
