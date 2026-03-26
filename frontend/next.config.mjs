@@ -1,5 +1,3 @@
-import type { NextConfig } from "next";
-
 const isCI = process.env.CI === "true";
 const cspHeader = [
   "default-src 'self'",
@@ -15,7 +13,8 @@ const cspHeader = [
   "upgrade-insecure-requests",
 ].join("; ");
 
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   reactStrictMode: false,
   poweredByHeader: false,
   typescript: {
