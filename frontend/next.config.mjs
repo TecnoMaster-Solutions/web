@@ -1,17 +1,4 @@
 const isCI = process.env.CI === "true";
-const cspHeader = [
-  "default-src 'self'",
-  "base-uri 'self'",
-  "object-src 'none'",
-  "frame-ancestors 'none'",
-  "form-action 'self'",
-  "img-src 'self' data: blob: https:",
-  "font-src 'self' data: https:",
-  "style-src 'self' 'unsafe-inline' https:",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https:",
-  "connect-src 'self' http: https: ws: wss:",
-  "upgrade-insecure-requests",
-].join("; ");
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -36,10 +23,6 @@ const nextConfig = {
       {
         source: "/:path*",
         headers: [
-          {
-            key: "Content-Security-Policy",
-            value: cspHeader,
-          },
           {
             key: "X-Frame-Options",
             value: "DENY",

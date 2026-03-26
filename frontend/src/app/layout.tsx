@@ -1,5 +1,6 @@
 import '@/app/globals.css';
 import type { ReactNode } from 'react';
+import { headers } from 'next/headers';
 import Script from 'next/script';
 import AppProviders from './providers';
 
@@ -33,11 +34,13 @@ export const metadata = {
   },
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const nonce = (await headers()).get('x-nonce') ?? undefined;
+
   return (
     <html lang="es">
       <body>
-        <Script src="/runtime-config.js" strategy="beforeInteractive" />
+        <Script nonce={nonce} src="/runtime-config.js" strategy="beforeInteractive" />
         <AppProviders>{children}</AppProviders>
       </body>
     </html>
