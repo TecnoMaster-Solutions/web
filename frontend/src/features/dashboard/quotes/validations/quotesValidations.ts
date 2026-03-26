@@ -1,86 +1,186 @@
-export interface QuoteErrors {
-  serviceTypes?: string;
-  client?: string;
-  status?: string;
-  description?: string;
-  materials?: string;
-  total?: string;
+import type { QuoteDetailPayload } from "../types/Quote.type";
+
+export const QUOTE_OBSERVATION_MAX = 500;
+
+type ServiceLineItemInput = { nombre: string; precio: number; tipoId: number };
+type ServiceOptionInput = { name: string; typeofserviceid?: number };
+type ProductOptionInput = { productid: number; productname: string };
+type ClientDraftInput = {
+  documento: string;
+  nombre: string;
+  telefono: string;
+  correo: string;
+};
+
+export type QuoteFormErrors = Partial<{
+  serviceType: string;
+  viaticos: string;
+  servicios: string;
+  materiales: string;
+  observation: string;
+}>;
+
+export type QuoteValidationContext = {
+  hasServiceRequest: boolean;
+  createClientInlineEnabled: boolean;
+  clientDraft: ClientDraftInput;
+  servicetype: string;
+  viaticosValue: number;
+  observation: string;
+  serviceLines: ServiceLineItemInput[];
+  servicesCatalog: ServiceOptionInput[];
+  details: QuoteDetailPayload[];
+  productsCatalog: ProductOptionInput[];
+};
+
+const normalizeText = (value: string) =>
+  String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+
+export function validateObservation(observation: string): string | undefined {
+  const text = String(observation || "").trim();
+  if (!text) return undefined;
+  if (text.length > QUOTE_OBSERVATION_MAX) {
+    return `La observacion no puede superar ${QUOTE_OBSERVATION_MAX} caracteres.`;
+  }
+  return undefined;
 }
 
-export type QuoteFormData = {
-  serviceTypes: {
-    mantenimiento: boolean;
-    instalacion: boolean;
-  };
-  client: string;
-  status: string;
-  description: string;
-  materials: Array<{ name: string; subtotal: number }>;
-  total: number | string;
-};
+function collectServiceErrors(
+  serviceLines: ServiceLineItemInput[],
+  servicesCatalog: ServiceOptionInput[],
+  collectAll: boolean,
+): string | undefined {
+  const errors: string[] = [];
 
-export const validateQuoteField = (
-  field: keyof QuoteFormData,
-  value: QuoteFormData[keyof QuoteFormData],
-): string | undefined => {
-  switch (field) {
-    case "client":
-      return String(value ?? "").trim() ? undefined : "El cliente es obligatorio";
+  if (!serviceLines.length) errors.push("Debes anadir al menos un servicio.");
 
-    case "status":
-      if (!value) return "El estado es obligatorio";
-      if (!["Pendiente", "Aprobada", "Rechazada", "Anulada"].includes(String(value))) {
-        return "Estado invalido";
-      }
-      return undefined;
-
-    case "description":
-      return String(value ?? "").trim().length >= 5
-        ? undefined
-        : "La descripcion debe tener al menos 5 caracteres";
-
-    case "materials":
-      return Array.isArray(value) && value.length > 0
-        ? undefined
-        : "Debes añadir al menos un material";
-
-    case "total": {
-      const numericTotal = Number(String(value ?? "").replace(/[^\d.-]/g, ""));
-      if (Number.isNaN(numericTotal) || numericTotal <= 0) {
-        return "El total debe ser mayor que 0";
-      }
-      return undefined;
-    }
-
-    case "serviceTypes": {
-      const serviceTypes = value as QuoteFormData["serviceTypes"];
-      return serviceTypes?.mantenimiento || serviceTypes?.instalacion
-        ? undefined
-        : "Selecciona al menos un tipo de servicio";
-    }
-
-    default:
-      return undefined;
-  }
-};
-
-export const validateQuoteForm = (data: QuoteFormData): QuoteErrors => {
-  const errors: QuoteErrors = {};
-  const fields: Array<keyof QuoteFormData> = [
-    "serviceTypes",
-    "client",
-    "status",
-    "description",
-    "materials",
-    "total",
-  ];
-
-  fields.forEach((field) => {
-    const error = validateQuoteField(field, data[field]);
-    if (error) {
-      errors[field] = error;
-    }
+  const invalid = serviceLines.some((line) => {
+    if (!Number.isFinite(Number(line.tipoId)) || Number(line.tipoId) <= 0) return true;
+    if (!String(line.nombre || "").trim()) return true;
+    return !servicesCatalog.some(
+      (service) =>
+        normalizeText(service.name) === normalizeText(line.nombre) &&
+        Number(service.typeofserviceid) === Number(line.tipoId),
+    );
   });
+  if (invalid) errors.push("Hay servicios invalidos. Vuelve a seleccionarlos.");
+
+  const badPrice = serviceLines.some(
+    (line) => !Number.isFinite(Number(line.precio)) || Number(line.precio) < 0,
+  );
+  if (badPrice) errors.push("Corrige precios de servicios.");
+
+  const duplicate = (() => {
+    const seen = new Set<string>();
+    for (const line of serviceLines) {
+      const key = `${Number(line.tipoId)}::${normalizeText(line.nombre)}`;
+      if (key.endsWith("::")) continue;
+      if (seen.has(key)) return true;
+      seen.add(key);
+    }
+    return false;
+  })();
+  if (duplicate) errors.push("No puedes repetir el mismo servicio dentro del mismo tipo.");
+
+  if (!errors.length) return undefined;
+  return collectAll ? errors.join(" ") : errors[0];
+}
+
+function collectMaterialErrors(
+  details: QuoteDetailPayload[],
+  productsCatalog: ProductOptionInput[],
+  collectAll: boolean,
+): string | undefined {
+  const errors: string[] = [];
+
+  if (!productsCatalog.length) errors.push("No hay productos cargados desde la BD.");
+  if (!details.length) errors.push("Debes anadir al menos un producto.");
+
+  const duplicate =
+    details.length > 1 &&
+    new Set(details.map((detail) => Number(detail.productid || 0))).size !== details.length;
+  if (duplicate) errors.push("No puedes repetir el mismo producto.");
+
+  if (
+    details.some(
+      (detail) =>
+        !Number.isFinite(Number(detail.productid)) ||
+        Number(detail.productid) <= 0 ||
+        !productsCatalog.some((product) => product.productid === Number(detail.productid)),
+    )
+  ) {
+    errors.push("Hay productos invalidos. Vuelve a seleccionarlos.");
+  }
+
+  if (
+    details.some(
+      (detail) =>
+        !Number.isFinite(Number(detail.quantity)) || Number(detail.quantity) < 1,
+    )
+  ) {
+    errors.push("Corrige cantidades de productos (minimo 1).");
+  }
+
+  if (!errors.length) return undefined;
+  return collectAll ? errors.join(" ") : errors[0];
+}
+
+export function validateQuoteField(
+  key: keyof QuoteFormErrors,
+  ctx: QuoteValidationContext,
+): string | undefined {
+  if (key === "serviceType") {
+    return String(ctx.servicetype || "").trim()
+      ? undefined
+      : "Selecciona el tipo de servicio.";
+  }
+
+  if (key === "viaticos") {
+    if (!Number.isFinite(ctx.viaticosValue)) return "Viaticos debe ser un numero valido.";
+    if (ctx.viaticosValue < 0) return "Viaticos no puede ser negativo.";
+    return undefined;
+  }
+
+  if (key === "servicios") {
+    return collectServiceErrors(ctx.serviceLines, ctx.servicesCatalog, false);
+  }
+
+  if (key === "materiales") {
+    return collectMaterialErrors(ctx.details, ctx.productsCatalog, false);
+  }
+
+  if (key === "observation") {
+    return validateObservation(ctx.observation);
+  }
+
+  return undefined;
+}
+
+export function validateQuoteForm(ctx: QuoteValidationContext): QuoteFormErrors {
+  const errors: QuoteFormErrors = {};
+
+  if (!String(ctx.servicetype || "").trim()) {
+    errors.serviceType = "Selecciona el tipo de servicio.";
+  }
+
+  if (!Number.isFinite(ctx.viaticosValue)) {
+    errors.viaticos = "Viaticos debe ser un numero valido.";
+  } else if (ctx.viaticosValue < 0) {
+    errors.viaticos = "Viaticos no puede ser negativo.";
+  }
+
+  const serviceError = collectServiceErrors(ctx.serviceLines, ctx.servicesCatalog, true);
+  if (serviceError) errors.servicios = serviceError;
+
+  const materialsError = collectMaterialErrors(ctx.details, ctx.productsCatalog, true);
+  if (materialsError) errors.materiales = materialsError;
+
+  const observationError = validateObservation(ctx.observation);
+  if (observationError) errors.observation = observationError;
 
   return errors;
-};
+}

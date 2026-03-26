@@ -63,6 +63,12 @@ type UpdateProfilePayload = {
   techniciantypeids?: number[];
 };
 
+type FormErrors = Partial<
+  Record<"name" | "lastname" | "email" | "phone" | "documentnumber", string>
+>;
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export default function ProfileModal({ isOpen, onClose }: Props) {
   const { user, refreshBasicUserData } = useAuth();
   const userId = user?.userid;
@@ -98,6 +104,7 @@ export default function ProfileModal({ isOpen, onClose }: Props) {
     CV: "",
     technicianTypeIds: [],
   });
+  const [errors, setErrors] = useState<FormErrors>({});
 
   const initials = useMemo(() => {
     const n = form.name.trim();
@@ -110,6 +117,57 @@ export default function ProfileModal({ isOpen, onClose }: Props) {
   }, [form.name]);
 
   const displayedAvatar = avatarPreview || form.image;
+
+  const getFieldError = (field: keyof FormErrors, value: string): string => {
+    const trimmedValue = value.trim();
+
+    switch (field) {
+      case "name":
+        return trimmedValue ? "" : "El nombre es obligatorio.";
+      case "lastname":
+        return trimmedValue ? "" : "El apellido es obligatorio.";
+      case "documentnumber":
+        return trimmedValue ? "" : "El número de documento es obligatorio.";
+      case "phone":
+        return trimmedValue ? "" : "El teléfono es obligatorio.";
+      case "email":
+        if (!trimmedValue) return "El correo electrónico es obligatorio.";
+        if (!EMAIL_REGEX.test(trimmedValue)) {
+          return "El formato del correo electrónico es inválido.";
+        }
+        return "";
+      default:
+        return "";
+    }
+  };
+
+  const validateForm = (currentForm: FormState) => {
+    const nextErrors: FormErrors = {
+      name: getFieldError("name", currentForm.name),
+      lastname: getFieldError("lastname", currentForm.lastname),
+      documentnumber: getFieldError("documentnumber", currentForm.documentnumber),
+      phone: getFieldError("phone", currentForm.phone),
+      email: getFieldError("email", currentForm.email),
+    };
+
+    setErrors(nextErrors);
+
+    return Object.values(nextErrors).find(
+      (message): message is string =>
+        typeof message === "string" && message.trim().length > 0
+    );
+  };
+
+  const updateField = (
+    field: "name" | "lastname" | "email" | "phone" | "documentnumber",
+    value: string
+  ) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+    setErrors((prev) => ({
+      ...prev,
+      [field]: getFieldError(field, value),
+    }));
+  };
 
   const resetLocalFiles = () => {
     setAvatarFile(null);
@@ -168,8 +226,10 @@ export default function ProfileModal({ isOpen, onClose }: Props) {
   useEffect(() => {
     if (!isOpen) {
       resetLocalFiles();
+      setErrors({});
       return;
     }
+    setErrors({});
     resetLocalFiles();
     loadUserData();
     loadTechnicianTypes();
@@ -210,6 +270,12 @@ export default function ProfileModal({ isOpen, onClose }: Props) {
   const onSave = async () => {
     if (!userId) return;
 
+    const firstError = validateForm(form);
+    if (firstError) {
+      showError(firstError);
+      return;
+    }
+
     setSaving(true);
 
     try {
@@ -229,17 +295,17 @@ export default function ProfileModal({ isOpen, onClose }: Props) {
       }
 
       const payload: UpdateProfilePayload = {
-        name: form.name,
-        lastname: form.lastname,
-        phone: form.phone,
-        email: form.email,
-        documentnumber: form.documentnumber,
+        name: form.name.trim(),
+        lastname: form.lastname.trim(),
+        phone: form.phone.trim(),
+        email: form.email.trim(),
+        documentnumber: form.documentnumber.trim(),
         image: imageUrl,
       };
 
       if (roleName === "cliente") {
-        payload.customercity = form.customercity;
-        payload.customerzipcode = form.customerzipcode;
+        payload.customercity = form.customercity.trim();
+        payload.customerzipcode = form.customerzipcode.trim();
       }
 
       if (roleName === "tecnico") {
@@ -354,49 +420,70 @@ export default function ProfileModal({ isOpen, onClose }: Props) {
               <label className="block text-sm font-medium mb-1">Nombre</label>
               <input
                 value={form.name}
-                onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-                className="w-full rounded-xl border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-gray-900"
+                onChange={(e) => updateField("name", e.target.value)}
+                className={`w-full rounded-xl border px-3 py-2 focus:ring-2 focus:ring-gray-900 ${
+                  errors.name ? "border-red-500" : "border-gray-300"
+                }`}
               />
+              {errors.name ? (
+                <p className="mt-1 text-sm text-red-600">{errors.name}</p>
+              ) : null}
             </div>
 
             <div>
               <label className="block text-sm font-medium mb-1">Apellido</label>
               <input
                 value={form.lastname}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, lastname: e.target.value }))
-                }
-                className="w-full rounded-xl border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-gray-900"
+                onChange={(e) => updateField("lastname", e.target.value)}
+                className={`w-full rounded-xl border px-3 py-2 focus:ring-2 focus:ring-gray-900 ${
+                  errors.lastname ? "border-red-500" : "border-gray-300"
+                }`}
               />
+              {errors.lastname ? (
+                <p className="mt-1 text-sm text-red-600">{errors.lastname}</p>
+              ) : null}
             </div>
 
             <div>
               <label className="block text-sm font-medium mb-1">Teléfono</label>
               <input
                 value={form.phone}
-                onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
-                className="w-full rounded-xl border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-gray-900"
+                onChange={(e) => updateField("phone", e.target.value)}
+                className={`w-full rounded-xl border px-3 py-2 focus:ring-2 focus:ring-gray-900 ${
+                  errors.phone ? "border-red-500" : "border-gray-300"
+                }`}
               />
+              {errors.phone ? (
+                <p className="mt-1 text-sm text-red-600">{errors.phone}</p>
+              ) : null}
             </div>
 
             <div>
               <label className="block text-sm font-medium mb-1">Documento</label>
               <input
                 value={form.documentnumber}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, documentnumber: e.target.value }))
-                }
-                className="w-full rounded-xl border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-gray-900"
+                onChange={(e) => updateField("documentnumber", e.target.value)}
+                className={`w-full rounded-xl border px-3 py-2 focus:ring-2 focus:ring-gray-900 ${
+                  errors.documentnumber ? "border-red-500" : "border-gray-300"
+                }`}
               />
+              {errors.documentnumber ? (
+                <p className="mt-1 text-sm text-red-600">{errors.documentnumber}</p>
+              ) : null}
             </div>
 
             <div className="sm:col-span-2">
               <label className="block text-sm font-medium mb-1">Correo</label>
               <input
                 value={form.email}
-                onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
-                className="w-full rounded-xl border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-gray-900"
+                onChange={(e) => updateField("email", e.target.value)}
+                className={`w-full rounded-xl border px-3 py-2 focus:ring-2 focus:ring-gray-900 ${
+                  errors.email ? "border-red-500" : "border-gray-300"
+                }`}
               />
+              {errors.email ? (
+                <p className="mt-1 text-sm text-red-600">{errors.email}</p>
+              ) : null}
             </div>
 
             {roleName === "cliente" && (

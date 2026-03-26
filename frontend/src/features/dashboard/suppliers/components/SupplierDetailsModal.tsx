@@ -59,7 +59,7 @@ function StatusBadge({ status }: { status: Supplier["status"] }) {
       className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium border ${
         active
           ? "bg-green-50 text-green-700 border-green-200"
-          : "bg-green-50 text-green-700 border-green-200"
+          : "bg-red-50 text-red-700 border-red-200"
       }`}
     >
       {active ? <BadgeCheck size={12} /> : <BadgeX size={12} />}

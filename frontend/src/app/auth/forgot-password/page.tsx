@@ -88,11 +88,11 @@ export default function ForgotPasswordPage() {
   const emailHasError = !!errors.email && touched.email;
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center px-4 py-10">
+    <div className="min-h-screen bg-[#f6f3f3] flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-md">
         <div className="mb-6 text-center">
           <div className="flex flex-col items-center gap-2">
-            <div className="relative h-16 w-16 rounded-2xl border border-neutral-200 bg-white shadow-sm">
+            <div className="relative h-16 w-16 rounded-2xl border border-[#d9e6dd] bg-white shadow-sm">
               <Image
                 src="/assets/imgs/preview.png"
                 alt="Logo Tecnomaster"
@@ -103,29 +103,30 @@ export default function ForgotPasswordPage() {
             </div>
           </div>
 
-          <h1 className="mt-4 text-2xl font-semibold tracking-tight text-neutral-900">
+          <h1 className="mt-4 text-2xl font-semibold tracking-tight bg-gradient-to-r from-[#04652c] via-[#06a646] to-[#2a9781] bg-clip-text text-transparent">
             Recuperar contrasena
           </h1>
-          <p className="mt-2 text-sm text-neutral-600">
+
+          <p className="mt-2 text-sm text-[#3b5f73]">
             Ingresa tu correo y te enviaremos un enlace para restablecerla.
           </p>
         </div>
 
-        <div className="rounded-2xl border border-neutral-200 bg-white shadow-sm">
+        <div className="rounded-2xl border border-[#d9e6dd] bg-white shadow-sm">
           <form noValidate onSubmit={handleSubmit} className="p-6">
             <label className="block text-sm font-medium text-neutral-800 mb-2">
               Correo electronico
             </label>
-
             <div className="relative">
               <input
+                id="email"
                 type="text"
                 inputMode="email"
                 className={[
                   "w-full rounded-xl border bg-white px-4 py-3 text-sm text-neutral-900 outline-none transition",
                   emailHasError
                     ? "border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-500/15"
-                    : "border-neutral-200 focus:border-red-500 focus:ring-4 focus:ring-red-500/15",
+                    : "border-[#d9e6dd] focus:border-[#06a646] focus:ring-4 focus:ring-[#06a646]/15",
                 ].join(" ")}
                 value={form.email}
                 onChange={(e) => setField("email", e.target.value)}
@@ -146,16 +147,16 @@ export default function ForgotPasswordPage() {
             <button
               type="submit"
               disabled={loading}
-              className="mt-5 w-full rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700 active:bg-red-800 disabled:opacity-60 disabled:hover:bg-red-600"
+              className="mt-5 w-full rounded-xl bg-[#06a646] px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#058a3c] active:bg-[#04652c] disabled:opacity-60 disabled:hover:bg-[#06a646]"
             >
               {loading ? "Enviando..." : "Enviar enlace"}
             </button>
           </form>
 
-          <div className="border-t border-neutral-200 px-6 py-4 text-center">
+          <div className="border-t border-[#d9e6dd] px-6 py-4 text-center">
             <Link
               href={routes.auth.login}
-              className="text-sm font-medium text-red-700 hover:text-red-800 hover:underline"
+              className="text-sm font-medium text-[#04652c] hover:text-[#058a3c] hover:underline"
             >
               Volver al inicio de sesion
             </Link>
@@ -163,7 +164,7 @@ export default function ForgotPasswordPage() {
         </div>
 
         <p className="mt-6 text-center text-xs text-neutral-400">
-          © {new Date().getFullYear()} Tecnomaster
+            &copy; {new Date().getFullYear()} Tecnomaster
         </p>
       </div>
     </div>

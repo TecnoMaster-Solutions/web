@@ -41,7 +41,9 @@ function ResetPasswordPageContent() {
     setLoading(true);
     try {
       await api.post("/auth/reset-password", { token: safeToken, password });
-      showSuccess("Contrasena actualizada correctamente. Ahora puedes iniciar sesion.");
+      showSuccess(
+        "Contrasena actualizada correctamente. Ahora puedes iniciar sesion."
+      );
       router.push(routes.auth.login);
     } catch (err: unknown) {
       showError(
@@ -58,11 +60,11 @@ function ResetPasswordPageContent() {
   const showTokenField = !tokenFromUrl;
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center px-4 py-10">
+    <div className="min-h-screen bg-[#f6f3f3] flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-md">
         <div className="mb-6 text-center">
           <div className="flex flex-col items-center gap-2">
-            <div className="relative h-16 w-16 rounded-2xl border border-neutral-200 bg-white shadow-sm">
+            <div className="relative h-16 w-16 rounded-2xl border border-[#d9e6dd] bg-white shadow-sm">
               <Image
                 src="/assets/imgs/preview.png"
                 alt="Logo Tecnomaster"
@@ -73,38 +75,46 @@ function ResetPasswordPageContent() {
             </div>
           </div>
 
-          <h1 className="mt-4 text-2xl font-semibold tracking-tight text-neutral-900">
-            Restablecer contrasena
+          <h1 className="mt-4 text-2xl font-semibold tracking-tight bg-gradient-to-r from-[#04652c] via-[#06a646] to-[#2a9781] bg-clip-text text-transparent">
+            Restaurar contrasena
           </h1>
-          <p className="mt-2 text-sm text-neutral-600">
+          <p className="mt-2 text-sm text-[#3b5f73]">
             Crea una nueva contrasena para tu cuenta.
           </p>
         </div>
 
-        <div className="rounded-2xl border border-neutral-200 bg-white shadow-sm">
+        <div className="rounded-2xl border border-[#d9e6dd] bg-white shadow-sm">
           <form onSubmit={handleSubmit} className="p-6 space-y-4">
-            {showTokenField && (
+            {showTokenField ? (
               <div>
-                <label className="block text-sm font-medium text-neutral-800 mb-2">
+                <label
+                  htmlFor="token"
+                  className="block text-sm font-medium text-neutral-800 mb-2"
+                >
                   Token de recuperacion
                 </label>
                 <input
+                  id="token"
                   type="text"
-                  className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-900 outline-none transition focus:border-red-500 focus:ring-4 focus:ring-red-500/15"
+                  className="w-full rounded-xl border border-[#d9e6dd] bg-white px-4 py-3 text-sm text-neutral-900 outline-none transition focus:border-[#06a646] focus:ring-4 focus:ring-[#06a646]/15"
                   value={token}
                   onChange={(e) => setToken(e.target.value)}
                   placeholder="Pega aqui el token"
                 />
               </div>
-            )}
+            ) : null}
 
             <div>
-              <label className="block text-sm font-medium text-neutral-800 mb-2">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-neutral-800 mb-2"
+              >
                 Nueva contrasena
               </label>
               <input
+                id="password"
                 type="password"
-                className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-900 outline-none transition focus:border-red-500 focus:ring-4 focus:ring-red-500/15"
+                className="w-full rounded-xl border border-[#d9e6dd] bg-white px-4 py-3 text-sm text-neutral-900 outline-none transition focus:border-[#06a646] focus:ring-4 focus:ring-[#06a646]/15"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Minimo 8 caracteres"
@@ -113,12 +123,16 @@ function ResetPasswordPageContent() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-neutral-800 mb-2">
+              <label
+                htmlFor="confirm"
+                className="block text-sm font-medium text-neutral-800 mb-2"
+              >
                 Confirmar contrasena
               </label>
               <input
+                id="confirm"
                 type="password"
-                className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-900 outline-none transition focus:border-red-500 focus:ring-4 focus:ring-red-500/15"
+                className="w-full rounded-xl border border-[#d9e6dd] bg-white px-4 py-3 text-sm text-neutral-900 outline-none transition focus:border-[#06a646] focus:ring-4 focus:ring-[#06a646]/15"
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
                 placeholder="Repite la contrasena"
@@ -129,20 +143,21 @@ function ResetPasswordPageContent() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700 active:bg-red-800 disabled:opacity-60 disabled:hover:bg-red-600"
+              className="w-full rounded-xl bg-[#06a646] px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#058a3c] active:bg-[#04652c] disabled:opacity-60 disabled:hover:bg-[#06a646]"
             >
               {loading ? "Guardando..." : "Guardar contrasena"}
             </button>
 
-            <p className="text-xs text-neutral-500 leading-relaxed">
-              Si el enlace expiro, solicita uno nuevo desde &quot;Recuperar contrasena&quot;.
+            <p className="text-xs text-[#3b5f73] leading-relaxed">
+              Si el enlace expiro, solicita uno nuevo desde &quot;Recuperar
+              contrasena&quot;.
             </p>
           </form>
 
-          <div className="border-t border-neutral-200 px-6 py-4 text-center">
+          <div className="border-t border-[#d9e6dd] px-6 py-4 text-center">
             <Link
               href={routes.auth.login}
-              className="text-sm font-medium text-red-700 hover:text-red-800 hover:underline"
+              className="text-sm font-medium text-[#04652c] hover:text-[#058a3c] hover:underline"
             >
               Volver al inicio de sesion
             </Link>
@@ -150,7 +165,7 @@ function ResetPasswordPageContent() {
         </div>
 
         <p className="mt-6 text-center text-xs text-neutral-400">
-          © {new Date().getFullYear()} Tecnomaster
+            &copy; {new Date().getFullYear()} Tecnomaster
         </p>
       </div>
     </div>
@@ -159,7 +174,7 @@ function ResetPasswordPageContent() {
 
 export default function ResetPasswordPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-white" />}>
+    <Suspense fallback={<div className="min-h-screen bg-[#f6f3f3]" />}>
       <ResetPasswordPageContent />
     </Suspense>
   );

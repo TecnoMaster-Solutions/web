@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Image from 'next/image';
+import Script from 'next/script';
 import { Target, Eye, Flag } from 'lucide-react';
 import Container from '@/features/landing/about/components/Container';
 import { JSX } from 'react';
@@ -87,18 +88,19 @@ const organizationSchema: OrganizationSchema = {
 /**
  * Componente principal de la página "Sobre Nosotros"
  */
-export default function About(): JSX.Element {
+export default function About({ nonce }: { nonce?: string }): JSX.Element {
   return (
     <>
       <Nav />
 
       {/* JSON-LD Schema para SEO */}
-      <script
+      <Script
+        id="organization-schema"
+        nonce={nonce}
         type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(organizationSchema)
-        }}
-      />
+      >
+        {JSON.stringify(organizationSchema)}
+      </Script>
 
       {/* Hero Section - Sobre Nosotros */}
       <section className="bg-[#f0f7f0] relative py-16 lg:py-24">
