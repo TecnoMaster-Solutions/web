@@ -137,9 +137,6 @@ export function usePurchases() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   
-  // Estados para filtros de fecha
-  const [dateRange, setDateRange] = useState<{ startDate: string | null; endDate: string | null }>({ startDate: null, endDate: null });
-
   const [form, setForm] = useState<PurchaseFormState>({
     orderNumber: "",
     invoiceNumber: "",
@@ -213,8 +210,6 @@ export function usePurchases() {
           limit: customLimit,
           search: customSearch,
           signal: controller.signal,
-          fecha_inicio: dateRange.startDate || undefined,
-          fecha_fin: dateRange.endDate || undefined,
         });
 
 
@@ -245,7 +240,7 @@ export function usePurchases() {
         }
       }
     },
-    [dateRange]
+    []
   );
 
   useEffect(() => {
@@ -283,13 +278,6 @@ export function usePurchases() {
       abortRef.current?.abort();
     };
   }, [page, limit, debouncedSearch, fetchPurchases]);
-
-  // Callback para manejar cambios en filtros de fecha
-  const handleFilterChange = useCallback(async (filters: { dateRange?: { startDate: string | null; endDate: string | null } }) => {
-    if (filters.dateRange) {
-      setDateRange(filters.dateRange);
-    }
-  }, []);
 
   useEffect(() => {
     const supplierId = Number(form.supplier);
@@ -702,10 +690,6 @@ export function usePurchases() {
     setPage,
     setLimit,
     setSearch,
-
-    // Filtros de fecha
-    dateRange,
-    handleFilterChange,
 
     form,
     setForm,
