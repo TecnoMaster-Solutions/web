@@ -144,10 +144,10 @@ export interface CreatePOPayload {
     fechaEntregaEstimada: string;
     observaciones?: string;
     detalles: Array<{
-        productoId: number | null; // Permite null para entradas manuales
+        productoId: number;
         cantidad: number;
         precioUnitario: number;
-        productoNombre?: string; // Para entradas manuales sin productId
+        productoNombre?: string;
     }>;
 }
 
@@ -156,11 +156,22 @@ export async function createPurchaseOrderInDB(
 ): Promise<PurchaseOrderAPIResponse> {
 
     const body = {
+        // Formato nuevo
+        supplierId: payload.proveedorId,
+        expectedDeliveryDate: payload.fechaEntregaEstimada,
+        observations: payload.observaciones ?? undefined,
+        items: payload.detalles.map((item) => ({
+            productId: Number(item.productoId),
+            quantity: Number(item.cantidad),
+            unitPrice: Number(item.precioUnitario),
+            observations: item.productoNombre ?? undefined,
+        })),
+        // Formato legacy (compatibilidad)
         proveedorId: payload.proveedorId,
         estadoId: 5, // 5 = Pendiente (según tabla states de la base de datos)
         fechaEstimadaEntrega: payload.fechaEntregaEstimada,
         detalles: payload.detalles.map((item) => ({
-            productoId: item.productoId ?? null, // Enviar null si es entrada manual
+            productoId: Number(item.productoId),
             cantidad: Number(item.cantidad),
             precioUnitario: Number(item.precioUnitario),
             productoNombre: item.productoNombre ?? null,
@@ -247,3 +258,6 @@ export async function sendPurchaseOrderNotification(
         throw error;
     }
 }
+
+
+

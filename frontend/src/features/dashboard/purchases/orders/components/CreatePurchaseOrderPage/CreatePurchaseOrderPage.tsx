@@ -228,6 +228,11 @@ export const CreatePurchaseOrderPage: React.FC<CreatePurchaseOrderPageProps> = (
       return;
     }
 
+    if (!formData.fecha) {
+      showError("Debe seleccionar una fecha estimada de entrega.");
+      return;
+    }
+
     const rowsWithoutProduct = rows.filter((r) => !r.productoNombre.trim());
     if (rowsWithoutProduct.length > 0) {
       showError("Todos los productos deben tener nombre.");
@@ -242,7 +247,17 @@ export const CreatePurchaseOrderPage: React.FC<CreatePurchaseOrderPageProps> = (
 
     const itemsWithoutId = validRows.filter((r) => !r.productId);
     if (itemsWithoutId.length > 0) {
-      showWarning(`${itemsWithoutId.length} producto(s) se guardarán como entrada manual sin vinculación a la base de datos.`);
+      showError("Todos los productos deben seleccionarse de la lista y tener ID válido.");
+      return;
+    }
+
+    const supplierProductIds = new Set(supplierProducts.map((p) => p.productid));
+    const itemsNotLinkedToSupplier = validRows.filter(
+      (r) => !supplierProductIds.has(Number(r.productId))
+    );
+    if (itemsNotLinkedToSupplier.length > 0) {
+      showError("Hay productos no vinculados al proveedor seleccionado. Vincúlalos primero.");
+      return;
     }
 
 
@@ -256,9 +271,9 @@ export const CreatePurchaseOrderPage: React.FC<CreatePurchaseOrderPageProps> = (
       proveedorId: selectedSupplier.supplierid,
       fecha: formData.fecha,
       descripcion: formData.descripcion,
-      items: rows.map((r) => ({
+      items: validRows.map((r) => ({
         producto: r.productoNombre,
-        productoId: r.productId,
+        productoId: Number(r.productId),
         cantidad: r.cantidad,
         precioUnitario: r.precioUnitario,
         imagen: r.imagen,

@@ -64,10 +64,9 @@ export const usePurchaseOrders = () => {
       return null;
     }
 
-    // Filtrar items válidos (con cantidad > 0)
-    // Ahora permitimos productos sin productId (entrada manual)
+    // Filtrar items válidos (con cantidad > 0 y producto seleccionado)
     const validItems = purchaseOrderData.items.filter(
-      (item) => item.cantidad > 0 && item.producto.trim()
+      (item) => item.cantidad > 0 && item.producto.trim() && !!item.productoId
     );
 
     if (validItems.length === 0) {
@@ -75,10 +74,10 @@ export const usePurchaseOrders = () => {
       return null;
     }
 
-    // Verificar si hay productos sin ID (entrada manual)
-    const itemsWithoutId = validItems.filter((item) => !item.productoId);
+    const itemsWithoutId = purchaseOrderData.items.filter((item) => !item.productoId);
     if (itemsWithoutId.length > 0) {
-      showWarning(`${itemsWithoutId.length} producto(s) se guardarán como entrada manual sin vinculación a la base de datos.`);
+      showError("Todos los productos deben estar vinculados y tener ID válido.");
+      return null;
     }
 
     try {
@@ -87,10 +86,9 @@ export const usePurchaseOrders = () => {
         fechaEntregaEstimada: purchaseOrderData.fecha,
         observaciones: purchaseOrderData.descripcion,
         detalles: validItems.map((item) => ({
-          productoId: item.productoId ?? null, // Enviar null si es entrada manual
+          productoId: Number(item.productoId),
           cantidad: item.cantidad,
           precioUnitario: item.precioUnitario,
-          // Incluir nombre del producto para entradas manuales
           productoNombre: item.producto,
         })),
       });
@@ -287,10 +285,9 @@ export const useCreatePurchaseOrderForm = ({
         return false;
       }
 
-      // Validar que tenga productoId (seleccionado de la lista) O que sea entrada manual
-      // Si es entrada manual sin productId, permitirlo pero con advertencia
       if (!item.productoId) {
-        console.warn("Producto sin ID de base de datos - se guardará como entrada manual");
+        showWarning("Todos los productos deben seleccionarse de la lista.");
+        return false;
       }
 
       if (item.cantidad <= 0) {
