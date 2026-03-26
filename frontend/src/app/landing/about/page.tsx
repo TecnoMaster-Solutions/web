@@ -1,8 +1,7 @@
-"use client";
-
 import About from "@/features/landing/about/about";
+import { headers } from "next/headers";
 
- 
-export default function AboutPage() {
-    return <About />;
+export default async function AboutPage() {
+    const nonce = (await headers()).get("x-nonce") ?? undefined;
+    return <About nonce={nonce} />;
 }
