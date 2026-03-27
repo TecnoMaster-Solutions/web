@@ -55,11 +55,7 @@ const HeaderSlider = () => {
         <p className="mt-6 text-xl md:text-3xl font-medium text-gray-200 drop-shadow-md animate-fadeIn delay-500 max-w-3xl">
           Soluciones tecnológicas avanzadas para su empresa
         </p>
-        <button
-          className="mt-10 px-8 py-3 rounded-md text-lg font-semibold text-white bg-[#04652c] hover:bg-[#06a646] transition-all duration-300 shadow-lg hover:scale-105"
-        >
-          Ver Más
-        </button>
+
       </div>
 
       {/* Flecha izquierda */}

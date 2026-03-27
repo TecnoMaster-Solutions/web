@@ -358,7 +358,7 @@ export const CreatePurchaseOrderPage: React.FC<CreatePurchaseOrderPageProps> = (
   const total = subtotal + iva;
 
   return (
-    <div className="flex flex-col gap-6 md:flex-row w-full p-2 ">
+    <div className="flex flex-col gap-6 md:flex-row w-full max-h-[80vh] overflow-y-auto p-4 pr-6 pb-[200px] custom-scrollbar">
       {(isSubmitting || isSending) && (
         <div className="fixed inset-0 bg-white/80 flex items-center justify-center z-50">
           <div className="flex flex-col items-center gap-3">
@@ -428,15 +428,26 @@ export const CreatePurchaseOrderPage: React.FC<CreatePurchaseOrderPageProps> = (
               </label>
               <input
                 type="date"
+                min={new Date().toISOString().split('T')[0]}
                 value={formData.fecha}
                 onChange={(e) => handleInputChange("fecha", e.target.value)}
                 onBlur={() => handleBlur("fecha")}
                 className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-                style={{ borderColor: errors.fecha && touched.fecha ? "red" : Colors.table.lines }}
+                style={{
+                  borderColor: (errors.fecha && touched.fecha) || (formData.fecha && formData.fecha < new Date().toISOString().split('T')[0]) ? "red" : Colors.table.lines
+                }}
               />
-              {errors.fecha && touched.fecha && (
-                <span className="text-red-500 text-xs mt-1">{errors.fecha}</span>
+              {formData.fecha && formData.fecha < new Date().toISOString().split('T')[0] && (
+                <span className="text-red-500 text-xs mt-1 block">
+                  La fecha estimada de entrega no puede ser anterior a la fecha de hoy.
+                </span>
               )}
+              {errors.fecha && touched.fecha && !(formData.fecha && formData.fecha < new Date().toISOString().split('T')[0]) && (
+                <span className="text-red-500 text-xs mt-1 block">{errors.fecha}</span>
+              )}
+              <p className="text-gray-500 text-[11px] mt-1 flex items-center gap-1">
+                Ten en cuenta que la entrega puede demorar una o más semanas en ser entregada.
+              </p>
             </div>
 
             {/* Estado - Read only */}
@@ -444,12 +455,14 @@ export const CreatePurchaseOrderPage: React.FC<CreatePurchaseOrderPageProps> = (
               <label className="block text-sm font-medium mb-1 text-gray-700">
                 Estado
               </label>
-              <input
-                type="text"
-                value="Pendiente"
-                disabled
-                className="w-full p-2 border border-gray-200 rounded-md bg-gray-100 text-gray-600"
-              />
+              <div className="flex items-center mt-2">
+                <span
+                  className="rounded-full px-3 py-1 text-xs font-semibold"
+                  style={{ backgroundColor: "#fff7ed", color: "#c2410c" }}
+                >
+                  Pendiente
+                </span>
+              </div>
             </div>
           </div>
 
@@ -655,15 +668,15 @@ export const CreatePurchaseOrderPage: React.FC<CreatePurchaseOrderPageProps> = (
         </div>
 
         {/* Observaciones */}
-        <div className="p-4 bg-white rounded-lg border border-gray-200 shadow-sm mb-12">
+        <div className="p-4 bg-white rounded-lg border border-gray-200 shadow-sm mb-16">
           <label className="block text-sm font-medium mb-2 text-gray-700">
             Observaciones
           </label>
           <textarea
             value={formData.descripcion || ""}
             onChange={(e) => handleInputChange("descripcion", e.target.value)}
-            rows={3}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500"
+            rows={4}
+            className="w-full px-4 py-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 min-h-[140px] resize-y mb-12"
             placeholder="Ingrese observaciones (opcional)"
           />
         </div>
@@ -712,8 +725,14 @@ export const CreatePurchaseOrderPage: React.FC<CreatePurchaseOrderPageProps> = (
             <button
               type="button"
               onClick={handleSendAndSave}
-              disabled={isSending || isSubmitting || !selectedSupplier}
-              className="px-6 py-2 rounded-lg font-medium text-white transition flex items-center justify-center"
+              disabled={
+                isSending ||
+                isSubmitting ||
+                !selectedSupplier ||
+                !formData.fecha ||
+                formData.fecha < new Date().toISOString().split('T')[0]
+              }
+              className="px-6 py-2 rounded-lg font-medium text-white transition flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ backgroundColor: "black" }}
             >
               {(isSending || isSubmitting) ? <Loader size="sm" /> : "Enviar al Proveedor y Guardar"}

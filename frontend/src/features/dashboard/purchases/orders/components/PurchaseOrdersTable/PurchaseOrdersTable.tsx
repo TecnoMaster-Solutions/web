@@ -48,14 +48,33 @@ export const PurchaseOrdersTable: React.FC<PurchaseOrdersTableProps> = ({
     {
       key: "estado",
       header: "Estado",
-      render: (order) => (
-        <span
-          className="rounded-full px-2 py-0.5 text-xs font-medium"
-          style={{ color: Colors.states.warning }}
-        >
-          {order.state?.statename || order.estado || "Pendiente"}
-        </span>
-      )
+      render: (order) => {
+        const estado = order.state?.statename || order.estado || "Pendiente";
+        let bgColor = "#f3f4f6";
+        let textColor = Colors.states.inactive;
+
+        if (estado === "Finalizado" || estado === "Completed") {
+          bgColor = "#e8f5e8";
+          textColor = Colors.states.success;
+        } else if (estado === "Pendiente" || estado === "Pending") {
+          bgColor = "#fff7ed";
+          textColor = "#c2410c";
+        } else if (estado === "Anulada" || estado === "Cancelled") {
+          bgColor = "#fef2f2";
+          textColor = "#ef4444";
+        }
+
+        return (
+          <span
+            className="rounded-full px-2 py-0.5 text-xs font-medium"
+            style={{ backgroundColor: bgColor, color: textColor }}
+          >
+            {estado === "Pending" ? "Pendiente" :
+              estado === "Completed" ? "Finalizado" :
+                estado === "Cancelled" ? "Anulada" : estado}
+          </span>
+        );
+      }
     }
   ];
 
