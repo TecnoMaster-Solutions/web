@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { headers } from 'next/headers';
 import Script from 'next/script';
 import AppProviders from './providers';
+import FloatingHelpButton from '@/shared/components/FloatingHelpButton';
 
 function resolveMetadataBase() {
   const publicUrl =
@@ -42,6 +43,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       <body>
         <Script nonce={nonce} src="/runtime-config.js" strategy="beforeInteractive" />
         <AppProviders>{children}</AppProviders>
+        <FloatingHelpButton />
       </body>
     </html>
   );
