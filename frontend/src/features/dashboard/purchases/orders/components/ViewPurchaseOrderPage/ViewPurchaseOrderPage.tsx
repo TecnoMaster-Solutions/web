@@ -58,12 +58,15 @@ export const ViewPurchaseOrderPage: React.FC<ViewPurchaseOrderPageProps> = ({
       Pending: 'Pendiente',
       Completed: 'Finalizado',
       Cancelled: 'Anulada',
+      Pendiente: 'Pendiente',
+      Finalizado: 'Finalizado',
+      Anulada: 'Anulada',
     };
-    return labels[estado] ?? 'Desconocido';
+    return labels[estado] ?? estado ?? 'Desconocido';
   };
 
   return (
-    <div className="flex flex-col gap-6 md:flex-row h-full p-2 pb-16">
+    <div className="flex flex-col gap-6 md:flex-row w-full max-h-[80vh] overflow-y-auto p-4 pr-6 pb-[200px]">
       {/* Left Column: Details */}
       <div className="md:w-[65%] flex flex-col gap-6">
 
@@ -87,24 +90,32 @@ export const ViewPurchaseOrderPage: React.FC<ViewPurchaseOrderPageProps> = ({
               <label className="block text-sm font-medium mb-1 text-gray-500">
                 Estado
               </label>
-              <div className="px-3 py-2 bg-gray-50 rounded-md border border-gray-200">
-                <span
-                  className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                  style={{
-                    color: getOrderStatusLabel(purchaseOrder.estado) === 'Pendiente' 
-                      ? Colors.states.warning 
-                      : getOrderStatusLabel(purchaseOrder.estado) === 'Anulada'
-                        ? Colors.states.error
-                        : Colors.states.success,
-                    backgroundColor: getOrderStatusLabel(purchaseOrder.estado) === 'Pendiente'
-                      ? `${Colors.states.warning}20`
-                      : getOrderStatusLabel(purchaseOrder.estado) === 'Anulada'
-                        ? `${Colors.states.error}20`
-                        : `${Colors.states.success}20`
-                  }}
-                >
-                  {getOrderStatusLabel(purchaseOrder.estado)}
-                </span>
+              <div className="flex items-center">
+                {(() => {
+                  const label = getOrderStatusLabel(purchaseOrder.state?.statename || purchaseOrder.estado);
+                  let bgColor = "#f3f4f6";
+                  let textColor = Colors.states.inactive;
+
+                  if (label === "Finalizado" || label === "Finalizada") {
+                    bgColor = "#e8f5e8";
+                    textColor = Colors.states.success;
+                  } else if (label === "Pendiente") {
+                    bgColor = "#fff7ed";
+                    textColor = "#c2410c";
+                  } else if (label === "Anulada") {
+                    bgColor = "#fef2f2";
+                    textColor = "#ef4444";
+                  }
+
+                  return (
+                    <span
+                      className="rounded-full px-3 py-1 text-xs font-semibold"
+                      style={{ backgroundColor: bgColor, color: textColor }}
+                    >
+                      {label}
+                    </span>
+                  );
+                })()}
               </div>
             </div>
 
@@ -234,11 +245,11 @@ export const ViewPurchaseOrderPage: React.FC<ViewPurchaseOrderPageProps> = ({
 
         {/* Observaciones */}
         {purchaseOrder.descripcion && (
-          <div className="p-4 bg-white rounded-lg border border-gray-200 shadow-sm mb-12">
+          <div className="p-4 bg-white rounded-lg border border-gray-200 shadow-sm mb-24">
             <label className="block text-sm font-medium mb-2 text-gray-700">
               Observaciones
             </label>
-            <div className="px-3 py-2 bg-gray-50 rounded-md border border-gray-200 min-h-[60px]">
+            <div className="px-4 py-3 bg-gray-50 rounded-md border border-gray-200 min-h-[140px] whitespace-pre-wrap">
               {purchaseOrder.descripcion}
             </div>
           </div>
